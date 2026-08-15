@@ -52,6 +52,20 @@ function writeConflict(): Prisma.PrismaClientKnownRequestError {
   })
 }
 
+// @prisma/adapter-pg reports a serialization failure as its own DriverAdapterError instead of
+// mapping it to P2034, so the adapter has to recognise that shape too.
+class FakeDriverAdapterError extends Error {
+  override readonly name = 'DriverAdapterError'
+
+  constructor() {
+    super('TransactionWriteConflict', { cause: { kind: 'TransactionWriteConflict' } })
+  }
+}
+
+function driverAdapterWriteConflict(): Error {
+  return new FakeDriverAdapterError()
+}
+
 function translatedWriteConflict(): DatabaseError {
   return new DatabaseError('Failed to save the account', { cause: writeConflict() })
 }
@@ -110,6 +124,22 @@ describe('PrismaUnitOfWorkAdapter', () => {
 
   it('retries the transaction when the database reports a write conflict', async () => {
     const fake = createRunner([writeConflict()])
+
+    await expect(createUnitOfWork(fake).run(() => Promise.resolve('done'))).resolves.toBe('done')
+    expect(fake.attempts).toHaveLength(2)
+  })
+
+  it('retries the write conflict the pg driver adapter reports', async () => {
+    const fake = createRunner([driverAdapterWriteConflict()])
+
+    await expect(createUnitOfWork(fake).run(() => Promise.resolve('done'))).resolves.toBe('done')
+    expect(fake.attempts).toHaveLength(2)
+  })
+
+  it('retries a driver adapter write conflict translated by the repository', async () => {
+    const fake = createRunner([
+      new DatabaseError('Failed to save the account', { cause: driverAdapterWriteConflict() }),
+    ])
 
     await expect(createUnitOfWork(fake).run(() => Promise.resolve('done'))).resolves.toBe('done')
     expect(fake.attempts).toHaveLength(2)

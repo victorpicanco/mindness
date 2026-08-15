@@ -16,12 +16,30 @@ export interface PrismaUnitOfWorkOptions {
   readonly retryDelay?: RetryDelay
 }
 
+const DRIVER_ADAPTER_ERROR_NAME = 'DriverAdapterError'
+const DRIVER_ADAPTER_WRITE_CONFLICT = 'TransactionWriteConflict'
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+// @prisma/adapter-pg surfaces a serialization failure as its own DriverAdapterError and never
+// maps it to P2034, so recognising only the Prisma code would silently disable every retry.
+function isDriverAdapterWriteConflict(error: unknown): boolean {
+  if (!(error instanceof Error) || error.name !== DRIVER_ADAPTER_ERROR_NAME) return false
+  if (error.message === DRIVER_ADAPTER_WRITE_CONFLICT) return true
+
+  return isRecord(error.cause) && error.cause.kind === DRIVER_ADAPTER_WRITE_CONFLICT
+}
+
 // The repository translates its failures, so a write conflict reaches the transaction
 // wrapped as the cause of a DatabaseError rather than as the Prisma error itself.
 function isWriteConflict(error: unknown): boolean {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     return error.code === WRITE_CONFLICT_CODE
   }
+
+  if (isDriverAdapterWriteConflict(error)) return true
 
   if (error instanceof BaseError) return isWriteConflict(error.cause)
 

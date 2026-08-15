@@ -1,0 +1,23 @@
+enum AccountPlan {
+  free
+
+  @@map("account_plan")
+}
+
+enum AccountStatus {
+  accessible
+
+  @@map("account_status")
+}
+
+model Account {
+  id         String        @id @db.Uuid
+  email      String        @unique
+  authUserId String        @unique @map("auth_user_id")
+  timeZone   String        @map("time_zone")
+  plan       AccountPlan
+  status     AccountStatus
+  createdAt  DateTime      @map("created_at") @db.Timestamptz(6)
+
+  @@map("accounts")
+}

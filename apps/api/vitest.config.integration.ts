@@ -7,6 +7,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/modules/**/presentation/integration/**/index.test.ts'],
     setupFiles: ['./src/tests/setup.ts'],
+    globalSetup: ['./src/tests/postgres-container.ts'],
     passWithNoTests: true,
     hookTimeout: 120_000,
     testTimeout: 60_000,

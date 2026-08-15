@@ -110,6 +110,15 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     this.failure = error
   }
 
+  reset(): void {
+    this.passwordUsers.clear()
+    this.googleCodes.clear()
+    this.validPkceStates.clear()
+    this.sessionsByToken.clear()
+    this.currentTokenByUser.clear()
+    this.failure = null
+  }
+
   private createSession(authUserId: string, email: string): AuthSession {
     const previousToken = this.currentTokenByUser.get(authUserId)
     if (previousToken !== undefined) this.sessionsByToken.delete(previousToken)

@@ -10,6 +10,11 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   WORKER_HEALTH_PORT: '3334',
   LOG_LEVEL: 'info',
   DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+  PUBLIC_API_URL: 'https://api.mindness.test',
+  SUPABASE_URL: 'https://project.supabase.co',
+  SUPABASE_SECRET_KEY: 'secret-key',
+  EMAIL_CONFIRMATION_REDIRECT_URL: 'https://app.mindness.test/auth/confirmed',
+  ACCOUNTS_CONSENT_VERSION: '2026-08-15',
 }
 
 describe('loadConfig', () => {
@@ -22,7 +27,19 @@ describe('loadConfig', () => {
       workerHealthPort: 3334,
       logLevel: 'info',
       databaseUrl: 'postgresql://user:pass@localhost:5432/db',
+      publicApiUrl: 'https://api.mindness.test',
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseSecretKey: 'secret-key',
+      emailConfirmationRedirectUrl: 'https://app.mindness.test/auth/confirmed',
+      accountsConsentVersion: '2026-08-15',
     })
+  })
+
+  it('lists every missing account variable without leaking the secret', () => {
+    const envWithoutSupabase = { ...VALID_ENV }
+    delete envWithoutSupabase.SUPABASE_SECRET_KEY
+
+    expect(() => loadConfig(envWithoutSupabase)).toThrow(ValidationFailedError)
   })
 
   it('lists the missing variable name and leaks no other value', () => {

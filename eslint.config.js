@@ -95,6 +95,9 @@ function moduleConfigs(self) {
     },
     {
       files: [`${module}/presentation/**/*.ts`],
+      // LAW-011.2/11.3: integration tests live under presentation/ but are driven by the
+      // module's own integration container, so the presentation import guard cannot apply.
+      ignores: [`${module}/presentation/integration/**`],
       rules: restrictedImports([
         {
           group: ['@/generated/prisma*', '@/generated/prisma/*'],
@@ -116,7 +119,7 @@ function moduleConfigs(self) {
       ]),
     },
     {
-      files: [`${module}/composition/**/*.ts`],
+      files: [`${module}/composition/**/*.ts`, `${module}/presentation/integration/**/*.ts`],
       rules: restrictedImports([otherModules(self)]),
     },
   ]

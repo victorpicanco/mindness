@@ -19,7 +19,9 @@ export function buildApp(deps: BuildAppDeps) {
 
   app.setValidatorCompiler(TypeBoxValidatorCompiler)
 
-  void app.register(fastifySwagger)
+  void app.register(fastifySwagger, {
+    openapi: { openapi: '3.1.0', info: { title: 'mindness', version: '1.0.0' } },
+  })
 
   registerErrorHandler(app)
 

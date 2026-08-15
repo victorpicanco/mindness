@@ -11,9 +11,23 @@ const EnvSchema = Type.Object({
   WORKER_HEALTH_PORT: Type.Integer(),
   LOG_LEVEL: Type.String(),
   DATABASE_URL: Type.String(),
+  PUBLIC_API_URL: Type.String(),
+  SUPABASE_URL: Type.String(),
+  SUPABASE_SECRET_KEY: Type.String(),
+  EMAIL_CONFIRMATION_REDIRECT_URL: Type.String(),
+  ACCOUNTS_CONSENT_VERSION: Type.String(),
 })
 
-const STRING_ENV_KEYS = ['NODE_ENV', 'LOG_LEVEL', 'DATABASE_URL'] as const
+const STRING_ENV_KEYS = [
+  'NODE_ENV',
+  'LOG_LEVEL',
+  'DATABASE_URL',
+  'PUBLIC_API_URL',
+  'SUPABASE_URL',
+  'SUPABASE_SECRET_KEY',
+  'EMAIL_CONFIRMATION_REDIRECT_URL',
+  'ACCOUNTS_CONSENT_VERSION',
+] as const
 const NUMERIC_ENV_KEYS = ['PORT', 'WORKER_HEALTH_PORT'] as const
 
 export interface Config {
@@ -22,6 +36,11 @@ export interface Config {
   readonly workerHealthPort: number
   readonly logLevel: string
   readonly databaseUrl: string
+  readonly publicApiUrl: string
+  readonly supabaseUrl: string
+  readonly supabaseSecretKey: string
+  readonly emailConfirmationRedirectUrl: string
+  readonly accountsConsentVersion: string
 }
 
 function buildCandidate(env: NodeJS.ProcessEnv): Record<string, unknown> {
@@ -68,5 +87,10 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
     workerHealthPort: candidate.WORKER_HEALTH_PORT,
     logLevel: candidate.LOG_LEVEL,
     databaseUrl: candidate.DATABASE_URL,
+    publicApiUrl: candidate.PUBLIC_API_URL,
+    supabaseUrl: candidate.SUPABASE_URL,
+    supabaseSecretKey: candidate.SUPABASE_SECRET_KEY,
+    emailConfirmationRedirectUrl: candidate.EMAIL_CONFIRMATION_REDIRECT_URL,
+    accountsConsentVersion: candidate.ACCOUNTS_CONSENT_VERSION,
   })
 }

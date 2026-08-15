@@ -14,6 +14,9 @@ const row: AccountRow = {
   timeZone: 'America/Sao_Paulo',
   plan: 'free',
   status: 'accessible',
+  consentPurpose: null,
+  consentVersion: null,
+  consentAcceptedAt: null,
   createdAt: new Date('2026-08-15T00:00:00.000Z'),
 }
 

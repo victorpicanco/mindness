@@ -6,6 +6,7 @@ enum AccountPlan {
 
 enum AccountStatus {
   accessible
+  deletion_pending
 
   @@map("account_status")
 }
@@ -17,7 +18,21 @@ model Account {
   timeZone   String        @map("time_zone")
   plan       AccountPlan
   status     AccountStatus
+  consentPurpose    String?   @map("consent_purpose")
+  consentVersion    String?   @map("consent_version")
+  consentAcceptedAt DateTime? @map("consent_accepted_at") @db.Timestamptz(6)
   createdAt  DateTime      @map("created_at") @db.Timestamptz(6)
+  deletionRequest AccountDeletionRequest?
 
   @@map("accounts")
+}
+
+model AccountDeletionRequest {
+  id           String   @id @db.Uuid
+  accountId    String   @unique @map("account_id") @db.Uuid
+  requestedAt  DateTime @map("requested_at") @db.Timestamptz(6)
+  scheduledFor DateTime @map("scheduled_for") @db.Timestamptz(6)
+  account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("account_deletion_requests")
 }

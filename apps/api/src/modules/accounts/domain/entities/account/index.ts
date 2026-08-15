@@ -1,10 +1,12 @@
 import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
 import type { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 import type { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
+import type { VoiceConsent } from '@/modules/accounts/domain/value-objects/voice-consent/index.js'
 
 import type {
   AccountPlan,
   AccountStatus,
+  AcceptVoiceConsentResult,
   CreateAccountParams,
   ReconstituteAccountParams,
 } from './types.js'
@@ -25,11 +27,24 @@ export class Account {
     readonly id: string,
     readonly email: EmailAddress,
     readonly authUserId: string,
-    readonly timeZone: TimeZone,
+    private _timeZone: TimeZone,
     readonly plan: AccountPlan,
-    readonly status: AccountStatus,
+    private _status: AccountStatus,
     readonly createdAt: Date,
+    private _voiceConsent: VoiceConsent | null,
   ) {}
+
+  get voiceConsent(): VoiceConsent | null {
+    return this._voiceConsent
+  }
+
+  get status(): AccountStatus {
+    return this._status
+  }
+
+  get timeZone(): TimeZone {
+    return this._timeZone
+  }
 
   static create(params: CreateAccountParams): Account {
     return new Account(
@@ -40,6 +55,7 @@ export class Account {
       INITIAL_PLAN,
       INITIAL_STATUS,
       params.createdAt,
+      null,
     )
   }
 
@@ -52,6 +68,23 @@ export class Account {
       params.plan,
       params.status,
       params.createdAt,
+      params.voiceConsent,
     )
+  }
+
+  acceptVoiceConsent(consent: VoiceConsent): AcceptVoiceConsentResult {
+    if (this._voiceConsent?.version === consent.version) {
+      return { changed: false, consent: this._voiceConsent }
+    }
+    this._voiceConsent = consent
+    return { changed: true, consent }
+  }
+
+  changeTimeZone(timeZone: TimeZone): void {
+    this._timeZone = timeZone
+  }
+
+  scheduleDeletion(): void {
+    this._status = 'deletion_pending'
   }
 }

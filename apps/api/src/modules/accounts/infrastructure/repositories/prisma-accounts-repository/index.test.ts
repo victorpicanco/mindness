@@ -22,6 +22,9 @@ const row: AccountRow = {
   timeZone: 'America/Sao_Paulo',
   plan: 'free',
   status: 'accessible',
+  consentPurpose: null,
+  consentVersion: null,
+  consentAcceptedAt: null,
   createdAt: new Date('2026-08-15T00:00:00.000Z'),
 }
 
@@ -44,10 +47,17 @@ function createFakeClient(options: FakeClientOptions = {}): FakeClient {
     upserts,
     client: {
       account: {
+        count: () => Promise.resolve(rows.length),
         findUnique: ({ where }) => {
           if (options.readFailure !== undefined) return Promise.reject(options.readFailure)
           return Promise.resolve(
-            rows.find((stored) => stored.authUserId === where.authUserId) ?? null,
+            rows.find((stored) =>
+              'id' in where
+                ? stored.id === where.id
+                : 'authUserId' in where
+                  ? stored.authUserId === where.authUserId
+                  : stored.email === where.email,
+            ) ?? null,
           )
         },
         upsert: (args) => {
@@ -55,6 +65,9 @@ function createFakeClient(options: FakeClientOptions = {}): FakeClient {
           upserts.push(args)
           return Promise.resolve(args.create)
         },
+      },
+      accountDeletionRequest: {
+        upsert: (args) => Promise.resolve(args.create),
       },
     },
   }
@@ -121,6 +134,18 @@ describe('PrismaAccountsRepository', () => {
     const repository = createRepository(createFakeClient({ rows: [row] }))
 
     await expect(repository.findByAuthUserId('auth-user-2')).resolves.toBeNull()
+  })
+
+  it('reconstitutes the aggregate persisted under its domain identifier', async () => {
+    const repository = createRepository(createFakeClient({ rows: [row] }))
+
+    await expect(repository.findById(row.id)).resolves.toMatchObject({ id: row.id })
+  })
+
+  it('reconstitutes the aggregate persisted for an email address', async () => {
+    const repository = createRepository(createFakeClient({ rows: [row] }))
+
+    await expect(repository.findByEmail(row.email)).resolves.toMatchObject({ id: row.id })
   })
 
   it('persists the whole aggregate under its own identifier', async () => {

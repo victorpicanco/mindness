@@ -65,8 +65,28 @@ export class PrismaAccountsRepository implements AccountsRepository {
     private readonly mapper: AccountMapper,
   ) {}
 
+  async count(): Promise<number> {
+    try {
+      return await this.client().account.count()
+    } catch (error) {
+      throw new DatabaseError('Failed to count accounts', { cause: error })
+    }
+  }
+
   async findByAuthUserId(authUserId: string): Promise<Account | null> {
     const row = await this.readByAuthUserId(authUserId)
+
+    return row === null ? null : this.mapper.toDomain(row)
+  }
+
+  async findById(accountId: string): Promise<Account | null> {
+    const row = await this.readById(accountId)
+
+    return row === null ? null : this.mapper.toDomain(row)
+  }
+
+  async findByEmail(email: string): Promise<Account | null> {
+    const row = await this.readByEmail(email)
 
     return row === null ? null : this.mapper.toDomain(row)
   }
@@ -91,6 +111,22 @@ export class PrismaAccountsRepository implements AccountsRepository {
   private async readByAuthUserId(authUserId: string): Promise<AccountRow | null> {
     try {
       return await this.client().account.findUnique({ where: { authUserId } })
+    } catch (error) {
+      throw new DatabaseError('Failed to read the account', { cause: error })
+    }
+  }
+
+  private async readById(accountId: string): Promise<AccountRow | null> {
+    try {
+      return await this.client().account.findUnique({ where: { id: accountId } })
+    } catch (error) {
+      throw new DatabaseError('Failed to read the account', { cause: error })
+    }
+  }
+
+  private async readByEmail(email: string): Promise<AccountRow | null> {
+    try {
+      return await this.client().account.findUnique({ where: { email } })
     } catch (error) {
       throw new DatabaseError('Failed to read the account', { cause: error })
     }

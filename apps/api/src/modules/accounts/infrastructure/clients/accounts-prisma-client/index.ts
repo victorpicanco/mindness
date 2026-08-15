@@ -8,6 +8,9 @@ export interface AccountRow {
   readonly timeZone: string
   readonly plan: AccountPlan
   readonly status: AccountStatus
+  readonly consentPurpose: string | null
+  readonly consentVersion: string | null
+  readonly consentAcceptedAt: Date | null
   readonly createdAt: Date
 }
 
@@ -17,10 +20,29 @@ export interface AccountUpsertArgs {
   readonly update: AccountRow
 }
 
+export interface AccountDeletionRequestRow {
+  readonly id: string
+  readonly accountId: string
+  readonly requestedAt: Date
+  readonly scheduledFor: Date
+}
+
+export interface AccountDeletionRequestUpsertArgs {
+  readonly where: { readonly accountId: string }
+  readonly create: AccountDeletionRequestRow
+  readonly update: AccountDeletionRequestRow
+}
+
 export interface AccountsPrismaClient {
   readonly account: {
-    findUnique(args: { where: { authUserId: string } }): Promise<AccountRow | null>
+    count(): Promise<number>
+    findUnique(args: {
+      where: { readonly id: string } | { readonly authUserId: string } | { readonly email: string }
+    }): Promise<AccountRow | null>
     upsert(args: AccountUpsertArgs): Promise<AccountRow>
+  }
+  readonly accountDeletionRequest: {
+    upsert(args: AccountDeletionRequestUpsertArgs): Promise<AccountDeletionRequestRow>
   }
 }
 

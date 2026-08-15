@@ -27,6 +27,7 @@ describe('Account', () => {
       authUserId: 'auth-user-1',
       plan: 'free',
       status: 'accessible',
+      voiceConsent: null,
       createdAt,
     })
     expect(account.email.value).toBe('person@example.com')
@@ -61,6 +62,7 @@ describe('Account', () => {
       ...validParams(),
       plan: 'free',
       status: 'accessible',
+      voiceConsent: null,
     })
 
     expect(account).toMatchObject({ id: 'account-1', plan: 'free', status: 'accessible' })
@@ -68,7 +70,13 @@ describe('Account', () => {
 
   it('rejects reconstituting an account without an identity', () => {
     expect(() =>
-      Account.reconstitute({ ...validParams(), id: '', plan: 'free', status: 'accessible' }),
+      Account.reconstitute({
+        ...validParams(),
+        id: '',
+        plan: 'free',
+        status: 'accessible',
+        voiceConsent: null,
+      }),
     ).toThrow(InvalidAccountValueError)
   })
 })

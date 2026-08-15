@@ -17,6 +17,7 @@ const row: AccountRow = {
   consentPurpose: null,
   consentVersion: null,
   consentAcceptedAt: null,
+  currentSessionId: null,
   createdAt: new Date('2026-08-15T00:00:00.000Z'),
 }
 
@@ -59,5 +60,13 @@ describe('AccountMapper', () => {
     })
 
     expect(new AccountMapper().toPersistence(account)).toEqual(row)
+  })
+
+  it('round-trips the current authenticated session', () => {
+    const mapper = new AccountMapper()
+    const account = mapper.toDomain({ ...row, currentSessionId: 'session-1' })
+
+    expect(account.hasCurrentSession('session-1')).toBe(true)
+    expect(mapper.toPersistence(account).currentSessionId).toBe('session-1')
   })
 })

@@ -11,6 +11,7 @@ export interface AccountRow {
   readonly consentPurpose: string | null
   readonly consentVersion: string | null
   readonly consentAcceptedAt: Date | null
+  readonly currentSessionId: string | null
   readonly createdAt: Date
 }
 

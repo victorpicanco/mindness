@@ -63,6 +63,7 @@ describe('Account', () => {
       plan: 'free',
       status: 'accessible',
       voiceConsent: null,
+      currentSessionId: null,
     })
 
     expect(account).toMatchObject({ id: 'account-1', plan: 'free', status: 'accessible' })
@@ -76,7 +77,39 @@ describe('Account', () => {
         plan: 'free',
         status: 'accessible',
         voiceConsent: null,
+        currentSessionId: null,
       }),
     ).toThrow(InvalidAccountValueError)
+  })
+
+  it('starts without an authenticated session and keeps only the latest one', () => {
+    const account = Account.create(validParams())
+
+    expect(account.currentSessionId).toBeNull()
+
+    account.startSession('session-1')
+    expect(account.hasCurrentSession('session-1')).toBe(true)
+
+    account.startSession('session-2')
+    expect(account.hasCurrentSession('session-1')).toBe(false)
+    expect(account.hasCurrentSession('session-2')).toBe(true)
+  })
+
+  it('rejects a blank session identifier', () => {
+    const account = Account.create(validParams())
+
+    expect(() => account.startSession('   ')).toThrow(
+      expect.objectContaining({ context: { field: 'currentSessionId' } }),
+    )
+  })
+
+  it('drops the authenticated session when the deletion is scheduled', () => {
+    const account = Account.create(validParams())
+    account.startSession('session-1')
+
+    account.scheduleDeletion()
+
+    expect(account.currentSessionId).toBeNull()
+    expect(account.hasCurrentSession('session-1')).toBe(false)
   })
 })

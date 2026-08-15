@@ -32,10 +32,15 @@ export class Account {
     private _status: AccountStatus,
     readonly createdAt: Date,
     private _voiceConsent: VoiceConsent | null,
+    private _currentSessionId: string | null,
   ) {}
 
   get voiceConsent(): VoiceConsent | null {
     return this._voiceConsent
+  }
+
+  get currentSessionId(): string | null {
+    return this._currentSessionId
   }
 
   get status(): AccountStatus {
@@ -56,6 +61,7 @@ export class Account {
       INITIAL_STATUS,
       params.createdAt,
       null,
+      null,
     )
   }
 
@@ -69,6 +75,7 @@ export class Account {
       params.status,
       params.createdAt,
       params.voiceConsent,
+      params.currentSessionId,
     )
   }
 
@@ -84,7 +91,16 @@ export class Account {
     this._timeZone = timeZone
   }
 
+  startSession(sessionId: string): void {
+    this._currentSessionId = requireIdentifier(sessionId, 'currentSessionId')
+  }
+
+  hasCurrentSession(sessionId: string): boolean {
+    return this._currentSessionId !== null && this._currentSessionId === sessionId
+  }
+
   scheduleDeletion(): void {
     this._status = 'deletion_pending'
+    this._currentSessionId = null
   }
 }

@@ -22,6 +22,7 @@ export class AccountMapper {
               acceptedAt: row.consentAcceptedAt,
             })
           : null,
+      currentSessionId: row.currentSessionId,
       createdAt: row.createdAt,
     })
   }
@@ -37,6 +38,7 @@ export class AccountMapper {
       consentPurpose: account.voiceConsent?.purpose ?? null,
       consentVersion: account.voiceConsent?.version ?? null,
       consentAcceptedAt: account.voiceConsent?.acceptedAt ?? null,
+      currentSessionId: account.currentSessionId,
       createdAt: account.createdAt,
     }
   }

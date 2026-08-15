@@ -18,6 +18,7 @@ export interface ReconstituteAccountParams extends CreateAccountParams {
   readonly plan: AccountPlan
   readonly status: AccountStatus
   readonly voiceConsent: VoiceConsent | null
+  readonly currentSessionId: string | null
 }
 
 export interface AcceptVoiceConsentResult {

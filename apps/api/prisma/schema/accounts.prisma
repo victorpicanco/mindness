@@ -21,6 +21,7 @@ model Account {
   consentPurpose    String?   @map("consent_purpose")
   consentVersion    String?   @map("consent_version")
   consentAcceptedAt DateTime? @map("consent_accepted_at") @db.Timestamptz(6)
+  currentSessionId  String?   @map("current_session_id")
   createdAt  DateTime      @map("created_at") @db.Timestamptz(6)
   deletionRequest AccountDeletionRequest?
 

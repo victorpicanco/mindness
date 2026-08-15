@@ -143,6 +143,14 @@ describe('CreateAccountUseCase', () => {
     expect(harness.transactionRuns()).toBe(1)
   })
 
+  it('binds the account to the session that provisioned it', async () => {
+    const harness = createHarness()
+
+    await harness.useCase.execute({ accessToken: 'verified-token', timeZone: null })
+
+    expect(harness.accounts.saved[0]?.hasCurrentSession('session-1')).toBe(true)
+  })
+
   it('publishes account_created with the account and current plan', async () => {
     const harness = createHarness()
 

@@ -6,7 +6,10 @@ export type AuthenticationRejectionReason =
 export class AuthenticationRejectedError extends UnauthorizedError {
   readonly code = 'accounts.AUTHENTICATION_REJECTED'
 
-  constructor(reason: AuthenticationRejectionReason, options?: { cause?: unknown }) {
+  constructor(
+    readonly reason: AuthenticationRejectionReason,
+    options?: { cause?: unknown },
+  ) {
     super('Authentication rejected', { context: { reason }, cause: options?.cause })
   }
 }

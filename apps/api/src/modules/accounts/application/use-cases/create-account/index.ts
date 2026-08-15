@@ -1,3 +1,4 @@
+import { NEUTRAL_ACCOUNT_MESSAGE } from '@/modules/accounts/application/dtos/account-messages/index.js'
 import { Account } from '@/modules/accounts/domain/entities/account/index.js'
 import { AccountCreated } from '@/modules/accounts/domain/events/account-created/index.js'
 import { AccountCreationRejected } from '@/modules/accounts/domain/events/account-creation-rejected/index.js'
@@ -76,6 +77,7 @@ export class CreateAccountUseCase {
         timeZone: TimeZone.fromOptional(input.timeZone ?? undefined),
         createdAt: this.dependencies.clock.now(),
       })
+      account.startSession(identity.sessionId)
 
       await this.dependencies.accounts.save(account)
       await this.dependencies.eventPublisher.publish(
@@ -88,9 +90,6 @@ export class CreateAccountUseCase {
       )
     })
 
-    return {
-      message:
-        'Verifique seu e-mail para continuar, caso exista uma conta elegível para este endereço.',
-    }
+    return { message: NEUTRAL_ACCOUNT_MESSAGE }
   }
 }

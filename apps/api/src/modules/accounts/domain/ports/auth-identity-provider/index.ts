@@ -33,9 +33,23 @@ export interface SessionRevoker {
   revokeSession(accessToken: string): Promise<void>
 }
 
-export interface AuthIdentityProvider extends AccessTokenValidator, SessionRevoker {
+export interface IdentityRegistrar {
   signUpWithPassword(params: SignUpWithPasswordParams): Promise<void>
+}
+
+export interface PasswordAuthenticator {
   signInWithPassword(params: SignInWithPasswordParams): Promise<AuthSession>
+}
+
+export interface GoogleAuthenticator {
   createGoogleAuthorization(redirectTo: string): Promise<GoogleAuthorization>
   exchangeGoogleCode(code: string, pkceState: string): Promise<AuthSession>
 }
+
+export interface AuthIdentityProvider
+  extends
+    AccessTokenValidator,
+    SessionRevoker,
+    IdentityRegistrar,
+    PasswordAuthenticator,
+    GoogleAuthenticator {}

@@ -14,4 +14,12 @@ export class VoiceConsent {
   static create(params: CreateVoiceConsentParams): VoiceConsent {
     return new VoiceConsent(params.version, params.acceptedAt)
   }
+
+  equals(other: VoiceConsent): boolean {
+    return (
+      this.purpose === other.purpose &&
+      this.version === other.version &&
+      this.acceptedAt.getTime() === other.acceptedAt.getTime()
+    )
+  }
 }

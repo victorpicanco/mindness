@@ -1,26 +1,55 @@
 import { Prisma } from '@/generated/prisma/client.js'
-import type { TransactionContext } from '@/shared/database/transaction-context/index.js'
+import type { UnitOfWork } from '@/modules/accounts/domain/ports/unit-of-work/index.js'
+import type { AccountsPrismaTransactionRunner } from '@/modules/accounts/infrastructure/clients/accounts-prisma-client/index.js'
+import type { AccountsTransactionContext } from '@/modules/accounts/infrastructure/clients/accounts-transaction-context/index.js'
+import { BaseError } from '@/shared/errors/base-error/index.js'
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
-
-import type { UnitOfWork } from '../../../domain/ports/unit-of-work/index.js'
-import type {
-  AccountsPrismaClient,
-  AccountsPrismaTransactionRunner,
-} from '../../clients/accounts-prisma-client/index.js'
 
 const WRITE_CONFLICT_CODE = 'P2034'
 const DEFAULT_MAX_ATTEMPTS = 3
+const BASE_RETRY_DELAY_MS = 10
 
+export type RetryDelay = (attempt: number) => Promise<void>
+
+export interface PrismaUnitOfWorkOptions {
+  readonly maxAttempts?: number
+  readonly retryDelay?: RetryDelay
+}
+
+// The repository translates its failures, so a write conflict reaches the transaction
+// wrapped as the cause of a DatabaseError rather than as the Prisma error itself.
 function isWriteConflict(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === WRITE_CONFLICT_CODE
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code === WRITE_CONFLICT_CODE
+  }
+
+  if (error instanceof BaseError) return isWriteConflict(error.cause)
+
+  return false
+}
+
+// Jitter matters here: retrying two conflicting transactions after the same fixed delay
+// reproduces the conflict that caused the retry.
+function backOff(attempt: number): Promise<void> {
+  const ceiling = BASE_RETRY_DELAY_MS * 2 ** attempt
+
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, Math.random() * ceiling)
+  })
 }
 
 export class PrismaUnitOfWorkAdapter implements UnitOfWork {
+  private readonly maxAttempts: number
+  private readonly retryDelay: RetryDelay
+
   constructor(
     private readonly prisma: AccountsPrismaTransactionRunner,
-    private readonly transactionContext: TransactionContext<AccountsPrismaClient>,
-    private readonly maxAttempts: number = DEFAULT_MAX_ATTEMPTS,
-  ) {}
+    private readonly transactionContext: AccountsTransactionContext,
+    options?: PrismaUnitOfWorkOptions,
+  ) {
+    this.maxAttempts = Math.max(1, options?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS)
+    this.retryDelay = options?.retryDelay ?? backOff
+  }
 
   async run<T>(operation: () => Promise<T>): Promise<T> {
     let lastConflict: unknown
@@ -35,6 +64,8 @@ export class PrismaUnitOfWorkAdapter implements UnitOfWork {
         if (!isWriteConflict(error)) throw error
         lastConflict = error
       }
+
+      if (attempt + 1 < this.maxAttempts) await this.retryDelay(attempt)
     }
 
     throw new DatabaseError('Transaction gave up after repeated write conflicts', {

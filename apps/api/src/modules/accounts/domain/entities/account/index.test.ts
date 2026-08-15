@@ -1,30 +1,74 @@
 import { describe, expect, it } from 'vitest'
 
+import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
+import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
+import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
+
 import { Account } from './index.js'
+
+const createdAt = new Date('2026-08-15T00:00:00.000Z')
+
+function validParams() {
+  return {
+    id: 'account-1',
+    email: EmailAddress.create('person@example.com'),
+    authUserId: 'auth-user-1',
+    timeZone: TimeZone.create('America/Sao_Paulo'),
+    createdAt,
+  }
+}
 
 describe('Account', () => {
   it('creates an accessible free account with its authenticated identity', () => {
-    const factory = Reflect.get(Account, 'create')
-
-    expect(factory).toBeTypeOf('function')
-
-    if (typeof factory !== 'function') return
-
-    const account = factory({
-      id: 'account-1',
-      email: 'person@example.com',
-      authUserId: 'auth-user-1',
-      timeZone: 'America/Sao_Paulo',
-      createdAt: new Date('2026-08-15T00:00:00.000Z'),
-    })
+    const account = Account.create(validParams())
 
     expect(account).toMatchObject({
       id: 'account-1',
-      email: 'person@example.com',
       authUserId: 'auth-user-1',
-      timeZone: 'America/Sao_Paulo',
+      plan: 'free',
+      status: 'accessible',
+      createdAt,
+    })
+    expect(account.email.value).toBe('person@example.com')
+    expect(account.timeZone.value).toBe('America/Sao_Paulo')
+  })
+
+  it('holds the email and the time zone as validated values, never as raw strings', () => {
+    const account = Account.create(validParams())
+
+    expect(account.email).toBeInstanceOf(EmailAddress)
+    expect(account.timeZone).toBeInstanceOf(TimeZone)
+  })
+
+  it('rejects a blank id', () => {
+    expect(() => Account.create({ ...validParams(), id: '   ' })).toThrow(InvalidAccountValueError)
+  })
+
+  it('rejects a blank authUserId', () => {
+    expect(() => Account.create({ ...validParams(), authUserId: '   ' })).toThrow(
+      InvalidAccountValueError,
+    )
+  })
+
+  it('names the offending field when an identifier is blank', () => {
+    expect(() => Account.create({ ...validParams(), authUserId: '' })).toThrow(
+      expect.objectContaining({ context: { field: 'authUserId' } }),
+    )
+  })
+
+  it('reconstitutes a persisted account with the state it was stored with', () => {
+    const account = Account.reconstitute({
+      ...validParams(),
       plan: 'free',
       status: 'accessible',
     })
+
+    expect(account).toMatchObject({ id: 'account-1', plan: 'free', status: 'accessible' })
+  })
+
+  it('rejects reconstituting an account without an identity', () => {
+    expect(() =>
+      Account.reconstitute({ ...validParams(), id: '', plan: 'free', status: 'accessible' }),
+    ).toThrow(InvalidAccountValueError)
   })
 })

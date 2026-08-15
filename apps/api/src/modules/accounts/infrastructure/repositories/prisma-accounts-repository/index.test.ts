@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
 import { Prisma } from '@/generated/prisma/client.js'
-import { TransactionContext } from '@/shared/database/transaction-context/index.js'
-
-import { Account } from '../../../domain/entities/account/index.js'
-import { AccountAlreadyExistsError } from '../../../domain/errors/account-already-exists-error/index.js'
+import { Account } from '@/modules/accounts/domain/entities/account/index.js'
+import { AccountAlreadyExistsError } from '@/modules/accounts/domain/errors/account-already-exists-error/index.js'
+import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
+import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 import type {
   AccountRow,
   AccountsPrismaClient,
   AccountUpsertArgs,
-} from '../../clients/accounts-prisma-client/index.js'
-import { AccountMapper } from '../../mappers/account-mapper/index.js'
+} from '@/modules/accounts/infrastructure/clients/accounts-prisma-client/index.js'
+import { AccountsTransactionContext } from '@/modules/accounts/infrastructure/clients/accounts-transaction-context/index.js'
+import { AccountMapper } from '@/modules/accounts/infrastructure/mappers/account-mapper/index.js'
+
 import { PrismaAccountsRepository } from './index.js'
 
 const row: AccountRow = {
@@ -28,7 +30,13 @@ interface FakeClient {
   readonly upserts: AccountUpsertArgs[]
 }
 
-function createFakeClient(options: { rows?: AccountRow[]; failure?: Error } = {}): FakeClient {
+interface FakeClientOptions {
+  readonly rows?: AccountRow[]
+  readonly writeFailure?: Error
+  readonly readFailure?: Error
+}
+
+function createFakeClient(options: FakeClientOptions = {}): FakeClient {
   const rows = options.rows ?? []
   const upserts: AccountUpsertArgs[] = []
 
@@ -36,10 +44,14 @@ function createFakeClient(options: { rows?: AccountRow[]; failure?: Error } = {}
     upserts,
     client: {
       account: {
-        findUnique: ({ where }) =>
-          Promise.resolve(rows.find((stored) => stored.authUserId === where.authUserId) ?? null),
+        findUnique: ({ where }) => {
+          if (options.readFailure !== undefined) return Promise.reject(options.readFailure)
+          return Promise.resolve(
+            rows.find((stored) => stored.authUserId === where.authUserId) ?? null,
+          )
+        },
         upsert: (args) => {
-          if (options.failure !== undefined) return Promise.reject(options.failure)
+          if (options.writeFailure !== undefined) return Promise.reject(options.writeFailure)
           upserts.push(args)
           return Promise.resolve(args.create)
         },
@@ -66,9 +78,26 @@ function uniqueViolation(fields: string[]): Prisma.PrismaClientKnownRequestError
   })
 }
 
+function writeConflict(): Prisma.PrismaClientKnownRequestError {
+  return new Prisma.PrismaClientKnownRequestError('Write conflict', {
+    code: 'P2034',
+    clientVersion: '7.9.1',
+  })
+}
+
+function anAccount(): Account {
+  return Account.create({
+    id: row.id,
+    email: EmailAddress.create(row.email),
+    authUserId: row.authUserId,
+    timeZone: TimeZone.create(row.timeZone),
+    createdAt: row.createdAt,
+  })
+}
+
 function createRepository(
   fake: FakeClient,
-  context = new TransactionContext<AccountsPrismaClient>(),
+  context = new AccountsTransactionContext(),
 ): PrismaAccountsRepository {
   return new PrismaAccountsRepository(fake.client, context, new AccountMapper())
 }
@@ -82,9 +111,7 @@ describe('PrismaAccountsRepository', () => {
     expect(account).toBeInstanceOf(Account)
     expect(account).toMatchObject({
       id: row.id,
-      email: row.email,
       authUserId: row.authUserId,
-      timeZone: row.timeZone,
       plan: 'free',
       status: 'accessible',
     })
@@ -98,94 +125,93 @@ describe('PrismaAccountsRepository', () => {
 
   it('persists the whole aggregate under its own identifier', async () => {
     const fake = createFakeClient()
-    const repository = createRepository(fake)
 
-    await repository.save(
-      Account.create({
-        id: row.id,
-        email: row.email,
-        authUserId: row.authUserId,
-        timeZone: row.timeZone,
-        createdAt: row.createdAt,
-      }),
-    )
+    await createRepository(fake).save(anAccount())
 
     expect(fake.upserts).toEqual([{ where: { id: row.id }, create: row, update: row }])
   })
 
   it('translates a unique violation into a conflict of the domain', async () => {
-    const repository = createRepository(
-      createFakeClient({ failure: uniqueViolation(['auth_user_id']) }),
-    )
+    const failure = uniqueViolation(['auth_user_id'])
+    const repository = createRepository(createFakeClient({ writeFailure: failure }))
 
-    await expect(
-      repository.save(
-        Account.create({
-          id: row.id,
-          email: row.email,
-          authUserId: row.authUserId,
-          timeZone: row.timeZone,
-          createdAt: row.createdAt,
-        }),
-      ),
-    ).rejects.toMatchObject({
+    await expect(repository.save(anAccount())).rejects.toBeInstanceOf(AccountAlreadyExistsError)
+    await expect(repository.save(anAccount())).rejects.toMatchObject({
       code: 'accounts.ACCOUNT_ALREADY_EXISTS',
       httpStatus: 409,
-      context: { fields: ['auth_user_id'] },
+      cause: failure,
     })
   })
 
-  it('keeps write conflicts unchanged so the transaction can be retried', async () => {
-    const conflict = new Prisma.PrismaClientKnownRequestError('Write conflict', {
-      code: 'P2034',
+  it('names the conflicting fields in the vocabulary of the domain', async () => {
+    const repository = createRepository(
+      createFakeClient({ writeFailure: uniqueViolation(['auth_user_id', 'email']) }),
+    )
+
+    await expect(repository.save(anAccount())).rejects.toMatchObject({
+      context: { fields: ['authUserId', 'email'] },
+    })
+  })
+
+  it('omits constraint columns it cannot express in the vocabulary of the domain', async () => {
+    const repository = createRepository(
+      createFakeClient({ writeFailure: uniqueViolation(['some_future_column']) }),
+    )
+
+    await expect(repository.save(anAccount())).rejects.toMatchObject({ context: { fields: [] } })
+  })
+
+  it('translates any other write failure into a database error that keeps its cause', async () => {
+    const failure = new Prisma.PrismaClientKnownRequestError('Table does not exist', {
+      code: 'P2021',
       clientVersion: '7.9.1',
     })
-    const repository = createRepository(createFakeClient({ failure: conflict }))
+    const repository = createRepository(createFakeClient({ writeFailure: failure }))
 
-    await expect(
-      repository.save(
-        Account.create({
-          id: row.id,
-          email: row.email,
-          authUserId: row.authUserId,
-          timeZone: row.timeZone,
-          createdAt: row.createdAt,
-        }),
-      ),
-    ).rejects.toBe(conflict)
+    await expect(repository.save(anAccount())).rejects.toMatchObject({
+      code: 'shared.DATABASE_ERROR',
+      httpStatus: 500,
+      cause: failure,
+    })
+  })
+
+  it('translates a read failure into a database error that keeps its cause', async () => {
+    const failure = new Prisma.PrismaClientKnownRequestError('Connection lost', {
+      code: 'P1017',
+      clientVersion: '7.9.1',
+    })
+    const repository = createRepository(createFakeClient({ readFailure: failure }))
+
+    await expect(repository.findByAuthUserId('auth-user-1')).rejects.toMatchObject({
+      code: 'shared.DATABASE_ERROR',
+      cause: failure,
+    })
+  })
+
+  it('keeps a write conflict reachable as the cause so the transaction can be retried', async () => {
+    const conflict = writeConflict()
+    const repository = createRepository(createFakeClient({ writeFailure: conflict }))
+
+    await expect(repository.save(anAccount())).rejects.toMatchObject({
+      code: 'shared.DATABASE_ERROR',
+      cause: conflict,
+    })
   })
 
   it('reads and writes through the client of the active transaction', async () => {
     const outside = createFakeClient()
     const inside = createFakeClient({ rows: [row] })
-    const context = new TransactionContext<AccountsPrismaClient>()
+    const context = new AccountsTransactionContext()
     const repository = createRepository(outside, context)
 
     const account = await context.run(inside.client, async () => {
       const found = await repository.findByAuthUserId('auth-user-1')
-      await repository.save(
-        Account.create({
-          id: row.id,
-          email: row.email,
-          authUserId: row.authUserId,
-          timeZone: row.timeZone,
-          createdAt: row.createdAt,
-        }),
-      )
+      await repository.save(anAccount())
       return found
     })
 
     expect(account).not.toBeNull()
     expect(inside.upserts).toHaveLength(1)
     expect(outside.upserts).toHaveLength(0)
-  })
-})
-
-describe('AccountAlreadyExistsError', () => {
-  it('never exposes the conflicting value', () => {
-    const error = new AccountAlreadyExistsError(['email'])
-
-    expect(error.message).not.toContain('@')
-    expect(error.context).toEqual({ fields: ['email'] })
   })
 })

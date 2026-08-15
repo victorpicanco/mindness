@@ -1,4 +1,4 @@
-import { InvalidAccountValueError } from '../../errors/invalid-account-value-error/index.js'
+import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
 
 const DEFAULT_TIME_ZONE = 'America/Sao_Paulo'
 
@@ -22,11 +22,17 @@ export class TimeZone {
     return new TimeZone(value)
   }
 
-  static fromBrowser(value: string | undefined): TimeZone {
+  // An unusable time zone is not a rejection: the account keeps the product default
+  // until the person corrects it (RF-001, bloco 1).
+  static fromOptional(value: string | undefined): TimeZone {
     if (value === undefined || !isIanaTimeZone(value)) {
       return new TimeZone(DEFAULT_TIME_ZONE)
     }
 
     return new TimeZone(value)
+  }
+
+  equals(other: TimeZone): boolean {
+    return this.value === other.value
   }
 }

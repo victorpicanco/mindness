@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { Account } from '../../../domain/entities/account/index.js'
-import type { AccountRow } from '../../clients/accounts-prisma-client/index.js'
+import { Account } from '@/modules/accounts/domain/entities/account/index.js'
+import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
+import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
+import type { AccountRow } from '@/modules/accounts/infrastructure/clients/accounts-prisma-client/index.js'
 
 import { AccountMapper } from './index.js'
 
@@ -22,18 +24,37 @@ describe('AccountMapper', () => {
     expect(account).toBeInstanceOf(Account)
     expect(account).toMatchObject({
       id: row.id,
-      email: row.email,
       authUserId: row.authUserId,
-      timeZone: row.timeZone,
       plan: 'free',
       status: 'accessible',
       createdAt: row.createdAt,
     })
   })
 
+  it('rebuilds the persisted columns as validated value objects', () => {
+    const account = new AccountMapper().toDomain(row)
+
+    expect(account.email).toBeInstanceOf(EmailAddress)
+    expect(account.email.equals(EmailAddress.create(row.email))).toBe(true)
+    expect(account.timeZone).toBeInstanceOf(TimeZone)
+    expect(account.timeZone.equals(TimeZone.create(row.timeZone))).toBe(true)
+  })
+
   it('maps the aggregate back to the persisted row without losing state', () => {
     const mapper = new AccountMapper()
 
     expect(mapper.toPersistence(mapper.toDomain(row))).toEqual(row)
+  })
+
+  it('maps a freshly created aggregate to its persisted row', () => {
+    const account = Account.create({
+      id: row.id,
+      email: EmailAddress.create(row.email),
+      authUserId: row.authUserId,
+      timeZone: TimeZone.create(row.timeZone),
+      createdAt: row.createdAt,
+    })
+
+    expect(new AccountMapper().toPersistence(account)).toEqual(row)
   })
 })

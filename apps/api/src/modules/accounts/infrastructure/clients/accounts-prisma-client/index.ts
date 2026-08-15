@@ -1,3 +1,4 @@
+import type { PrismaClient } from '@/generated/prisma/client.js'
 import type { AccountPlan, AccountStatus } from '@/generated/prisma/enums.js'
 
 export interface AccountRow {
@@ -33,3 +34,12 @@ export interface AccountsPrismaTransactionRunner {
     options: TransactionOptions,
   ): Promise<T>
 }
+
+type AssignableTo<TSource extends TTarget, TTarget> = TSource
+
+// Nothing wires the generated client to this narrowed surface yet, so this alias is what
+// makes a divergent schema fail at typecheck instead of at composition time.
+export type PrismaClientCoversAccounts = AssignableTo<
+  PrismaClient,
+  AccountsPrismaClient & AccountsPrismaTransactionRunner
+>

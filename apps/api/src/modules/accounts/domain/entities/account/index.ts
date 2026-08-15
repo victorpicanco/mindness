@@ -1,29 +1,56 @@
-export interface CreateAccountParams {
-  readonly id: string
-  readonly email: string
-  readonly authUserId: string
-  readonly timeZone: string
-  readonly createdAt: Date
+import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
+import type { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
+import type { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
+
+import type {
+  AccountPlan,
+  AccountStatus,
+  CreateAccountParams,
+  ReconstituteAccountParams,
+} from './types.js'
+
+const INITIAL_PLAN: AccountPlan = 'free'
+const INITIAL_STATUS: AccountStatus = 'accessible'
+
+function requireIdentifier(value: string, field: string): string {
+  if (value.trim().length === 0) {
+    throw new InvalidAccountValueError(field)
+  }
+
+  return value
 }
 
 export class Account {
-  readonly plan = 'free'
-  readonly status = 'accessible'
-
   private constructor(
     readonly id: string,
-    readonly email: string,
+    readonly email: EmailAddress,
     readonly authUserId: string,
-    readonly timeZone: string,
+    readonly timeZone: TimeZone,
+    readonly plan: AccountPlan,
+    readonly status: AccountStatus,
     readonly createdAt: Date,
   ) {}
 
   static create(params: CreateAccountParams): Account {
     return new Account(
-      params.id,
+      requireIdentifier(params.id, 'id'),
       params.email,
-      params.authUserId,
+      requireIdentifier(params.authUserId, 'authUserId'),
       params.timeZone,
+      INITIAL_PLAN,
+      INITIAL_STATUS,
+      params.createdAt,
+    )
+  }
+
+  static reconstitute(params: ReconstituteAccountParams): Account {
+    return new Account(
+      requireIdentifier(params.id, 'id'),
+      params.email,
+      requireIdentifier(params.authUserId, 'authUserId'),
+      params.timeZone,
+      params.plan,
+      params.status,
       params.createdAt,
     )
   }

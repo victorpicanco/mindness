@@ -1,4 +1,4 @@
-import { InvalidAccountValueError } from '../../errors/invalid-account-value-error/index.js'
+import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -11,5 +11,9 @@ export class EmailAddress {
     }
 
     return new EmailAddress(value.toLowerCase())
+  }
+
+  equals(other: EmailAddress): boolean {
+    return this.value === other.value
   }
 }

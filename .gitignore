@@ -31,7 +31,7 @@ Thumbs.db
 
 # documentation — ignore the content, keep the versioned laws
 docs/*
-!docs/architecture/
+!docs/architecture/*
 
 # local agent instructions
 CLAUDE.md

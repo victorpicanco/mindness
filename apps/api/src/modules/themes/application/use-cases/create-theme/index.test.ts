@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { ThemeCategory } from '@/modules/themes/domain/entities/theme-category/index.js'
 import type { Theme } from '@/modules/themes/domain/entities/theme/index.js'
-import { ThemeCategoryNotFoundError } from '@/modules/themes/domain/errors/theme-category-not-found-error/index.js'
+import { ThemeCategorySlugNotFoundError } from '@/modules/themes/domain/errors/theme-category-slug-not-found-error/index.js'
 import { ThemeTitleAlreadyUsedError } from '@/modules/themes/domain/errors/theme-title-already-used-error/index.js'
 import { CategorySlug } from '@/modules/themes/domain/value-objects/category-slug/index.js'
 import type { ThemeCategoriesRepository } from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
@@ -199,7 +199,14 @@ describe('CreateThemeUseCase', () => {
         categorySlug: 'unknown-category',
         difficulty: 'easy',
       }),
-    ).rejects.toBeInstanceOf(ThemeCategoryNotFoundError)
+    ).rejects.toBeInstanceOf(ThemeCategorySlugNotFoundError)
+    await expect(
+      harness.useCase.execute({
+        title: 'How to give feedback',
+        categorySlug: 'unknown-category',
+        difficulty: 'easy',
+      }),
+    ).rejects.toMatchObject({ context: { categorySlug: 'unknown-category' } })
 
     expect(harness.eventPublisher.published).toContainEqual(
       expect.objectContaining({

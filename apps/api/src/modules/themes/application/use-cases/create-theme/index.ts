@@ -1,7 +1,7 @@
 import { Theme } from '@/modules/themes/domain/entities/theme/index.js'
 import { ThemeRejected } from '@/modules/themes/domain/events/theme-rejected/index.js'
 import { InvalidThemeValueError } from '@/modules/themes/domain/errors/invalid-theme-value-error/index.js'
-import { ThemeCategoryNotFoundError } from '@/modules/themes/domain/errors/theme-category-not-found-error/index.js'
+import { ThemeCategorySlugNotFoundError } from '@/modules/themes/domain/errors/theme-category-slug-not-found-error/index.js'
 import { ThemeTitleAlreadyUsedError } from '@/modules/themes/domain/errors/theme-title-already-used-error/index.js'
 import type { Clock } from '@/modules/themes/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/themes/domain/ports/event-publisher/index.js'
@@ -30,7 +30,7 @@ export class CreateThemeUseCase {
       const title = ThemeTitle.create(input.title)
       const category = await this.dependencies.categories.findBySlug(categorySlug.value)
 
-      if (category === null) throw new ThemeCategoryNotFoundError(categorySlug.value)
+      if (category === null) throw new ThemeCategorySlugNotFoundError(categorySlug.value)
 
       const existingTheme = await this.dependencies.themes.findByNormalizedTitle({
         categoryId: category.id,
@@ -77,16 +77,16 @@ export class CreateThemeUseCase {
 
   private isRejection(
     error: unknown,
-  ): error is InvalidThemeValueError | ThemeCategoryNotFoundError | ThemeTitleAlreadyUsedError {
+  ): error is InvalidThemeValueError | ThemeCategorySlugNotFoundError | ThemeTitleAlreadyUsedError {
     return (
       error instanceof InvalidThemeValueError ||
-      error instanceof ThemeCategoryNotFoundError ||
+      error instanceof ThemeCategorySlugNotFoundError ||
       error instanceof ThemeTitleAlreadyUsedError
     )
   }
 
   private toIssue(
-    error: InvalidThemeValueError | ThemeCategoryNotFoundError | ThemeTitleAlreadyUsedError,
+    error: InvalidThemeValueError | ThemeCategorySlugNotFoundError | ThemeTitleAlreadyUsedError,
   ): {
     readonly field: string
     readonly reason: string
@@ -95,7 +95,7 @@ export class CreateThemeUseCase {
       const field = error.context.field
       return { field: typeof field === 'string' ? field : 'theme', reason: 'is invalid' }
     }
-    if (error instanceof ThemeCategoryNotFoundError) {
+    if (error instanceof ThemeCategorySlugNotFoundError) {
       return { field: 'category', reason: 'not found' }
     }
     return { field: 'title', reason: 'already used' }

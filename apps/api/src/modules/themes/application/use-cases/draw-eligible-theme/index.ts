@@ -1,14 +1,10 @@
-import { ThemePoolLow } from '@/modules/themes/domain/events/theme-pool-low/index.js'
-import { ThemeCategoryNotFoundError } from '@/modules/themes/domain/errors/theme-category-not-found-error/index.js'
+import { ThemeCategorySlugNotFoundError } from '@/modules/themes/domain/errors/theme-category-slug-not-found-error/index.js'
 import type { Clock } from '@/modules/themes/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/themes/domain/ports/event-publisher/index.js'
 import type { IdGenerator } from '@/modules/themes/domain/ports/id-generator/index.js'
 import type { ThemeCategoriesRepository } from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
 import type { ThemesRepository } from '@/modules/themes/domain/repositories/themes-repository/index.js'
-import {
-  THEME_POOL_MINIMUM,
-  ThemePoolMonitor,
-} from '@/modules/themes/domain/services/theme-pool-monitor/index.js'
+import { ThemePoolMonitor } from '@/modules/themes/domain/services/theme-pool-monitor/index.js'
 
 import type { DrawEligibleThemeInput, DrawEligibleThemeOutput } from './types.js'
 
@@ -25,24 +21,20 @@ export class DrawEligibleThemeUseCase {
 
   async execute(input: DrawEligibleThemeInput): Promise<DrawEligibleThemeOutput | null> {
     const category = await this.dependencies.categories.findBySlug(input.categorySlug)
-    if (category === null) throw new ThemeCategoryNotFoundError(input.categorySlug)
+    if (category === null) throw new ThemeCategorySlugNotFoundError(input.categorySlug)
 
     const combination = { categoryId: category.id, difficulty: input.difficulty }
     const theme = await this.dependencies.themes.drawPublished(combination)
     const publishedCount = await this.dependencies.themes.countPublishedBy(combination)
 
-    if (ThemePoolMonitor.evaluate(publishedCount) !== 'healthy') {
-      await this.dependencies.eventPublisher.publish(
-        ThemePoolLow.create({
-          eventId: this.dependencies.idGenerator.generate(),
-          occurredAt: this.dependencies.clock.now(),
-          categorySlug: category.slug.value,
-          difficulty: input.difficulty,
-          publishedCount,
-          minimum: THEME_POOL_MINIMUM,
-        }),
-      )
-    }
+    const event = ThemePoolMonitor.createLowAlert({
+      eventId: this.dependencies.idGenerator.generate(),
+      occurredAt: this.dependencies.clock.now(),
+      categorySlug: category.slug.value,
+      difficulty: input.difficulty,
+      publishedCount,
+    })
+    if (event !== null) await this.dependencies.eventPublisher.publish(event)
 
     if (theme === null) return null
 

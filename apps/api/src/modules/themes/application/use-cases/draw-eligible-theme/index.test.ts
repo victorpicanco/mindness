@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { ThemeCategory } from '@/modules/themes/domain/entities/theme-category/index.js'
 import { Theme } from '@/modules/themes/domain/entities/theme/index.js'
-import { ThemeCategoryNotFoundError } from '@/modules/themes/domain/errors/theme-category-not-found-error/index.js'
+import { ThemeCategorySlugNotFoundError } from '@/modules/themes/domain/errors/theme-category-slug-not-found-error/index.js'
 import { CategorySlug } from '@/modules/themes/domain/value-objects/category-slug/index.js'
 import { ThemeTitle } from '@/modules/themes/domain/value-objects/theme-title/index.js'
 import type { ThemeCategoriesRepository } from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
@@ -221,11 +221,14 @@ describe('DrawEligibleThemeUseCase', () => {
     )
   })
 
-  it('throws ThemeCategoryNotFoundError when the category does not exist', async () => {
+  it('throws ThemeCategorySlugNotFoundError when the category does not exist', async () => {
     const harness = createHarness()
 
     await expect(
       harness.useCase.execute({ categorySlug: 'missing', difficulty: 'balanced' }),
-    ).rejects.toBeInstanceOf(ThemeCategoryNotFoundError)
+    ).rejects.toBeInstanceOf(ThemeCategorySlugNotFoundError)
+    await expect(
+      harness.useCase.execute({ categorySlug: 'missing', difficulty: 'balanced' }),
+    ).rejects.toMatchObject({ context: { categorySlug: 'missing' } })
   })
 })

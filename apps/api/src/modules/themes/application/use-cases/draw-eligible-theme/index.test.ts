@@ -5,13 +5,93 @@ import { Theme } from '@/modules/themes/domain/entities/theme/index.js'
 import { ThemeCategoryNotFoundError } from '@/modules/themes/domain/errors/theme-category-not-found-error/index.js'
 import { CategorySlug } from '@/modules/themes/domain/value-objects/category-slug/index.js'
 import { ThemeTitle } from '@/modules/themes/domain/value-objects/theme-title/index.js'
-import { InMemoryThemeCategoriesRepository } from '@/modules/themes/infrastructure/repositories/in-memory-theme-categories-repository/index.js'
-import { InMemoryThemesRepository } from '@/modules/themes/infrastructure/repositories/in-memory-themes-repository/index.js'
+import type { ThemeCategoriesRepository } from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
+import type {
+  ThemeCombination,
+  ThemesRepository,
+} from '@/modules/themes/domain/repositories/themes-repository/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 
 import { DrawEligibleThemeUseCase } from './index.js'
 
 const NOW = new Date('2026-08-16T12:00:00.000Z')
+
+class FakeThemesRepository implements ThemesRepository {
+  readonly themes: Theme[] = []
+
+  findById(themeId: string): Promise<Theme | null> {
+    return Promise.resolve(this.themes.find((theme) => theme.id === themeId) ?? null)
+  }
+
+  findByNormalizedTitle(params: {
+    categoryId: string
+    normalizedTitle: string
+  }): Promise<Theme | null> {
+    return Promise.resolve(
+      this.themes.find(
+        (theme) =>
+          theme.categoryId === params.categoryId &&
+          theme.title.normalized === params.normalizedTitle,
+      ) ?? null,
+    )
+  }
+
+  save(theme: Theme): Promise<void> {
+    const index = this.themes.findIndex((candidate) => candidate.id === theme.id)
+    if (index === -1) this.themes.push(theme)
+    else this.themes[index] = theme
+    return Promise.resolve()
+  }
+
+  countPublishedBy(combination: ThemeCombination): Promise<number> {
+    return Promise.resolve(
+      this.themes.filter(
+        (theme) =>
+          theme.categoryId === combination.categoryId &&
+          theme.difficulty === combination.difficulty &&
+          theme.isEligible(),
+      ).length,
+    )
+  }
+
+  drawPublished(combination: ThemeCombination): Promise<Theme | null> {
+    return Promise.resolve(
+      this.themes.find(
+        (theme) =>
+          theme.categoryId === combination.categoryId &&
+          theme.difficulty === combination.difficulty &&
+          theme.isEligible(),
+      ) ?? null,
+    )
+  }
+
+  listPublishedCombinations(): Promise<ThemeCombination[]> {
+    return Promise.resolve([])
+  }
+}
+
+class FakeThemeCategoriesRepository implements ThemeCategoriesRepository {
+  readonly categories: ThemeCategory[] = []
+
+  findById(categoryId: string): Promise<ThemeCategory | null> {
+    return Promise.resolve(this.categories.find((category) => category.id === categoryId) ?? null)
+  }
+
+  findBySlug(slug: string): Promise<ThemeCategory | null> {
+    return Promise.resolve(this.categories.find((category) => category.slug.value === slug) ?? null)
+  }
+
+  save(category: ThemeCategory): Promise<void> {
+    const index = this.categories.findIndex((candidate) => candidate.id === category.id)
+    if (index === -1) this.categories.push(category)
+    else this.categories[index] = category
+    return Promise.resolve()
+  }
+
+  listWithPublishedThemes(): Promise<ThemeCategory[]> {
+    return Promise.resolve([])
+  }
+}
 
 function createTheme(params: {
   id: string
@@ -23,8 +103,8 @@ function createTheme(params: {
 }
 
 function createHarness() {
-  const themes = new InMemoryThemesRepository()
-  const categories = new InMemoryThemeCategoriesRepository(themes)
+  const themes = new FakeThemesRepository()
+  const categories = new FakeThemeCategoriesRepository()
   const eventPublisher = new FakeEventBus()
   let generatedIds = 0
   const useCase = new DrawEligibleThemeUseCase({

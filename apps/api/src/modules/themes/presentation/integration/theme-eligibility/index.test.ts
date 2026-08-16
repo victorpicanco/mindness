@@ -1,3 +1,4 @@
+import Fastify from 'fastify'
 import pino from 'pino'
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 
@@ -16,6 +17,8 @@ import {
   type ThemePoolLowPayload,
 } from '@/modules/themes/domain/events/theme-pool-low/index.js'
 import type { IntegrationEvent } from '@/shared/messaging/integration-event/index.js'
+import { registerThemesModule } from '@/modules/themes/index.js'
+import { ValidationFailedError } from '@/shared/errors/validation-failed-error/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
 
 let integration: ThemesIntegrationContainer
@@ -182,8 +185,40 @@ describe('theme eligibility integration', () => {
     }
   })
 
+  it('does not replace the application error handler', async () => {
+    const app = Fastify({ logger: false })
+    app.setErrorHandler((_error, _request, reply) => {
+      reply.status(418).send({ preserved: true })
+    })
+    app.get('/handler-probe', () => {
+      throw new ValidationFailedError([])
+    })
+
+    registerThemesModule(app, {
+      prisma: integration.prisma,
+      clock: integration.clock,
+      eventPublisher: integration.eventBus,
+      idGenerator: { generate: () => 'event-id' },
+    })
+    await app.ready()
+
+    const response = await app.inject({ method: 'GET', url: '/handler-probe' })
+
+    expect(response.statusCode).toBe(418)
+    expect(response.json()).toEqual({ preserved: true })
+    await app.close()
+  })
+
   it('does not expose the catalog through an HTTP route', async () => {
     const app = buildApp({ logger: pino({ level: 'silent' }) })
+
+    registerThemesModule(app, {
+      prisma: integration.prisma,
+      clock: integration.clock,
+      eventPublisher: integration.eventBus,
+      idGenerator: { generate: () => 'event-id' },
+    })
+    await app.ready()
 
     const response = await app.inject({ method: 'GET', url: '/themes' })
 
@@ -193,5 +228,6 @@ describe('theme eligibility integration', () => {
       error: 'Not Found',
       statusCode: 404,
     })
+    await app.close()
   })
 })

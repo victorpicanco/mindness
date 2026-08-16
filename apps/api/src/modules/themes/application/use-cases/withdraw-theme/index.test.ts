@@ -10,8 +10,7 @@ import type {
 } from '@/modules/themes/domain/repositories/themes-repository/index.js'
 import { CategorySlug } from '@/modules/themes/domain/value-objects/category-slug/index.js'
 import { ThemeTitle } from '@/modules/themes/domain/value-objects/theme-title/index.js'
-import { InMemoryThemeCategoriesRepository } from '@/modules/themes/infrastructure/repositories/in-memory-theme-categories-repository/index.js'
-import { InMemoryThemesRepository } from '@/modules/themes/infrastructure/repositories/in-memory-themes-repository/index.js'
+import type { ThemeCategoriesRepository } from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 
 import { PublishThemeUseCase } from '../publish-theme/index.js'
@@ -21,37 +20,83 @@ import { WithdrawThemeUseCase } from './index.js'
 const NOW = new Date('2026-08-16T12:00:00.000Z')
 
 class CountAfterSaveThemesRepository implements ThemesRepository {
-  private readonly delegate = new InMemoryThemesRepository()
+  private readonly themes: Theme[] = []
   readonly operations: string[] = []
 
-  async findById(themeId: string): Promise<Theme | null> {
-    return this.delegate.findById(themeId)
+  findById(themeId: string): Promise<Theme | null> {
+    return Promise.resolve(this.themes.find((theme) => theme.id === themeId) ?? null)
   }
 
-  async findByNormalizedTitle(params: {
+  findByNormalizedTitle(params: {
     categoryId: string
     normalizedTitle: string
   }): Promise<Theme | null> {
-    return this.delegate.findByNormalizedTitle(params)
+    return Promise.resolve(
+      this.themes.find(
+        (theme) =>
+          theme.categoryId === params.categoryId &&
+          theme.title.normalized === params.normalizedTitle,
+      ) ?? null,
+    )
   }
 
-  async save(theme: Theme): Promise<void> {
-    await this.delegate.save(theme)
+  save(theme: Theme): Promise<void> {
+    const index = this.themes.findIndex((candidate) => candidate.id === theme.id)
+    if (index === -1) this.themes.push(theme)
+    else this.themes[index] = theme
     this.operations.push('save')
+    return Promise.resolve()
   }
 
-  async countPublishedBy(combination: ThemeCombination): Promise<number> {
+  countPublishedBy(combination: ThemeCombination): Promise<number> {
     this.operations.push('countPublishedBy')
 
-    return this.delegate.countPublishedBy(combination)
+    return Promise.resolve(
+      this.themes.filter(
+        (theme) =>
+          theme.categoryId === combination.categoryId &&
+          theme.difficulty === combination.difficulty &&
+          theme.isEligible(),
+      ).length,
+    )
   }
 
-  async drawPublished(combination: ThemeCombination): Promise<Theme | null> {
-    return this.delegate.drawPublished(combination)
+  drawPublished(combination: ThemeCombination): Promise<Theme | null> {
+    return Promise.resolve(
+      this.themes.find(
+        (theme) =>
+          theme.categoryId === combination.categoryId &&
+          theme.difficulty === combination.difficulty &&
+          theme.isEligible(),
+      ) ?? null,
+    )
   }
 
-  async listPublishedCombinations(): Promise<ThemeCombination[]> {
-    return this.delegate.listPublishedCombinations()
+  listPublishedCombinations(): Promise<ThemeCombination[]> {
+    return Promise.resolve([])
+  }
+}
+
+class FakeThemeCategoriesRepository implements ThemeCategoriesRepository {
+  readonly categories: ThemeCategory[] = []
+
+  findById(categoryId: string): Promise<ThemeCategory | null> {
+    return Promise.resolve(this.categories.find((category) => category.id === categoryId) ?? null)
+  }
+
+  findBySlug(slug: string): Promise<ThemeCategory | null> {
+    return Promise.resolve(this.categories.find((category) => category.slug.value === slug) ?? null)
+  }
+
+  save(category: ThemeCategory): Promise<void> {
+    const index = this.categories.findIndex((candidate) => candidate.id === category.id)
+    if (index === -1) this.categories.push(category)
+    else this.categories[index] = category
+    return Promise.resolve()
+  }
+
+  listWithPublishedThemes(): Promise<ThemeCategory[]> {
+    return Promise.resolve([])
   }
 }
 
@@ -67,7 +112,7 @@ function createTheme(id: string): Theme {
 
 function createHarness() {
   const themes = new CountAfterSaveThemesRepository()
-  const categories = new InMemoryThemeCategoriesRepository(themes)
+  const categories = new FakeThemeCategoriesRepository()
   const eventPublisher = new FakeEventBus()
   let generatedIds = 0
   const useCase = new WithdrawThemeUseCase({

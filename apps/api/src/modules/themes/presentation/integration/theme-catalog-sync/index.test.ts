@@ -7,6 +7,7 @@ import {
 } from '@/modules/themes/composition/integration-container.js'
 import { clearThemeData } from '@/modules/themes/composition/integration-fixtures.js'
 import { ThemeRejected } from '@/modules/themes/domain/events/theme-rejected/index.js'
+import { ValidationFailedError } from '@/shared/errors/validation-failed-error/index.js'
 
 let integration: ThemesIntegrationContainer
 
@@ -24,6 +25,22 @@ beforeEach(async () => {
 })
 
 describe('theme catalog sync integration', () => {
+  it('reports structured validation issues for an invalid catalog', async () => {
+    const catalog: unknown = { categories: 'invalid' }
+
+    await expect(
+      synchronizeThemeCatalog(catalog, integration.container.useCases),
+    ).rejects.toMatchObject({
+      code: 'shared.VALIDATION_FAILED',
+      context: {
+        issues: [{ field: 'categories', message: 'Theme catalog categories is invalid' }],
+      },
+    })
+    await expect(
+      synchronizeThemeCatalog(catalog, integration.container.useCases),
+    ).rejects.toBeInstanceOf(ValidationFailedError)
+  })
+
   it('is idempotent and preserves a theme manually withdrawn after the first sync', async () => {
     const catalog: unknown = {
       categories: [

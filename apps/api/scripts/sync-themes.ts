@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 import { Type } from '@fastify/type-provider-typebox'
+import type { TLocalizedValidationError } from 'typebox/error'
 import { Value } from 'typebox/value'
 
 import { loadConfig } from '@/config.js'
@@ -15,6 +16,8 @@ import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
 import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import { InProcessEventBus } from '@/shared/messaging/in-process-event-bus/index.js'
 import { SystemClock } from '@/shared/time/system-clock/index.js'
+import type { FieldIssue } from '@/shared/errors/validation-failed-error/index.js'
+import { ValidationFailedError } from '@/shared/errors/validation-failed-error/index.js'
 
 const ThemeCatalogSchema = Type.Object(
   {
@@ -51,12 +54,20 @@ const ThemeCatalogSchema = Type.Object(
 
 type ThemeCatalogUseCases = ThemesContainer['useCases']
 
+function issuesFromValidationError(error: TLocalizedValidationError): FieldIssue[] {
+  const field = error.instancePath.replace(/^\//, '').replace(/\//g, '.')
+
+  return [{ field: field || 'catalog', message: `Theme catalog ${field || 'catalog'} is invalid` }]
+}
+
 export async function synchronizeThemeCatalog(
   catalog: unknown,
   useCases: Pick<ThemeCatalogUseCases, 'synchronizeThemeCatalog'>,
 ): Promise<SynchronizeThemeCatalogOutput> {
   if (!Value.Check(ThemeCatalogSchema, catalog)) {
-    throw new TypeError('The theme catalog has an invalid structure')
+    throw new ValidationFailedError(
+      Value.Errors(ThemeCatalogSchema, catalog).flatMap(issuesFromValidationError),
+    )
   }
 
   return useCases.synchronizeThemeCatalog.execute(catalog)

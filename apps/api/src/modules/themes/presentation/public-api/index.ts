@@ -4,7 +4,8 @@ import type {
 } from '@/modules/themes/application/use-cases/draw-eligible-theme/index.js'
 import type { FindThemeByIdOutput } from '@/modules/themes/application/use-cases/find-theme-by-id/index.js'
 import type { ListThemeCategoriesOutput } from '@/modules/themes/application/use-cases/list-theme-categories/index.js'
-import type { ThemeDifficulty } from '@/modules/themes/domain/entities/theme/index.js'
+
+type ThemeDifficulty = 'easy' | 'balanced' | 'hard'
 
 export interface PublicTheme {
   readonly themeId: string

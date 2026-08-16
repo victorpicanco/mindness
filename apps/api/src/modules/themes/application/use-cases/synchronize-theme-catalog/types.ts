@@ -26,6 +26,13 @@ export interface ThemePoolReport {
   readonly minimum: number
 }
 
+export interface ThemeCatalogDivergence {
+  readonly categorySlug: string
+  readonly title: string
+  readonly reason: 'manual_withdrawal_preserved'
+}
+
 export interface SynchronizeThemeCatalogOutput {
   readonly poolReports: readonly ThemePoolReport[]
+  readonly divergences: readonly ThemeCatalogDivergence[]
 }

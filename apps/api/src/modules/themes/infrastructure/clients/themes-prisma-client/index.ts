@@ -1,5 +1,4 @@
 import type {
-  PrismaClient,
   Theme,
   ThemeCategory,
   ThemeDifficulty,
@@ -57,9 +56,16 @@ export interface ThemesPrismaClient {
       }
     }): Promise<ThemeCategoryRow[]>
   }
-  $queryRaw(query: TemplateStringsArray, ...values: readonly unknown[]): Promise<ThemeRow[]>
+  $queryRaw(query: TemplateStringsArray, ...values: readonly unknown[]): Promise<unknown>
 }
 
-type AssignableTo<TSource extends TTarget, TTarget> = TSource
+export interface ThemesTransactionOptions {
+  readonly isolationLevel: 'Serializable'
+}
 
-export type PrismaClientCoversThemes = AssignableTo<PrismaClient, ThemesPrismaClient>
+export interface ThemesPrismaTransactionRunner {
+  $transaction<T>(
+    operation: (transaction: ThemesPrismaClient) => Promise<T>,
+    options: ThemesTransactionOptions,
+  ): Promise<T>
+}

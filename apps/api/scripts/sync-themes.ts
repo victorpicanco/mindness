@@ -6,18 +6,16 @@ import type { TLocalizedValidationError } from 'typebox/error'
 import { Value } from 'typebox/value'
 
 import { loadConfig } from '@/config.js'
-import {
-  createThemesContainer,
-  type ThemesContainer,
-} from '@/modules/themes/composition/container.js'
-import type { SynchronizeThemeCatalogOutput } from '@/modules/themes/application/use-cases/synchronize-theme-catalog/index.js'
+import { createThemesContainer } from '@/modules/themes/index.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
+import {
+  ValidationFailedError,
+  type FieldIssue,
+} from '@/shared/errors/validation-failed-error/index.js'
 import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
 import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import { InProcessEventBus } from '@/shared/messaging/in-process-event-bus/index.js'
 import { SystemClock } from '@/shared/time/system-clock/index.js'
-import type { FieldIssue } from '@/shared/errors/validation-failed-error/index.js'
-import { ValidationFailedError } from '@/shared/errors/validation-failed-error/index.js'
 
 const ThemeCatalogSchema = Type.Object(
   {
@@ -52,7 +50,15 @@ const ThemeCatalogSchema = Type.Object(
   { additionalProperties: false },
 )
 
-type ThemeCatalogUseCases = ThemesContainer['useCases']
+type ThemeCatalogUseCases = ReturnType<typeof createThemesContainer>['useCases']
+type CatalogSyncResult = Awaited<
+  ReturnType<ThemeCatalogUseCases['synchronizeThemeCatalog']['execute']>
+>
+
+export interface CatalogReport {
+  readonly lines: readonly string[]
+  readonly hasFindings: boolean
+}
 
 function issuesFromValidationError(error: TLocalizedValidationError): FieldIssue[] {
   const field = error.instancePath.replace(/^\//, '').replace(/\//g, '.')
@@ -63,7 +69,7 @@ function issuesFromValidationError(error: TLocalizedValidationError): FieldIssue
 export async function synchronizeThemeCatalog(
   catalog: unknown,
   useCases: Pick<ThemeCatalogUseCases, 'synchronizeThemeCatalog'>,
-): Promise<SynchronizeThemeCatalogOutput> {
+): Promise<CatalogSyncResult> {
   if (!Value.Check(ThemeCatalogSchema, catalog)) {
     throw new ValidationFailedError(
       Value.Errors(ThemeCatalogSchema, catalog).flatMap(issuesFromValidationError),
@@ -73,11 +79,21 @@ export async function synchronizeThemeCatalog(
   return useCases.synchronizeThemeCatalog.execute(catalog)
 }
 
-function printPoolReports(result: SynchronizeThemeCatalogOutput): void {
-  for (const report of result.poolReports) {
-    console.log(
-      `${report.categorySlug} / ${report.difficulty}: ${report.publishedCount}/${report.minimum} published`,
-    )
+export function buildCatalogReport(result: CatalogSyncResult): CatalogReport {
+  const poolLines = result.poolReports.map(
+    (report) =>
+      `pool  ${report.categorySlug} / ${report.difficulty}: ${report.publishedCount}/${report.minimum} published`,
+  )
+  const divergenceLines = result.divergences.map(
+    (divergence) =>
+      `drift ${divergence.categorySlug} / "${divergence.title}": manual withdrawal preserved`,
+  )
+
+  return {
+    lines: [...poolLines, ...divergenceLines],
+    hasFindings:
+      result.divergences.length > 0 ||
+      result.poolReports.some((report) => report.publishedCount < report.minimum),
   }
 }
 
@@ -98,11 +114,9 @@ async function run(): Promise<void> {
   try {
     const catalogPath = new URL('../prisma/catalog/themes.json', import.meta.url)
     const catalog: unknown = JSON.parse(await readFile(catalogPath, 'utf8'))
-    const result = await synchronizeThemeCatalog(catalog, container.useCases)
-    printPoolReports(result)
-    if (result.poolReports.some((report) => report.publishedCount < report.minimum)) {
-      process.exitCode = 1
-    }
+    const report = buildCatalogReport(await synchronizeThemeCatalog(catalog, container.useCases))
+    for (const line of report.lines) console.log(line)
+    if (report.hasFindings) process.exitCode = 1
   } finally {
     await prisma.$disconnect()
   }

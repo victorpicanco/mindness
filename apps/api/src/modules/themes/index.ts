@@ -1,4 +1,5 @@
 export { createThemesFacade } from './composition/facade.js'
+export { createThemesContainer } from './composition/container.js'
 export { registerThemesModule } from './composition/register.js'
 export type { ThemesModuleDeps } from './composition/container.js'
 export type { ThemesPublicApi } from './presentation/public-api/index.js'

@@ -1,43 +1,29 @@
 import { describe, expect, it } from 'vitest'
 
-import { ThemeCategory } from '@/modules/themes/domain/entities/theme-category/index.js'
 import { Theme } from '@/modules/themes/domain/entities/theme/index.js'
-import { InvalidThemeTransitionError } from '@/modules/themes/domain/errors/invalid-theme-transition-error/index.js'
 import { ThemeNotFoundError } from '@/modules/themes/domain/errors/theme-not-found-error/index.js'
+import type { ThemePoolAudit } from '@/modules/themes/domain/ports/theme-pool-audit/index.js'
 import type {
   ThemeCombination,
   ThemesRepository,
 } from '@/modules/themes/domain/repositories/themes-repository/index.js'
-import { CategorySlug } from '@/modules/themes/domain/value-objects/category-slug/index.js'
 import { ThemeTitle } from '@/modules/themes/domain/value-objects/theme-title/index.js'
-import type { ThemeCategoriesRepository } from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
-import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 
-import { PublishThemeUseCase } from '../publish-theme/index.js'
-import { MoveThemeToDraftUseCase } from '../move-theme-to-draft/index.js'
 import { WithdrawThemeUseCase } from './index.js'
 
 const NOW = new Date('2026-08-16T12:00:00.000Z')
 
-class CountAfterSaveThemesRepository implements ThemesRepository {
+class RecordingThemesRepository implements ThemesRepository {
   private readonly themes: Theme[] = []
-  readonly operations: string[] = []
+
+  constructor(private readonly operations: string[]) {}
 
   findById(themeId: string): Promise<Theme | null> {
     return Promise.resolve(this.themes.find((theme) => theme.id === themeId) ?? null)
   }
 
-  findByNormalizedTitle(params: {
-    categoryId: string
-    normalizedTitle: string
-  }): Promise<Theme | null> {
-    return Promise.resolve(
-      this.themes.find(
-        (theme) =>
-          theme.categoryId === params.categoryId &&
-          theme.title.normalized === params.normalizedTitle,
-      ) ?? null,
-    )
+  findByNormalizedTitle(): Promise<Theme | null> {
+    return Promise.resolve(null)
   }
 
   save(theme: Theme): Promise<void> {
@@ -48,28 +34,12 @@ class CountAfterSaveThemesRepository implements ThemesRepository {
     return Promise.resolve()
   }
 
-  countPublishedBy(combination: ThemeCombination): Promise<number> {
-    this.operations.push('countPublishedBy')
-
-    return Promise.resolve(
-      this.themes.filter(
-        (theme) =>
-          theme.categoryId === combination.categoryId &&
-          theme.difficulty === combination.difficulty &&
-          theme.isEligible(),
-      ).length,
-    )
+  countPublishedBy(): Promise<number> {
+    return Promise.resolve(0)
   }
 
-  drawPublished(combination: ThemeCombination): Promise<Theme | null> {
-    return Promise.resolve(
-      this.themes.find(
-        (theme) =>
-          theme.categoryId === combination.categoryId &&
-          theme.difficulty === combination.difficulty &&
-          theme.isEligible(),
-      ) ?? null,
-    )
+  drawPublished(): Promise<Theme | null> {
+    return Promise.resolve(null)
   }
 
   listPublishedCombinations(): Promise<ThemeCombination[]> {
@@ -77,143 +47,68 @@ class CountAfterSaveThemesRepository implements ThemesRepository {
   }
 }
 
-class FakeThemeCategoriesRepository implements ThemeCategoriesRepository {
-  readonly categories: ThemeCategory[] = []
+class RecordingThemePoolAudit implements ThemePoolAudit {
+  readonly audited: ThemeCombination[] = []
 
-  findById(categoryId: string): Promise<ThemeCategory | null> {
-    return Promise.resolve(this.categories.find((category) => category.id === categoryId) ?? null)
-  }
+  constructor(private readonly operations: string[]) {}
 
-  findBySlug(slug: string): Promise<ThemeCategory | null> {
-    return Promise.resolve(this.categories.find((category) => category.slug.value === slug) ?? null)
-  }
-
-  save(category: ThemeCategory): Promise<void> {
-    const index = this.categories.findIndex((candidate) => candidate.id === category.id)
-    if (index === -1) this.categories.push(category)
-    else this.categories[index] = category
+  record(combination: ThemeCombination): Promise<void> {
+    this.audited.push(combination)
+    this.operations.push('audit')
     return Promise.resolve()
-  }
-
-  listWithPublishedThemes(): Promise<ThemeCategory[]> {
-    return Promise.resolve([])
   }
 }
 
-function createTheme(id: string): Theme {
-  return Theme.create({
+function createHarness() {
+  const operations: string[] = []
+  const themes = new RecordingThemesRepository(operations)
+  const themePoolAudit = new RecordingThemePoolAudit(operations)
+
+  return {
+    operations,
+    themePoolAudit,
+    themes,
+    useCase: new WithdrawThemeUseCase({ themes, themePoolAudit }),
+  }
+}
+
+async function addPublishedTheme(themes: ThemesRepository, id: string): Promise<Theme> {
+  const theme = Theme.create({
     id,
     title: ThemeTitle.create(`Theme ${id}`),
     categoryId: 'category-1',
     difficulty: 'balanced',
     createdAt: NOW,
   })
-}
-
-function createHarness() {
-  const themes = new CountAfterSaveThemesRepository()
-  const categories = new FakeThemeCategoriesRepository()
-  const eventPublisher = new FakeEventBus()
-  let generatedIds = 0
-  const useCase = new WithdrawThemeUseCase({
-    themes,
-    categories,
-    eventPublisher,
-    clock: { now: () => NOW },
-    idGenerator: { generate: () => `event-${(generatedIds += 1)}` },
-  })
-  const publishTheme = new PublishThemeUseCase({
-    themes,
-    categories,
-    eventPublisher,
-    clock: { now: () => NOW },
-    idGenerator: { generate: () => `event-${(generatedIds += 1)}` },
-  })
-  const moveThemeToDraft = new MoveThemeToDraftUseCase({
-    themes,
-    categories,
-    eventPublisher,
-    clock: { now: () => NOW },
-    idGenerator: { generate: () => `event-${(generatedIds += 1)}` },
-  })
-
-  return { categories, eventPublisher, moveThemeToDraft, publishTheme, themes, useCase }
-}
-
-async function addPublishedTheme(themes: ThemesRepository, id: string): Promise<Theme> {
-  const theme = createTheme(id)
   theme.publish()
   await themes.save(theme)
   return theme
 }
 
-async function addCategory(harness: ReturnType<typeof createHarness>): Promise<void> {
-  await harness.categories.save(
-    ThemeCategory.create({
-      id: 'category-1',
-      slug: CategorySlug.create('reflection'),
-      name: 'Reflection',
-    }),
-  )
-}
-
 describe('WithdrawThemeUseCase', () => {
-  it('publishes theme_pool_low after withdrawing the tenth published theme', async () => {
+  it('withdraws the theme and audits the pool of the affected combination', async () => {
     const harness = createHarness()
-    await addCategory(harness)
+    await addPublishedTheme(harness.themes, 'theme-1')
+    harness.operations.length = 0
 
-    for (let index = 1; index <= 10; index += 1) {
-      await addPublishedTheme(harness.themes, `theme-${index}`)
-    }
-
-    await expect(harness.useCase.execute({ themeId: 'theme-10' })).resolves.toEqual({
-      themeId: 'theme-10',
+    await expect(harness.useCase.execute({ themeId: 'theme-1' })).resolves.toEqual({
+      themeId: 'theme-1',
       publicationStatus: 'withdrawn',
     })
 
-    expect(harness.eventPublisher.published).toContainEqual(
-      expect.objectContaining({
-        eventName: 'theme_pool_low',
-        payload: {
-          categorySlug: 'reflection',
-          difficulty: 'balanced',
-          publishedCount: 9,
-          minimum: 10,
-        },
-      }),
-    )
-    expect(harness.themes.operations.slice(-2)).toEqual(['save', 'countPublishedBy'])
+    expect(harness.themePoolAudit.audited).toEqual([
+      { categoryId: 'category-1', difficulty: 'balanced' },
+    ])
   })
 
-  it('does not publish theme_pool_low when ten or more themes remain published', async () => {
+  it('audits the pool only after the transition is persisted', async () => {
     const harness = createHarness()
-    await addCategory(harness)
+    await addPublishedTheme(harness.themes, 'theme-1')
+    harness.operations.length = 0
 
-    for (let index = 1; index <= 11; index += 1) {
-      await addPublishedTheme(harness.themes, `theme-${index}`)
-    }
+    await harness.useCase.execute({ themeId: 'theme-1' })
 
-    await harness.useCase.execute({ themeId: 'theme-11' })
-
-    expect(harness.eventPublisher.published).toHaveLength(0)
-  })
-
-  it('returns a republished withdrawn theme to the eligible draw', async () => {
-    const harness = createHarness()
-    await addCategory(harness)
-    const theme = await addPublishedTheme(harness.themes, 'theme-1')
-
-    await harness.useCase.execute({ themeId: theme.id })
-
-    expect(
-      await harness.themes.drawPublished({ categoryId: 'category-1', difficulty: 'balanced' }),
-    ).toBeNull()
-
-    await harness.publishTheme.execute({ themeId: theme.id })
-
-    await expect(
-      harness.themes.drawPublished({ categoryId: 'category-1', difficulty: 'balanced' }),
-    ).resolves.toMatchObject({ id: theme.id, publicationStatus: 'published' })
+    expect(harness.operations).toEqual(['save', 'audit'])
   })
 
   it('throws ThemeNotFoundError when the theme does not exist', async () => {
@@ -222,18 +117,18 @@ describe('WithdrawThemeUseCase', () => {
     await expect(harness.useCase.execute({ themeId: 'missing' })).rejects.toBeInstanceOf(
       ThemeNotFoundError,
     )
+    expect(harness.themePoolAudit.audited).toEqual([])
   })
 
-  it('does not persist when the transition is invalid', async () => {
+  it('does not persist nor audit when the transition is invalid', async () => {
     const harness = createHarness()
-    await addCategory(harness)
-    const theme = await addPublishedTheme(harness.themes, 'theme-1')
-    await harness.useCase.execute({ themeId: theme.id })
+    await addPublishedTheme(harness.themes, 'theme-1')
+    await harness.useCase.execute({ themeId: 'theme-1' })
+    harness.operations.length = 0
 
-    await expect(harness.moveThemeToDraft.execute({ themeId: theme.id })).rejects.toBeInstanceOf(
-      InvalidThemeTransitionError,
-    )
-
-    expect((await harness.themes.findById(theme.id))?.publicationStatus).toBe('withdrawn')
+    await expect(harness.useCase.execute({ themeId: 'theme-1' })).rejects.toMatchObject({
+      code: 'themes.INVALID_THEME_TRANSITION',
+    })
+    expect(harness.operations).toEqual([])
   })
 })

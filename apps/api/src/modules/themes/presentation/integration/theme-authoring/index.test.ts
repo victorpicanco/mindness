@@ -99,6 +99,32 @@ describe('theme authoring integration', () => {
     }
   })
 
+  it('publishes theme_pool_low with nine published themes after withdrawing the tenth', async () => {
+    await integration.container.useCases.createThemeCategory.execute(createThemeCategoryFixture())
+    let tenthThemeId = ''
+    for (let index = 1; index <= 10; index += 1) {
+      const created = await integration.container.useCases.createTheme.execute(
+        createThemeFixture({ title: `Notice your breathing ${index}` }),
+      )
+      await integration.container.useCases.publishTheme.execute({ themeId: created.themeId })
+      tenthThemeId = created.themeId
+    }
+    integration.reset()
+
+    await integration.container.useCases.withdrawTheme.execute({ themeId: tenthThemeId })
+
+    expect(integration.eventBus.published).toHaveLength(1)
+    expect(integration.eventBus.published[0]).toMatchObject({
+      eventName: 'theme_pool_low',
+      payload: {
+        categorySlug: 'mindfulness',
+        difficulty: 'easy',
+        publishedCount: 9,
+        minimum: 10,
+      },
+    })
+  })
+
   it('keeps a withdrawn theme readable after it leaves the draw', async () => {
     await integration.container.useCases.createThemeCategory.execute(createThemeCategoryFixture())
     const created = await integration.container.useCases.createTheme.execute(createThemeFixture())

@@ -5,12 +5,64 @@ import type {
   ThemeCombination,
   ThemesRepository,
 } from '@/modules/themes/domain/repositories/themes-repository/index.js'
-import type { ThemesPrismaClient } from '@/modules/themes/infrastructure/clients/themes-prisma-client/index.js'
+import type {
+  ThemeRow,
+  ThemesPrismaClient,
+} from '@/modules/themes/infrastructure/clients/themes-prisma-client/index.js'
+import type { ThemesTransactionContext } from '@/modules/themes/infrastructure/clients/themes-transaction-context/index.js'
 import type { ThemeMapper } from '@/modules/themes/infrastructure/mappers/theme-mapper/index.js'
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
 
 const UNIQUE_VIOLATION_CODE = 'P2002'
 const PUBLISHED_STATUS = 'published'
+const TITLE_UNIQUE_COLUMNS = new Set(['category_id', 'normalized_title'])
+
+function isThemeRow(value: unknown): value is ThemeRow {
+  if (typeof value !== 'object' || value === null) return false
+  if (
+    !('id' in value) ||
+    !('categoryId' in value) ||
+    !('title' in value) ||
+    !('normalizedTitle' in value) ||
+    !('difficulty' in value) ||
+    !('publicationStatus' in value) ||
+    !('createdAt' in value)
+  ) {
+    return false
+  }
+
+  return (
+    typeof value.id === 'string' &&
+    typeof value.categoryId === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.normalizedTitle === 'string' &&
+    (value.difficulty === 'easy' ||
+      value.difficulty === 'balanced' ||
+      value.difficulty === 'hard') &&
+    (value.publicationStatus === 'draft' ||
+      value.publicationStatus === 'published' ||
+      value.publicationStatus === 'withdrawn') &&
+    value.createdAt instanceof Date
+  )
+}
+
+function rawThemeRow(raw: unknown, combination: ThemeCombination): ThemeRow | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null
+  if (!isThemeRow(raw[0])) {
+    throw new DatabaseError('Received an invalid published theme row from the database', {
+      context: { categoryId: combination.categoryId, difficulty: combination.difficulty },
+    })
+  }
+
+  return raw[0]
+}
+
+function isTitleUniqueViolation(error: Prisma.PrismaClientKnownRequestError): boolean {
+  const target = error.meta?.target
+  if (!Array.isArray(target) || target.length !== TITLE_UNIQUE_COLUMNS.size) return false
+
+  return target.every((column) => typeof column === 'string' && TITLE_UNIQUE_COLUMNS.has(column))
+}
 
 function isUniqueViolation(error: unknown): error is Prisma.PrismaClientKnownRequestError {
   return (
@@ -21,39 +73,42 @@ function isUniqueViolation(error: unknown): error is Prisma.PrismaClientKnownReq
 export class PrismaThemesRepository implements ThemesRepository {
   constructor(
     private readonly prisma: ThemesPrismaClient,
+    private readonly transactionContext: ThemesTransactionContext,
     private readonly mapper: ThemeMapper,
   ) {}
 
   async findById(themeId: string): Promise<Theme | null> {
+    let row
     try {
-      const row = await this.prisma.theme.findUnique({ where: { id: themeId } })
-
-      return row === null ? null : this.mapper.toDomain(row)
+      row = await this.client().theme.findUnique({ where: { id: themeId } })
     } catch (error) {
       throw new DatabaseError('Failed to read the theme', { cause: error, context: { themeId } })
     }
+
+    return row === null ? null : this.mapper.toDomain(row)
   }
 
   async findByNormalizedTitle(params: {
     categoryId: string
     normalizedTitle: string
   }): Promise<Theme | null> {
+    let row
     try {
-      const row = await this.prisma.theme.findFirst({ where: params })
-
-      return row === null ? null : this.mapper.toDomain(row)
+      row = await this.client().theme.findFirst({ where: params })
     } catch (error) {
       throw new DatabaseError('Failed to read the theme', { cause: error, context: params })
     }
+
+    return row === null ? null : this.mapper.toDomain(row)
   }
 
   async save(theme: Theme): Promise<void> {
     const row = this.mapper.toPersistence(theme)
 
     try {
-      await this.prisma.theme.upsert({ where: { id: row.id }, create: row, update: row })
+      await this.client().theme.upsert({ where: { id: row.id }, create: row, update: row })
     } catch (error) {
-      if (isUniqueViolation(error)) {
+      if (isUniqueViolation(error) && isTitleUniqueViolation(error)) {
         throw new ThemeTitleAlreadyUsedError(row.categoryId, row.normalizedTitle, { cause: error })
       }
 
@@ -66,7 +121,7 @@ export class PrismaThemesRepository implements ThemesRepository {
 
   async countPublishedBy(combination: ThemeCombination): Promise<number> {
     try {
-      return await this.prisma.theme.count({
+      return await this.client().theme.count({
         where: { ...combination, publicationStatus: PUBLISHED_STATUS },
       })
     } catch (error) {
@@ -78,8 +133,9 @@ export class PrismaThemesRepository implements ThemesRepository {
   }
 
   async drawPublished(combination: ThemeCombination): Promise<Theme | null> {
+    let raw: unknown
     try {
-      const rows = await this.prisma.$queryRaw`
+      raw = await this.client().$queryRaw`
         SELECT
           "id",
           "category_id" AS "categoryId",
@@ -95,26 +151,32 @@ export class PrismaThemesRepository implements ThemesRepository {
         ORDER BY random()
         LIMIT 1
       `
-      const row = rows[0]
-
-      return row === undefined ? null : this.mapper.toDomain(row)
     } catch (error) {
       throw new DatabaseError('Failed to draw a published theme', {
         cause: error,
         context: { categoryId: combination.categoryId, difficulty: combination.difficulty },
       })
     }
+
+    const row = rawThemeRow(raw, combination)
+
+    return row === null ? null : this.mapper.toDomain(row)
   }
 
   async listPublishedCombinations(): Promise<ThemeCombination[]> {
     try {
-      return await this.prisma.theme.findMany({
+      const rows = await this.client().theme.findMany({
         where: { publicationStatus: PUBLISHED_STATUS },
         distinct: ['categoryId', 'difficulty'],
         select: { categoryId: true, difficulty: true },
       })
+      return rows.map((row) => ({ categoryId: row.categoryId, difficulty: row.difficulty }))
     } catch (error) {
       throw new DatabaseError('Failed to list published theme combinations', { cause: error })
     }
+  }
+
+  private client(): ThemesPrismaClient {
+    return this.transactionContext.current() ?? this.prisma
   }
 }

@@ -2,7 +2,12 @@ import path from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
+  resolve: {
+    alias: {
+      '@': path.resolve(import.meta.dirname, 'src'),
+      '@scripts': path.resolve(import.meta.dirname, 'scripts'),
+    },
+  },
   test: {
     environment: 'node',
     include: ['src/modules/**/presentation/integration/**/index.test.ts'],

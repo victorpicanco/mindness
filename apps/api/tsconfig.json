@@ -3,7 +3,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "dist",
-    "paths": { "@/*": ["./src/*"] }
+    "paths": { "@/*": ["./src/*"], "@scripts/*": ["./scripts/*"] }
   },
   "include": ["src/**/*.ts", "scripts/**/*.ts", "vitest.config*.ts", "prisma.config.ts"]
 }

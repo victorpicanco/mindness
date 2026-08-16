@@ -14,7 +14,20 @@ function otherModules(self) {
 }
 
 function restrictedImports(patterns) {
-  return { 'no-restricted-imports': ['error', { patterns }] }
+  return {
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          ...patterns,
+          {
+            group: ['../..*'],
+            message: 'LAW-007.8: use an alias instead of a relative import crossing two levels.',
+          },
+        ],
+      },
+    ],
+  }
 }
 
 function moduleConfigs(self) {
@@ -162,6 +175,17 @@ export default tseslint.config(
           selector: "CallExpression[callee.object.name='Reflect'][callee.property.name='get']",
           message:
             'Convenções §2.2: Reflect.get returns any and hides the real contract. Call the member directly.',
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../..*'],
+              message: 'LAW-007.8: use an alias instead of a relative import crossing two levels.',
+            },
+          ],
         },
       ],
     },

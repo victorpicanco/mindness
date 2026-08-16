@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 
-import { synchronizeThemeCatalog } from '../../../../../../scripts/sync-themes.js'
+import { synchronizeThemeCatalog } from '@scripts/sync-themes.js'
 import {
   createThemesIntegrationContainer,
   type ThemesIntegrationContainer,

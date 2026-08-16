@@ -3,7 +3,7 @@ import { ThemeNotFoundError } from '@/modules/themes/domain/errors/theme-not-fou
 import type { ThemeCategoriesRepository } from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
 import type { ThemesRepository } from '@/modules/themes/domain/repositories/themes-repository/index.js'
 
-import type { FindThemeByIdOutput } from './types.js'
+import type { FindThemeByIdInput, FindThemeByIdOutput } from './types.js'
 
 export interface FindThemeByIdDependencies {
   readonly themes: ThemesRepository
@@ -13,9 +13,9 @@ export interface FindThemeByIdDependencies {
 export class FindThemeByIdUseCase {
   constructor(private readonly dependencies: FindThemeByIdDependencies) {}
 
-  async execute(themeId: string): Promise<FindThemeByIdOutput> {
-    const theme = await this.dependencies.themes.findById(themeId)
-    if (theme === null) throw new ThemeNotFoundError(themeId)
+  async execute(input: FindThemeByIdInput): Promise<FindThemeByIdOutput> {
+    const theme = await this.dependencies.themes.findById(input.themeId)
+    if (theme === null) throw new ThemeNotFoundError(input.themeId)
 
     const category = await this.dependencies.categories.findById(theme.categoryId)
     if (category === null) throw new ThemeCategoryNotFoundError(theme.categoryId)
@@ -29,4 +29,4 @@ export class FindThemeByIdUseCase {
   }
 }
 
-export type { FindThemeByIdOutput } from './types.js'
+export type { FindThemeByIdInput, FindThemeByIdOutput } from './types.js'

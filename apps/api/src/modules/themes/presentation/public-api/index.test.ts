@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
+import type { ThemesPublicApi } from './index.js'
 import { ThemesPublicApiImpl } from './index.js'
+
+type Equal<Left, Right> =
+  (<Value>() => Value extends Left ? 1 : 2) extends <Value>() => Value extends Right ? 1 : 2
+    ? true
+    : false
+type Assert<Condition extends true> = Condition
+type ThemesPublicApiExposesOnlyReads = Assert<
+  Equal<keyof ThemesPublicApi, 'drawEligibleTheme' | 'findThemeById' | 'listCategories'>
+>
+
+const themesPublicApiExposesOnlyReads: ThemesPublicApiExposesOnlyReads = true
 
 describe('ThemesPublicApiImpl', () => {
   it('delegates each read operation to its use case and translates the results', async () => {
@@ -20,7 +32,7 @@ describe('ThemesPublicApiImpl', () => {
       },
     }
     const findThemeById = {
-      execute: (themeId: string) => {
+      execute: ({ themeId }: { readonly themeId: string }) => {
         expect(themeId).toBe('theme-1')
 
         return Promise.resolve({
@@ -58,5 +70,16 @@ describe('ThemesPublicApiImpl', () => {
     await expect(api.listCategories()).resolves.toEqual([
       { categoryId: 'category-1', slug: 'reflection', name: 'Reflection' },
     ])
+  })
+
+  it('does not expose catalog write operations', () => {
+    expect(themesPublicApiExposesOnlyReads).toBe(true)
+    const methods = Object.getOwnPropertyNames(ThemesPublicApiImpl.prototype)
+
+    expect(methods).not.toContain('createTheme')
+    expect(methods).not.toContain('publishTheme')
+    expect(methods).not.toContain('moveThemeToDraft')
+    expect(methods).not.toContain('withdrawTheme')
+    expect(methods).not.toContain('synchronizeThemeCatalog')
   })
 })

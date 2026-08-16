@@ -2,8 +2,14 @@ import type {
   DrawEligibleThemeInput,
   DrawEligibleThemeOutput,
 } from '@/modules/themes/application/use-cases/draw-eligible-theme/index.js'
-import type { FindThemeByIdOutput } from '@/modules/themes/application/use-cases/find-theme-by-id/index.js'
-import type { ListThemeCategoriesOutput } from '@/modules/themes/application/use-cases/list-theme-categories/index.js'
+import type {
+  FindThemeByIdInput,
+  FindThemeByIdOutput,
+} from '@/modules/themes/application/use-cases/find-theme-by-id/index.js'
+import type {
+  ListThemeCategoriesInput,
+  ListThemeCategoriesOutput,
+} from '@/modules/themes/application/use-cases/list-theme-categories/index.js'
 
 type ThemeDifficulty = 'easy' | 'balanced' | 'hard'
 
@@ -31,11 +37,11 @@ interface DrawEligibleTheme {
 }
 
 interface FindThemeById {
-  execute(themeId: string): Promise<FindThemeByIdOutput>
+  execute(input: FindThemeByIdInput): Promise<FindThemeByIdOutput>
 }
 
 interface ListThemeCategories {
-  execute(): Promise<ListThemeCategoriesOutput>
+  execute(input: ListThemeCategoriesInput): Promise<ListThemeCategoriesOutput>
 }
 
 export interface ThemesPublicApiDependencies {
@@ -54,11 +60,11 @@ export class ThemesPublicApiImpl implements ThemesPublicApi {
   }
 
   async findThemeById(themeId: string): Promise<PublicTheme> {
-    return this.toPublicTheme(await this.dependencies.findThemeById.execute(themeId))
+    return this.toPublicTheme(await this.dependencies.findThemeById.execute({ themeId }))
   }
 
   async listCategories(): Promise<readonly PublicThemeCategory[]> {
-    const categories = await this.dependencies.listThemeCategories.execute()
+    const categories = await this.dependencies.listThemeCategories.execute(null)
 
     return categories.map((category) => ({
       categoryId: category.categoryId,

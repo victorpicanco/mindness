@@ -1,3 +1,5 @@
+export type ListThemeCategoriesInput = null
+
 export interface ThemeCategoryListItem {
   readonly categoryId: string
   readonly slug: string

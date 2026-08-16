@@ -1,0 +1,6 @@
+export { createThemesFacade } from './composition/facade.js'
+export { registerThemesModule } from './composition/register.js'
+export type { ThemesModuleDeps } from './composition/container.js'
+export type { ThemesPublicApi } from './presentation/public-api/index.js'
+export { ThemePoolLow } from './domain/events/theme-pool-low/index.js'
+export { ThemeRejected } from './domain/events/theme-rejected/index.js'

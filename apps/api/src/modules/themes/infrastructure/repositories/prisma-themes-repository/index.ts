@@ -80,7 +80,14 @@ export class PrismaThemesRepository implements ThemesRepository {
   async drawPublished(combination: ThemeCombination): Promise<Theme | null> {
     try {
       const rows = await this.prisma.$queryRaw`
-        SELECT "id", "category_id", "title", "normalized_title", "difficulty", "publication_status", "created_at"
+        SELECT
+          "id",
+          "category_id" AS "categoryId",
+          "title",
+          "normalized_title" AS "normalizedTitle",
+          "difficulty",
+          "publication_status" AS "publicationStatus",
+          "created_at" AS "createdAt"
         FROM "themes"
         WHERE "category_id" = ${combination.categoryId}
           AND "difficulty" = ${combination.difficulty}::"theme_difficulty"

@@ -2,6 +2,7 @@ import 'dotenv/config'
 
 import { loadConfig } from '@/config.js'
 import { registerAccountsModule } from '@/modules/accounts/index.js'
+import { registerThemesModule } from '@/modules/themes/index.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
 import { registerHealthRoute } from '@/shared/http/health-route/index.js'
@@ -37,6 +38,13 @@ await registerAccountsModule(app, {
     supabaseSecretKey: config.supabaseSecretKey,
     emailConfirmationRedirectUrl: config.emailConfirmationRedirectUrl,
   },
+})
+
+registerThemesModule(app, {
+  prisma,
+  clock,
+  eventPublisher: eventBus,
+  idGenerator,
 })
 
 await app.listen({ port: config.port })

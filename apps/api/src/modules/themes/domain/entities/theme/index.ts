@@ -51,11 +51,22 @@ export class Theme {
   }
 
   private changePublicationStatus(targetStatus: ThemePublicationStatus): void {
-    if (this._publicationStatus === targetStatus) {
+    if (!this.canTransitionTo(targetStatus)) {
       throw new InvalidThemeTransitionError(this._publicationStatus, targetStatus)
     }
 
     this._publicationStatus = targetStatus
+  }
+
+  private canTransitionTo(targetStatus: ThemePublicationStatus): boolean {
+    if (this._publicationStatus === 'draft') {
+      return targetStatus === 'published' || targetStatus === 'withdrawn'
+    }
+    if (this._publicationStatus === 'published') {
+      return targetStatus === 'draft' || targetStatus === 'withdrawn'
+    }
+
+    return targetStatus === 'published'
   }
 }
 

@@ -1,68 +1,121 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 
-import { createThemesContainer } from '@/modules/themes/composition/container.js'
+import {
+  createThemesIntegrationContainer,
+  type ThemesIntegrationContainer,
+} from '@/modules/themes/composition/integration-container.js'
+import {
+  clearThemeData,
+  createThemeCategoryFixture,
+  createThemeFixture,
+} from '@/modules/themes/composition/integration-fixtures.js'
 import { ThemePoolLow } from '@/modules/themes/domain/events/theme-pool-low/index.js'
-import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
-import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
-import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
-import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
+import { ThemeRejected } from '@/modules/themes/domain/events/theme-rejected/index.js'
 
-const now = new Date('2026-08-16T12:00:00.000Z')
-
-let prisma: ReturnType<typeof createPrismaClient>
-let eventBus: FakeEventBus
-let container: ReturnType<typeof createThemesContainer>
+let integration: ThemesIntegrationContainer
 
 beforeAll(() => {
-  prisma = createPrismaClient({ databaseUrl: inject('databaseUrl'), logQueries: false })
-  eventBus = new FakeEventBus()
-  container = createThemesContainer({
-    prisma,
-    clock: new ControllableClock(now),
-    eventPublisher: eventBus,
-    idGenerator: new UuidGenerator(),
-  })
+  integration = createThemesIntegrationContainer({ databaseUrl: inject('databaseUrl') })
 })
 
 afterAll(async () => {
-  await prisma.$disconnect()
+  await integration.close()
 })
 
 beforeEach(async () => {
-  await prisma.$executeRawUnsafe('TRUNCATE TABLE themes, theme_categories RESTART IDENTITY CASCADE')
-  eventBus.published.length = 0
+  await clearThemeData(integration.prisma)
+  integration.reset()
 })
 
-describe('theme authoring composition', () => {
-  it('creates, publishes, persists, and draws a theme through the composed module', async () => {
-    await container.useCases.createThemeCategory.execute({
-      slug: 'mindfulness',
-      name: 'Mindfulness',
-    })
-    const created = await container.useCases.createTheme.execute({
-      title: 'Notice your breathing',
-      categorySlug: 'mindfulness',
-      difficulty: 'easy',
-    })
+describe('theme authoring integration', () => {
+  it('creates and persists a draft theme', async () => {
+    await integration.container.useCases.createThemeCategory.execute(createThemeCategoryFixture())
 
-    await container.useCases.publishTheme.execute({ themeId: created.themeId })
+    const created = await integration.container.useCases.createTheme.execute(createThemeFixture())
 
-    await expect(container.repositories.themes.findById(created.themeId)).resolves.toMatchObject({
+    expect(created.publicationStatus).toBe('draft')
+    await expect(integration.repositories.themes.findById(created.themeId)).resolves.toMatchObject({
       id: created.themeId,
+      publicationStatus: 'draft',
+    })
+    expect(integration.eventBus.published).toEqual([])
+  })
+
+  it('rejects a duplicate title in the same category and publishes theme_rejected', async () => {
+    await integration.container.useCases.createThemeCategory.execute(createThemeCategoryFixture())
+
+    const results = await Promise.allSettled([
+      integration.container.useCases.createTheme.execute(createThemeFixture()),
+      integration.container.useCases.createTheme.execute(
+        createThemeFixture({ title: ' notice   your BREATHING ' }),
+      ),
+    ])
+    const fulfilled = results.filter((result) => result.status === 'fulfilled')
+    const rejected = results.filter((result) => result.status === 'rejected')
+
+    expect(fulfilled).toHaveLength(1)
+    expect(rejected).toHaveLength(1)
+    expect(rejected[0]).toMatchObject({ reason: { code: 'themes.THEME_TITLE_ALREADY_USED' } })
+    expect(integration.eventBus.published).toHaveLength(1)
+    expect(integration.eventBus.published[0]).toBeInstanceOf(ThemeRejected)
+    expect(integration.eventBus.published[0]).toMatchObject({
+      eventName: 'theme_rejected',
+      payload: { issues: [{ field: 'title', reason: 'already used' }] },
+    })
+  })
+
+  it('accepts the same title in a different category', async () => {
+    await integration.container.useCases.createThemeCategory.execute(createThemeCategoryFixture())
+    await integration.container.useCases.createThemeCategory.execute(
+      createThemeCategoryFixture({ slug: 'focus', name: 'Focus' }),
+    )
+    await integration.container.useCases.createTheme.execute(createThemeFixture())
+
+    const created = await integration.container.useCases.createTheme.execute(
+      createThemeFixture({ categorySlug: 'focus' }),
+    )
+
+    await expect(integration.repositories.themes.findById(created.themeId)).resolves.not.toBeNull()
+    expect(integration.eventBus.published).toEqual([])
+  })
+
+  it('publishes and withdraws a theme reversibly', async () => {
+    await integration.container.useCases.createThemeCategory.execute(createThemeCategoryFixture())
+    const created = await integration.container.useCases.createTheme.execute(createThemeFixture())
+
+    await integration.container.useCases.publishTheme.execute({ themeId: created.themeId })
+    await integration.container.useCases.withdrawTheme.execute({ themeId: created.themeId })
+
+    await expect(integration.repositories.themes.findById(created.themeId)).resolves.toMatchObject({
+      publicationStatus: 'withdrawn',
+    })
+    await integration.container.useCases.publishTheme.execute({ themeId: created.themeId })
+    await expect(integration.repositories.themes.findById(created.themeId)).resolves.toMatchObject({
       publicationStatus: 'published',
     })
+    expect(integration.eventBus.published).toHaveLength(3)
+    for (const event of integration.eventBus.published) {
+      expect(event).toBeInstanceOf(ThemePoolLow)
+    }
+  })
+
+  it('keeps a withdrawn theme readable after it leaves the draw', async () => {
+    await integration.container.useCases.createThemeCategory.execute(createThemeCategoryFixture())
+    const created = await integration.container.useCases.createTheme.execute(createThemeFixture())
+    await integration.container.useCases.publishTheme.execute({ themeId: created.themeId })
+    await integration.container.useCases.withdrawTheme.execute({ themeId: created.themeId })
+
     await expect(
-      container.publicApi.drawEligibleTheme({ categorySlug: 'mindfulness', difficulty: 'easy' }),
-    ).resolves.toEqual({
+      integration.container.publicApi.drawEligibleTheme({
+        categorySlug: 'mindfulness',
+        difficulty: 'easy',
+      }),
+    ).resolves.toBeNull()
+    await expect(integration.container.publicApi.findThemeById(created.themeId)).resolves.toEqual({
       themeId: created.themeId,
       title: 'Notice your breathing',
       categorySlug: 'mindfulness',
       difficulty: 'easy',
     })
-    const poolLow = eventBus.published.find(
-      (event): event is ThemePoolLow => event instanceof ThemePoolLow,
-    )
-
-    expect(poolLow?.payload.publishedCount).toBe(1)
   })
 })

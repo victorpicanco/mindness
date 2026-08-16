@@ -1,0 +1,38 @@
+enum ThemeDifficulty {
+  easy
+  balanced
+  hard
+
+  @@map("theme_difficulty")
+}
+
+enum ThemePublicationStatus {
+  draft
+  published
+  withdrawn
+
+  @@map("theme_publication_status")
+}
+
+model ThemeCategory {
+  id     String @id @db.Uuid
+  slug   String @unique
+  name   String
+  themes Theme[]
+
+  @@map("theme_categories")
+}
+
+model Theme {
+  id                String                 @id @db.Uuid
+  categoryId        String                 @map("category_id") @db.Uuid
+  title             String
+  normalizedTitle   String                 @map("normalized_title")
+  difficulty        ThemeDifficulty
+  publicationStatus ThemePublicationStatus @map("publication_status")
+  createdAt         DateTime               @map("created_at") @db.Timestamptz(6)
+  category          ThemeCategory          @relation(fields: [categoryId], references: [id])
+
+  @@unique([categoryId, normalizedTitle])
+  @@map("themes")
+}

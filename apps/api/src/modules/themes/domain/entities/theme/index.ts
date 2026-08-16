@@ -1,7 +1,12 @@
 import { InvalidThemeTransitionError } from '@/modules/themes/domain/errors/invalid-theme-transition-error/index.js'
 import type { ThemeTitle } from '@/modules/themes/domain/value-objects/theme-title/index.js'
 
-import type { CreateThemeParams, ThemeDifficulty, ThemePublicationStatus } from './types.js'
+import type {
+  CreateThemeParams,
+  ReconstituteThemeParams,
+  ThemeDifficulty,
+  ThemePublicationStatus,
+} from './types.js'
 
 const INITIAL_PUBLICATION_STATUS: ThemePublicationStatus = 'draft'
 
@@ -10,7 +15,7 @@ export class Theme {
     readonly id: string,
     private _title: ThemeTitle,
     readonly categoryId: string,
-    readonly difficulty: ThemeDifficulty,
+    private _difficulty: ThemeDifficulty,
     private _publicationStatus: ThemePublicationStatus,
     private readonly createdAtEpoch: number,
   ) {}
@@ -21,6 +26,10 @@ export class Theme {
 
   get title(): ThemeTitle {
     return this._title
+  }
+
+  get difficulty(): ThemeDifficulty {
+    return this._difficulty
   }
 
   get createdAt(): Date {
@@ -34,6 +43,17 @@ export class Theme {
       params.categoryId,
       params.difficulty,
       INITIAL_PUBLICATION_STATUS,
+      params.createdAt.getTime(),
+    )
+  }
+
+  static reconstitute(params: ReconstituteThemeParams): Theme {
+    return new Theme(
+      params.id,
+      params.title,
+      params.categoryId,
+      params.difficulty,
+      params.publicationStatus,
       params.createdAt.getTime(),
     )
   }
@@ -52,6 +72,10 @@ export class Theme {
 
   rename(title: ThemeTitle): void {
     this._title = title
+  }
+
+  changeDifficulty(difficulty: ThemeDifficulty): void {
+    this._difficulty = difficulty
   }
 
   isEligible(): boolean {
@@ -78,4 +102,9 @@ export class Theme {
   }
 }
 
-export type { CreateThemeParams, ThemeDifficulty, ThemePublicationStatus } from './types.js'
+export type {
+  CreateThemeParams,
+  ReconstituteThemeParams,
+  ThemeDifficulty,
+  ThemePublicationStatus,
+} from './types.js'

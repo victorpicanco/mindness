@@ -10,3 +10,7 @@ export interface CreateThemeParams {
   readonly difficulty: ThemeDifficulty
   readonly createdAt: Date
 }
+
+export interface ReconstituteThemeParams extends CreateThemeParams {
+  readonly publicationStatus: ThemePublicationStatus
+}

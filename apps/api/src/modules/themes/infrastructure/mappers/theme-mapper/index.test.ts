@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { Theme as ThemeRow } from '@/generated/prisma/client.js'
 
 import { ThemeMapper } from './index.js'
+import { DatabaseError } from '@/shared/errors/database-error/index.js'
 
 const row: ThemeRow = {
   id: '1d3e3f45-8bb3-48ca-a721-71276ed4f1f3',
@@ -29,5 +30,11 @@ describe('ThemeMapper', () => {
     expect(theme.title.value).toBe('Climate  Change')
     expect(theme.title.normalized).toBe('climate change')
     expect(mapper.toPersistence(theme)).toEqual(row)
+  })
+
+  it('rejects a row whose normalized title disagrees with its title', () => {
+    const mapper = new ThemeMapper()
+
+    expect(() => mapper.toDomain({ ...row, normalizedTitle: 'other title' })).toThrow(DatabaseError)
   })
 })

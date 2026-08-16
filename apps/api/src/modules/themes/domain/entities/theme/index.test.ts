@@ -56,4 +56,20 @@ describe('Theme', () => {
     expect(theme.createdAt).toEqual(new Date('2026-08-16T12:00:00.000Z'))
     expect(theme.createdAt).not.toBe(firstRead)
   })
+
+  it('reconstitutes persisted state without replaying transitions and can change difficulty', () => {
+    const theme = Theme.reconstitute({
+      id: 'theme-1',
+      title: ThemeTitle.create('Mindful breathing'),
+      categoryId: 'category-1',
+      difficulty: 'easy',
+      publicationStatus: 'withdrawn',
+      createdAt: new Date('2026-08-16T12:00:00.000Z'),
+    })
+
+    theme.changeDifficulty('hard')
+
+    expect(theme.publicationStatus).toBe('withdrawn')
+    expect(theme.difficulty).toBe('hard')
+  })
 })

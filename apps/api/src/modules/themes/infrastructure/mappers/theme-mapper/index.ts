@@ -1,21 +1,25 @@
 import type { Theme as ThemeRow } from '@/generated/prisma/client.js'
 import { Theme } from '@/modules/themes/domain/entities/theme/index.js'
 import { ThemeTitle } from '@/modules/themes/domain/value-objects/theme-title/index.js'
+import { DatabaseError } from '@/shared/errors/database-error/index.js'
 
 export class ThemeMapper {
   toDomain(row: ThemeRow): Theme {
-    const theme = Theme.create({
+    const title = ThemeTitle.create(row.title)
+    if (title.normalized !== row.normalizedTitle) {
+      throw new DatabaseError('Persisted theme title is inconsistent', {
+        context: { themeId: row.id },
+      })
+    }
+
+    return Theme.reconstitute({
       id: row.id,
-      title: ThemeTitle.create(row.title),
+      title,
       categoryId: row.categoryId,
       difficulty: row.difficulty,
+      publicationStatus: row.publicationStatus,
       createdAt: row.createdAt,
     })
-
-    if (row.publicationStatus === 'published') theme.publish()
-    if (row.publicationStatus === 'withdrawn') theme.withdraw()
-
-    return theme
   }
 
   toPersistence(theme: Theme): ThemeRow {

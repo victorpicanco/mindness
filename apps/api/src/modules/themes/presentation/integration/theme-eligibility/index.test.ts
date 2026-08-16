@@ -1,3 +1,4 @@
+import pino from 'pino'
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 
 import {
@@ -15,6 +16,7 @@ import {
   type ThemePoolLowPayload,
 } from '@/modules/themes/domain/events/theme-pool-low/index.js'
 import type { IntegrationEvent } from '@/shared/messaging/integration-event/index.js'
+import { buildApp } from '@/shared/http/build-app/index.js'
 
 let integration: ThemesIntegrationContainer
 
@@ -178,5 +180,18 @@ describe('theme eligibility integration', () => {
     for (const event of integration.eventBus.published) {
       expect(event).toBeInstanceOf(ThemePoolLow)
     }
+  })
+
+  it('does not expose the catalog through an HTTP route', async () => {
+    const app = buildApp({ logger: pino({ level: 'silent' }) })
+
+    const response = await app.inject({ method: 'GET', url: '/themes' })
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toEqual({
+      message: 'Route GET:/themes not found',
+      error: 'Not Found',
+      statusCode: 404,
+    })
   })
 })

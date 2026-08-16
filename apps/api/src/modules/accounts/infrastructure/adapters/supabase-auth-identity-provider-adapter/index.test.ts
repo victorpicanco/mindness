@@ -12,6 +12,7 @@ const claims = {
   email: 'person@example.com',
   session_id: 'session-1',
   iat: 1_786_795_200,
+  amr: [{ method: 'password', timestamp: 1_786_795_200 }],
 }
 
 class FakeSupabaseAuthApi implements SupabaseAuthApi {
@@ -97,6 +98,7 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
         email: 'person@example.com',
         issuedAt: new Date('2026-08-15T12:00:00.000Z'),
         sessionId: 'session-1',
+        authenticationMethod: 'password',
       },
     })
     expect(api.calls).toEqual(['sign-in', 'get-claims'])
@@ -104,15 +106,20 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
 
   it('round-trips the opaque PKCE state through Google OAuth', async () => {
     const api = new FakeSupabaseAuthApi()
+    api.claimsResult = {
+      data: { claims: { ...claims, amr: [{ method: 'oauth', timestamp: 1_786_795_200 }] } },
+      error: null,
+    }
     const adapter = new SupabaseAuthIdentityProviderAdapter(api)
 
     const authorization = await adapter.createGoogleAuthorization('https://api.test/callback')
-    await adapter.exchangeGoogleCode('authorization-code', authorization.pkceState)
+    const session = await adapter.exchangeGoogleCode('authorization-code', authorization.pkceState)
 
     expect(authorization).toEqual({
       authorizationUrl: 'https://accounts.google.com/oauth',
       pkceState: 'opaque-pkce-state',
     })
+    expect(session.identity.authenticationMethod).toBe('google')
     expect(api.calls).toEqual(['google-start', 'google-callback', 'get-claims'])
   })
 

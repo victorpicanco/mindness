@@ -2,6 +2,7 @@ import { AuthenticationRejectedError } from '@/modules/accounts/domain/errors/au
 import type {
   AuthIdentityProvider,
   AuthSession,
+  AuthenticationMethod,
   GoogleAuthorization,
   SignInWithPasswordParams,
   SignUpWithPasswordParams,
@@ -59,7 +60,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       throw new AuthenticationRejectedError('email_unconfirmed')
     }
 
-    return this.createSession(user.authUserId, user.email)
+    return this.createSession(user.authUserId, user.email, 'password')
   }
 
   async createGoogleAuthorization(redirectTo: string): Promise<GoogleAuthorization> {
@@ -78,7 +79,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       throw new AuthenticationRejectedError('google_failed')
     }
 
-    return this.createSession(identity.authUserId, identity.email)
+    return this.createSession(identity.authUserId, identity.email, 'google')
   }
 
   async validateAccessToken(accessToken: string): Promise<VerifiedAuthIdentity> {
@@ -119,7 +120,11 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     this.failure = null
   }
 
-  private createSession(authUserId: string, email: string): AuthSession {
+  private createSession(
+    authUserId: string,
+    email: string,
+    authenticationMethod: AuthenticationMethod,
+  ): AuthSession {
     const previousToken = this.currentTokenByUser.get(authUserId)
     if (previousToken !== undefined) this.sessionsByToken.delete(previousToken)
 
@@ -130,7 +135,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       accessToken,
       refreshToken: `refresh-${sessionId}`,
       expiresAt: new Date(issuedAt.getTime() + 60 * 60 * 1000),
-      identity: { authUserId, email, issuedAt, sessionId },
+      identity: { authUserId, email, issuedAt, sessionId, authenticationMethod },
     }
     this.sessionsByToken.set(accessToken, session)
     this.currentTokenByUser.set(authUserId, accessToken)

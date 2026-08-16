@@ -65,6 +65,7 @@ class FixedAuthIdentityProvider implements AccessTokenValidator {
       email: 'person@example.com',
       issuedAt: NOW,
       sessionId: 'session-1',
+      authenticationMethod: 'password' as const,
     })
   }
 }
@@ -161,7 +162,12 @@ describe('CreateAccountUseCase', () => {
         eventId: 'generated-2',
         eventName: 'account_created',
         occurredAt: NOW,
-        payload: { accountId: 'generated-1', plan: 'free' },
+        payload: {
+          accountId: 'generated-1',
+          plan: 'free',
+          origin: 'api',
+          authenticationMethod: 'password',
+        },
       }),
     )
   })

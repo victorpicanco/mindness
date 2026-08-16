@@ -76,6 +76,7 @@ class StubIdentitySignIn {
         email: 'person@example.com',
         sessionId: 'session-2',
         issuedAt: NOW,
+        authenticationMethod: 'password',
       },
     })
   }

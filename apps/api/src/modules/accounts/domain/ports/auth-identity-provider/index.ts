@@ -1,8 +1,11 @@
+export type AuthenticationMethod = 'password' | 'google'
+
 export interface VerifiedAuthIdentity {
   readonly authUserId: string
   readonly email: string
   readonly sessionId: string
   readonly issuedAt: Date
+  readonly authenticationMethod: AuthenticationMethod
 }
 
 export interface AuthSession {

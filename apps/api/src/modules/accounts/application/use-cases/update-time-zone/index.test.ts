@@ -53,6 +53,7 @@ function createHarness() {
           email: 'person@example.com',
           issuedAt: new Date('2026-08-15T00:00:00.000Z'),
           sessionId: 'session-1',
+          authenticationMethod: 'password',
         }),
     },
     unitOfWork: { run: (operation) => operation() },

@@ -74,6 +74,7 @@ function createHarness(issuedAt = new Date(NOW.getTime() - 4 * 60 * 1000)) {
           email: 'person@example.com',
           issuedAt,
           sessionId: 'session-1',
+          authenticationMethod: 'password',
         }),
       revokeSession: () => {
         calls.push('revoke-session')

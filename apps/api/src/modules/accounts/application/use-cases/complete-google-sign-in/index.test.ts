@@ -67,6 +67,7 @@ class StubGoogleExchange {
         email: 'person@example.com',
         sessionId: 'session-2',
         issuedAt: NOW,
+        authenticationMethod: 'google',
       },
     })
   }

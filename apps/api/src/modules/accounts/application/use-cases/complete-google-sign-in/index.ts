@@ -43,6 +43,12 @@ export class CompleteGoogleSignInUseCase {
   }
 
   private async exchange(input: CompleteGoogleSignInInput): Promise<AuthSession> {
+    if (input.pkceState === null) {
+      const error = new AuthenticationRejectedError('google_failed')
+      await this.publishRejection(error)
+      throw error
+    }
+
     try {
       return await this.dependencies.authIdentityProvider.exchangeGoogleCode(
         input.code,
@@ -51,16 +57,20 @@ export class CompleteGoogleSignInUseCase {
     } catch (error) {
       if (!(error instanceof AuthenticationRejectedError)) throw error
 
-      await this.dependencies.eventPublisher.publish(
-        GoogleLoginRejected.create({
-          eventId: this.dependencies.idGenerator.generate(),
-          occurredAt: this.dependencies.clock.now(),
-          accountId: null,
-          plan: null,
-          reason: error.reason,
-        }),
-      )
+      await this.publishRejection(error)
       throw error
     }
+  }
+
+  private publishRejection(error: AuthenticationRejectedError): Promise<void> {
+    return this.dependencies.eventPublisher.publish(
+      GoogleLoginRejected.create({
+        eventId: this.dependencies.idGenerator.generate(),
+        occurredAt: this.dependencies.clock.now(),
+        accountId: null,
+        plan: null,
+        reason: error.reason,
+      }),
+    )
   }
 }

@@ -57,6 +57,7 @@ function createHarness() {
           email: 'person@example.com',
           issuedAt: NOW,
           sessionId: 'session-1',
+          authenticationMethod: 'password',
         }),
     },
     clock: { now: () => NOW },

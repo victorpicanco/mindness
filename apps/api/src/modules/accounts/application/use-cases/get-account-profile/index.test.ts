@@ -53,6 +53,7 @@ const authIdentityProvider = {
       email: 'person@example.com',
       sessionId: 'session-1',
       issuedAt: NOW,
+      authenticationMethod: 'password',
     })
   },
 }

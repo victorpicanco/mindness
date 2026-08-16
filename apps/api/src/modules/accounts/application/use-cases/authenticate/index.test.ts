@@ -58,6 +58,7 @@ class StubTokenValidator {
       email: 'person@example.com',
       sessionId: this.sessionId,
       issuedAt: NOW,
+      authenticationMethod: 'password',
     })
   }
 }

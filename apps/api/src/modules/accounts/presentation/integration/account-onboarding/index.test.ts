@@ -104,7 +104,12 @@ describe('account onboarding', () => {
     expect(harness.eventBus.published).toContainEqual(
       expect.objectContaining({
         eventName: 'account_created',
-        payload: { accountId: persisted?.id, plan: 'free' },
+        payload: {
+          accountId: persisted?.id,
+          plan: 'free',
+          origin: 'api',
+          authenticationMethod: 'password',
+        },
       }),
     )
   })

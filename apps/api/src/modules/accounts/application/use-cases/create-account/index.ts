@@ -86,6 +86,7 @@ export class CreateAccountUseCase {
           occurredAt: this.dependencies.clock.now(),
           accountId: account.id,
           plan: account.plan,
+          authenticationMethod: identity.authenticationMethod,
         }),
       )
     })

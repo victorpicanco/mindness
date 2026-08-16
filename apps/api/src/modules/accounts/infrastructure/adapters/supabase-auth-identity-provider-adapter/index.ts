@@ -4,6 +4,7 @@ import { AuthProviderError } from '@/modules/accounts/domain/errors/auth-provide
 import type {
   AuthIdentityProvider,
   AuthSession,
+  AuthenticationMethod,
   GoogleAuthorization,
   SignInWithPasswordParams,
   SignUpWithPasswordParams,
@@ -41,6 +42,20 @@ function providerErrorCode(error: unknown): string | null {
   return isRecord(error) ? readString(error, 'code') : null
 }
 
+function readAuthenticationMethod(claims: Record<string, unknown>): AuthenticationMethod | null {
+  const references = claims.amr
+  if (!Array.isArray(references)) return null
+
+  for (const reference of references) {
+    if (!isRecord(reference)) continue
+    const method = readString(reference, 'method')
+    if (method === 'password') return 'password'
+    if (method === 'oauth') return 'google'
+  }
+
+  return null
+}
+
 function rejectionFrom(error: unknown, fallback: AuthenticationRejectionReason): never {
   const code = providerErrorCode(error)
   const reason =
@@ -71,9 +86,18 @@ function readIdentity(data: unknown): VerifiedAuthIdentity | null {
   const email = readString(claims, 'email')
   const sessionId = readString(claims, 'session_id')
   const issuedAt = readEpochSeconds(claims, 'iat')
-  if (authUserId === null || email === null || sessionId === null || issuedAt === null) return null
+  const authenticationMethod = readAuthenticationMethod(claims)
+  if (
+    authUserId === null ||
+    email === null ||
+    sessionId === null ||
+    issuedAt === null ||
+    authenticationMethod === null
+  ) {
+    return null
+  }
 
-  return { authUserId, email, sessionId, issuedAt }
+  return { authUserId, email, sessionId, issuedAt, authenticationMethod }
 }
 
 export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider {

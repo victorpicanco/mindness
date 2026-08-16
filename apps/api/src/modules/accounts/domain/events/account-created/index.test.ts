@@ -11,6 +11,7 @@ describe('AccountCreated', () => {
       occurredAt,
       accountId: 'account-1',
       plan: 'free',
+      authenticationMethod: 'password',
     })
 
     expect(event).toMatchObject({
@@ -27,9 +28,15 @@ describe('AccountCreated', () => {
       occurredAt,
       accountId: 'account-1',
       plan: 'free',
+      authenticationMethod: 'password',
     })
 
-    expect(event.payload).toEqual({ accountId: 'account-1', plan: 'free' })
+    expect(event.payload).toEqual({
+      accountId: 'account-1',
+      plan: 'free',
+      origin: 'api',
+      authenticationMethod: 'password',
+    })
     expect(JSON.parse(JSON.stringify(event.payload))).toEqual(event.payload)
   })
 })

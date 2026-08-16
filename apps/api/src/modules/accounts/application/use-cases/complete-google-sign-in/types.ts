@@ -1,6 +1,6 @@
 export interface CompleteGoogleSignInInput {
   readonly code: string
-  readonly pkceState: string
+  readonly pkceState: string | null
 }
 
 export interface CompleteGoogleSignInOutput {

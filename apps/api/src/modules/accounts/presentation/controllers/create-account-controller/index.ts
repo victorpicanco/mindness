@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import type { CreateAccountUseCase } from '@/modules/accounts/application/use-cases/create-account/index.js'
-import { readBearerToken } from '@/modules/accounts/presentation/middleware/authenticated-identity/index.js'
+import { requireAuthenticatedIdentity } from '@/modules/accounts/presentation/middleware/authenticated-identity/index.js'
 import { ok } from '@/shared/http/envelope/index.js'
 
 import type { CreateAccountBody } from './schemas.js'
@@ -14,7 +14,7 @@ export class CreateAccountController {
     reply: FastifyReply,
   ): Promise<void> {
     const output = await this.useCase.execute({
-      accessToken: readBearerToken(request),
+      identity: requireAuthenticatedIdentity(request),
       timeZone: request.body.timeZone,
     })
 

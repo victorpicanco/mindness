@@ -26,12 +26,16 @@ export class AccountCreationRejected implements IntegrationEvent<
 
   private constructor(
     readonly eventId: string,
-    readonly occurredAt: Date,
+    private readonly occurredAtEpoch: number,
     readonly payload: AccountCreationRejectedPayload,
   ) {}
 
+  get occurredAt(): Date {
+    return new Date(this.occurredAtEpoch)
+  }
+
   static create(params: CreateAccountCreationRejectedParams): AccountCreationRejected {
-    return new AccountCreationRejected(params.eventId, params.occurredAt, {
+    return new AccountCreationRejected(params.eventId, params.occurredAt.getTime(), {
       accountId: params.accountId,
       plan: params.plan,
       reason: 'duplicate',

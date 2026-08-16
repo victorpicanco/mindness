@@ -26,12 +26,16 @@ export class ConsentAccepted implements IntegrationEvent<
 
   private constructor(
     readonly eventId: string,
-    readonly occurredAt: Date,
+    private readonly occurredAtEpoch: number,
     readonly payload: ConsentAcceptedPayload,
   ) {}
 
+  get occurredAt(): Date {
+    return new Date(this.occurredAtEpoch)
+  }
+
   static create(params: CreateConsentAcceptedParams): ConsentAccepted {
-    return new ConsentAccepted(params.eventId, params.occurredAt, {
+    return new ConsentAccepted(params.eventId, params.occurredAt.getTime(), {
       accountId: params.accountId,
       plan: params.plan,
       purpose: params.purpose,

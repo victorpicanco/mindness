@@ -18,9 +18,7 @@ export class AuthenticateUseCase {
     )
     const account = await this.dependencies.accounts.findByAuthUserId(identity.authUserId)
 
-    const sessionWasReplaced =
-      account !== null &&
-      (account.status !== 'accessible' || !account.hasCurrentSession(identity.sessionId))
+    const sessionWasReplaced = account !== null && !account.canAuthenticate(identity.sessionId)
     if (sessionWasReplaced) throw new AuthenticationRejectedError('invalid_token')
 
     return {
@@ -29,6 +27,7 @@ export class AuthenticateUseCase {
       email: identity.email,
       sessionId: identity.sessionId,
       issuedAt: identity.issuedAt,
+      authenticationMethod: identity.authenticationMethod,
     }
   }
 }

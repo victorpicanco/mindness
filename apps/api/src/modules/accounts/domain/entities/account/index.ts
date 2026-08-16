@@ -30,7 +30,7 @@ export class Account {
     private _timeZone: TimeZone,
     readonly plan: AccountPlan,
     private _status: AccountStatus,
-    readonly createdAt: Date,
+    private readonly createdAtEpoch: number,
     private _voiceConsent: VoiceConsent | null,
     private _currentSessionId: string | null,
   ) {}
@@ -51,6 +51,10 @@ export class Account {
     return this._timeZone
   }
 
+  get createdAt(): Date {
+    return new Date(this.createdAtEpoch)
+  }
+
   static create(params: CreateAccountParams): Account {
     return new Account(
       requireIdentifier(params.id, 'id'),
@@ -59,7 +63,7 @@ export class Account {
       params.timeZone,
       INITIAL_PLAN,
       INITIAL_STATUS,
-      params.createdAt,
+      params.createdAt.getTime(),
       null,
       null,
     )
@@ -73,13 +77,14 @@ export class Account {
       params.timeZone,
       params.plan,
       params.status,
-      params.createdAt,
+      params.createdAt.getTime(),
       params.voiceConsent,
       params.currentSessionId,
     )
   }
 
   acceptVoiceConsent(consent: VoiceConsent): AcceptVoiceConsentResult {
+    this.requireAccessible()
     if (this._voiceConsent?.version === consent.version) {
       return { changed: false, consent: this._voiceConsent }
     }
@@ -88,10 +93,12 @@ export class Account {
   }
 
   changeTimeZone(timeZone: TimeZone): void {
+    this.requireAccessible()
     this._timeZone = timeZone
   }
 
   startSession(sessionId: string): void {
+    this.requireAccessible()
     this._currentSessionId = requireIdentifier(sessionId, 'currentSessionId')
   }
 
@@ -99,8 +106,20 @@ export class Account {
     return this._currentSessionId !== null && this._currentSessionId === sessionId
   }
 
+  canAuthenticate(sessionId: string): boolean {
+    return this._status === 'accessible' && this.hasCurrentSession(sessionId)
+  }
+
+  canStartPractice(): boolean {
+    return this._status === 'accessible' && this._voiceConsent !== null
+  }
+
   scheduleDeletion(): void {
     this._status = 'deletion_pending'
     this._currentSessionId = null
+  }
+
+  private requireAccessible(): void {
+    if (this._status !== 'accessible') throw new InvalidAccountValueError('status')
   }
 }

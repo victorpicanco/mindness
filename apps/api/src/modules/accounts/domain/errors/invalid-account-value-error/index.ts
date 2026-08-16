@@ -3,7 +3,7 @@ import { UnprocessableError } from '@/shared/errors/categories/unprocessable-err
 export class InvalidAccountValueError extends UnprocessableError {
   readonly code = 'accounts.INVALID_ACCOUNT_VALUE'
 
-  constructor(field: string) {
-    super('Account value is invalid', { context: { field } })
+  constructor(field: string, options?: { cause?: unknown }) {
+    super('Account value is invalid', { context: { field }, cause: options?.cause })
   }
 }

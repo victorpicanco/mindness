@@ -105,7 +105,11 @@ describe('CompleteGoogleSignInUseCase', () => {
     const harness = createHarness()
 
     await expect(
-      harness.useCase.execute({ code: 'authorization-code', pkceState: 'opaque-pkce-state' }),
+      harness.useCase.execute({
+        code: 'authorization-code',
+        error: null,
+        pkceState: 'opaque-pkce-state',
+      }),
     ).resolves.toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
@@ -117,12 +121,52 @@ describe('CompleteGoogleSignInUseCase', () => {
     ])
   })
 
+  it('publishes google_login_rejected without exchanging when google reports an error', async () => {
+    const harness = createHarness()
+
+    await expect(
+      harness.useCase.execute({
+        code: null,
+        error: 'access_denied',
+        pkceState: 'opaque-pkce-state',
+      }),
+    ).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'google_failed' },
+    })
+
+    expect(harness.authIdentityProvider.exchanges).toEqual([])
+    expect(harness.eventPublisher.published).toContainEqual(
+      expect.objectContaining({
+        eventName: 'google_login_rejected',
+        payload: { accountId: null, plan: null, reason: 'google_failed' },
+      }),
+    )
+  })
+
+  it('publishes google_login_rejected without exchanging when the pkce state is missing', async () => {
+    const harness = createHarness()
+
+    await expect(
+      harness.useCase.execute({ code: 'authorization-code', error: null, pkceState: null }),
+    ).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'google_failed' },
+    })
+
+    expect(harness.authIdentityProvider.exchanges).toEqual([])
+  })
+
   it('makes the google session the only one an existing account accepts', async () => {
     const existing = accountFor()
     existing.startSession('session-1')
     const harness = createHarness(existing)
 
-    await harness.useCase.execute({ code: 'authorization-code', pkceState: 'opaque-pkce-state' })
+    await harness.useCase.execute({
+      code: 'authorization-code',
+      error: null,
+      pkceState: 'opaque-pkce-state',
+    })
 
     expect(harness.accounts.saved).toHaveLength(1)
     expect(existing.hasCurrentSession('session-2')).toBe(true)
@@ -133,7 +177,11 @@ describe('CompleteGoogleSignInUseCase', () => {
     harness.authIdentityProvider.rejection = new AuthenticationRejectedError('google_failed')
 
     await expect(
-      harness.useCase.execute({ code: 'authorization-code', pkceState: 'stale-pkce-state' }),
+      harness.useCase.execute({
+        code: 'authorization-code',
+        error: null,
+        pkceState: 'stale-pkce-state',
+      }),
     ).rejects.toMatchObject({
       code: 'accounts.AUTHENTICATION_REJECTED',
       context: { reason: 'google_failed' },

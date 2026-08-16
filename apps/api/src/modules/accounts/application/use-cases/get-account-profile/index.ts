@@ -13,9 +13,12 @@ export class GetAccountProfileUseCase {
   constructor(private readonly dependencies: GetAccountProfileDependencies) {}
 
   async execute(input: GetAccountProfileInput): Promise<GetAccountProfileOutput> {
-    const identity = await this.dependencies.authIdentityProvider.validateAccessToken(
-      input.accessToken,
-    )
+    const identity =
+      input.identity ??
+      (input.accessToken === undefined
+        ? null
+        : await this.dependencies.authIdentityProvider.validateAccessToken(input.accessToken))
+    if (identity === null) throw new AccountNotFoundError()
     const account = await this.dependencies.accounts.findByAuthUserId(identity.authUserId)
     if (account === null || account.status !== 'accessible') throw new AccountNotFoundError()
 

@@ -16,9 +16,12 @@ export class UpdateTimeZoneUseCase {
   constructor(private readonly dependencies: UpdateTimeZoneDependencies) {}
 
   async execute(input: UpdateTimeZoneInput): Promise<UpdateTimeZoneOutput> {
-    const identity = await this.dependencies.authIdentityProvider.validateAccessToken(
-      input.accessToken,
-    )
+    const identity =
+      input.identity ??
+      (input.accessToken === undefined
+        ? null
+        : await this.dependencies.authIdentityProvider.validateAccessToken(input.accessToken))
+    if (identity === null) throw new AccountNotFoundError()
     const timeZone = TimeZone.create(input.timeZone)
 
     return this.dependencies.unitOfWork.run(async () => {

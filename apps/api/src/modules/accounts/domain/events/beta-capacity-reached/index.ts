@@ -26,12 +26,16 @@ export class BetaCapacityReached implements IntegrationEvent<
 
   private constructor(
     readonly eventId: string,
-    readonly occurredAt: Date,
+    private readonly occurredAtEpoch: number,
     readonly payload: BetaCapacityReachedPayload,
   ) {}
 
+  get occurredAt(): Date {
+    return new Date(this.occurredAtEpoch)
+  }
+
   static create(params: CreateBetaCapacityReachedParams): BetaCapacityReached {
-    return new BetaCapacityReached(params.eventId, params.occurredAt, {
+    return new BetaCapacityReached(params.eventId, params.occurredAt.getTime(), {
       accountId: null,
       plan: params.plan,
       capacity: params.capacity,

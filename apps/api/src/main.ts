@@ -7,6 +7,8 @@ import { buildApp } from '@/shared/http/build-app/index.js'
 import { registerHealthRoute } from '@/shared/http/health-route/index.js'
 import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import { InProcessEventBus } from '@/shared/messaging/in-process-event-bus/index.js'
+import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
+import { SystemClock } from '@/shared/time/system-clock/index.js'
 
 const config = loadConfig(process.env)
 const logger = createLogger({ level: config.logLevel, pretty: config.nodeEnv !== 'production' })
@@ -19,10 +21,14 @@ const prisma = createPrismaClient({
   logQueries: config.nodeEnv !== 'production',
 })
 const eventBus = new InProcessEventBus(logger)
+const clock = new SystemClock()
+const idGenerator = new UuidGenerator()
 
 await registerAccountsModule(app, {
   prisma,
+  clock,
   eventPublisher: eventBus,
+  idGenerator,
   config: {
     consentVersion: config.accountsConsentVersion,
     publicApiUrl: config.publicApiUrl,

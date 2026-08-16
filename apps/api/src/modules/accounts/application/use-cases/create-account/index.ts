@@ -3,8 +3,9 @@ import { Account } from '@/modules/accounts/domain/entities/account/index.js'
 import { AccountCreated } from '@/modules/accounts/domain/events/account-created/index.js'
 import { AccountCreationRejected } from '@/modules/accounts/domain/events/account-creation-rejected/index.js'
 import { BetaCapacityReached } from '@/modules/accounts/domain/events/beta-capacity-reached/index.js'
-import { BetaCapacityReachedError } from '@/modules/accounts/domain/errors/beta-capacity-reached-error/index.js'
+import { AccountAlreadyExistsError } from '@/modules/accounts/domain/errors/account-already-exists-error/index.js'
 import type { AccessTokenValidator } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
+import { BetaCapacityReachedError } from '@/modules/accounts/domain/errors/beta-capacity-reached-error/index.js'
 import type { Clock } from '@/modules/accounts/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/accounts/domain/ports/event-publisher/index.js'
 import type { IdGenerator } from '@/modules/accounts/domain/ports/id-generator/index.js'
@@ -12,7 +13,7 @@ import type { UnitOfWork } from '@/modules/accounts/domain/ports/unit-of-work/in
 import type { AccountsRepository } from '@/modules/accounts/domain/repositories/accounts-repository/index.js'
 import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
-import { BetaCapacity } from '@/modules/accounts/domain/value-objects/beta-capacity/index.js'
+import { BetaCapacityPolicy } from '@/modules/accounts/domain/services/beta-capacity-policy/index.js'
 
 import type { CreateAccountInput, CreateAccountOutput } from './types.js'
 
@@ -29,36 +30,54 @@ export class CreateAccountUseCase {
   constructor(private readonly dependencies: CreateAccountDependencies) {}
 
   async execute(input: CreateAccountInput): Promise<CreateAccountOutput> {
-    const identity = await this.dependencies.authIdentityProvider.validateAccessToken(
-      input.accessToken,
-    )
+    const identity =
+      input.identity ??
+      (input.accessToken === undefined
+        ? null
+        : await this.dependencies.authIdentityProvider.validateAccessToken(input.accessToken))
+    if (identity === null) throw new AccountAlreadyExistsError([])
+    let event: AccountCreated | AccountCreationRejected | null = null
+    try {
+      event = await this.dependencies.unitOfWork.run(async () => {
+        const existingByIdentity = await this.dependencies.accounts.findByAuthUserId(
+          identity.authUserId,
+        )
+        const existing =
+          existingByIdentity ?? (await this.dependencies.accounts.findByEmail(identity.email))
 
-    await this.dependencies.unitOfWork.run(async () => {
-      const existingByIdentity = await this.dependencies.accounts.findByAuthUserId(
-        identity.authUserId,
-      )
-      const existing =
-        existingByIdentity ?? (await this.dependencies.accounts.findByEmail(identity.email))
-
-      if (existing !== null) {
-        await this.dependencies.eventPublisher.publish(
-          AccountCreationRejected.create({
+        if (existing !== null) {
+          return AccountCreationRejected.create({
             eventId: this.dependencies.idGenerator.generate(),
             occurredAt: this.dependencies.clock.now(),
             accountId: existing.id,
             plan: existing.plan,
-          }),
-        )
-        return
-      }
+          })
+        }
 
-      const accountCount = await this.dependencies.accounts.count()
+        const accountCount = await this.dependencies.accounts.count()
 
-      try {
-        BetaCapacity.ensureAvailable(accountCount)
-      } catch (error) {
-        if (!(error instanceof BetaCapacityReachedError)) throw error
+        BetaCapacityPolicy.ensureAvailable(accountCount)
 
+        const account = Account.create({
+          id: this.dependencies.idGenerator.generate(),
+          email: EmailAddress.create(identity.email),
+          authUserId: identity.authUserId,
+          timeZone: TimeZone.fromOptional(input.timeZone ?? undefined),
+          createdAt: this.dependencies.clock.now(),
+        })
+        account.startSession(identity.sessionId)
+
+        await this.dependencies.accounts.save(account)
+        return AccountCreated.create({
+          eventId: this.dependencies.idGenerator.generate(),
+          occurredAt: this.dependencies.clock.now(),
+          accountId: account.id,
+          plan: account.plan,
+          authenticationMethod: identity.authenticationMethod,
+        })
+      })
+    } catch (error) {
+      if (error instanceof BetaCapacityReachedError) {
         await this.dependencies.eventPublisher.publish(
           BetaCapacityReached.create({
             eventId: this.dependencies.idGenerator.generate(),
@@ -69,27 +88,17 @@ export class CreateAccountUseCase {
         )
         throw error
       }
-
-      const account = Account.create({
-        id: this.dependencies.idGenerator.generate(),
-        email: EmailAddress.create(identity.email),
-        authUserId: identity.authUserId,
-        timeZone: TimeZone.fromOptional(input.timeZone ?? undefined),
-        createdAt: this.dependencies.clock.now(),
+      if (!(error instanceof AccountAlreadyExistsError)) throw error
+      const existing = await this.dependencies.accounts.findByAuthUserId(identity.authUserId)
+      if (existing === null) throw error
+      event = AccountCreationRejected.create({
+        eventId: this.dependencies.idGenerator.generate(),
+        occurredAt: this.dependencies.clock.now(),
+        accountId: existing.id,
+        plan: existing.plan,
       })
-      account.startSession(identity.sessionId)
-
-      await this.dependencies.accounts.save(account)
-      await this.dependencies.eventPublisher.publish(
-        AccountCreated.create({
-          eventId: this.dependencies.idGenerator.generate(),
-          occurredAt: this.dependencies.clock.now(),
-          accountId: account.id,
-          plan: account.plan,
-          authenticationMethod: identity.authenticationMethod,
-        }),
-      )
-    })
+    }
+    if (event !== null) await this.dependencies.eventPublisher.publish(event)
 
     return { message: NEUTRAL_ACCOUNT_MESSAGE }
   }

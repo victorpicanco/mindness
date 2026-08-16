@@ -1,4 +1,5 @@
 import { AuthenticationRejectedError } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
+import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
 import type { AuthenticationRejectionReason } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
 import { AuthProviderError } from '@/modules/accounts/domain/errors/auth-provider-error/index.js'
 import type {
@@ -21,7 +22,6 @@ interface SupabaseSessionTokens {
 const REJECTION_REASON_BY_PROVIDER_CODE = new Map<string, AuthenticationRejectionReason>([
   ['email_not_confirmed', 'email_unconfirmed'],
   ['invalid_credentials', 'invalid_credentials'],
-  ['weak_password', 'weak_password'],
 ])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -105,7 +105,12 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
 
   async signUpWithPassword(params: SignUpWithPasswordParams): Promise<void> {
     const result = await this.call(() => this.api.signUp(params))
-    if (result.error !== null) rejectionFrom(result.error, 'weak_password')
+    if (result.error !== null) {
+      if (providerErrorCode(result.error) === 'weak_password') {
+        throw new InvalidAccountValueError('password', { cause: result.error })
+      }
+      rejectionFrom(result.error, 'invalid_credentials')
+    }
   }
 
   async signInWithPassword(params: SignInWithPasswordParams): Promise<AuthSession> {

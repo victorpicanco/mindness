@@ -1,5 +1,8 @@
+import type { VerifiedAuthIdentity } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
+
 export interface UpdateTimeZoneInput {
-  readonly accessToken: string
+  readonly identity?: VerifiedAuthIdentity
+  readonly accessToken?: string
   readonly timeZone: string
 }
 

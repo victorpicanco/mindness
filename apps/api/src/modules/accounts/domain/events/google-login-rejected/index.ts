@@ -25,12 +25,16 @@ export class GoogleLoginRejected implements IntegrationEvent<
 
   private constructor(
     readonly eventId: string,
-    readonly occurredAt: Date,
+    private readonly occurredAtEpoch: number,
     readonly payload: GoogleLoginRejectedPayload,
   ) {}
 
+  get occurredAt(): Date {
+    return new Date(this.occurredAtEpoch)
+  }
+
   static create(params: CreateGoogleLoginRejectedParams): GoogleLoginRejected {
-    return new GoogleLoginRejected(params.eventId, params.occurredAt, {
+    return new GoogleLoginRejected(params.eventId, params.occurredAt.getTime(), {
       accountId: params.accountId,
       plan: params.plan,
       reason: params.reason,

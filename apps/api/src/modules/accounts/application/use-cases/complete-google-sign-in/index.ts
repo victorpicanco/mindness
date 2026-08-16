@@ -43,7 +43,7 @@ export class CompleteGoogleSignInUseCase {
   }
 
   private async exchange(input: CompleteGoogleSignInInput): Promise<AuthSession> {
-    if (input.pkceState === null) {
+    if (input.error !== null || input.code === null || input.pkceState === null) {
       const error = new AuthenticationRejectedError('google_failed')
       await this.publishRejection(error)
       throw error

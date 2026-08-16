@@ -81,7 +81,8 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
 
     api.signUpResult = { data: null, error: { code: 'weak_password' } }
     await expect(adapter.signUpWithPassword(credentials)).rejects.toMatchObject({
-      code: 'accounts.AUTHENTICATION_REJECTED',
+      code: 'accounts.INVALID_ACCOUNT_VALUE',
+      context: { field: 'password' },
     })
   })
 

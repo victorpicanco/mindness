@@ -31,16 +31,16 @@ export class DeleteAccountUseCase {
   constructor(private readonly dependencies: DeleteAccountDependencies) {}
 
   async execute(input: DeleteAccountInput): Promise<DeleteAccountOutput> {
-    const identity = await this.dependencies.authIdentityProvider.validateAccessToken(
-      input.accessToken,
-    )
+    const identity =
+      input.identity ??
+      (await this.dependencies.authIdentityProvider.validateAccessToken(input.accessToken))
     const requestedAt = this.dependencies.clock.now()
     const authenticationAge = requestedAt.getTime() - identity.issuedAt.getTime()
     if (authenticationAge > 5 * 60 * 1000) throw new ReauthenticationRequiredError()
 
     const scheduledFor = new Date(requestedAt.getTime() + 30 * 24 * 60 * 60 * 1000)
 
-    await this.dependencies.unitOfWork.run(async () => {
+    const event = await this.dependencies.unitOfWork.run(async () => {
       const account = await this.dependencies.accounts.findByAuthUserId(identity.authUserId)
       if (account === null || account.status !== 'accessible') throw new AccountNotFoundError()
 
@@ -55,16 +55,16 @@ export class DeleteAccountUseCase {
 
       await this.dependencies.accounts.save(account)
       await this.dependencies.deletionRequests.save(deletionRequest)
-      await this.dependencies.eventPublisher.publish(
-        AccountDeletionRequested.create({
-          eventId: this.dependencies.idGenerator.generate(),
-          occurredAt: requestedAt,
-          accountId: account.id,
-          plan: account.plan,
-          scheduledFor: scheduledFor.toISOString(),
-        }),
-      )
+      return AccountDeletionRequested.create({
+        eventId: this.dependencies.idGenerator.generate(),
+        occurredAt: requestedAt,
+        accountId: account.id,
+        plan: account.plan,
+        scheduledFor: scheduledFor.toISOString(),
+      })
     })
+
+    await this.dependencies.eventPublisher.publish(event)
 
     await this.dependencies.authIdentityProvider.revokeSession(input.accessToken)
 

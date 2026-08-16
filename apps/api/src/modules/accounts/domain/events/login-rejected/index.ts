@@ -25,12 +25,16 @@ export class LoginRejected implements IntegrationEvent<
 
   private constructor(
     readonly eventId: string,
-    readonly occurredAt: Date,
+    private readonly occurredAtEpoch: number,
     readonly payload: LoginRejectedPayload,
   ) {}
 
+  get occurredAt(): Date {
+    return new Date(this.occurredAtEpoch)
+  }
+
   static create(params: CreateLoginRejectedParams): LoginRejected {
-    return new LoginRejected(params.eventId, params.occurredAt, {
+    return new LoginRejected(params.eventId, params.occurredAt.getTime(), {
       accountId: params.accountId,
       plan: params.plan,
       reason: params.reason,

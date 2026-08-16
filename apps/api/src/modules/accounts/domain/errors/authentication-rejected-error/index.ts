@@ -1,7 +1,7 @@
 import { UnauthorizedError } from '@/shared/errors/categories/unauthorized-error/index.js'
 
 export type AuthenticationRejectionReason =
-  'email_unconfirmed' | 'google_failed' | 'invalid_credentials' | 'invalid_token' | 'weak_password'
+  'email_unconfirmed' | 'google_failed' | 'invalid_credentials' | 'invalid_token'
 
 export class AuthenticationRejectedError extends UnauthorizedError {
   readonly code = 'accounts.AUTHENTICATION_REJECTED'

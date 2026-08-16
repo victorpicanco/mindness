@@ -39,4 +39,20 @@ describe('AccountCreated', () => {
     })
     expect(JSON.parse(JSON.stringify(event.payload))).toEqual(event.payload)
   })
+
+  it('does not retain or expose a mutable occurrence instant', () => {
+    const input = new Date('2026-08-15T00:00:00.000Z')
+    const event = AccountCreated.create({
+      eventId: 'event-1',
+      occurredAt: input,
+      accountId: 'account-1',
+      plan: 'free',
+      authenticationMethod: 'password',
+    })
+    input.setTime(0)
+    const exposed = event.occurredAt
+    exposed.setTime(0)
+
+    expect(event.occurredAt).toEqual(new Date('2026-08-15T00:00:00.000Z'))
+  })
 })

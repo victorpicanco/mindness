@@ -112,4 +112,22 @@ describe('Account', () => {
     expect(account.currentSessionId).toBeNull()
     expect(account.hasCurrentSession('session-1')).toBe(false)
   })
+
+  it('does not allow inaccessible accounts to mutate or authenticate', () => {
+    const account = Account.create(validParams())
+    account.scheduleDeletion()
+
+    expect(() => account.startSession('session-1')).toThrow(InvalidAccountValueError)
+    expect(() => account.changeTimeZone(TimeZone.create('Europe/Lisbon'))).toThrow(
+      InvalidAccountValueError,
+    )
+  })
+
+  it('does not expose a mutable created-at instant', () => {
+    const account = Account.create(validParams())
+    const exposed = account.createdAt
+    exposed.setTime(0)
+
+    expect(account.createdAt).toEqual(createdAt)
+  })
 })

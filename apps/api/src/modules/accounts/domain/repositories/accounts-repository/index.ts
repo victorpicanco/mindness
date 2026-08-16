@@ -1,4 +1,4 @@
-import type { Account } from '../../entities/account/index.js'
+import type { Account } from '@/modules/accounts/domain/entities/account/index.js'
 
 export interface AccountsRepository {
   count(): Promise<number>

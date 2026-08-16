@@ -24,12 +24,16 @@ export class AccountDeletionRequested implements IntegrationEvent<
 
   private constructor(
     readonly eventId: string,
-    readonly occurredAt: Date,
+    private readonly occurredAtEpoch: number,
     readonly payload: AccountDeletionRequestedPayload,
   ) {}
 
+  get occurredAt(): Date {
+    return new Date(this.occurredAtEpoch)
+  }
+
   static create(params: CreateAccountDeletionRequestedParams): AccountDeletionRequested {
-    return new AccountDeletionRequested(params.eventId, params.occurredAt, {
+    return new AccountDeletionRequested(params.eventId, params.occurredAt.getTime(), {
       accountId: params.accountId,
       plan: params.plan,
       scheduledFor: params.scheduledFor,

@@ -26,4 +26,14 @@ describe('VoiceConsent', () => {
       ),
     ).toBe(false)
   })
+
+  it('does not retain or expose a mutable acceptance instant', () => {
+    const input = new Date('2026-08-15T00:00:00.000Z')
+    const consent = VoiceConsent.create({ version: '2026-08-15', acceptedAt: input })
+    input.setTime(0)
+    const exposed = consent.acceptedAt
+    exposed.setTime(0)
+
+    expect(consent.acceptedAt).toEqual(new Date('2026-08-15T00:00:00.000Z'))
+  })
 })

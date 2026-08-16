@@ -8,6 +8,6 @@ export class CheckPracticeEligibilityUseCase {
   async execute(input: CheckPracticeEligibilityInput): Promise<CheckPracticeEligibilityOutput> {
     const account = await this.accounts.findById(input.accountId)
 
-    return { eligible: account !== null && account.voiceConsent !== null }
+    return { eligible: account?.canStartPractice() ?? false }
   }
 }

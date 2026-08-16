@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { AuthenticationRejectedError } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
 import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
 import type { SignUpWithPasswordParams } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 
@@ -17,7 +16,7 @@ const credentials = {
 
 class RecordingIdentityRegistrar {
   readonly registered: SignUpWithPasswordParams[] = []
-  rejection: AuthenticationRejectedError | null = null
+  rejection: InvalidAccountValueError | null = null
 
   signUpWithPassword(params: SignUpWithPasswordParams): Promise<void> {
     if (this.rejection !== null) return Promise.reject(this.rejection)
@@ -69,13 +68,13 @@ describe('SignUpUseCase', () => {
     expect(harness.authIdentityProvider.registered).toHaveLength(0)
   })
 
-  it('propagates a provider rejection such as a leaked password', async () => {
+  it('propagates a password validation rejection from the provider', async () => {
     const harness = createHarness()
-    harness.authIdentityProvider.rejection = new AuthenticationRejectedError('weak_password')
+    harness.authIdentityProvider.rejection = new InvalidAccountValueError('password')
 
     await expect(harness.useCase.execute(credentials)).rejects.toMatchObject({
-      code: 'accounts.AUTHENTICATION_REJECTED',
-      context: { reason: 'weak_password' },
+      code: 'accounts.INVALID_ACCOUNT_VALUE',
+      context: { field: 'password' },
     })
   })
 })

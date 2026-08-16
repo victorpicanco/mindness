@@ -29,12 +29,16 @@ export class AccountCreated implements IntegrationEvent<
 
   private constructor(
     readonly eventId: string,
-    readonly occurredAt: Date,
+    private readonly occurredAtEpoch: number,
     readonly payload: AccountCreatedPayload,
   ) {}
 
+  get occurredAt(): Date {
+    return new Date(this.occurredAtEpoch)
+  }
+
   static create(params: CreateAccountCreatedParams): AccountCreated {
-    return new AccountCreated(params.eventId, params.occurredAt, {
+    return new AccountCreated(params.eventId, params.occurredAt.getTime(), {
       accountId: params.accountId,
       plan: params.plan,
       origin: 'api',

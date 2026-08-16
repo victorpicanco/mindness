@@ -86,6 +86,7 @@ describe('AuthenticateUseCase', () => {
       accountId: 'account-1',
       authUserId: 'auth-user-1',
       email: 'person@example.com',
+      authenticationMethod: 'password',
       sessionId: 'session-1',
       issuedAt: NOW,
     })

@@ -39,13 +39,16 @@ export async function buildAccountsTestApp(
   const prisma = createPrismaClient({ databaseUrl: deps.databaseUrl, logQueries: false })
   const eventBus = new FakeEventBus()
   const clock = new ControllableClock(TEST_NOW)
-  const authIdentityProvider = new InMemoryAuthIdentityProviderAdapter(clock, new UuidGenerator())
+  const idGenerator = new UuidGenerator()
+  const authIdentityProvider = new InMemoryAuthIdentityProviderAdapter(clock, idGenerator)
   const subscriptionCancellation = new InMemorySubscriptionCancellationAdapter()
   const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })
 
   const container = await registerAccountsModule(app, {
     prisma,
+    clock,
     eventPublisher: eventBus,
+    idGenerator,
     config: {
       consentVersion: TEST_CONSENT_VERSION,
       publicApiUrl: 'https://api.test',
@@ -54,7 +57,7 @@ export async function buildAccountsTestApp(
       supabaseSecretKey: 'test-secret-key',
       emailConfirmationRedirectUrl: 'https://app.test/auth/confirmed',
     },
-    adapters: { authIdentityProvider, clock, subscriptionCancellation },
+    adapters: { authIdentityProvider, subscriptionCancellation },
   })
 
   await app.ready()

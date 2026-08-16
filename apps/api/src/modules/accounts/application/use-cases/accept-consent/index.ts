@@ -24,11 +24,13 @@ export class AcceptConsentUseCase {
   constructor(private readonly dependencies: AcceptConsentDependencies) {}
 
   async execute(input: AcceptConsentInput): Promise<AcceptConsentOutput> {
-    const identity = await this.dependencies.authIdentityProvider.validateAccessToken(
-      input.accessToken,
-    )
-
-    return this.dependencies.unitOfWork.run(async () => {
+    const identity =
+      input.identity ??
+      (input.accessToken === undefined
+        ? null
+        : await this.dependencies.authIdentityProvider.validateAccessToken(input.accessToken))
+    if (identity === null) throw new AccountNotFoundError()
+    const result = await this.dependencies.unitOfWork.run(async () => {
       const account = await this.dependencies.accounts.findByAuthUserId(identity.authUserId)
       if (account === null) throw new AccountNotFoundError()
 
@@ -39,29 +41,34 @@ export class AcceptConsentUseCase {
       const { changed, consent } = account.acceptVoiceConsent(requestedConsent)
       if (!changed) {
         return {
-          acceptedAt: consent.acceptedAt.toISOString(),
-          purpose: consent.purpose,
-          version: consent.version,
+          event: null,
+          output: {
+            acceptedAt: consent.acceptedAt.toISOString(),
+            purpose: consent.purpose,
+            version: consent.version,
+          },
         }
       }
 
       await this.dependencies.accounts.save(account)
-      await this.dependencies.eventPublisher.publish(
-        ConsentAccepted.create({
-          eventId: this.dependencies.idGenerator.generate(),
-          occurredAt: this.dependencies.clock.now(),
-          accountId: account.id,
-          plan: account.plan,
-          purpose: consent.purpose,
-          version: consent.version,
-        }),
-      )
-
-      return {
-        acceptedAt: consent.acceptedAt.toISOString(),
+      const event = ConsentAccepted.create({
+        eventId: this.dependencies.idGenerator.generate(),
+        occurredAt: this.dependencies.clock.now(),
+        accountId: account.id,
+        plan: account.plan,
         purpose: consent.purpose,
         version: consent.version,
+      })
+      return {
+        event,
+        output: {
+          acceptedAt: consent.acceptedAt.toISOString(),
+          purpose: consent.purpose,
+          version: consent.version,
+        },
       }
     })
+    if (result.event !== null) await this.dependencies.eventPublisher.publish(result.event)
+    return result.output
   }
 }

@@ -1,5 +1,8 @@
+import type { VerifiedAuthIdentity } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
+
 export interface CreateAccountInput {
-  readonly accessToken: string
+  readonly identity?: VerifiedAuthIdentity
+  readonly accessToken?: string
   readonly timeZone: string | null
 }
 

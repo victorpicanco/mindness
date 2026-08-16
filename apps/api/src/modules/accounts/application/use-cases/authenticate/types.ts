@@ -8,4 +8,5 @@ export interface AuthenticateOutput {
   readonly email: string
   readonly sessionId: string
   readonly issuedAt: Date
+  readonly authenticationMethod: 'password' | 'google'
 }

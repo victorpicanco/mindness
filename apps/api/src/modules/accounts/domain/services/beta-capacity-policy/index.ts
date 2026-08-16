@@ -2,10 +2,8 @@ import { BetaCapacityReachedError } from '@/modules/accounts/domain/errors/beta-
 
 const BETA_CAPACITY = 100
 
-export class BetaCapacity {
+export class BetaCapacityPolicy {
   static ensureAvailable(accountCount: number): void {
-    if (accountCount >= BETA_CAPACITY) {
-      throw new BetaCapacityReachedError(accountCount)
-    }
+    if (accountCount >= BETA_CAPACITY) throw new BetaCapacityReachedError(accountCount)
   }
 }

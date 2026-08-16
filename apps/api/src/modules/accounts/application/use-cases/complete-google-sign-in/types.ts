@@ -1,5 +1,6 @@
 export interface CompleteGoogleSignInInput {
-  readonly code: string
+  readonly code: string | null
+  readonly error: string | null
   readonly pkceState: string | null
 }
 

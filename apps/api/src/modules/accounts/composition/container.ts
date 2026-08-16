@@ -12,6 +12,7 @@ import { UpdateTimeZoneUseCase } from '@/modules/accounts/application/use-cases/
 import type { AuthIdentityProvider } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 import type { Clock } from '@/modules/accounts/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/accounts/domain/ports/event-publisher/index.js'
+import type { IdGenerator } from '@/modules/accounts/domain/ports/id-generator/index.js'
 import type { SubscriptionCancellation } from '@/modules/accounts/domain/ports/subscription-cancellation/index.js'
 import type { UnitOfWork } from '@/modules/accounts/domain/ports/unit-of-work/index.js'
 import { NoOpSubscriptionCancellationAdapter } from '@/modules/accounts/infrastructure/adapters/no-op-subscription-cancellation-adapter/index.js'
@@ -38,8 +39,6 @@ import { StartGoogleSignInController } from '@/modules/accounts/presentation/con
 import { UpdateTimeZoneController } from '@/modules/accounts/presentation/controllers/update-time-zone-controller/index.js'
 import { ACCOUNTS_ROUTE_PATHS } from '@/modules/accounts/presentation/routes/accounts-routes/types.js'
 import type { AccountsControllers } from '@/modules/accounts/presentation/routes/accounts-routes/types.js'
-import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
-import { SystemClock } from '@/shared/time/system-clock/index.js'
 
 import { createAccountsFacade, type AccountsFacade } from './facade.js'
 
@@ -54,22 +53,22 @@ export interface AccountsConfig {
 
 export interface AccountsAdapterOverrides {
   readonly authIdentityProvider?: AuthIdentityProvider
-  readonly clock?: Clock
   readonly subscriptionCancellation?: SubscriptionCancellation
   readonly unitOfWork?: UnitOfWork
 }
 
 export interface AccountsModuleDeps {
   readonly prisma: AccountsPrismaClient & AccountsPrismaTransactionRunner
+  readonly clock: Clock
   readonly eventPublisher: EventPublisher
+  readonly idGenerator: IdGenerator
   readonly config: AccountsConfig
   readonly adapters?: AccountsAdapterOverrides
 }
 
 export function createAccountsContainer(deps: AccountsModuleDeps) {
   const transactionContext = new AccountsTransactionContext()
-  const clock = deps.adapters?.clock ?? new SystemClock()
-  const idGenerator = new UuidGenerator()
+  const { clock, idGenerator } = deps
   const unitOfWork =
     deps.adapters?.unitOfWork ?? new PrismaUnitOfWorkAdapter(deps.prisma, transactionContext)
   const authIdentityProvider =
@@ -130,7 +129,10 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
 
   const controllers: AccountsControllers = {
     acceptConsent: new AcceptConsentController(useCases.acceptConsent),
-    completeGoogleSignIn: new CompleteGoogleSignInController(useCases.completeGoogleSignIn),
+    completeGoogleSignIn: new CompleteGoogleSignInController(
+      useCases.completeGoogleSignIn,
+      ACCOUNTS_ROUTE_PATHS.googleCallback,
+    ),
     createAccount: new CreateAccountController(useCases.createAccount),
     deleteAccount: new DeleteAccountController(useCases.deleteAccount),
     getAccountProfile: new GetAccountProfileController(useCases.getAccountProfile),

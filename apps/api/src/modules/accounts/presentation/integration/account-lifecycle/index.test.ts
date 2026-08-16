@@ -150,7 +150,7 @@ describe('account lifecycle', () => {
     expect(harness.eventBus.published).toHaveLength(eventCount)
   })
 
-  it('makes a deleted account inaccessible and schedules its removal', async () => {
+  it('cancels billing, makes a deleted account inaccessible and schedules its removal', async () => {
     const email = 'deletion@example.com'
     const accessToken = await provisionedPasswordAccount(email)
     const account = await harness.repositories.accounts.findByEmail(email)
@@ -171,8 +171,15 @@ describe('account lifecycle', () => {
     const persisted = await harness.repositories.accounts.findByEmail(email)
     expect(persisted).toMatchObject({ status: 'deletion_pending', currentSessionId: null })
     expect(harness.subscriptionCancellation.canceled).toEqual([account?.id])
-    expect(harness.eventBus.published.map((event) => event.eventName)).toContain(
-      'account_deletion_requested',
+    expect(harness.eventBus.published).toContainEqual(
+      expect.objectContaining({
+        eventName: 'account_deletion_requested',
+        payload: {
+          accountId: account?.id,
+          plan: 'free',
+          scheduledFor: response.json<{ data: { scheduledFor: string } }>().data.scheduledFor,
+        },
+      }),
     )
     expect(afterDeletion.statusCode).toBe(401)
     assertResponseMatchesSchema(harness.app, 'GET', '/accounts/me', afterDeletion, 401)

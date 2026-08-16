@@ -4,15 +4,19 @@ export interface CreateVoiceConsentParams {
 }
 
 export class VoiceConsent {
-  readonly purpose = 'voice_recording_and_analysis'
+  readonly purpose = 'voice_recording_and_analysis' as const
 
   private constructor(
     readonly version: string,
-    readonly acceptedAt: Date,
+    private readonly acceptedAtEpoch: number,
   ) {}
 
+  get acceptedAt(): Date {
+    return new Date(this.acceptedAtEpoch)
+  }
+
   static create(params: CreateVoiceConsentParams): VoiceConsent {
-    return new VoiceConsent(params.version, params.acceptedAt)
+    return new VoiceConsent(params.version, params.acceptedAt.getTime())
   }
 
   equals(other: VoiceConsent): boolean {

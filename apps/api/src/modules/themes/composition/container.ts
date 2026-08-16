@@ -6,6 +6,7 @@ import { FindThemeByIdUseCase } from '@/modules/themes/application/use-cases/fin
 import { ListThemeCategoriesUseCase } from '@/modules/themes/application/use-cases/list-theme-categories/index.js'
 import { MoveThemeToDraftUseCase } from '@/modules/themes/application/use-cases/move-theme-to-draft/index.js'
 import { PublishThemeUseCase } from '@/modules/themes/application/use-cases/publish-theme/index.js'
+import { SynchronizeThemeCatalogUseCase } from '@/modules/themes/application/use-cases/synchronize-theme-catalog/index.js'
 import { WithdrawThemeUseCase } from '@/modules/themes/application/use-cases/withdraw-theme/index.js'
 import type { Clock } from '@/modules/themes/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/themes/domain/ports/event-publisher/index.js'
@@ -61,6 +62,7 @@ export function createThemesContainer(deps: ThemesModuleDeps) {
     listThemeCategories: new ListThemeCategoriesUseCase({ categories }),
     moveThemeToDraft: new MoveThemeToDraftUseCase(shared),
     publishTheme: new PublishThemeUseCase(shared),
+    synchronizeThemeCatalog: new SynchronizeThemeCatalogUseCase(shared),
     withdrawTheme: new WithdrawThemeUseCase(shared),
   }
 

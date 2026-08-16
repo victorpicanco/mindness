@@ -1,0 +1,160 @@
+{
+  "categories": [
+    {
+      "slug": "mindfulness",
+      "name": "Mindfulness",
+      "themes": [
+        {
+          "title": "Notice your breathing 01",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 02",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 03",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 04",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 05",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 06",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 07",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 08",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 09",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Notice your breathing 10",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 01",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 02",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 03",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 04",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 05",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 06",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 07",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 08",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 09",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Follow the body scan 10",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 01",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 02",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 03",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 04",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 05",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 06",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 07",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 08",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 09",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Observe each thought 10",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        }
+      ]
+    }
+  ]
+}

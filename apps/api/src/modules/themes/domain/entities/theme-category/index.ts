@@ -14,8 +14,12 @@ export class ThemeCategory {
   private constructor(
     readonly id: string,
     readonly slug: CategorySlug,
-    readonly name: string,
+    private _name: string,
   ) {}
+
+  get name(): string {
+    return this._name
+  }
 
   static create(params: CreateThemeCategoryParams): ThemeCategory {
     const nameLength = params.name.trim().length
@@ -25,5 +29,15 @@ export class ThemeCategory {
     }
 
     return new ThemeCategory(params.id, params.slug, params.name)
+  }
+
+  rename(name: string): void {
+    const nameLength = name.trim().length
+
+    if (nameLength < MINIMUM_CATEGORY_NAME_LENGTH || nameLength > MAXIMUM_CATEGORY_NAME_LENGTH) {
+      throw new InvalidThemeValueError('name')
+    }
+
+    this._name = name
   }
 }

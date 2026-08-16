@@ -8,7 +8,7 @@ const INITIAL_PUBLICATION_STATUS: ThemePublicationStatus = 'draft'
 export class Theme {
   private constructor(
     readonly id: string,
-    readonly title: ThemeTitle,
+    private _title: ThemeTitle,
     readonly categoryId: string,
     readonly difficulty: ThemeDifficulty,
     private _publicationStatus: ThemePublicationStatus,
@@ -17,6 +17,10 @@ export class Theme {
 
   get publicationStatus(): ThemePublicationStatus {
     return this._publicationStatus
+  }
+
+  get title(): ThemeTitle {
+    return this._title
   }
 
   get createdAt(): Date {
@@ -44,6 +48,10 @@ export class Theme {
 
   moveToDraft(): void {
     this.changePublicationStatus('draft')
+  }
+
+  rename(title: ThemeTitle): void {
+    this._title = title
   }
 
   isEligible(): boolean {

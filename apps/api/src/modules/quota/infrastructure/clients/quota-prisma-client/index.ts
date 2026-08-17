@@ -74,3 +74,14 @@ export interface QuotaReservationsPrismaClient {
 }
 
 export interface QuotaPrismaClient extends QuotaCyclesPrismaClient, QuotaReservationsPrismaClient {}
+
+export interface TransactionOptions {
+  readonly isolationLevel: 'Serializable'
+}
+
+export interface QuotaPrismaTransactionRunner {
+  $transaction<T>(
+    operation: (transaction: QuotaPrismaClient) => Promise<T>,
+    options: TransactionOptions,
+  ): Promise<T>
+}

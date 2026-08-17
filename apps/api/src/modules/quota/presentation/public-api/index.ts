@@ -45,14 +45,31 @@ export class QuotaPublicApiImpl implements QuotaPublicApi {
   constructor(private readonly dependencies: QuotaPublicApiDependencies) {}
 
   async readQuota(input: { readonly accountId: string }): Promise<QuotaSnapshot> {
-    return this.dependencies.readQuota.execute(input)
+    const balance = await this.dependencies.readQuota.execute(input)
+
+    return balance.enforced
+      ? {
+          enforced: true,
+          allowance: balance.allowance,
+          remaining: balance.remaining,
+          renewsAt: balance.renewsAt,
+        }
+      : { enforced: false }
   }
 
   async reserveForSession(input: {
     readonly accountId: string
     readonly sessionId: string
   }): Promise<QuotaReservationGranted> {
-    return this.dependencies.reserveQuota.execute(input)
+    const reservation = await this.dependencies.reserveQuota.execute(input)
+
+    return reservation.enforced
+      ? {
+          reservationId: reservation.reservationId,
+          enforced: true,
+          remaining: reservation.remaining,
+        }
+      : { reservationId: reservation.reservationId, enforced: false }
   }
 
   async releaseReservation(input: { readonly sessionId: string }): Promise<void> {

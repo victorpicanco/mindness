@@ -8,60 +8,122 @@ type Equal<Left, Right> =
     ? true
     : false
 type Assert<Condition extends true> = Condition
-type QuotaPublicApiExposesOnlySagaOperations = Assert<
+
+export type QuotaPublicApiExposesOnlySagaOperations = Assert<
   Equal<keyof QuotaPublicApi, 'readQuota' | 'reserveForSession' | 'releaseReservation'>
 >
 
-const quotaPublicApiExposesOnlySagaOperations: QuotaPublicApiExposesOnlySagaOperations = true
+const RENEWS_AT = new Date('2026-09-15T00:00:00.000Z')
+
+// The doubles answer with more fields than the contract declares, because structural typing
+// accepts a wider use case output: without an explicit translation the extra field would cross
+// the module boundary while the public type denies it exists.
+const enforcedBalance = {
+  enforced: true as const,
+  allowance: 4,
+  remaining: 3,
+  renewsAt: RENEWS_AT,
+  cycleId: 'cycle-1',
+}
+const exemptBalance = { enforced: false as const, cycleId: null }
+const enforcedReservation = {
+  reservationId: 'reservation-1',
+  enforced: true as const,
+  remaining: 2,
+  cycleId: 'cycle-1',
+}
+const exemptReservation = {
+  reservationId: 'reservation-1',
+  enforced: false as const,
+  cycleId: null,
+}
 
 describe('QuotaPublicApiImpl', () => {
-  it('delegates each saga operation to its use case and translates the results', async () => {
-    const readQuota = {
-      execute: (input: { readonly accountId: string }) => {
-        expect(input).toEqual({ accountId: 'account-1' })
-        return Promise.resolve({
-          enforced: true as const,
-          allowance: 4,
-          remaining: 3,
-          renewsAt: new Date('2026-09-15T00:00:00.000Z'),
-        })
+  it('exposes only the three saga operations', () => {
+    const methods = Object.getOwnPropertyNames(QuotaPublicApiImpl.prototype).filter(
+      (method) => method !== 'constructor',
+    )
+
+    expect([...methods].sort()).toEqual(['readQuota', 'releaseReservation', 'reserveForSession'])
+  })
+
+  it('translates the enforced balance into the public snapshot', async () => {
+    const inputs: unknown[] = []
+    const api = new QuotaPublicApiImpl({
+      readQuota: {
+        execute: (input) => {
+          inputs.push(input)
+          return Promise.resolve(enforcedBalance)
+        },
       },
-    }
-    const reserveQuota = {
-      execute: (input: { readonly accountId: string; readonly sessionId: string }) => {
-        expect(input).toEqual({ accountId: 'account-1', sessionId: 'session-1' })
-        return Promise.resolve({
-          reservationId: 'reservation-1',
-          enforced: true as const,
-          remaining: 2,
-        })
-      },
-    }
-    const releaseQuotaReservation = {
-      execute: (input: { readonly sessionId: string }) => {
-        expect(input).toEqual({ sessionId: 'session-1' })
-        return Promise.resolve()
-      },
-    }
-    const api = new QuotaPublicApiImpl({ readQuota, reserveQuota, releaseQuotaReservation })
+      reserveQuota: { execute: () => Promise.resolve(enforcedReservation) },
+      releaseQuotaReservation: { execute: () => Promise.resolve() },
+    })
 
     await expect(api.readQuota({ accountId: 'account-1' })).resolves.toEqual({
       enforced: true,
       allowance: 4,
       remaining: 3,
-      renewsAt: new Date('2026-09-15T00:00:00.000Z'),
+      renewsAt: RENEWS_AT,
     })
+    expect(inputs).toEqual([{ accountId: 'account-1' }])
+  })
+
+  it('translates the exempt balance into the public snapshot', async () => {
+    const api = new QuotaPublicApiImpl({
+      readQuota: { execute: () => Promise.resolve(exemptBalance) },
+      reserveQuota: { execute: () => Promise.resolve(enforcedReservation) },
+      releaseQuotaReservation: { execute: () => Promise.resolve() },
+    })
+
+    await expect(api.readQuota({ accountId: 'account-1' })).resolves.toEqual({ enforced: false })
+  })
+
+  it('translates the enforced reservation into the public grant', async () => {
+    const inputs: unknown[] = []
+    const api = new QuotaPublicApiImpl({
+      readQuota: { execute: () => Promise.resolve(enforcedBalance) },
+      reserveQuota: {
+        execute: (input) => {
+          inputs.push(input)
+          return Promise.resolve(enforcedReservation)
+        },
+      },
+      releaseQuotaReservation: { execute: () => Promise.resolve() },
+    })
+
     await expect(
       api.reserveForSession({ accountId: 'account-1', sessionId: 'session-1' }),
     ).resolves.toEqual({ reservationId: 'reservation-1', enforced: true, remaining: 2 })
-    await expect(api.releaseReservation({ sessionId: 'session-1' })).resolves.toBeUndefined()
+    expect(inputs).toEqual([{ accountId: 'account-1', sessionId: 'session-1' }])
   })
 
-  it('does not expose internal quota operations', () => {
-    expect(quotaPublicApiExposesOnlySagaOperations).toBe(true)
-    const methods = Object.getOwnPropertyNames(QuotaPublicApiImpl.prototype)
+  it('translates the exempt reservation into the public grant', async () => {
+    const api = new QuotaPublicApiImpl({
+      readQuota: { execute: () => Promise.resolve(enforcedBalance) },
+      reserveQuota: { execute: () => Promise.resolve(exemptReservation) },
+      releaseQuotaReservation: { execute: () => Promise.resolve() },
+    })
 
-    expect(methods).not.toContain('consumeQuotaReservation')
-    expect(methods).not.toContain('reopenFreeQuotaCycle')
+    await expect(
+      api.reserveForSession({ accountId: 'account-1', sessionId: 'session-1' }),
+    ).resolves.toEqual({ reservationId: 'reservation-1', enforced: false })
+  })
+
+  it('delegates the release to its use case and resolves without a value', async () => {
+    const inputs: unknown[] = []
+    const api = new QuotaPublicApiImpl({
+      readQuota: { execute: () => Promise.resolve(enforcedBalance) },
+      reserveQuota: { execute: () => Promise.resolve(enforcedReservation) },
+      releaseQuotaReservation: {
+        execute: (input) => {
+          inputs.push(input)
+          return Promise.resolve()
+        },
+      },
+    })
+
+    await expect(api.releaseReservation({ sessionId: 'session-1' })).resolves.toBeUndefined()
+    expect(inputs).toEqual([{ sessionId: 'session-1' }])
   })
 })

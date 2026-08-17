@@ -9,15 +9,15 @@ export interface AccountsFacade {
   getAccountSnapshot(accountId: string): Promise<AccountSnapshot | null>
 }
 
-export function createAccountsFacade(
-  checkPracticeEligibility: CheckPracticeEligibilityUseCase,
-  getAccountSnapshot: GetAccountSnapshotUseCase,
-): AccountsFacade {
+export function createAccountsFacade(dependencies: {
+  readonly checkPracticeEligibility: CheckPracticeEligibilityUseCase
+  readonly getAccountSnapshot: GetAccountSnapshotUseCase
+}): AccountsFacade {
   return {
     canStartPractice: async (accountId) => {
-      const result = await checkPracticeEligibility.execute({ accountId })
+      const result = await dependencies.checkPracticeEligibility.execute({ accountId })
       return result.eligible
     },
-    getAccountSnapshot: (accountId) => getAccountSnapshot.execute({ accountId }),
+    getAccountSnapshot: (accountId) => dependencies.getAccountSnapshot.execute({ accountId }),
   }
 }

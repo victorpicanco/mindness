@@ -147,10 +147,10 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     updateTimeZone: new UpdateTimeZoneController(useCases.updateTimeZone),
   }
 
-  const facade: AccountsFacade = createAccountsFacade(
-    useCases.checkPracticeEligibility,
-    useCases.getAccountSnapshot,
-  )
+  const facade: AccountsFacade = createAccountsFacade({
+    checkPracticeEligibility: useCases.checkPracticeEligibility,
+    getAccountSnapshot: useCases.getAccountSnapshot,
+  })
 
   return { controllers, facade, repositories: { accounts, deletionRequests }, useCases }
 }

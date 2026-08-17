@@ -1,0 +1,6 @@
+export { createQuotaContainer } from './composition/container.js'
+export { createQuotaFacade } from './composition/facade.js'
+export { registerQuotaModule } from './composition/register.js'
+export { QuotaExhausted } from './domain/events/quota-exhausted/index.js'
+export type { QuotaModuleDeps } from './composition/container.js'
+export type { QuotaPublicApi } from './presentation/public-api/index.js'

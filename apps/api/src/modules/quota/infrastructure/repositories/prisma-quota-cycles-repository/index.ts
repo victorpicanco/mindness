@@ -9,15 +9,37 @@ import { DatabaseError } from '@/shared/errors/database-error/index.js'
 
 const UNIQUE_VIOLATION_CODE = 'P2002'
 const CYCLE_OPEN_CONSTRAINT = 'quota_cycles_account_id_starts_at_key'
+const CYCLE_OPEN_FIELDS = ['account_id', 'starts_at']
 
-function isCycleAlreadyOpenViolation(
-  error: unknown,
-): error is Prisma.PrismaClientKnownRequestError {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === UNIQUE_VIOLATION_CODE &&
-    error.meta?.target === CYCLE_OPEN_CONSTRAINT
-  )
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+// The driver adapter reports the violated constraint under meta.driverAdapterError, not in the
+// meta.target of the former Rust query engine. @prisma/adapter-pg 7.9.1 can only name the
+// columns, later versions prefer the index name, and the docs guarantee neither.
+function violatedConstraint(error: Prisma.PrismaClientKnownRequestError): unknown {
+  const meta: unknown = error.meta
+  if (!isRecord(meta) || !isRecord(meta.driverAdapterError)) return undefined
+
+  const cause = meta.driverAdapterError.cause
+
+  return isRecord(cause) ? cause.constraint : undefined
+}
+
+function isCycleAlreadyOpenViolation(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
+  if (error.code !== UNIQUE_VIOLATION_CODE) return false
+
+  const constraint = violatedConstraint(error)
+  // quota_cycles carries a single unique index besides its primary key, so a violation the
+  // adapter could not detail can only be that one.
+  if (!isRecord(constraint)) return true
+  if (constraint.index === CYCLE_OPEN_CONSTRAINT) return true
+
+  const fields: unknown = constraint.fields
+
+  return Array.isArray(fields) && CYCLE_OPEN_FIELDS.every((column) => fields.includes(column))
 }
 
 export class PrismaQuotaCyclesRepository implements QuotaCyclesRepository {

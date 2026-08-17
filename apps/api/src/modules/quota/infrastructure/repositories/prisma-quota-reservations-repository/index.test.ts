@@ -60,7 +60,17 @@ function sessionUniqueViolation(): Prisma.PrismaClientKnownRequestError {
   return new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
     code: 'P2002',
     clientVersion: '7.9.1',
-    meta: { target: ['session_id'] },
+    meta: {
+      modelName: 'QuotaReservation',
+      driverAdapterError: {
+        name: 'DriverAdapterError',
+        cause: {
+          originalCode: '23505',
+          kind: 'UniqueConstraintViolation',
+          constraint: { fields: ['session_id'] },
+        },
+      },
+    },
   })
 }
 

@@ -21,17 +21,15 @@ export interface QuotaReservationRow {
   readonly resolvedAt: Date | null
 }
 
-export interface QuotaCycleFindCurrentArgs {
+// One argument shape rather than an overload per query: with two signatures TypeScript cannot
+// infer the generated client's SelectSubset parameter, so the real client stops satisfying this.
+export interface QuotaCycleFindArgs {
   readonly where: {
     readonly accountId: string
-    readonly startsAt: { readonly lte: Date }
-    readonly renewsAt: { readonly gt: Date }
+    readonly startsAt?: { readonly lte: Date }
+    readonly renewsAt?: { readonly gt: Date }
   }
-}
-
-export interface QuotaCycleFindLatestArgs {
-  readonly where: { readonly accountId: string }
-  readonly orderBy: { readonly sequence: 'desc' }
+  readonly orderBy?: { readonly sequence: 'desc' }
 }
 
 export interface QuotaCycleCreateArgs {
@@ -59,8 +57,7 @@ export interface QuotaReservationUpsertArgs {
 
 export interface QuotaCyclesPrismaClient {
   readonly quotaCycle: {
-    findFirst(args: QuotaCycleFindCurrentArgs): Promise<QuotaCycleRow | null>
-    findFirst(args: QuotaCycleFindLatestArgs): Promise<QuotaCycleRow | null>
+    findFirst(args: QuotaCycleFindArgs): Promise<QuotaCycleRow | null>
     create(args: QuotaCycleCreateArgs): Promise<QuotaCycleRow>
   }
 }

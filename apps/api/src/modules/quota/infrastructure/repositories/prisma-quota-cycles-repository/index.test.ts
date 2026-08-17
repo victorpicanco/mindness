@@ -54,7 +54,6 @@ function cycle(): QuotaCycle {
   return new QuotaCycleMapper().toDomain(row)
 }
 
-// Shape captured from a real PostgreSQL 17 with @prisma/adapter-pg 7.9.1.
 function uniqueViolation(
   constraint?: Record<string, unknown>,
 ): Prisma.PrismaClientKnownRequestError {

@@ -1,11 +1,8 @@
+import type { QuotaReservationCounts } from '@/modules/quota/domain/entities/quota-reservation/types.js'
 import { InvalidQuotaValueError } from '@/modules/quota/domain/errors/invalid-quota-value-error/index.js'
 import type { CycleWindow } from '@/modules/quota/domain/value-objects/cycle-window/index.js'
 
-import type {
-  CreateQuotaCycleParams,
-  QuotaReservationCounts,
-  ReconstituteQuotaCycleParams,
-} from './types.js'
+import type { CreateQuotaCycleParams, ReconstituteQuotaCycleParams } from './types.js'
 
 export class QuotaCycle {
   private constructor(
@@ -33,7 +30,7 @@ export class QuotaCycle {
   }
 
   remainingFor(counts: QuotaReservationCounts): number {
-    return Math.max(0, this.allowance - this.carriedUsage - counts.heldCount - counts.consumedCount)
+    return Math.max(0, this.allowance - this.carriedUsage - counts.held - counts.consumed)
   }
 
   isExhaustedFor(counts: QuotaReservationCounts): boolean {
@@ -59,14 +56,14 @@ export class QuotaCycle {
     if (!Number.isInteger(params.allowance) || params.allowance < 1) {
       throw new InvalidQuotaValueError('allowance')
     }
-    if (params.carriedUsage < 0 || params.carriedUsage > params.allowance) {
+    if (
+      !Number.isInteger(params.carriedUsage) ||
+      params.carriedUsage < 0 ||
+      params.carriedUsage > params.allowance
+    ) {
       throw new InvalidQuotaValueError('carriedUsage')
     }
   }
 }
 
-export type {
-  CreateQuotaCycleParams,
-  QuotaReservationCounts,
-  ReconstituteQuotaCycleParams,
-} from './types.js'
+export type { CreateQuotaCycleParams, ReconstituteQuotaCycleParams } from './types.js'

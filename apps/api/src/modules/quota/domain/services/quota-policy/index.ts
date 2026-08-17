@@ -1,3 +1,5 @@
+import { InvalidQuotaValueError } from '@/modules/quota/domain/errors/invalid-quota-value-error/index.js'
+
 import type { QuotaPlan } from './types.js'
 
 export const FREE_CYCLE_ALLOWANCE = 4
@@ -8,11 +10,15 @@ export class QuotaPolicy {
   }
 
   static allowanceFor(plan: QuotaPlan): number {
-    return QuotaPolicy.isEnforced(plan) ? FREE_CYCLE_ALLOWANCE : 0
+    if (!QuotaPolicy.isEnforced(plan)) {
+      throw new InvalidQuotaValueError('plan')
+    }
+
+    return FREE_CYCLE_ALLOWANCE
   }
 
-  static carriedUsageFrom(consumedCount: number): number {
-    return Math.min(FREE_CYCLE_ALLOWANCE, Math.max(0, consumedCount))
+  static carriedUsageFrom(consumedCount: number, allowance: number): number {
+    return Math.min(allowance, Math.max(0, consumedCount))
   }
 }
 

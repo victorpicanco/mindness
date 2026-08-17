@@ -31,6 +31,7 @@ describe('QuotaCycle', () => {
     ['allowance', 1, 0, 0],
     ['carriedUsage above allowance', 1, 4, 5],
     ['negative carriedUsage', 1, 4, -1],
+    ['fractional carriedUsage', 1, 4, 1.5],
   ])('rejects an invalid %s', (_label, sequence, allowance, carriedUsage) => {
     expect(() =>
       QuotaCycle.create({
@@ -56,8 +57,22 @@ describe('QuotaCycle', () => {
       createdAt: CREATED_AT,
     })
 
-    expect(cycle.remainingFor({ heldCount: 1, consumedCount: 1 })).toBe(1)
-    expect(cycle.remainingFor({ heldCount: 2, consumedCount: 2 })).toBe(0)
+    expect(cycle.remainingFor({ held: 1, consumed: 1 })).toBe(1)
+    expect(cycle.remainingFor({ held: 2, consumed: 2 })).toBe(0)
+  })
+
+  it('trusts the persisted state when reconstituting', () => {
+    const reconstituted = QuotaCycle.reconstitute({
+      id: 'cycle-1',
+      accountId: 'account-1',
+      sequence: 1,
+      window: WINDOW,
+      allowance: 4,
+      carriedUsage: 9,
+      createdAt: CREATED_AT,
+    })
+
+    expect(reconstituted.carriedUsage).toBe(9)
   })
 
   it('reports exhaustion from the remaining balance', () => {
@@ -71,7 +86,7 @@ describe('QuotaCycle', () => {
       createdAt: CREATED_AT,
     })
 
-    expect(cycle.isExhaustedFor({ heldCount: 1, consumedCount: 1 })).toBe(false)
-    expect(cycle.isExhaustedFor({ heldCount: 2, consumedCount: 1 })).toBe(true)
+    expect(cycle.isExhaustedFor({ held: 1, consumed: 1 })).toBe(false)
+    expect(cycle.isExhaustedFor({ held: 2, consumed: 1 })).toBe(true)
   })
 })

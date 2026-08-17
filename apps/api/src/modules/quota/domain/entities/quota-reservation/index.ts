@@ -6,8 +6,6 @@ import type {
   ReconstituteQuotaReservationParams,
 } from './types.js'
 
-const HELD_STATUS: QuotaReservationStatus = 'held'
-
 export class QuotaReservation {
   private constructor(
     readonly id: string,
@@ -37,7 +35,7 @@ export class QuotaReservation {
       params.accountId,
       params.cycleId,
       params.sessionId,
-      HELD_STATUS,
+      'held',
       params.createdAt.getTime(),
       null,
     )
@@ -71,7 +69,7 @@ export class QuotaReservation {
     if (this._status === targetStatus) {
       return
     }
-    if (this._status !== HELD_STATUS) {
+    if (this._status !== 'held') {
       throw new InvalidQuotaTransitionError(this._status, targetStatus)
     }
 
@@ -82,6 +80,7 @@ export class QuotaReservation {
 
 export type {
   CreateQuotaReservationParams,
+  QuotaReservationCounts,
   QuotaReservationStatus,
   ReconstituteQuotaReservationParams,
 } from './types.js'

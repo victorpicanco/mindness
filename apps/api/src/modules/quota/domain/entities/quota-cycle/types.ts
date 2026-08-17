@@ -1,10 +1,5 @@
 import type { CycleWindow } from '@/modules/quota/domain/value-objects/cycle-window/index.js'
 
-export interface QuotaReservationCounts {
-  readonly heldCount: number
-  readonly consumedCount: number
-}
-
 export interface CreateQuotaCycleParams {
   readonly id: string
   readonly accountId: string

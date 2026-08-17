@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { BaseError } from '@/shared/errors/base-error/index.js'
-
 import { InvalidQuotaTransitionError } from '@/modules/quota/domain/errors/invalid-quota-transition-error/index.js'
 import { InvalidQuotaValueError } from '@/modules/quota/domain/errors/invalid-quota-value-error/index.js'
 import { QuotaAccountNotFoundError } from '@/modules/quota/domain/errors/quota-account-not-found-error/index.js'
 import { QuotaCycleAlreadyOpenError } from '@/modules/quota/domain/errors/quota-cycle-already-open-error/index.js'
 import { QuotaReservationNotFoundError } from '@/modules/quota/domain/errors/quota-reservation-not-found-error/index.js'
+import { BaseError } from '@/shared/errors/base-error/index.js'
 
 import { QuotaExhaustedError } from './index.js'
 
@@ -22,10 +21,10 @@ describe('quota domain errors', () => {
       { accountId: 'account-1', renewsAt: RENEWS_AT.toISOString() },
     ],
     [
-      new InvalidQuotaTransitionError('held', 'held'),
+      new InvalidQuotaTransitionError('consumed', 'released'),
       'quota.INVALID_QUOTA_TRANSITION',
       409,
-      { currentStatus: 'held', targetStatus: 'held' },
+      { currentStatus: 'consumed', targetStatus: 'released' },
     ],
     [
       new InvalidQuotaValueError('allowance'),

@@ -21,8 +21,6 @@ export interface QuotaReservationRow {
   readonly resolvedAt: Date | null
 }
 
-// One argument shape rather than an overload per query: with two signatures TypeScript cannot
-// infer the generated client's SelectSubset parameter, so the real client stops satisfying this.
 export interface QuotaCycleFindArgs {
   readonly where: {
     readonly accountId: string

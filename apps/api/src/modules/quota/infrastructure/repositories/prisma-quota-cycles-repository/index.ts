@@ -15,9 +15,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-// The driver adapter reports the violated constraint under meta.driverAdapterError, not in the
-// meta.target of the former Rust query engine. @prisma/adapter-pg 7.9.1 can only name the
-// columns, later versions prefer the index name, and the docs guarantee neither.
 function violatedConstraint(error: Prisma.PrismaClientKnownRequestError): unknown {
   const meta: unknown = error.meta
   if (!isRecord(meta) || !isRecord(meta.driverAdapterError)) return undefined
@@ -32,8 +29,6 @@ function isCycleAlreadyOpenViolation(error: unknown): boolean {
   if (error.code !== UNIQUE_VIOLATION_CODE) return false
 
   const constraint = violatedConstraint(error)
-  // quota_cycles carries a single unique index besides its primary key, so a violation the
-  // adapter could not detail can only be that one.
   if (!isRecord(constraint)) return true
   if (constraint.index === CYCLE_OPEN_CONSTRAINT) return true
 

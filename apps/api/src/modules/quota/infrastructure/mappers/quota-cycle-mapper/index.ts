@@ -8,7 +8,7 @@ export class QuotaCycleMapper {
       id: row.id,
       accountId: row.accountId,
       sequence: row.sequence,
-      window: CycleWindow.create(row.startsAt),
+      window: CycleWindow.reconstitute(row.startsAt, row.renewsAt),
       allowance: row.allowance,
       carriedUsage: row.carriedUsage,
       createdAt: row.createdAt,

@@ -1,8 +1,6 @@
 import type { QuotaReservation } from '@/modules/quota/domain/entities/quota-reservation/index.js'
-import type {
-  QuotaReservationCounts,
-  QuotaReservationsRepository,
-} from '@/modules/quota/domain/repositories/quota-reservations-repository/index.js'
+import type { QuotaReservationCounts } from '@/modules/quota/domain/entities/quota-reservation/types.js'
+import type { QuotaReservationsRepository } from '@/modules/quota/domain/repositories/quota-reservations-repository/index.js'
 import type { QuotaReservationsPrismaClient } from '@/modules/quota/infrastructure/clients/quota-prisma-client/index.js'
 import type { QuotaTransactionContext } from '@/modules/quota/infrastructure/clients/quota-transaction-context/index.js'
 import type { QuotaReservationMapper } from '@/modules/quota/infrastructure/mappers/quota-reservation-mapper/index.js'

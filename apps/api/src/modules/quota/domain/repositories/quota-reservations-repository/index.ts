@@ -1,9 +1,5 @@
 import type { QuotaReservation } from '@/modules/quota/domain/entities/quota-reservation/index.js'
-
-export interface QuotaReservationCounts {
-  readonly held: number
-  readonly consumed: number
-}
+import type { QuotaReservationCounts } from '@/modules/quota/domain/entities/quota-reservation/types.js'
 
 export interface QuotaReservationsRepository {
   findBySessionId(sessionId: string): Promise<QuotaReservation | null>

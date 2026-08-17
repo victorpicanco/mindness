@@ -1,3 +1,5 @@
+import { InvalidQuotaValueError } from '@/modules/quota/domain/errors/invalid-quota-value-error/index.js'
+
 export const CYCLE_LENGTH_DAYS = 30
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
@@ -20,7 +22,15 @@ export class CycleWindow {
   static create(startsAt: Date): CycleWindow {
     const startsAtEpoch = startsAt.getTime()
 
+    if (!Number.isFinite(startsAtEpoch)) {
+      throw new InvalidQuotaValueError('startsAt')
+    }
+
     return new CycleWindow(startsAtEpoch, startsAtEpoch + CYCLE_LENGTH_MILLISECONDS)
+  }
+
+  static reconstitute(startsAt: Date, renewsAt: Date): CycleWindow {
+    return new CycleWindow(startsAt.getTime(), renewsAt.getTime())
   }
 
   contains(instant: Date): boolean {
@@ -30,12 +40,9 @@ export class CycleWindow {
   }
 
   advanceTo(instant: Date): CycleWindow {
-    if (this.contains(instant)) {
-      return CycleWindow.create(this.startsAt)
-    }
-
-    const elapsedCycles = Math.floor(
-      (instant.getTime() - this.startsAtEpoch) / CYCLE_LENGTH_MILLISECONDS,
+    const elapsedCycles = Math.max(
+      0,
+      Math.floor((instant.getTime() - this.startsAtEpoch) / CYCLE_LENGTH_MILLISECONDS),
     )
 
     return CycleWindow.create(

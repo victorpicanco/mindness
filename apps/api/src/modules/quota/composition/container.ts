@@ -11,7 +11,6 @@ import type { UnitOfWork } from '@/modules/quota/domain/ports/unit-of-work/index
 import type { QuotaCyclesRepository } from '@/modules/quota/domain/repositories/quota-cycles-repository/index.js'
 import type { QuotaReservationsRepository } from '@/modules/quota/domain/repositories/quota-reservations-repository/index.js'
 import { PrismaUnitOfWorkAdapter } from '@/modules/quota/infrastructure/adapters/prisma-unit-of-work-adapter/index.js'
-import { AccountsPortAdapter } from '@/modules/quota/infrastructure/module-adapters/accounts-port-adapter/index.js'
 import type {
   QuotaPrismaClient,
   QuotaPrismaTransactionRunner,
@@ -19,6 +18,10 @@ import type {
 import { QuotaTransactionContext } from '@/modules/quota/infrastructure/clients/quota-transaction-context/index.js'
 import { QuotaCycleMapper } from '@/modules/quota/infrastructure/mappers/quota-cycle-mapper/index.js'
 import { QuotaReservationMapper } from '@/modules/quota/infrastructure/mappers/quota-reservation-mapper/index.js'
+import {
+  AccountsPortAdapter,
+  type AccountsSnapshotReader,
+} from '@/modules/quota/infrastructure/module-adapters/accounts-port-adapter/index.js'
 import { PrismaQuotaCyclesRepository } from '@/modules/quota/infrastructure/repositories/prisma-quota-cycles-repository/index.js'
 import { PrismaQuotaReservationsRepository } from '@/modules/quota/infrastructure/repositories/prisma-quota-reservations-repository/index.js'
 
@@ -29,15 +32,6 @@ export interface QuotaAdapterOverrides {
   readonly quotaCycles?: QuotaCyclesRepository
   readonly quotaReservations?: QuotaReservationsRepository
   readonly unitOfWork?: UnitOfWork
-}
-
-interface AccountsSnapshotReader {
-  canStartPractice(accountId: string): Promise<boolean>
-  getAccountSnapshot(accountId: string): Promise<{
-    readonly accountId: string
-    readonly plan: 'free'
-    readonly createdAt: Date
-  } | null>
 }
 
 export interface QuotaModuleDeps {

@@ -70,6 +70,36 @@ describe('QuotaReservation', () => {
     expect(createReservation(null).cycleId).toBeNull()
   })
 
+  it('attaches a held reservation to the cycle that reopened', () => {
+    const reservation = createReservation(null)
+
+    reservation.attachToCycle('cycle-2')
+
+    expect(reservation.cycleId).toBe('cycle-2')
+    expect(reservation.status).toBe('held')
+    expect(reservation.resolvedAt).toBeNull()
+  })
+
+  it('keeps attaching to the same cycle idempotent', () => {
+    const reservation = createReservation()
+
+    reservation.attachToCycle('cycle-1')
+
+    expect(reservation.cycleId).toBe('cycle-1')
+  })
+
+  it('rejects attaching a resolved reservation to a cycle', () => {
+    const consumedReservation = createReservation()
+    consumedReservation.consume(RESOLVED_AT)
+    const releasedReservation = createReservation()
+    releasedReservation.release(RESOLVED_AT)
+
+    expect(() => consumedReservation.attachToCycle('cycle-2')).toThrow(InvalidQuotaTransitionError)
+    expect(() => releasedReservation.attachToCycle('cycle-2')).toThrow(InvalidQuotaTransitionError)
+    expect(consumedReservation.cycleId).toBe('cycle-1')
+    expect(releasedReservation.cycleId).toBe('cycle-1')
+  })
+
   it('counts held and consumed reservations against the balance', () => {
     const heldReservation = createReservation()
     const consumedReservation = createReservation()

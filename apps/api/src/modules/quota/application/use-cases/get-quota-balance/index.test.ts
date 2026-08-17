@@ -62,6 +62,7 @@ function createHarness(
   }
   const quotaReservations: QuotaReservationsRepository = {
     findBySessionId: () => Promise.resolve(null),
+    findHeldByAccountSince: () => Promise.resolve([]),
     countByCycle: () => Promise.resolve(counts),
     countConsumedSince: () => Promise.resolve(0),
     save: () => Promise.resolve(),

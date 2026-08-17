@@ -25,6 +25,7 @@ function createHarness(reservation: QuotaReservation | null) {
   const unitOfWork: UnitOfWork = { run: (operation) => operation() }
   const quotaReservations: QuotaReservationsRepository = {
     findBySessionId: () => Promise.resolve(reservation),
+    findHeldByAccountSince: () => Promise.resolve([]),
     countByCycle: () => Promise.resolve({ held: 0, consumed: 0 }),
     countConsumedSince: () => Promise.resolve(0),
     save: (nextReservation) => {

@@ -10,12 +10,16 @@ export class QuotaReservation {
   private constructor(
     readonly id: string,
     readonly accountId: string,
-    readonly cycleId: string | null,
+    private _cycleId: string | null,
     readonly sessionId: string,
     private _status: QuotaReservationStatus,
     private readonly createdAtEpoch: number,
     private resolvedAtEpoch: number | null,
   ) {}
+
+  get cycleId(): string | null {
+    return this._cycleId
+  }
 
   get status(): QuotaReservationStatus {
     return this._status
@@ -59,6 +63,17 @@ export class QuotaReservation {
 
   release(at: Date): void {
     this.transitionTo('released', at)
+  }
+
+  attachToCycle(cycleId: string): void {
+    if (this._cycleId === cycleId) {
+      return
+    }
+    if (this._status !== 'held') {
+      throw new InvalidQuotaTransitionError(this._status, 'held')
+    }
+
+    this._cycleId = cycleId
   }
 
   countsAgainstBalance(): boolean {

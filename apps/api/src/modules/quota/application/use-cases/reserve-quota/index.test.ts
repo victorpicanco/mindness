@@ -66,6 +66,7 @@ function createHarness(params: { readonly plan?: QuotaPlan } = {}): Harness {
       Promise.resolve(
         reservations.find((reservation) => reservation.sessionId === sessionId) ?? null,
       ),
+    findHeldByAccountSince: () => Promise.resolve([]),
     countByCycle: (cycleId) => {
       const counts = reservations.reduce<QuotaReservationCounts>(
         (current, reservation) => {

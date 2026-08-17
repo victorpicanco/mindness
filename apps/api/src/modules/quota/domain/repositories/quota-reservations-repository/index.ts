@@ -3,6 +3,7 @@ import type { QuotaReservationCounts } from '@/modules/quota/domain/entities/quo
 
 export interface QuotaReservationsRepository {
   findBySessionId(sessionId: string): Promise<QuotaReservation | null>
+  findHeldByAccountSince(accountId: string, since: Date): Promise<QuotaReservation[]>
   countByCycle(cycleId: string): Promise<QuotaReservationCounts>
   countConsumedSince(accountId: string, since: Date): Promise<number>
   save(reservation: QuotaReservation): Promise<void>

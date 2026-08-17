@@ -4,6 +4,7 @@ import { Prisma } from '@/generated/prisma/client.js'
 import { QuotaReservation } from '@/modules/quota/domain/entities/quota-reservation/index.js'
 import type {
   QuotaReservationCountArgs,
+  QuotaReservationFindManyArgs,
   QuotaReservationRow,
   QuotaReservationsPrismaClient,
 } from '@/modules/quota/infrastructure/clients/quota-prisma-client/index.js'
@@ -26,6 +27,7 @@ const CYCLE_ID = 'caf10e0d-969b-4f05-9a4a-9d487e7a1301'
 interface FakeClient {
   readonly client: QuotaReservationsPrismaClient
   readonly countArgs: QuotaReservationCountArgs[]
+  readonly findManyArgs: QuotaReservationFindManyArgs[]
   readonly upserts: number[]
 }
 
@@ -34,10 +36,12 @@ function createFakeClient(
   foundRow: QuotaReservationRow | null = null,
 ): FakeClient {
   const countArgs: QuotaReservationCountArgs[] = []
+  const findManyArgs: QuotaReservationFindManyArgs[] = []
   const upserts: number[] = []
 
   return {
     countArgs,
+    findManyArgs,
     upserts,
     client: {
       quotaReservation: {
@@ -46,6 +50,10 @@ function createFakeClient(
           return Promise.resolve(0)
         },
         findUnique: () => Promise.resolve(foundRow),
+        findMany: (args) => {
+          findManyArgs.push(args)
+          return Promise.resolve(foundRow === null ? [] : [foundRow])
+        },
         upsert: (args) => {
           if (writeFailure !== undefined) return Promise.reject(writeFailure)
           upserts.push(1)
@@ -142,6 +150,24 @@ describe('PrismaQuotaReservationsRepository', () => {
 
     expect(fake.countArgs).toEqual([
       { where: { accountId: row.accountId, status: 'consumed', resolvedAt: { gte: since } } },
+    ])
+  })
+
+  it('finds the held reservations of an account created since an instant', async () => {
+    const fake = createFakeClient(undefined, row)
+    const repository = new PrismaQuotaReservationsRepository(
+      fake.client,
+      new QuotaTransactionContext(),
+      new QuotaReservationMapper(),
+    )
+    const since = new Date('2026-08-01T00:00:00.000Z')
+
+    const reservations = await repository.findHeldByAccountSince(row.accountId, since)
+
+    expect(reservations).toHaveLength(1)
+    expect(reservations[0]).toBeInstanceOf(QuotaReservation)
+    expect(fake.findManyArgs).toEqual([
+      { where: { accountId: row.accountId, status: 'held', createdAt: { gte: since } } },
     ])
   })
 

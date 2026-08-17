@@ -38,6 +38,14 @@ export interface QuotaReservationFindArgs {
   readonly where: { readonly sessionId: string }
 }
 
+export interface QuotaReservationFindManyArgs {
+  readonly where: {
+    readonly accountId: string
+    readonly status: QuotaReservationStatus
+    readonly createdAt: { readonly gte: Date }
+  }
+}
+
 export interface QuotaReservationCountArgs {
   readonly where: {
     readonly cycleId?: string
@@ -64,6 +72,7 @@ export interface QuotaReservationsPrismaClient {
   readonly quotaReservation: {
     count(args: QuotaReservationCountArgs): Promise<number>
     findUnique(args: QuotaReservationFindArgs): Promise<QuotaReservationRow | null>
+    findMany(args: QuotaReservationFindManyArgs): Promise<QuotaReservationRow[]>
     upsert(args: QuotaReservationUpsertArgs): Promise<QuotaReservationRow>
   }
 }

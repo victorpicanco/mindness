@@ -30,6 +30,7 @@ function createRunner(failures: Error[] = []): FakeRunner {
     quotaReservation: {
       count: () => Promise.resolve(0),
       findUnique: () => Promise.resolve(null),
+      findMany: () => Promise.resolve([]),
       upsert: (args) => Promise.resolve(args.create),
     },
   }

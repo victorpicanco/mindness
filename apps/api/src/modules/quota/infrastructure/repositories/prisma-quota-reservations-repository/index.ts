@@ -22,6 +22,17 @@ export class PrismaQuotaReservationsRepository implements QuotaReservationsRepos
     }
   }
 
+  async findHeldByAccountSince(accountId: string, since: Date): Promise<QuotaReservation[]> {
+    try {
+      const rows = await this.client().quotaReservation.findMany({
+        where: { accountId, status: 'held', createdAt: { gte: since } },
+      })
+      return rows.map((row) => this.mapper.toDomain(row))
+    } catch (error) {
+      throw new DatabaseError('Failed to find the held quota reservations', { cause: error })
+    }
+  }
+
   async countByCycle(cycleId: string): Promise<QuotaReservationCounts> {
     try {
       const [held, consumed] = await Promise.all([

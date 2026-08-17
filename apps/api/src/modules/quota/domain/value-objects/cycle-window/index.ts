@@ -39,6 +39,10 @@ export class CycleWindow {
     return instantEpoch >= this.startsAtEpoch && instantEpoch < this.renewsAtEpoch
   }
 
+  previous(): CycleWindow {
+    return CycleWindow.create(new Date(this.startsAtEpoch - CYCLE_LENGTH_MILLISECONDS))
+  }
+
   advanceTo(instant: Date): CycleWindow {
     const elapsedCycles = Math.max(
       0,

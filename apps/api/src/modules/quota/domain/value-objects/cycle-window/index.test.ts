@@ -48,6 +48,18 @@ describe('CycleWindow', () => {
     expect(window.advanceTo(instantBeforeStart).equals(window)).toBe(true)
   })
 
+  it('exposes the window that ends where it starts', () => {
+    const window = CycleWindow.create(STARTS_AT)
+
+    const previousWindow = window.previous()
+
+    expect(previousWindow.startsAt).toEqual(
+      new Date(STARTS_AT.getTime() - CYCLE_LENGTH_MILLISECONDS),
+    )
+    expect(previousWindow.renewsAt).toEqual(STARTS_AT)
+    expect(previousWindow.contains(STARTS_AT)).toBe(false)
+  })
+
   it('rejects an unusable starting instant', () => {
     expect(() => CycleWindow.create(new Date('not-a-date'))).toThrow(InvalidQuotaValueError)
   })

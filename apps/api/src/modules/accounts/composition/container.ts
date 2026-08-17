@@ -5,6 +5,7 @@ import { CompleteGoogleSignInUseCase } from '@/modules/accounts/application/use-
 import { CreateAccountUseCase } from '@/modules/accounts/application/use-cases/create-account/index.js'
 import { DeleteAccountUseCase } from '@/modules/accounts/application/use-cases/delete-account/index.js'
 import { GetAccountProfileUseCase } from '@/modules/accounts/application/use-cases/get-account-profile/index.js'
+import { GetAccountSnapshotUseCase } from '@/modules/accounts/application/use-cases/get-account-snapshot/index.js'
 import { SignInUseCase } from '@/modules/accounts/application/use-cases/sign-in/index.js'
 import { SignUpUseCase } from '@/modules/accounts/application/use-cases/sign-up/index.js'
 import { StartGoogleSignInUseCase } from '@/modules/accounts/application/use-cases/start-google-sign-in/index.js'
@@ -118,6 +119,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
       subscriptionCancellation,
     }),
     getAccountProfile: new GetAccountProfileUseCase({ accounts, authIdentityProvider }),
+    getAccountSnapshot: new GetAccountSnapshotUseCase(accounts),
     signIn: new SignInUseCase(shared),
     signUp: new SignUpUseCase({ authIdentityProvider }),
     startGoogleSignIn: new StartGoogleSignInUseCase({
@@ -145,7 +147,10 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     updateTimeZone: new UpdateTimeZoneController(useCases.updateTimeZone),
   }
 
-  const facade: AccountsFacade = createAccountsFacade(useCases.checkPracticeEligibility)
+  const facade: AccountsFacade = createAccountsFacade(
+    useCases.checkPracticeEligibility,
+    useCases.getAccountSnapshot,
+  )
 
   return { controllers, facade, repositories: { accounts, deletionRequests }, useCases }
 }

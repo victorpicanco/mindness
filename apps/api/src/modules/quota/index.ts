@@ -1,5 +1,4 @@
 export { registerQuotaModule } from './composition/register.js'
 export { QuotaExhausted } from './domain/events/quota-exhausted/index.js'
 export type { QuotaModuleDeps } from './composition/container.js'
-export type { QuotaModule } from './composition/register.js'
 export type { QuotaPublicApi } from './presentation/public-api/index.js'

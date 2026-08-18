@@ -12,6 +12,8 @@ import { DatabaseError } from '@/shared/errors/database-error/index.js'
 
 const UNIQUE_VIOLATION_CODE = 'P2002'
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // The pg driver adapter reports the violated constraint here instead of in `meta.target`.
 const CONSTRAINT_FIELDS_PATH = ['driverAdapterError', 'cause', 'constraint', 'fields']
 
@@ -117,6 +119,8 @@ export class PrismaAccountsRepository implements AccountsRepository {
   }
 
   private async readById(accountId: string): Promise<AccountRow | null> {
+    if (!UUID_PATTERN.test(accountId)) return null
+
     try {
       return await this.client().account.findUnique({ where: { id: accountId } })
     } catch (error) {

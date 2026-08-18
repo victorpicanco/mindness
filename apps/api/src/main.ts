@@ -2,6 +2,8 @@ import 'dotenv/config'
 
 import { loadConfig } from '@/config.js'
 import { registerAccountsModule } from '@/modules/accounts/index.js'
+import { registerQuotaModule } from '@/modules/quota/index.js'
+import { registerThemesModule } from '@/modules/themes/index.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
 import { registerHealthRoute } from '@/shared/http/health-route/index.js'
@@ -24,7 +26,7 @@ const eventBus = new InProcessEventBus(logger)
 const clock = new SystemClock()
 const idGenerator = new UuidGenerator()
 
-await registerAccountsModule(app, {
+const accountsContainer = await registerAccountsModule(app, {
   prisma,
   clock,
   eventPublisher: eventBus,
@@ -37,6 +39,21 @@ await registerAccountsModule(app, {
     supabaseSecretKey: config.supabaseSecretKey,
     emailConfirmationRedirectUrl: config.emailConfirmationRedirectUrl,
   },
+})
+
+registerQuotaModule(app, {
+  prisma,
+  clock,
+  eventPublisher: eventBus,
+  idGenerator,
+  accountsFacade: accountsContainer.facade,
+})
+
+registerThemesModule(app, {
+  prisma,
+  clock,
+  eventPublisher: eventBus,
+  idGenerator,
 })
 
 await app.listen({ port: config.port })

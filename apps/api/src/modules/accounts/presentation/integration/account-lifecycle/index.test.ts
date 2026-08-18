@@ -84,6 +84,26 @@ describe('account lifecycle', () => {
     )
   })
 
+  it('serves consumers the account snapshot and nothing beyond it', async () => {
+    const email = 'snapshot@example.com'
+    await provisionedPasswordAccount(email)
+    const account = await harness.repositories.accounts.findByEmail(email)
+
+    const snapshot = await harness.container.facade.getAccountSnapshot(account?.id ?? '')
+
+    expect(snapshot).toEqual({
+      accountId: account?.id,
+      plan: 'free',
+      createdAt: account?.createdAt,
+    })
+    await expect(
+      harness.container.facade.getAccountSnapshot('00000000-0000-4000-8000-000000000000'),
+    ).resolves.toBeNull()
+    await expect(
+      harness.container.facade.getAccountSnapshot('not-an-identifier'),
+    ).resolves.toBeNull()
+  })
+
   it('records consent before practice eligibility becomes available', async () => {
     const email = 'consent@example.com'
     const accessToken = await provisionedPasswordAccount(email)

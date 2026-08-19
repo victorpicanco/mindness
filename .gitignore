@@ -37,3 +37,6 @@ docs/*
 CLAUDE.md
 CLAUDE.local.md
 .claude/
+
+# MCPs
+.mcp.json

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
+import { SessionAudio } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
 
 import { Session } from './index.js'
@@ -68,6 +69,36 @@ describe('Session', () => {
       )
     },
   )
+
+  it('accepts audio for an in-progress session', () => {
+    const session = createSession()
+    const audio = createAudio()
+
+    session.acceptAudio(audio)
+
+    expect(session.state).toBe('processing')
+    expect(session.audio).toBe(audio)
+  })
+
+  it.each(['processing', 'expired', 'completed', 'failed', 'deleted'] as const)(
+    'rejects audio acceptance from the %s state',
+    (state) => {
+      const session = Session.reconstitute({
+        sessionId: 'session-id',
+        accountId: 'account-id',
+        themeId: 'theme-id',
+        configuration: createConfiguration(),
+        quotaReservationId: 'reservation-id',
+        state,
+        createdAt: new Date('2026-08-18T12:00:00.000Z'),
+        expiresAt: new Date('2026-08-18T12:15:00.000Z'),
+        expiredReason: state === 'expired' ? 'timeout' : null,
+        expiredAt: state === 'expired' ? new Date('2026-08-18T12:15:00.000Z') : null,
+      })
+
+      expect(() => session.acceptAudio(createAudio())).toThrow(SessionNotInProgressError)
+    },
+  )
 })
 
 function createConfiguration(): SessionConfiguration {
@@ -86,5 +117,14 @@ function createSession(): Session {
     configuration: createConfiguration(),
     quotaReservationId: 'reservation-id',
     createdAt: new Date('2026-08-18T12:00:00.000Z'),
+  })
+}
+
+function createAudio(): SessionAudio {
+  return SessionAudio.create({
+    durationSeconds: 42,
+    sizeBytes: 1024,
+    contentType: 'audio/webm',
+    storagePath: 'account-id/session-id/audio.webm',
   })
 }

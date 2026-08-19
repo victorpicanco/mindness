@@ -1,4 +1,5 @@
 import type { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
+import type { SessionAudio } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
 
 import type {
@@ -22,6 +23,7 @@ export class Session {
     private readonly expiresAtEpoch: number,
     private _expiredReason: SessionExpiredReason | null,
     private expiredAtEpoch: number | null,
+    private _audio: SessionAudio | null,
   ) {}
 
   get state(): SessionState {
@@ -44,6 +46,10 @@ export class Session {
     return this.expiredAtEpoch === null ? null : new Date(this.expiredAtEpoch)
   }
 
+  get audio(): SessionAudio | null {
+    return this._audio
+  }
+
   static start(params: StartSessionParams): Session {
     const createdAtEpoch = params.createdAt.getTime()
 
@@ -56,6 +62,7 @@ export class Session {
       'in_progress',
       createdAtEpoch,
       createdAtEpoch + SESSION_DURATION_MILLISECONDS,
+      null,
       null,
       null,
     )
@@ -73,6 +80,7 @@ export class Session {
       params.expiresAt.getTime(),
       params.expiredReason,
       params.expiredAt?.getTime() ?? null,
+      null,
     )
   }
 
@@ -84,6 +92,15 @@ export class Session {
     this._state = 'expired'
     this._expiredReason = reason
     this.expiredAtEpoch = at.getTime()
+  }
+
+  acceptAudio(audio: SessionAudio): void {
+    if (this._state !== 'in_progress') {
+      throw new SessionNotInProgressError(this._state)
+    }
+
+    this._audio = audio
+    this._state = 'processing'
   }
 }
 

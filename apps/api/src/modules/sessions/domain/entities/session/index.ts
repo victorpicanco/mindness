@@ -80,7 +80,7 @@ export class Session {
       params.expiresAt.getTime(),
       params.expiredReason,
       params.expiredAt?.getTime() ?? null,
-      null,
+      params.audio ?? null,
     )
   }
 

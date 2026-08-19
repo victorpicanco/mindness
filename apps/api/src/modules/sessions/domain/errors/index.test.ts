@@ -4,6 +4,7 @@ import { AudioSizeRejectedError } from '@/modules/sessions/domain/errors/audio-s
 import { AudioUploadFailedError } from '@/modules/sessions/domain/errors/audio-upload-failed-error/index.js'
 import { AudioValidationRejectedError } from '@/modules/sessions/domain/errors/audio-validation-rejected-error/index.js'
 import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/session-already-running-error/index.js'
+import { SessionAuthenticationRejectedError } from '@/modules/sessions/domain/errors/session-authentication-rejected-error/index.js'
 import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
 import { ThemeUnavailableError } from '@/modules/sessions/domain/errors/theme-unavailable-error/index.js'
@@ -53,6 +54,7 @@ describe('session domain errors', () => {
       422,
       { storagePath: 'account-1/session-1/audio' },
     ],
+    [new SessionAuthenticationRejectedError(), 'sessions.AUTHENTICATION_REJECTED', 401, {}],
   ])('has the expected code, HTTP status, and context', (error, code, httpStatus, context) => {
     expect(error).toBeInstanceOf(BaseError)
     expect(error.code).toBe(code)

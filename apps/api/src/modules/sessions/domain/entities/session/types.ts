@@ -11,3 +11,12 @@ export interface StartSessionParams {
   readonly quotaReservationId: string
   readonly createdAt: Date
 }
+
+export type SessionExpiredReason = 'timeout' | 'abandoned' | 'microphone_permission_denied'
+
+export interface ReconstituteSessionParams extends StartSessionParams {
+  readonly state: SessionState
+  readonly expiresAt: Date
+  readonly expiredReason: SessionExpiredReason | null
+  readonly expiredAt: Date | null
+}

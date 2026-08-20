@@ -150,6 +150,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
   const facade: AccountsFacade = createAccountsFacade({
     checkPracticeEligibility: useCases.checkPracticeEligibility,
     getAccountSnapshot: useCases.getAccountSnapshot,
+    authenticate: useCases.authenticate,
   })
 
   return { controllers, facade, repositories: { accounts, deletionRequests }, useCases }

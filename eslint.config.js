@@ -2,7 +2,7 @@ import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
 
-const API_MODULES = ['accounts', 'themes', 'quota']
+const API_MODULES = ['accounts', 'themes', 'quota', 'sessions']
 
 const CROSS_MODULE_MESSAGE =
   "LAW-001.4 / LAW-008.4: import the other module's index.ts, and only from module-adapters/."

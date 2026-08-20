@@ -62,6 +62,29 @@ describe('quota isolation integration', () => {
     await app.close()
   })
 
+  // Probing one guessed URL only proves that URL is unrouted. LAW-011.13 asks every response
+  // to match its route's schema; this module answers by having no route to declare one for, so
+  // that absence is what gets asserted.
+  it('registers no HTTP route when it is mounted on the application', async () => {
+    const app = buildApp({ logger: pino({ level: 'silent' }) })
+    const registeredRoutes: string[] = []
+    app.addHook('onRoute', (route) => {
+      registeredRoutes.push(`${String(route.method)} ${route.url}`)
+    })
+
+    registerQuotaModule(app, {
+      prisma: harness.prisma,
+      clock: harness.clock,
+      idGenerator: { generate: () => 'event-id' },
+      eventPublisher: harness.eventBus,
+      accountsFacade: { getAccountSnapshot: () => Promise.resolve(null) },
+    })
+    await app.ready()
+
+    expect(registeredRoutes).toEqual([])
+    await app.close()
+  })
+
   it('does not replace the application error handler', async () => {
     const app = Fastify({ logger: false })
     app.setErrorHandler((_error, _request, reply) => {

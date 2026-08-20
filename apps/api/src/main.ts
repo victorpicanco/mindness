@@ -1,8 +1,11 @@
 import 'dotenv/config'
 
+import { createClient } from '@supabase/supabase-js'
+
 import { loadConfig } from '@/config.js'
 import { registerAccountsModule } from '@/modules/accounts/index.js'
 import { registerQuotaModule } from '@/modules/quota/index.js'
+import { registerSessionsModule } from '@/modules/sessions/index.js'
 import { registerThemesModule } from '@/modules/themes/index.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
@@ -41,7 +44,7 @@ const accountsContainer = await registerAccountsModule(app, {
   },
 })
 
-registerQuotaModule(app, {
+const quotaContainer = registerQuotaModule(app, {
   prisma,
   clock,
   eventPublisher: eventBus,
@@ -49,11 +52,22 @@ registerQuotaModule(app, {
   accountsFacade: accountsContainer.facade,
 })
 
-registerThemesModule(app, {
+const themesContainer = registerThemesModule(app, {
   prisma,
   clock,
   eventPublisher: eventBus,
   idGenerator,
+})
+
+await registerSessionsModule(app, {
+  prisma,
+  clock,
+  eventPublisher: eventBus,
+  idGenerator,
+  accountsFacade: accountsContainer.facade,
+  themesFacade: themesContainer.publicApi,
+  quotaFacade: quotaContainer.publicApi,
+  supabase: createClient(config.supabaseUrl, config.supabaseSecretKey),
 })
 
 await app.listen({ port: config.port })

@@ -1,0 +1,59 @@
+enum SessionState {
+  in_progress
+  expired
+  processing
+  completed
+  failed
+  deleted
+
+  @@map("session_state")
+}
+
+enum SessionDifficulty {
+  easy
+  balanced
+  hard
+
+  @@map("session_difficulty")
+}
+
+enum SessionExpiredReason {
+  timeout
+  abandoned
+  microphone_permission_denied
+
+  @@map("session_expired_reason")
+}
+
+model Session {
+  id                 String                @id @db.Uuid
+  accountId          String                @map("account_id") @db.Uuid
+  themeId            String                @map("theme_id") @db.Uuid
+  difficulty         SessionDifficulty
+  categorySlug       String                @map("category_slug")
+  searchWindowMinutes Int                  @map("search_window_minutes")
+  quotaReservationId String                @map("quota_reservation_id") @db.Uuid
+  state              SessionState
+  expiredReason      SessionExpiredReason? @map("expired_reason")
+  createdAt          DateTime              @map("created_at") @db.Timestamptz(6)
+  expiresAt          DateTime              @map("expires_at") @db.Timestamptz(6)
+  expiredAt          DateTime?             @map("expired_at") @db.Timestamptz(6)
+  audio              SessionAudio?
+
+  @@index([accountId, state])
+  @@index([state, expiresAt])
+  @@map("sessions")
+}
+
+model SessionAudio {
+  id              String   @id @db.Uuid
+  sessionId       String   @unique @map("session_id") @db.Uuid
+  durationSeconds Int      @map("duration_seconds")
+  sizeBytes       Int      @map("size_bytes")
+  contentType     String   @map("content_type")
+  storagePath     String   @map("storage_path")
+  createdAt       DateTime @map("created_at") @db.Timestamptz(6)
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("session_audios")
+}

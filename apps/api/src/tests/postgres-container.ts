@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
@@ -18,6 +19,18 @@ export async function setup(project: TestProject): Promise<void> {
   container = await new PostgreSqlContainer('postgres:17-alpine').start()
   const databaseUrl = container.getConnectionUri()
 
+  await run(
+    'pnpm',
+    [
+      'exec',
+      'prisma',
+      'db',
+      'execute',
+      '--file',
+      fileURLToPath(new URL('./storage-schema.sql', import.meta.url)),
+    ],
+    { env: { ...process.env, DATABASE_URL: databaseUrl } },
+  )
   await run('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
     env: { ...process.env, DATABASE_URL: databaseUrl },
   })

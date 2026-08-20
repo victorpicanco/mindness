@@ -1,4 +1,4 @@
-import { Type } from '@fastify/type-provider-typebox'
+import { Type, type Static } from '@fastify/type-provider-typebox'
 
 import { successSchema } from '@/shared/http/envelope/index.js'
 
@@ -11,11 +11,7 @@ export const StartSessionBodySchema = Type.Object(
   { additionalProperties: false },
 )
 
-export type StartSessionBody = {
-  readonly difficulty: 'easy' | 'balanced' | 'hard'
-  readonly categorySlug: string
-  readonly searchWindowMinutes: 3 | 4 | 5
-}
+export type StartSessionBody = Static<typeof StartSessionBodySchema>
 
 export const StartSessionResponseSchema = successSchema(
   Type.Object(

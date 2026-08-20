@@ -9,9 +9,10 @@ describe('registerExpiredSessionSweep', () => {
     let registeredCallback: (() => void) | undefined
     let registeredInterval: number | undefined
     let executions = 0
+    let stopped = false
     const loggedErrors: unknown[] = []
 
-    registerExpiredSessionSweep({
+    const stopSweep = registerExpiredSessionSweep({
       sweepExpiredSessions: {
         execute: async () => {
           await Promise.resolve()
@@ -28,6 +29,9 @@ describe('registerExpiredSessionSweep', () => {
       schedule: (callback, interval) => {
         registeredCallback = callback
         registeredInterval = interval
+        return () => {
+          stopped = true
+        }
       },
     })
 
@@ -43,5 +47,8 @@ describe('registerExpiredSessionSweep', () => {
     await new Promise<void>((resolve) => queueMicrotask(resolve))
 
     expect(executions).toBe(2)
+
+    stopSweep()
+    expect(stopped).toBe(true)
   })
 })

@@ -30,7 +30,7 @@ export interface SessionRow {
   readonly audio?: SessionAudioRow | null
 }
 
-interface SessionScalars {
+export interface SessionScalars {
   readonly id: string
   readonly accountId: string
   readonly themeId: string

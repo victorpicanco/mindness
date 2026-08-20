@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
 import type { SessionRow } from '@/modules/sessions/infrastructure/clients/sessions-prisma-client/index.js'
+import { SessionAudioMapper } from '@/modules/sessions/infrastructure/mappers/session-audio-mapper/index.js'
 
 import { SessionMapper } from './index.js'
 
+const AUDIO_ID = '2c3d0f4e-9a1b-4c5d-8e6f-0a1b2c3d4e5f'
 const row: SessionRow = {
   id: '6f3a143d-6853-48f0-b414-a57d8b65f101',
   accountId: '97784f56-9b46-44a4-a0d2-52e97d2fe201',
@@ -19,7 +21,7 @@ const row: SessionRow = {
   expiresAt: new Date('2026-08-19T12:15:00.000Z'),
   expiredAt: null,
   audio: {
-    id: '6f3a143d-6853-48f0-b414-a57d8b65f101',
+    id: AUDIO_ID,
     sessionId: '6f3a143d-6853-48f0-b414-a57d8b65f101',
     durationSeconds: 42,
     sizeBytes: 1024,
@@ -29,9 +31,13 @@ const row: SessionRow = {
   },
 }
 
+function createMapper(): SessionMapper {
+  return new SessionMapper(new SessionAudioMapper())
+}
+
 describe('SessionMapper', () => {
   it('reconstitutes a persisted session including its related audio', () => {
-    const session = new SessionMapper().toDomain(row)
+    const session = createMapper().toDomain(row)
 
     expect(session).toBeInstanceOf(Session)
     expect(session).toMatchObject({
@@ -51,6 +57,7 @@ describe('SessionMapper', () => {
       searchWindowMinutes: row.searchWindowMinutes,
     })
     expect(session.audio).toMatchObject({
+      id: AUDIO_ID,
       durationSeconds: row.audio?.durationSeconds,
       sizeBytes: row.audio?.sizeBytes,
       contentType: row.audio?.contentType,
@@ -58,9 +65,59 @@ describe('SessionMapper', () => {
     })
   })
 
-  it('maps a session back to its persistence row without losing its audio', () => {
-    const mapper = new SessionMapper()
+  it('maps a session to a create payload that carries the related audio', () => {
+    const mapper = createMapper()
 
-    expect(mapper.toPersistence(mapper.toDomain(row))).toEqual(row)
+    const created = mapper.toCreateData(mapper.toDomain(row))
+
+    expect(created).toMatchObject({
+      id: row.id,
+      accountId: row.accountId,
+      difficulty: row.difficulty,
+      categorySlug: row.categorySlug,
+      searchWindowMinutes: row.searchWindowMinutes,
+      state: row.state,
+      createdAt: row.createdAt,
+      expiresAt: row.expiresAt,
+    })
+    expect(created.audio).toEqual({
+      create: {
+        id: AUDIO_ID,
+        durationSeconds: 42,
+        sizeBytes: 1024,
+        contentType: 'audio/webm',
+        storagePath: row.audio?.storagePath,
+        createdAt: row.createdAt,
+      },
+    })
+  })
+
+  it('maps a session to an update payload that upserts the related audio', () => {
+    const mapper = createMapper()
+
+    const updated = mapper.toUpdateData(mapper.toDomain(row))
+
+    expect(updated.audio?.upsert.create.id).toBe(AUDIO_ID)
+    expect(updated.audio?.upsert.update).toEqual({
+      durationSeconds: 42,
+      sizeBytes: 1024,
+      contentType: 'audio/webm',
+      storagePath: row.audio?.storagePath,
+    })
+  })
+
+  it('omits the audio payload entirely for a session that has none', () => {
+    const mapper = createMapper()
+    const session = mapper.toDomain({ ...row, state: 'in_progress', audio: null })
+
+    expect(mapper.toCreateData(session).audio).toBeUndefined()
+    expect(mapper.toUpdateData(session).audio).toBeUndefined()
+  })
+
+  it('gives the audio row its own identity rather than reusing the session id', () => {
+    const session = createMapper().toDomain(row)
+
+    expect(session.audio?.id).toBe(AUDIO_ID)
+    expect(session.audio?.id).not.toBe(session.id)
   })
 })

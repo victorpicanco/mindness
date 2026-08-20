@@ -1,11 +1,15 @@
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
-import type { SessionRow } from '@/modules/sessions/infrastructure/clients/sessions-prisma-client/index.js'
-
-import { SessionAudioMapper } from '../session-audio-mapper/index.js'
+import type {
+  SessionCreateData,
+  SessionRow,
+  SessionScalars,
+  SessionUpdateData,
+} from '@/modules/sessions/infrastructure/clients/sessions-prisma-client/index.js'
+import type { SessionAudioMapper } from '@/modules/sessions/infrastructure/mappers/session-audio-mapper/index.js'
 
 export class SessionMapper {
-  constructor(private readonly audioMapper = new SessionAudioMapper()) {}
+  constructor(private readonly audioMapper: SessionAudioMapper) {}
 
   toDomain(row: SessionRow): Session {
     return Session.reconstitute({
@@ -28,9 +32,36 @@ export class SessionMapper {
     })
   }
 
-  toPersistence(session: Session): SessionRow {
+  toCreateData(session: Session): SessionCreateData {
     const audio = session.audio
 
+    return {
+      ...this.toScalars(session),
+      ...(audio === null
+        ? {}
+        : { audio: { create: this.audioMapper.toCreateData(audio, session.createdAt) } }),
+    }
+  }
+
+  toUpdateData(session: Session): SessionUpdateData {
+    const audio = session.audio
+
+    return {
+      ...this.toScalars(session),
+      ...(audio === null
+        ? {}
+        : {
+            audio: {
+              upsert: {
+                create: this.audioMapper.toCreateData(audio, session.createdAt),
+                update: this.audioMapper.toUpdateData(audio),
+              },
+            },
+          }),
+    }
+  }
+
+  private toScalars(session: Session): SessionScalars {
     return {
       id: session.id,
       accountId: session.accountId,
@@ -44,13 +75,6 @@ export class SessionMapper {
       createdAt: session.createdAt,
       expiresAt: session.expiresAt,
       expiredAt: session.expiredAt,
-      audio:
-        audio === null
-          ? null
-          : {
-              ...this.audioMapper.toCreateData(session.id, audio, session.createdAt),
-              sessionId: session.id,
-            },
     }
   }
 }

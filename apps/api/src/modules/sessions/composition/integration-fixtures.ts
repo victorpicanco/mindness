@@ -8,11 +8,13 @@ import type {
   ReleaseQuotaReservationInput,
   ReserveQuotaForSessionInput,
 } from '@/modules/sessions/domain/ports/quota-port/index.js'
-import { ConflictError } from '@/shared/errors/categories/conflict-error/index.js'
-import { InfrastructureError } from '@/shared/errors/infrastructure-error/index.js'
+import { readFile } from 'node:fs/promises'
+
 import type { PrismaClient } from '@/generated/prisma/client.js'
 import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { SupabaseAudioStorageClient } from '@/modules/sessions/infrastructure/adapters/supabase-audio-storage-adapter/index.js'
+
+import { FakeQuotaExhaustedError, FakeStorageObjectNotFoundError } from './errors.js'
 
 type Difficulty = 'easy' | 'balanced' | 'hard'
 
@@ -44,22 +46,6 @@ export interface InMemorySupabaseStorageClient extends SupabaseAudioStorageClien
   putObject(path: string, buffer: Buffer): void
   hasObject(path: string): boolean
   reset(): void
-}
-
-class FakeQuotaExhaustedError extends ConflictError {
-  readonly code = 'quota.QUOTA_EXHAUSTED'
-
-  constructor() {
-    super('Quota is exhausted')
-  }
-}
-
-class FakeStorageObjectNotFoundError extends InfrastructureError {
-  readonly code = 'sessions.FAKE_STORAGE_OBJECT_NOT_FOUND'
-
-  constructor() {
-    super('Audio object was not found')
-  }
 }
 
 function themeKey(categorySlug: string, difficulty: Difficulty): string {
@@ -158,16 +144,17 @@ export function createInMemorySupabaseStorageClient(): InMemorySupabaseStorageCl
         data: { signedUrl: `memory://session-audio/${path}`, token: `token-${path}` },
         error: null,
       }),
+    // Supabase filters `search` as a prefix over the names inside the directory.
     list: (directory: string, options: { readonly search: string }) => {
-      const path = objectPath(directory, options.search)
-      const buffer = objects.get(path)
-      return Promise.resolve({
-        data:
-          buffer === undefined
-            ? []
-            : [{ name: options.search, metadata: { size: buffer.byteLength } }],
-        error: null,
-      })
+      const prefix = objectPath(directory, options.search)
+      const matches = [...objects.entries()]
+        .filter(([path]) => path.startsWith(prefix))
+        .map(([path, buffer]) => ({
+          name: directory.length === 0 ? path : path.slice(directory.length + 1),
+          metadata: { size: buffer.byteLength },
+        }))
+
+      return Promise.resolve({ data: matches, error: null })
     },
     download: (path: string) => {
       const buffer = objects.get(path)
@@ -194,8 +181,24 @@ export function createInMemorySupabaseStorageClient(): InMemorySupabaseStorageCl
   }
 }
 
+// The decodable-audio fixtures live beside the adapter that is tested against them; reading
+// them through here keeps the integration suites from reaching across three folder levels.
+export function readAudioFixture(name: string): Promise<Buffer> {
+  return readFile(
+    new URL(
+      `../infrastructure/adapters/ffmpeg-audio-validation-adapter/fixtures/${name}`,
+      import.meta.url,
+    ),
+  )
+}
+
 export function clearSessionsData(prisma: PrismaClient): Promise<number> {
   return prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${SESSIONS_TABLES.join(', ')} RESTART IDENTITY CASCADE`,
   )
 }
+
+export {
+  assertResponseMatchesSchema,
+  type InjectedResponse,
+} from '@/shared/http/openapi-response-assertion/index.js'

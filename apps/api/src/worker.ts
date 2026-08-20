@@ -9,10 +9,7 @@ import type { SweepExpiredSessionsUseCase } from '@/modules/sessions/application
 import { loadConfig } from '@/config.js'
 import { createAccountsContainer } from '@/modules/accounts/composition/container.js'
 import { createQuotaContainer } from '@/modules/quota/composition/container.js'
-import {
-  createSessionsContainer,
-  type SessionsSupabaseDatabase,
-} from '@/modules/sessions/composition/container.js'
+import { createSessionsContainer } from '@/modules/sessions/composition/container.js'
 import { createThemesContainer } from '@/modules/themes/composition/container.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
@@ -34,8 +31,10 @@ export interface WorkerSweepLogger {
 export interface WorkerSweepDeps {
   readonly sweepExpiredSessions: SweepExpiredSessions
   readonly logger: WorkerSweepLogger
-  readonly schedule?: (callback: () => void, interval: number) => void
+  readonly schedule?: (callback: () => void, interval: number) => StopSweep
 }
+
+export type StopSweep = () => void
 
 async function sweepExpiredSessions(deps: WorkerSweepDeps): Promise<void> {
   try {
@@ -45,10 +44,20 @@ async function sweepExpiredSessions(deps: WorkerSweepDeps): Promise<void> {
   }
 }
 
-export function registerExpiredSessionSweep(deps: WorkerSweepDeps): void {
-  const schedule = deps.schedule ?? ((callback, interval) => void setInterval(callback, interval))
+export function registerExpiredSessionSweep(deps: WorkerSweepDeps): StopSweep {
+  const schedule =
+    deps.schedule ??
+    ((callback, interval) => {
+      const timer = setInterval(callback, interval)
+      // The sweep must never be the reason the process stays alive on shutdown.
+      timer.unref()
 
-  schedule(() => {
+      return () => {
+        clearInterval(timer)
+      }
+    })
+
+  return schedule(() => {
     void sweepExpiredSessions(deps)
   }, SWEEP_INTERVAL_MS)
 }
@@ -99,13 +108,16 @@ export async function startWorker(): Promise<void> {
     accountsFacade: accountsContainer.facade,
     themesFacade: themesContainer.publicApi,
     quotaFacade: quotaContainer.publicApi,
-    supabase: createClient<SessionsSupabaseDatabase>(config.supabaseUrl, config.supabaseSecretKey),
+    supabase: createClient(config.supabaseUrl, config.supabaseSecretKey),
   })
 
   registerHealthRoute(app)
-  registerExpiredSessionSweep({
+  const stopSweep = registerExpiredSessionSweep({
     sweepExpiredSessions: sessionsContainer.useCases.sweepExpiredSessions,
     logger,
+  })
+  app.addHook('onClose', () => {
+    stopSweep()
   })
 
   await app.listen({ port: config.workerHealthPort })

@@ -55,14 +55,6 @@ export async function createSessionsIntegrationContainer(
     clock,
     idGenerator: new UuidGenerator(),
     eventPublisher: eventBus,
-    accountsFacade: { authenticate: () => Promise.resolve({ accountId: null }) },
-    themesFacade: { drawEligibleTheme: () => Promise.resolve(null) },
-    quotaFacade: {
-      reserveForSession: () =>
-        Promise.resolve({ reservationId: '', enforced: false, remaining: null }),
-      releaseReservation: () => Promise.resolve(),
-    },
-    supabase: storage,
     adapters: {
       accounts,
       themes,

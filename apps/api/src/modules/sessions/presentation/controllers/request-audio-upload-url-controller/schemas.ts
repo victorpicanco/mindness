@@ -1,4 +1,4 @@
-import { Type } from '@fastify/type-provider-typebox'
+import { Type, type Static } from '@fastify/type-provider-typebox'
 
 import { successSchema } from '@/shared/http/envelope/index.js'
 
@@ -7,7 +7,7 @@ export const SessionIdParamsSchema = Type.Object(
   { additionalProperties: false },
 )
 
-export type SessionIdParams = { readonly sessionId: string }
+export type SessionIdParams = Static<typeof SessionIdParamsSchema>
 
 export const RequestAudioUploadUrlResponseSchema = successSchema(
   Type.Object(

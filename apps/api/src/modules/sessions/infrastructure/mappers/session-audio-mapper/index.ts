@@ -8,6 +8,7 @@ import type {
 export class SessionAudioMapper {
   toDomain(row: SessionAudioRow): SessionAudio {
     return SessionAudio.create({
+      id: row.id,
       durationSeconds: row.durationSeconds,
       sizeBytes: row.sizeBytes,
       contentType: row.contentType,
@@ -15,9 +16,9 @@ export class SessionAudioMapper {
     })
   }
 
-  toCreateData(sessionId: string, audio: SessionAudio, createdAt: Date): SessionAudioCreateData {
+  toCreateData(audio: SessionAudio, createdAt: Date): SessionAudioCreateData {
     return {
-      id: sessionId,
+      id: audio.id,
       durationSeconds: audio.durationSeconds,
       sizeBytes: audio.sizeBytes,
       contentType: audio.contentType,

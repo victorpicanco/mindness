@@ -1,0 +1,5 @@
+export { createSessionsContainer } from './composition/container.js'
+export { createSessionsFacade } from './composition/facade.js'
+export { registerSessionsModule } from './composition/register.js'
+export type { SessionsModuleDeps, SessionsSupabaseDatabase } from './composition/container.js'
+export type { SessionsFacade } from './composition/facade.js'

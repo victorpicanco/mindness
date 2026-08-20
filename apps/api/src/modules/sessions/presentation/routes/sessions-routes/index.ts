@@ -28,7 +28,6 @@ import {
   StartSessionResponseSchema,
   type StartSessionBody,
 } from '@/modules/sessions/presentation/controllers/start-session-controller/schemas.js'
-import { registerSessionsErrorHandler } from '@/modules/sessions/presentation/error-handler/index.js'
 import { registerAuthenticatedIdentityGuard } from '@/modules/sessions/presentation/middleware/authenticated-identity-guard/index.js'
 import { ErrorResponseSchema } from '@/shared/http/envelope/index.js'
 
@@ -52,8 +51,6 @@ export async function registerSessionsRoutes(
   deps: SessionsRoutesDeps,
 ): Promise<void> {
   const { controllers } = deps
-
-  registerSessionsErrorHandler(app)
 
   await app.register((scope, _options, done) => {
     registerAuthenticatedIdentityGuard(scope, deps.resolveAccountIdentity)

@@ -13,11 +13,17 @@ import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/se
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 import { ConflictError } from '@/shared/errors/categories/conflict-error/index.js'
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
+import { ValidationFailedError } from '@/shared/errors/validation-failed-error/index.js'
 
-import { ExpireSessionUseCase } from '../expire-session/index.js'
 import { StartSessionUseCase } from './index.js'
 
 const NOW = new Date('2026-08-19T00:00:00.000Z')
+const VALID_INPUT = {
+  accountId: 'account-1',
+  difficulty: 'easy',
+  categorySlug: 'self-awareness',
+  searchWindowMinutes: 4,
+} as const
 
 class QuotaExhaustedError extends ConflictError {
   readonly code = 'quota.QUOTA_EXHAUSTED'
@@ -52,6 +58,7 @@ function createDependencies(input?: {
   const events = new FakeEventBus()
   const operations: string[] = []
   const quotaCalls: string[] = []
+  const themeCalls: string[] = []
   const releasedSessionIds: string[] = []
   let transactionRuns = 0
   let nextId = 0
@@ -67,10 +74,14 @@ function createDependencies(input?: {
     },
   }
   const themes: ThemesPort = {
-    drawEligibleTheme: () => Promise.resolve(input?.eligibleTheme ?? null),
+    drawEligibleTheme: ({ categorySlug }) => {
+      themeCalls.push(categorySlug)
+      return Promise.resolve(input?.eligibleTheme ?? null)
+    },
   }
   const quota: QuotaPort = {
     reserveForSession: ({ sessionId }) => {
+      operations.push('reserve')
       quotaCalls.push(sessionId)
       if (input?.quotaError !== undefined) return Promise.reject(input.quotaError)
       return Promise.resolve({
@@ -93,19 +104,12 @@ function createDependencies(input?: {
       return operation()
     },
   }
-  const expireSession = new ExpireSessionUseCase({
-    sessions,
-    quota,
-    eventPublisher,
-    idGenerator,
-    unitOfWork,
-    clock: { now: () => NOW },
-  })
 
   return {
     events,
     operations,
     quotaCalls,
+    themeCalls,
     releasedSessionIds,
     saved,
     transactionRuns: () => transactionRuns,
@@ -117,69 +121,28 @@ function createDependencies(input?: {
       eventPublisher,
       idGenerator,
       unitOfWork,
-      expireSession,
     },
   }
 }
 
 describe('StartSessionUseCase', () => {
   it('rejects a new session while the account has an unexpired session in progress', async () => {
-    const calls: string[] = []
-    const existingSession = Session.start({
-      sessionId: 'session-1',
-      accountId: 'account-1',
-      themeId: 'theme-1',
-      configuration: SessionConfiguration.create({
-        difficulty: 'easy',
-        categorySlug: 'self-awareness',
-        searchWindowMinutes: 4,
-      }),
-      quotaReservationId: 'reservation-1',
-      createdAt: new Date('2026-08-18T23:50:00.000Z'),
+    const harness = createDependencies({
+      activeSession: createSession('session-1', new Date('2026-08-18T23:50:00.000Z')),
+      eligibleTheme: { themeId: 'theme-2' },
     })
-    const sessions: SessionsRepository = {
-      findById: () => Promise.resolve(null),
-      findActiveByAccountId: () => Promise.resolve(existingSession),
-      findExpiredInProgress: () => Promise.resolve([]),
-      save: () => Promise.resolve(),
-    }
-    const themes: ThemesPort = {
-      drawEligibleTheme: () => {
-        calls.push('theme')
-        return Promise.resolve(null)
-      },
-    }
-    const quota: QuotaPort = {
-      reserveForSession: () => {
-        calls.push('quota')
-        return Promise.resolve({ reservationId: 'reservation-2', enforced: true, remaining: 3 })
-      },
-      releaseReservation: () => Promise.resolve(),
-    }
-    const useCase = new StartSessionUseCase({
-      sessions,
-      themes,
-      quota,
-      clock: { now: () => NOW },
-      eventPublisher: { publish: () => Promise.resolve() },
-      idGenerator: { generate: () => 'event-1' },
-      unitOfWork: { run: (operation) => operation() },
-      expireSession: { execute: () => Promise.resolve() },
-    })
+    const useCase = new StartSessionUseCase(harness.dependencies)
 
-    await expect(
-      useCase.execute({
-        accountId: 'account-1',
-        difficulty: 'easy',
-        categorySlug: 'self-awareness',
-        searchWindowMinutes: 4,
-      }),
-    ).rejects.toEqual(new SessionAlreadyRunningError('session-1'))
+    await expect(useCase.execute(VALID_INPUT)).rejects.toEqual(
+      new SessionAlreadyRunningError('session-1'),
+    )
 
-    expect(calls).toEqual([])
+    expect(harness.themeCalls).toEqual([])
+    expect(harness.quotaCalls).toEqual([])
+    expect(harness.saved).toHaveLength(0)
   })
 
-  it('expires a stale active session before starting a new one', async () => {
+  it('expires a stale active session in its own transaction before starting a new one', async () => {
     const staleSession = createSession('stale-session', new Date('2026-08-18T23:45:00.000Z'))
     const harness = createDependencies({
       activeSession: staleSession,
@@ -187,42 +150,28 @@ describe('StartSessionUseCase', () => {
     })
     const useCase = new StartSessionUseCase(harness.dependencies)
 
-    const result = await useCase.execute({
-      accountId: 'account-1',
-      difficulty: 'easy',
-      categorySlug: 'self-awareness',
-      searchWindowMinutes: 4,
-    })
+    const result = await useCase.execute(VALID_INPUT)
 
     expect(staleSession.state).toBe('expired')
     expect(staleSession.expiredReason).toBe('timeout')
     expect(harness.releasedSessionIds).toEqual(['stale-session'])
     expect(harness.events.published[0]).toMatchObject({
       eventName: 'session_expired',
-      payload: { sessionId: 'stale-session' },
+      payload: { sessionId: 'stale-session', stoppedAtStage: 'in_progress' },
     })
     expect(harness.saved).toHaveLength(2)
     expect(harness.transactionRuns()).toBe(2)
-    expect(result).toEqual({
-      sessionId: 'generated-2',
-      themeId: 'theme-2',
-      expiresAt: '2026-08-19T00:15:00.000Z',
-      remaining: 3,
-    })
+    expect(result.themeId).toBe('theme-2')
+    expect(result.expiresAt).toBe('2026-08-19T00:15:00.000Z')
   })
 
   it('publishes an unavailable theme event without reserving quota or saving a session', async () => {
     const harness = createDependencies()
     const useCase = new StartSessionUseCase(harness.dependencies)
 
-    await expect(
-      useCase.execute({
-        accountId: 'account-1',
-        difficulty: 'easy',
-        categorySlug: 'self-awareness',
-        searchWindowMinutes: 4,
-      }),
-    ).rejects.toEqual(new ThemeUnavailableError('self-awareness', 'easy'))
+    await expect(useCase.execute(VALID_INPUT)).rejects.toEqual(
+      new ThemeUnavailableError('self-awareness', 'easy'),
+    )
 
     expect(harness.quotaCalls).toHaveLength(0)
     expect(harness.saved).toHaveLength(0)
@@ -239,14 +188,7 @@ describe('StartSessionUseCase', () => {
     })
     const useCase = new StartSessionUseCase(harness.dependencies)
 
-    await expect(
-      useCase.execute({
-        accountId: 'account-1',
-        difficulty: 'easy',
-        categorySlug: 'self-awareness',
-        searchWindowMinutes: 4,
-      }),
-    ).rejects.toBe(quotaError)
+    await expect(useCase.execute(VALID_INPUT)).rejects.toBe(quotaError)
 
     expect(harness.saved).toHaveLength(0)
     expect(harness.events.published).not.toContainEqual(
@@ -258,12 +200,7 @@ describe('StartSessionUseCase', () => {
     const harness = createDependencies({ eligibleTheme: { themeId: 'theme-2' } })
     const useCase = new StartSessionUseCase(harness.dependencies)
 
-    const result = await useCase.execute({
-      accountId: 'account-1',
-      difficulty: 'easy',
-      categorySlug: 'self-awareness',
-      searchWindowMinutes: 4,
-    })
+    const result = await useCase.execute(VALID_INPUT)
 
     expect(harness.saved).toHaveLength(1)
     expect(harness.saved[0]).toMatchObject({
@@ -275,7 +212,7 @@ describe('StartSessionUseCase', () => {
     expect(harness.saved[0]?.expiresAt).toEqual(new Date('2026-08-19T00:15:00.000Z'))
     expect(harness.events.published[0]).toMatchObject({
       eventName: 'session_started',
-      payload: { sessionId: 'generated-1', remaining: 3 },
+      payload: { sessionId: 'generated-1', remaining: 3, surface: 'web' },
     })
     expect(result).toEqual({
       sessionId: 'generated-1',
@@ -293,16 +230,27 @@ describe('StartSessionUseCase', () => {
     })
     const useCase = new StartSessionUseCase(harness.dependencies)
 
-    await expect(
-      useCase.execute({
-        accountId: 'account-1',
-        difficulty: 'easy',
-        categorySlug: 'self-awareness',
-        searchWindowMinutes: 4,
-      }),
-    ).rejects.toBe(saveError)
+    await expect(useCase.execute(VALID_INPUT)).rejects.toBe(saveError)
 
     expect(harness.releasedSessionIds).toEqual(['generated-1'])
-    expect(harness.operations).toEqual(['save', 'release'])
+    expect(harness.operations).toEqual(['reserve', 'save', 'release'])
+  })
+
+  // D-12: the value object is defence in depth for callers that skip the HTTP schema; it must
+  // reject before the saga takes a reservation it would then have to compensate.
+  it.each([
+    { field: 'difficulty', input: { ...VALID_INPUT, difficulty: 'impossible' } },
+    { field: 'categorySlug', input: { ...VALID_INPUT, categorySlug: '  ' } },
+    { field: 'searchWindowMinutes', input: { ...VALID_INPUT, searchWindowMinutes: 9 } },
+  ])('rejects an invalid $field without touching themes or quota', async ({ input }) => {
+    const harness = createDependencies({ eligibleTheme: { themeId: 'theme-2' } })
+    const useCase = new StartSessionUseCase(harness.dependencies)
+
+    await expect(useCase.execute(input)).rejects.toThrow(ValidationFailedError)
+
+    expect(harness.themeCalls).toEqual([])
+    expect(harness.quotaCalls).toEqual([])
+    expect(harness.operations).toEqual([])
+    expect(harness.saved).toHaveLength(0)
   })
 })

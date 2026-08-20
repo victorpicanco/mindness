@@ -6,7 +6,6 @@ import type { SessionsRepository } from '@/modules/sessions/domain/repositories/
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 
-import { ExpireSessionUseCase } from '../expire-session/index.js'
 import { GetActiveSessionUseCase } from './index.js'
 
 const NOW = new Date('2026-08-19T00:00:00.000Z')
@@ -48,9 +47,10 @@ function createHarness(activeSession: Session | null) {
       return Promise.resolve()
     },
   }
-  const expireSession = new ExpireSessionUseCase({
+  const useCase = new GetActiveSessionUseCase({
     sessions,
     quota,
+    clock: { now: () => NOW },
     eventPublisher: events,
     idGenerator: { generate: () => 'event-1' },
     unitOfWork: {
@@ -59,12 +59,6 @@ function createHarness(activeSession: Session | null) {
         return operation()
       },
     },
-    clock: { now: () => NOW },
-  })
-  const useCase = new GetActiveSessionUseCase({
-    sessions,
-    clock: { now: () => NOW },
-    expireSession,
   })
 
   return { events, releasedSessionIds, saved, transactionRuns: () => transactionRuns, useCase }

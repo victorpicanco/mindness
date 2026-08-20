@@ -4,7 +4,10 @@ import {
   createSessionsIntegrationContainer,
   type SessionsIntegrationContainer,
 } from '@/modules/sessions/composition/integration-container.js'
-import { clearSessionsData } from '@/modules/sessions/composition/integration-fixtures.js'
+import {
+  assertResponseMatchesSchema,
+  clearSessionsData,
+} from '@/modules/sessions/composition/integration-fixtures.js'
 
 const ACCOUNT_ID = '00000000-0000-4000-8000-000000000011'
 const OTHER_ACCOUNT_ID = '00000000-0000-4000-8000-000000000012'
@@ -20,6 +23,7 @@ async function start(token = 'account-token'): Promise<string> {
     payload: { difficulty: 'easy', categorySlug: 'focus', searchWindowMinutes: 3 },
   })
   expect(response.statusCode).toBe(201)
+  assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 201)
   return response.json<{ data: { readonly sessionId: string } }>().data.sessionId
 }
 
@@ -50,6 +54,7 @@ describe('session expiration integration', () => {
       headers: { authorization: 'Bearer account-token' },
     })
     expect(response.statusCode).toBe(200)
+    assertResponseMatchesSchema(harness.app, 'POST', '/sessions/{sessionId}/abandon', response, 200)
     expect(response.json()).toEqual({ data: null })
     await expect(
       harness.prisma.session.findUnique({ where: { id: sessionId } }),
@@ -69,6 +74,13 @@ describe('session expiration integration', () => {
       headers: { authorization: 'Bearer account-token' },
     })
     expect(response.statusCode).toBe(200)
+    assertResponseMatchesSchema(
+      harness.app,
+      'POST',
+      '/sessions/{sessionId}/microphone-permission-denied',
+      response,
+      200,
+    )
     await expect(
       harness.prisma.session.findUnique({ where: { id: sessionId } }),
     ).resolves.toMatchObject({ state: 'expired', expiredReason: 'microphone_permission_denied' })

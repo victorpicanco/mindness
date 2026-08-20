@@ -1,3 +1,6 @@
+import type { Session } from '@/modules/sessions/domain/entities/session/index.js'
+import { SessionExpiration } from '@/modules/sessions/domain/services/session-expiration/index.js'
+
 import type {
   GetActiveSessionDependencies,
   GetActiveSessionInput,
@@ -12,12 +15,9 @@ export class GetActiveSessionUseCase {
 
     if (session === null) return null
 
-    if (session.expiresAt.getTime() <= this.dependencies.clock.now().getTime()) {
-      await this.dependencies.expireSession.execute({
-        accountId: input.accountId,
-        sessionId: session.id,
-        reason: 'timeout',
-      })
+    const now = this.dependencies.clock.now()
+    if (session.hasElapsedAt(now)) {
+      await this.expireStaleSession(session, now)
       return null
     }
 
@@ -32,6 +32,29 @@ export class GetActiveSessionUseCase {
       createdAt: session.createdAt.toISOString(),
       expiresAt: session.expiresAt.toISOString(),
     }
+  }
+
+  // D-04: reading the active session is one of the three points that close a stale one, so
+  // the caller never sees a session the deadline already ended.
+  private async expireStaleSession(session: Session, at: Date): Promise<void> {
+    await this.dependencies.unitOfWork.run(async () => {
+      const outcome = SessionExpiration.expire({
+        session,
+        reason: 'timeout',
+        at,
+        eventIds: [
+          this.dependencies.idGenerator.generate(),
+          this.dependencies.idGenerator.generate(),
+        ],
+      })
+      if (!outcome.expired) return
+
+      await this.dependencies.sessions.save(session)
+      await this.dependencies.quota.releaseReservation({ sessionId: session.id })
+      for (const event of outcome.events) {
+        await this.dependencies.eventPublisher.publish(event)
+      }
+    })
   }
 }
 

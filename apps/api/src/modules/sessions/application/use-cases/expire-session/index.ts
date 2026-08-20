@@ -1,6 +1,5 @@
 import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
-import { MicrophonePermissionDenied } from '@/modules/sessions/domain/events/microphone-permission-denied/index.js'
-import { SessionExpired } from '@/modules/sessions/domain/events/session-expired/index.js'
+import { SessionExpiration } from '@/modules/sessions/domain/services/session-expiration/index.js'
 
 import type { ExpireSessionDependencies, ExpireSessionInput } from './types.js'
 
@@ -14,32 +13,22 @@ export class ExpireSessionUseCase {
       if (session === null || session.accountId !== input.accountId) {
         throw new SessionNotFoundError(input.sessionId)
       }
-      if (session.state !== 'in_progress') return
 
-      const stoppedAtStage = session.state
-      const occurredAt = this.dependencies.clock.now()
-      session.expire(input.reason, occurredAt)
+      const outcome = SessionExpiration.expire({
+        session,
+        reason: input.reason,
+        at: this.dependencies.clock.now(),
+        eventIds: [
+          this.dependencies.idGenerator.generate(),
+          this.dependencies.idGenerator.generate(),
+        ],
+      })
+      if (!outcome.expired) return
+
       await this.dependencies.sessions.save(session)
       await this.dependencies.quota.releaseReservation({ sessionId: session.id })
-      await this.dependencies.eventPublisher.publish(
-        SessionExpired.create({
-          eventId: this.dependencies.idGenerator.generate(),
-          occurredAt,
-          sessionId: session.id,
-          accountId: session.accountId,
-          stoppedAtStage,
-        }),
-      )
-
-      if (input.reason === 'microphone_permission_denied') {
-        await this.dependencies.eventPublisher.publish(
-          MicrophonePermissionDenied.create({
-            eventId: this.dependencies.idGenerator.generate(),
-            occurredAt,
-            sessionId: session.id,
-            accountId: session.accountId,
-          }),
-        )
+      for (const event of outcome.events) {
+        await this.dependencies.eventPublisher.publish(event)
       }
     })
   }

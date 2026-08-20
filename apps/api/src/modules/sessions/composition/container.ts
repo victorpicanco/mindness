@@ -7,14 +7,11 @@ import { StartSessionUseCase } from '@/modules/sessions/application/use-cases/st
 import { SweepExpiredSessionsUseCase } from '@/modules/sessions/application/use-cases/sweep-expired-sessions/index.js'
 import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { AudioStoragePort } from '@/modules/sessions/domain/ports/audio-storage-port/index.js'
-import type { AudioValidationPort } from '@/modules/sessions/domain/ports/audio-validation-port/index.js'
 import type { Clock } from '@/modules/sessions/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/sessions/domain/ports/event-publisher/index.js'
 import type { IdGenerator } from '@/modules/sessions/domain/ports/id-generator/index.js'
 import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/index.js'
-import type { UnitOfWork } from '@/modules/sessions/domain/ports/unit-of-work/index.js'
-import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { FfmpegAudioValidationAdapter } from '@/modules/sessions/infrastructure/adapters/ffmpeg-audio-validation-adapter/index.js'
 import { PrismaUnitOfWorkAdapter } from '@/modules/sessions/infrastructure/adapters/prisma-unit-of-work-adapter/index.js'
 import {
@@ -26,6 +23,7 @@ import type {
   SessionsPrismaTransactionRunner,
 } from '@/modules/sessions/infrastructure/clients/sessions-prisma-client/index.js'
 import { SessionsTransactionContext } from '@/modules/sessions/infrastructure/clients/sessions-transaction-context/index.js'
+import { SessionAudioMapper } from '@/modules/sessions/infrastructure/mappers/session-audio-mapper/index.js'
 import { SessionMapper } from '@/modules/sessions/infrastructure/mappers/session-mapper/index.js'
 import {
   AccountsPortAdapter,
@@ -47,27 +45,15 @@ import { ReportMicrophonePermissionDeniedController } from '@/modules/sessions/p
 import { RequestAudioUploadUrlController } from '@/modules/sessions/presentation/controllers/request-audio-upload-url-controller/index.js'
 import { StartSessionController } from '@/modules/sessions/presentation/controllers/start-session-controller/index.js'
 import type { SessionsControllers } from '@/modules/sessions/presentation/routes/sessions-routes/types.js'
-
-import { createSessionsFacade, type SessionsFacade } from './facade.js'
+import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
 
 const DEFAULT_SWEEP_LIMIT = 100
-
-export interface SessionsSupabaseDatabase {
-  readonly public: {
-    readonly Tables: Record<string, never>
-    readonly Views: Record<string, never>
-    readonly Functions: Record<string, never>
-  }
-}
 
 export interface SessionsAdapterOverrides {
   readonly accounts?: AccountsPort
   readonly audioStorage?: AudioStoragePort
-  readonly audioValidation?: AudioValidationPort
   readonly quota?: QuotaPort
-  readonly sessions?: SessionsRepository
   readonly themes?: ThemesPort
-  readonly unitOfWork?: UnitOfWork
 }
 
 export interface SessionsModuleDeps {
@@ -75,36 +61,52 @@ export interface SessionsModuleDeps {
   readonly clock: Clock
   readonly idGenerator: IdGenerator
   readonly eventPublisher: EventPublisher
-  readonly accountsFacade: AccountsIdentityReader
-  readonly themesFacade: ThemesEligibilityReader
-  readonly quotaFacade: QuotaReservationManager
-  readonly supabase: SupabaseAudioStorageClient
+  // Each neighbour arrives either as the facade the bootstrap owns or, in tests, as the port
+  // itself through `adapters` — never as both, and never as a throwaway stub.
+  readonly accountsFacade?: AccountsIdentityReader
+  readonly themesFacade?: ThemesEligibilityReader
+  readonly quotaFacade?: QuotaReservationManager
+  readonly supabase?: SupabaseAudioStorageClient
   readonly sweepLimit?: number
   readonly adapters?: SessionsAdapterOverrides
+}
+
+function required<T>(value: T | undefined, name: string): T {
+  if (value === undefined) {
+    throw new OperationFailedError('create-sessions-container', {
+      context: { missingDependency: name },
+    })
+  }
+
+  return value
 }
 
 export function createSessionsContainer(deps: SessionsModuleDeps) {
   const adapters = deps.adapters ?? {}
   const transactionContext = new SessionsTransactionContext()
-  const accounts = adapters.accounts ?? new AccountsPortAdapter(deps.accountsFacade)
-  const themes = adapters.themes ?? new ThemesPortAdapter(deps.themesFacade)
-  const quota = adapters.quota ?? new QuotaPortAdapter(deps.quotaFacade)
-  const audioStorage = adapters.audioStorage ?? new SupabaseAudioStorageAdapter(deps.supabase)
-  const audioValidation = adapters.audioValidation ?? new FfmpegAudioValidationAdapter()
-  const unitOfWork =
-    adapters.unitOfWork ?? new PrismaUnitOfWorkAdapter(deps.prisma, transactionContext)
-  const sessions =
-    adapters.sessions ??
-    new PrismaSessionsRepository(deps.prisma, transactionContext, new SessionMapper())
+  const accounts =
+    adapters.accounts ?? new AccountsPortAdapter(required(deps.accountsFacade, 'accountsFacade'))
+  const themes =
+    adapters.themes ?? new ThemesPortAdapter(required(deps.themesFacade, 'themesFacade'))
+  const quota = adapters.quota ?? new QuotaPortAdapter(required(deps.quotaFacade, 'quotaFacade'))
+  const audioStorage =
+    adapters.audioStorage ?? new SupabaseAudioStorageAdapter(required(deps.supabase, 'supabase'))
+  const audioValidation = new FfmpegAudioValidationAdapter()
+  const unitOfWork = new PrismaUnitOfWorkAdapter(deps.prisma, transactionContext)
+  const sessions = new PrismaSessionsRepository(
+    deps.prisma,
+    transactionContext,
+    new SessionMapper(new SessionAudioMapper()),
+  )
 
-  const expireSession = new ExpireSessionUseCase({
+  const expirationDependencies = {
     sessions,
     quota,
+    clock: deps.clock,
     eventPublisher: deps.eventPublisher,
     idGenerator: deps.idGenerator,
     unitOfWork,
-    clock: deps.clock,
-  })
+  }
   const useCases = {
     confirmAudioUpload: new ConfirmAudioUploadUseCase({
       sessions,
@@ -115,28 +117,17 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
       clock: deps.clock,
       unitOfWork,
     }),
-    expireSession,
-    getActiveSession: new GetActiveSessionUseCase({
+    expireSession: new ExpireSessionUseCase(expirationDependencies),
+    getActiveSession: new GetActiveSessionUseCase(expirationDependencies),
+    requestAudioUploadUrl: new RequestAudioUploadUrlUseCase({
       sessions,
+      audioStorage,
       clock: deps.clock,
-      expireSession,
     }),
-    requestAudioUploadUrl: new RequestAudioUploadUrlUseCase({ sessions, audioStorage }),
     resolveAccountIdentity: new ResolveAccountIdentityUseCase({ accounts }),
-    startSession: new StartSessionUseCase({
-      sessions,
-      themes,
-      quota,
-      clock: deps.clock,
-      eventPublisher: deps.eventPublisher,
-      idGenerator: deps.idGenerator,
-      unitOfWork,
-      expireSession,
-    }),
+    startSession: new StartSessionUseCase({ ...expirationDependencies, themes }),
     sweepExpiredSessions: new SweepExpiredSessionsUseCase({
-      sessions,
-      expireSession,
-      clock: deps.clock,
+      ...expirationDependencies,
       defaultLimit: deps.sweepLimit ?? DEFAULT_SWEEP_LIMIT,
     }),
   }
@@ -151,11 +142,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     requestAudioUploadUrl: new RequestAudioUploadUrlController(useCases.requestAudioUploadUrl),
     confirmAudioUpload: new ConfirmAudioUploadController(useCases.confirmAudioUpload),
   }
-  const facade: SessionsFacade = createSessionsFacade({
-    sweepExpiredSessions: useCases.sweepExpiredSessions,
-  })
-
-  return { controllers, facade, repositories: { sessions }, useCases }
+  return { controllers, useCases }
 }
 
 export type SessionsContainer = ReturnType<typeof createSessionsContainer>

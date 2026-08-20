@@ -6,7 +6,6 @@ import type { SessionsRepository } from '@/modules/sessions/domain/repositories/
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 
-import { ExpireSessionUseCase } from '../expire-session/index.js'
 import { SweepExpiredSessionsUseCase } from './index.js'
 
 const NOW = new Date('2026-08-19T00:00:00.000Z')
@@ -57,22 +56,23 @@ function createHarness(initialSessions: Session[]) {
       return Promise.resolve()
     },
   }
-  const expireSession = new ExpireSessionUseCase({
-    sessions: repository,
-    quota,
-    eventPublisher: events,
-    idGenerator: { generate: () => `event-${(nextId += 1)}` },
-    unitOfWork: { run: (operation) => operation() },
-    clock: { now: () => NOW },
-  })
+  let transactionRuns = 0
   const useCase = new SweepExpiredSessionsUseCase({
     sessions: repository,
+    quota,
     clock: { now: () => NOW },
-    expireSession,
+    eventPublisher: events,
+    idGenerator: { generate: () => `event-${(nextId += 1)}` },
+    unitOfWork: {
+      run: (operation) => {
+        transactionRuns += 1
+        return operation()
+      },
+    },
     defaultLimit: 3,
   })
 
-  return { events, limits, releasedSessionIds, useCase }
+  return { events, limits, releasedSessionIds, transactionRuns: () => transactionRuns, useCase }
 }
 
 describe('SweepExpiredSessionsUseCase', () => {
@@ -87,6 +87,7 @@ describe('SweepExpiredSessionsUseCase', () => {
     await expect(harness.useCase.execute()).resolves.toEqual({ expiredCount: 3 })
 
     expect(harness.limits).toEqual([3])
+    expect(harness.transactionRuns()).toBe(3)
     expect(harness.releasedSessionIds).toEqual(['session-1', 'session-2', 'session-3'])
     expect(harness.events.published).toHaveLength(3)
     expect(harness.events.published.map((event) => event.eventName)).toEqual([

@@ -38,10 +38,10 @@ describe('session domain events', () => {
         occurredAt,
         sessionId: 'session-1',
         accountId: 'account-1',
-        stoppedAtStage: 'research',
+        stoppedAtStage: 'in_progress',
       }),
       'session_expired',
-      { sessionId: 'session-1', accountId: 'account-1', stoppedAtStage: 'research' },
+      { sessionId: 'session-1', accountId: 'account-1', stoppedAtStage: 'in_progress' },
     ],
     [
       RecordingSubmitted.create({

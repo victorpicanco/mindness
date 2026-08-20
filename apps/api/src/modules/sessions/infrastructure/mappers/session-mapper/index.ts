@@ -23,7 +23,8 @@ export class SessionMapper {
       expiresAt: row.expiresAt,
       expiredReason: row.expiredReason,
       expiredAt: row.expiredAt,
-      audio: row.audio === null ? null : this.audioMapper.toDomain(row.audio),
+      audio:
+        row.audio === undefined || row.audio === null ? null : this.audioMapper.toDomain(row.audio),
     })
   }
 

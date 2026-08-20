@@ -11,6 +11,8 @@ import type { SessionMapper } from '@/modules/sessions/infrastructure/mappers/se
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
 
 function toCreateData(row: SessionRow): SessionCreateData {
+  const audio = row.audio
+
   return {
     id: row.id,
     accountId: row.accountId,
@@ -24,17 +26,17 @@ function toCreateData(row: SessionRow): SessionCreateData {
     createdAt: row.createdAt,
     expiresAt: row.expiresAt,
     expiredAt: row.expiredAt,
-    ...(row.audio === null
+    ...(audio === undefined || audio === null
       ? {}
       : {
           audio: {
             create: {
-              id: row.audio.id,
-              durationSeconds: row.audio.durationSeconds,
-              sizeBytes: row.audio.sizeBytes,
-              contentType: row.audio.contentType,
-              storagePath: row.audio.storagePath,
-              createdAt: row.audio.createdAt,
+              id: audio.id,
+              durationSeconds: audio.durationSeconds,
+              sizeBytes: audio.sizeBytes,
+              contentType: audio.contentType,
+              storagePath: audio.storagePath,
+              createdAt: audio.createdAt,
             },
           },
         }),
@@ -42,6 +44,8 @@ function toCreateData(row: SessionRow): SessionCreateData {
 }
 
 function toUpdateData(row: SessionRow): SessionUpdateData {
+  const audio = row.audio
+
   return {
     id: row.id,
     accountId: row.accountId,
@@ -55,24 +59,24 @@ function toUpdateData(row: SessionRow): SessionUpdateData {
     createdAt: row.createdAt,
     expiresAt: row.expiresAt,
     expiredAt: row.expiredAt,
-    ...(row.audio === null
+    ...(audio === undefined || audio === null
       ? {}
       : {
           audio: {
             upsert: {
               create: {
-                id: row.audio.id,
-                durationSeconds: row.audio.durationSeconds,
-                sizeBytes: row.audio.sizeBytes,
-                contentType: row.audio.contentType,
-                storagePath: row.audio.storagePath,
-                createdAt: row.audio.createdAt,
+                id: audio.id,
+                durationSeconds: audio.durationSeconds,
+                sizeBytes: audio.sizeBytes,
+                contentType: audio.contentType,
+                storagePath: audio.storagePath,
+                createdAt: audio.createdAt,
               },
               update: {
-                durationSeconds: row.audio.durationSeconds,
-                sizeBytes: row.audio.sizeBytes,
-                contentType: row.audio.contentType,
-                storagePath: row.audio.storagePath,
+                durationSeconds: audio.durationSeconds,
+                sizeBytes: audio.sizeBytes,
+                contentType: audio.contentType,
+                storagePath: audio.storagePath,
               },
             },
           },

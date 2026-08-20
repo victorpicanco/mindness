@@ -4,16 +4,14 @@ import { AudioValidationRejectedError } from '@/modules/sessions/domain/errors/a
 import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
 import { RecordingSubmitted } from '@/modules/sessions/domain/events/recording-submitted/index.js'
-import { SessionAudio } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
+import { AudioObjectPath } from '@/modules/sessions/domain/value-objects/audio-object-path/index.js'
+import {
+  MAX_AUDIO_DURATION_SECONDS,
+  MAX_AUDIO_SIZE_BYTES,
+  SessionAudio,
+} from '@/modules/sessions/domain/value-objects/session-audio/index.js'
 
 import type { ConfirmAudioUploadDependencies, ConfirmAudioUploadInput } from './types.js'
-
-const MAX_SIZE_BYTES = 25 * 1024 * 1024
-const MAX_DURATION_SECONDS = 60
-
-function audioPath(accountId: string, sessionId: string): string {
-  return `${accountId}/${sessionId}/audio`
-}
 
 export class ConfirmAudioUploadUseCase {
   constructor(private readonly dependencies: ConfirmAudioUploadDependencies) {}
@@ -24,50 +22,65 @@ export class ConfirmAudioUploadUseCase {
       throw new SessionNotFoundError(input.sessionId)
     }
 
-    const path = audioPath(input.accountId, input.sessionId)
-    if (session.state !== 'in_progress') {
+    const path = AudioObjectPath.forSession({
+      accountId: input.accountId,
+      sessionId: input.sessionId,
+    }).value
+    const now = this.dependencies.clock.now()
+
+    // D-09: an upload that lands after the deadline is an orphan, not a submission — the
+    // object goes before the caller learns the session is over.
+    if (!session.isLiveAt(now)) {
       await this.removeBestEffort(path)
-      throw new SessionNotInProgressError(session.state)
+      throw new SessionNotInProgressError(session.hasElapsedAt(now) ? 'expired' : session.state)
     }
 
+    // Checked before downloading so a hostile object of arbitrary size is never pulled in.
     const sizeBytes = await this.dependencies.audioStorage.getObjectSize(path)
-    if (sizeBytes === null) throw new AudioUploadFailedError(path)
-    if (sizeBytes > MAX_SIZE_BYTES) {
+    if (sizeBytes === null || sizeBytes === 0) throw new AudioUploadFailedError(path)
+    if (sizeBytes > MAX_AUDIO_SIZE_BYTES) {
       await this.dependencies.audioStorage.removeObject(path)
       throw new AudioSizeRejectedError(sizeBytes)
     }
 
-    const audio = await this.dependencies.audioValidation.validate({
+    const validation = await this.dependencies.audioValidation.validate({
       buffer: await this.dependencies.audioStorage.downloadObject(path),
     })
-    if (!audio.ok || audio.durationSeconds <= 0 || audio.durationSeconds > MAX_DURATION_SECONDS) {
+    // The decoder only reports what it observed (D-08); the duration limit is decided here.
+    const withinDomainLimits =
+      validation.ok &&
+      validation.durationSeconds > 0 &&
+      validation.durationSeconds <= MAX_AUDIO_DURATION_SECONDS
+    if (!withinDomainLimits) {
       await this.dependencies.audioStorage.removeObject(path)
       throw new AudioValidationRejectedError(path)
     }
 
-    const sessionAudio = SessionAudio.create({
-      durationSeconds: audio.durationSeconds,
+    const audio = SessionAudio.create({
+      id: this.dependencies.idGenerator.generate(),
+      durationSeconds: validation.durationSeconds,
       sizeBytes,
-      contentType: audio.contentType,
+      contentType: validation.contentType,
       storagePath: path,
     })
-    const occurredAt = this.dependencies.clock.now()
 
     await this.dependencies.unitOfWork.run(async () => {
-      session.acceptAudio(sessionAudio)
+      session.acceptAudio(audio, now)
       await this.dependencies.sessions.save(session)
       await this.dependencies.eventPublisher.publish(
         RecordingSubmitted.create({
           eventId: this.dependencies.idGenerator.generate(),
-          occurredAt,
+          occurredAt: now,
           sessionId: session.id,
           accountId: session.accountId,
-          durationSeconds: sessionAudio.durationSeconds,
+          durationSeconds: audio.durationSeconds,
         }),
       )
     })
   }
 
+  // A-12: removing the orphan is best effort by design — the caller must still see why the
+  // confirmation failed, never an infrastructure error from the cleanup.
   private async removeBestEffort(path: string): Promise<void> {
     try {
       await this.dependencies.audioStorage.removeObject(path)

@@ -84,6 +84,14 @@ export class Session {
     )
   }
 
+  isLiveAt(at: Date): boolean {
+    return this._state === 'in_progress' && this.expiresAtEpoch > at.getTime()
+  }
+
+  hasElapsedAt(at: Date): boolean {
+    return this._state === 'in_progress' && this.expiresAtEpoch <= at.getTime()
+  }
+
   expire(reason: SessionExpiredReason, at: Date): void {
     if (this._state !== 'in_progress') {
       throw new SessionNotInProgressError(this._state)
@@ -94,9 +102,11 @@ export class Session {
     this.expiredAtEpoch = at.getTime()
   }
 
-  acceptAudio(audio: SessionAudio): void {
-    if (this._state !== 'in_progress') {
-      throw new SessionNotInProgressError(this._state)
+  acceptAudio(audio: SessionAudio, at: Date): void {
+    // DA-11: a session past its deadline is expired even before a sweep persists the
+    // transition, so the aggregate — not the caller — refuses the recording.
+    if (!this.isLiveAt(at)) {
+      throw new SessionNotInProgressError(this.hasElapsedAt(at) ? 'expired' : this._state)
     }
 
     this._audio = audio

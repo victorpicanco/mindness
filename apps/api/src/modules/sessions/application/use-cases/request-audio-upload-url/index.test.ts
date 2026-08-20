@@ -10,6 +10,10 @@ import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/se
 
 import { RequestAudioUploadUrlUseCase } from './index.js'
 
+const CREATED_AT = new Date('2026-08-19T00:00:00.000Z')
+const INSIDE_WINDOW = new Date('2026-08-19T00:01:00.000Z')
+const PAST_DEADLINE = new Date('2026-08-19T00:15:00.000Z')
+
 function createSession(accountId = 'account-1'): Session {
   return Session.start({
     sessionId: 'session-1',
@@ -21,11 +25,11 @@ function createSession(accountId = 'account-1'): Session {
       searchWindowMinutes: 4,
     }),
     quotaReservationId: 'reservation-1',
-    createdAt: new Date('2026-08-19T00:00:00.000Z'),
+    createdAt: CREATED_AT,
   })
 }
 
-function createHarness(session: Session | null) {
+function createHarness(session: Session | null, now: Date = INSIDE_WINDOW) {
   const paths: string[] = []
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(session),
@@ -43,7 +47,14 @@ function createHarness(session: Session | null) {
     removeObject: () => Promise.resolve(),
   }
 
-  return { paths, useCase: new RequestAudioUploadUrlUseCase({ sessions, audioStorage }) }
+  return {
+    paths,
+    useCase: new RequestAudioUploadUrlUseCase({
+      sessions,
+      audioStorage,
+      clock: { now: () => now },
+    }),
+  }
 }
 
 describe('RequestAudioUploadUrlUseCase', () => {
@@ -83,16 +94,32 @@ describe('RequestAudioUploadUrlUseCase', () => {
     const session = createSession()
     session.acceptAudio(
       SessionAudio.create({
+        id: 'audio-1',
         durationSeconds: 1,
         sizeBytes: 1,
         contentType: 'audio/webm',
         storagePath: 'account-1/session-1/audio',
       }),
+      INSIDE_WINDOW,
     )
     const harness = createHarness(session)
 
     await expect(
       harness.useCase.execute({ accountId: 'account-1', sessionId: 'session-1' }),
     ).rejects.toEqual(new SessionNotInProgressError('processing'))
+
+    expect(harness.paths).toHaveLength(0)
+  })
+
+  // D-05: the credential must not outlive the session's own fifteen-minute window, even
+  // before a sweep has written the expired state.
+  it('refuses a credential once the window elapsed but the row still reads in_progress', async () => {
+    const harness = createHarness(createSession(), PAST_DEADLINE)
+
+    await expect(
+      harness.useCase.execute({ accountId: 'account-1', sessionId: 'session-1' }),
+    ).rejects.toEqual(new SessionNotInProgressError('expired'))
+
+    expect(harness.paths).toHaveLength(0)
   })
 })

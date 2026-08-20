@@ -13,13 +13,16 @@ import type {
 } from '@/modules/sessions/domain/ports/audio-validation-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
+import { MAX_AUDIO_SIZE_BYTES } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
 import { InfrastructureError } from '@/shared/errors/infrastructure-error/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 
 import { ConfirmAudioUploadUseCase } from './index.js'
 
 const PATH = 'account-1/session-1/audio'
-const MAX_SIZE_BYTES = 25 * 1024 * 1024
+const CREATED_AT = new Date('2026-08-19T00:00:00.000Z')
+const INSIDE_WINDOW = new Date('2026-08-19T00:01:00.000Z')
+const PAST_DEADLINE = new Date('2026-08-19T00:15:00.000Z')
 
 class AudioStorageRemovalError extends InfrastructureError {
   readonly code = 'sessions.AUDIO_STORAGE_PROVIDER_ERROR'
@@ -40,7 +43,7 @@ function createSession(accountId = 'account-1'): Session {
       searchWindowMinutes: 5,
     }),
     quotaReservationId: 'reservation-1',
-    createdAt: new Date('2026-08-19T00:00:00.000Z'),
+    createdAt: CREATED_AT,
   })
 }
 
@@ -56,6 +59,7 @@ function createHarness(session: Session | null) {
   }
   let removeFails = false
   let transactionRuns = 0
+  let now = INSIDE_WINDOW
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
@@ -93,7 +97,7 @@ function createHarness(session: Session | null) {
     audioValidation,
     eventPublisher: events,
     idGenerator: { generate: () => 'event-1' },
-    clock: { now: () => new Date('2026-08-19T00:01:00.000Z') },
+    clock: { now: () => now },
     unitOfWork: {
       run: (operation) => {
         transactionRuns += 1
@@ -111,6 +115,9 @@ function createHarness(session: Session | null) {
     },
     setRemoveFails: () => {
       removeFails = true
+    },
+    setNow: (value: Date) => {
+      now = value
     },
     setValidation: (result: ValidAudio | { readonly ok: false }) => {
       validation = result
@@ -134,11 +141,11 @@ describe('ConfirmAudioUploadUseCase', () => {
 
   it('removes an oversized upload before rejecting it', async () => {
     const harness = createHarness(createSession())
-    harness.setObjectSize(MAX_SIZE_BYTES + 1)
+    harness.setObjectSize(MAX_AUDIO_SIZE_BYTES + 1)
 
     await expect(
       harness.useCase.execute({ accountId: 'account-1', sessionId: 'session-1' }),
-    ).rejects.toEqual(new AudioSizeRejectedError(MAX_SIZE_BYTES + 1))
+    ).rejects.toEqual(new AudioSizeRejectedError(MAX_AUDIO_SIZE_BYTES + 1))
 
     expect(harness.calls).toEqual(['size', 'remove'])
   })
@@ -202,6 +209,35 @@ describe('ConfirmAudioUploadUseCase', () => {
     ).rejects.toEqual(new SessionNotInProgressError('expired'))
 
     expect(harness.calls).toEqual(['remove'])
+  })
+
+  // DA-11 / D-09: the row still reads in_progress until a sweep closes it, but the deadline
+  // has passed — the recording is an orphan, never a submission.
+  it('removes the object and refuses a session whose window elapsed but was never swept', async () => {
+    const session = createSession()
+    const harness = createHarness(session)
+    harness.setNow(PAST_DEADLINE)
+
+    await expect(
+      harness.useCase.execute({ accountId: 'account-1', sessionId: 'session-1' }),
+    ).rejects.toEqual(new SessionNotInProgressError('expired'))
+
+    expect(session.state).toBe('in_progress')
+    expect(session.audio).toBeNull()
+    expect(harness.calls).toEqual(['remove'])
+    expect(harness.saved).toHaveLength(0)
+    expect(harness.events.published).toHaveLength(0)
+  })
+
+  it('rejects an object that was created empty', async () => {
+    const harness = createHarness(createSession())
+    harness.setObjectSize(0)
+
+    await expect(
+      harness.useCase.execute({ accountId: 'account-1', sessionId: 'session-1' }),
+    ).rejects.toEqual(new AudioUploadFailedError(PATH))
+
+    expect(harness.calls).toEqual(['size'])
   })
 
   it.each([

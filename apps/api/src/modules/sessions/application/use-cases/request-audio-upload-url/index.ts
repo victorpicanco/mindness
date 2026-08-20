@@ -1,15 +1,12 @@
 import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
+import { AudioObjectPath } from '@/modules/sessions/domain/value-objects/audio-object-path/index.js'
 
 import type {
   RequestAudioUploadUrlDependencies,
   RequestAudioUploadUrlInput,
   RequestAudioUploadUrlOutput,
 } from './types.js'
-
-function audioPath(accountId: string, sessionId: string): string {
-  return `${accountId}/${sessionId}/audio`
-}
 
 export class RequestAudioUploadUrlUseCase {
   constructor(private readonly dependencies: RequestAudioUploadUrlDependencies) {}
@@ -19,9 +16,18 @@ export class RequestAudioUploadUrlUseCase {
     if (session === null || session.accountId !== input.accountId) {
       throw new SessionNotFoundError(input.sessionId)
     }
-    if (session.state !== 'in_progress') throw new SessionNotInProgressError(session.state)
 
-    const path = audioPath(input.accountId, input.sessionId)
+    // D-05: the credential is only handed out for a session that is in progress *and* still
+    // inside its fifteen-minute window.
+    const now = this.dependencies.clock.now()
+    if (!session.isLiveAt(now)) {
+      throw new SessionNotInProgressError(session.hasElapsedAt(now) ? 'expired' : session.state)
+    }
+
+    const path = AudioObjectPath.forSession({
+      accountId: input.accountId,
+      sessionId: input.sessionId,
+    }).value
     const credential = await this.dependencies.audioStorage.createUploadUrl(path)
 
     return { ...credential, path }

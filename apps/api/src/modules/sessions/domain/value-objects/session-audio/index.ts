@@ -1,11 +1,12 @@
 import { ValidationFailedError } from '@/shared/errors/validation-failed-error/index.js'
 
 // DA-04 and RF-003 cap recordings at sixty seconds.
-const MAX_DURATION_SECONDS = 60
+export const MAX_AUDIO_DURATION_SECONDS = 60
 // RF-003 limits uploaded audio to 25 MiB.
-const MAX_SIZE_BYTES = 25 * 1024 * 1024
+export const MAX_AUDIO_SIZE_BYTES = 25 * 1024 * 1024
 
 export interface CreateSessionAudioParams {
+  readonly id: string
   readonly durationSeconds: number
   readonly sizeBytes: number
   readonly contentType: string
@@ -14,6 +15,7 @@ export interface CreateSessionAudioParams {
 
 export class SessionAudio {
   private constructor(
+    readonly id: string,
     readonly durationSeconds: number,
     readonly sizeBytes: number,
     readonly contentType: string,
@@ -24,36 +26,35 @@ export class SessionAudio {
     if (
       !Number.isFinite(params.durationSeconds) ||
       params.durationSeconds <= 0 ||
-      params.durationSeconds > MAX_DURATION_SECONDS
+      params.durationSeconds > MAX_AUDIO_DURATION_SECONDS
     ) {
       throw new ValidationFailedError([
         {
           field: 'durationSeconds',
-          message: `Duration seconds must be between 0 and ${MAX_DURATION_SECONDS}`,
+          message: `Duration seconds must be between 0 and ${MAX_AUDIO_DURATION_SECONDS}`,
         },
       ])
     }
 
-    if (!Number.isFinite(params.sizeBytes) || params.sizeBytes > MAX_SIZE_BYTES) {
+    if (
+      !Number.isFinite(params.sizeBytes) ||
+      params.sizeBytes <= 0 ||
+      params.sizeBytes > MAX_AUDIO_SIZE_BYTES
+    ) {
       throw new ValidationFailedError([
-        { field: 'sizeBytes', message: `Size bytes must not exceed ${MAX_SIZE_BYTES}` },
+        {
+          field: 'sizeBytes',
+          message: `Size bytes must be between 0 and ${MAX_AUDIO_SIZE_BYTES}`,
+        },
       ])
     }
 
     return new SessionAudio(
+      params.id,
       params.durationSeconds,
       params.sizeBytes,
       params.contentType,
       params.storagePath,
-    )
-  }
-
-  equals(other: SessionAudio): boolean {
-    return (
-      this.durationSeconds === other.durationSeconds &&
-      this.sizeBytes === other.sizeBytes &&
-      this.contentType === other.contentType &&
-      this.storagePath === other.storagePath
     )
   }
 }

@@ -8,6 +8,7 @@ import type {
   SessionUpsertArgs,
 } from '@/modules/sessions/infrastructure/clients/sessions-prisma-client/index.js'
 import { SessionsTransactionContext } from '@/modules/sessions/infrastructure/clients/sessions-transaction-context/index.js'
+import { SessionAudioMapper } from '@/modules/sessions/infrastructure/mappers/session-audio-mapper/index.js'
 import { SessionMapper } from '@/modules/sessions/infrastructure/mappers/session-mapper/index.js'
 
 import { PrismaSessionsRepository } from './index.js'
@@ -70,7 +71,7 @@ function createRepository(fake: FakeClient): PrismaSessionsRepository {
   return new PrismaSessionsRepository(
     fake.client,
     new SessionsTransactionContext(),
-    new SessionMapper(),
+    new SessionMapper(new SessionAudioMapper()),
   )
 }
 
@@ -103,7 +104,7 @@ describe('PrismaSessionsRepository', () => {
   it('persists a session and its accepted audio in one upsert', async () => {
     const fake = createFakeClient()
     const repository = createRepository(fake)
-    const mapper = new SessionMapper()
+    const mapper = new SessionMapper(new SessionAudioMapper())
     const session = mapper.toDomain({
       ...row,
       state: 'processing',

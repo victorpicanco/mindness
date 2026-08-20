@@ -4,7 +4,10 @@ import {
   createSessionsIntegrationContainer,
   type SessionsIntegrationContainer,
 } from '@/modules/sessions/composition/integration-container.js'
-import { clearSessionsData } from '@/modules/sessions/composition/integration-fixtures.js'
+import {
+  assertResponseMatchesSchema,
+  clearSessionsData,
+} from '@/modules/sessions/composition/integration-fixtures.js'
 
 const ACCOUNT_ID = '00000000-0000-4000-8000-000000000001'
 const THEME_ID = '00000000-0000-4000-8000-000000000002'
@@ -40,6 +43,8 @@ describe('session lifecycle integration', () => {
     })
 
     expect(response.statusCode).toBe(201)
+    assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 201)
+    assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 201)
     const body = response.json<{
       data: {
         readonly sessionId: string
@@ -85,6 +90,8 @@ describe('session lifecycle integration', () => {
     })
 
     expect(response.statusCode).toBe(409)
+    assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 409)
+    assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 409)
     expect(response.json()).toMatchObject({ error: { code: 'sessions.SESSION_ALREADY_RUNNING' } })
     await expect(harness.prisma.session.count()).resolves.toBe(1)
     expect(harness.quota.reserveCalls).toHaveLength(1)
@@ -134,6 +141,7 @@ describe('session lifecycle integration', () => {
     })
 
     expect(response.statusCode).toBe(422)
+    assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 422)
     expect(response.json()).toMatchObject({ error: { code: 'sessions.THEME_UNAVAILABLE' } })
     await expect(harness.prisma.session.count()).resolves.toBe(0)
     expect(harness.quota.reserveCalls).toHaveLength(0)
@@ -154,5 +162,30 @@ describe('session lifecycle integration', () => {
     expect(response.json()).toMatchObject({ error: { code: 'quota.QUOTA_EXHAUSTED' } })
     await expect(harness.prisma.session.count()).resolves.toBe(0)
     expect(harness.eventBus.published).toHaveLength(0)
+  })
+
+  // The active-session check reads outside the writing transaction, so only the partial unique
+  // index keeps a concurrent pair of starts from opening two sessions for one account.
+  it('lets only one of two concurrent starts open a session for the account', async () => {
+    const start = () =>
+      harness.app.inject({
+        method: 'POST',
+        url: '/sessions',
+        headers: { authorization: 'Bearer access-token' },
+        payload: { difficulty: 'balanced', categorySlug: 'focus', searchWindowMinutes: 4 },
+      })
+
+    const responses = await Promise.all([start(), start(), start()])
+
+    expect(responses.filter((response) => response.statusCode === 201)).toHaveLength(1)
+    for (const response of responses.filter((r) => r.statusCode !== 201)) {
+      expect(response.statusCode).toBe(409)
+      expect(response.json()).toMatchObject({
+        error: { code: 'sessions.SESSION_ALREADY_RUNNING' },
+      })
+    }
+    await expect(
+      harness.prisma.session.count({ where: { accountId: ACCOUNT_ID, state: 'in_progress' } }),
+    ).resolves.toBe(1)
   })
 })

@@ -1,87 +1,20 @@
+import { Prisma } from '@/generated/prisma/client.js'
 import type { Session } from '@/modules/sessions/domain/entities/session/index.js'
+import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/session-already-running-error/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
-import type {
-  SessionCreateData,
-  SessionRow,
-  SessionsPrismaClient,
-  SessionUpdateData,
-} from '@/modules/sessions/infrastructure/clients/sessions-prisma-client/index.js'
+import type { SessionsPrismaClient } from '@/modules/sessions/infrastructure/clients/sessions-prisma-client/index.js'
 import type { SessionsTransactionContext } from '@/modules/sessions/infrastructure/clients/sessions-transaction-context/index.js'
 import type { SessionMapper } from '@/modules/sessions/infrastructure/mappers/session-mapper/index.js'
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
 
-function toCreateData(row: SessionRow): SessionCreateData {
-  const audio = row.audio
+const UNIQUE_VIOLATION_CODE = 'P2002'
+const ACTIVE_SESSION_INDEX = 'sessions_account_id_active_key'
 
-  return {
-    id: row.id,
-    accountId: row.accountId,
-    themeId: row.themeId,
-    difficulty: row.difficulty,
-    categorySlug: row.categorySlug,
-    searchWindowMinutes: row.searchWindowMinutes,
-    quotaReservationId: row.quotaReservationId,
-    state: row.state,
-    expiredReason: row.expiredReason,
-    createdAt: row.createdAt,
-    expiresAt: row.expiresAt,
-    expiredAt: row.expiredAt,
-    ...(audio === undefined || audio === null
-      ? {}
-      : {
-          audio: {
-            create: {
-              id: audio.id,
-              durationSeconds: audio.durationSeconds,
-              sizeBytes: audio.sizeBytes,
-              contentType: audio.contentType,
-              storagePath: audio.storagePath,
-              createdAt: audio.createdAt,
-            },
-          },
-        }),
-  }
-}
+function isInProgressUniquenessViolation(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
+  if (error.code !== UNIQUE_VIOLATION_CODE) return false
 
-function toUpdateData(row: SessionRow): SessionUpdateData {
-  const audio = row.audio
-
-  return {
-    id: row.id,
-    accountId: row.accountId,
-    themeId: row.themeId,
-    difficulty: row.difficulty,
-    categorySlug: row.categorySlug,
-    searchWindowMinutes: row.searchWindowMinutes,
-    quotaReservationId: row.quotaReservationId,
-    state: row.state,
-    expiredReason: row.expiredReason,
-    createdAt: row.createdAt,
-    expiresAt: row.expiresAt,
-    expiredAt: row.expiredAt,
-    ...(audio === undefined || audio === null
-      ? {}
-      : {
-          audio: {
-            upsert: {
-              create: {
-                id: audio.id,
-                durationSeconds: audio.durationSeconds,
-                sizeBytes: audio.sizeBytes,
-                contentType: audio.contentType,
-                storagePath: audio.storagePath,
-                createdAt: audio.createdAt,
-              },
-              update: {
-                durationSeconds: audio.durationSeconds,
-                sizeBytes: audio.sizeBytes,
-                contentType: audio.contentType,
-                storagePath: audio.storagePath,
-              },
-            },
-          },
-        }),
-  }
+  return JSON.stringify(error.meta ?? {}).includes(ACTIVE_SESSION_INDEX)
 }
 
 export class PrismaSessionsRepository implements SessionsRepository {
@@ -141,18 +74,22 @@ export class PrismaSessionsRepository implements SessionsRepository {
   }
 
   async save(session: Session): Promise<void> {
-    const row = this.mapper.toPersistence(session)
-
     try {
       await this.client().session.upsert({
-        where: { id: row.id },
-        create: toCreateData(row),
-        update: toUpdateData(row),
+        where: { id: session.id },
+        create: this.mapper.toCreateData(session),
+        update: this.mapper.toUpdateData(session),
       })
     } catch (error) {
+      // LAW-004.6: the partial unique index that keeps one in-progress session per account
+      // has a domain meaning, so the technology error is translated rather than propagated.
+      if (isInProgressUniquenessViolation(error)) {
+        throw new SessionAlreadyRunningError(session.id)
+      }
+
       throw new DatabaseError('Failed to save the session', {
         cause: error,
-        context: { sessionId: row.id },
+        context: { sessionId: session.id },
       })
     }
   }

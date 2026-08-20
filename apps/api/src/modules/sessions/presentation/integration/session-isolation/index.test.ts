@@ -4,7 +4,10 @@ import {
   createSessionsIntegrationContainer,
   type SessionsIntegrationContainer,
 } from '@/modules/sessions/composition/integration-container.js'
-import { clearSessionsData } from '@/modules/sessions/composition/integration-fixtures.js'
+import {
+  assertResponseMatchesSchema,
+  clearSessionsData,
+} from '@/modules/sessions/composition/integration-fixtures.js'
 
 const ACCOUNT_A = '00000000-0000-4000-8000-000000000031'
 const ACCOUNT_B = '00000000-0000-4000-8000-000000000032'
@@ -63,6 +66,13 @@ describe('session isolation integration', () => {
         headers: { authorization: 'Bearer account-b' },
       })
       expect(response.statusCode).toBe(404)
+      assertResponseMatchesSchema(
+        harness.app,
+        'POST',
+        `/sessions/{sessionId}/${suffix}`,
+        response,
+        404,
+      )
       expect(response.json()).toMatchObject({ error: { code: 'sessions.SESSION_NOT_FOUND' } })
     }
     await expect(
@@ -84,5 +94,15 @@ describe('session isolation integration', () => {
       `SELECT count(*)::int AS count FROM pg_policies WHERE tablename IN (${tableList})`,
     )
     expect(policies[0]?.count).toBe(0)
+  })
+
+  it('enforces one in-progress session per account at the database level', async () => {
+    const indexes = await harness.prisma.$queryRawUnsafe<Array<{ readonly indexdef: string }>>(
+      `SELECT indexdef FROM pg_indexes WHERE tablename = 'sessions' AND indexname = 'sessions_account_id_active_key'`,
+    )
+
+    expect(indexes).toHaveLength(1)
+    expect(indexes[0]?.indexdef).toContain('UNIQUE')
+    expect(indexes[0]?.indexdef).toContain("state = 'in_progress'")
   })
 })

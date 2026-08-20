@@ -164,4 +164,30 @@ describe('SupabaseAudioStorageAdapter', () => {
       await expect(call(storage, error)).rejects.toMatchObject({ cause: error })
     },
   )
+
+  // The DoD forbids the signed URL and the upload token from ever reaching a log, and the
+  // shared error handler writes `cause` for every InfrastructureError.
+  it('never carries the signed url or the upload token in the error it raises', async () => {
+    const storage = createStorageClient()
+    storage.setCreateUploadUrlResult({
+      data: { signed_url: 'https://storage.test/secret-upload', token: 'secret-upload-token' },
+      error: null,
+    })
+    const adapter = new SupabaseAudioStorageAdapter(storage.client)
+
+    const error = await adapter
+      .createUploadUrl('account-1/session-1/audio')
+      .then(() => null)
+      .catch((raised: unknown) => raised)
+
+    expect(error).toBeInstanceOf(InfrastructureError)
+    const serialized = JSON.stringify({
+      context: error instanceof InfrastructureError ? error.context : null,
+      cause: error instanceof InfrastructureError ? error.cause : null,
+      message: error instanceof Error ? error.message : null,
+    })
+    expect(serialized).not.toContain('secret-upload-token')
+    expect(serialized).not.toContain('secret-upload')
+    expect(serialized).toContain('signedUrl')
+  })
 })

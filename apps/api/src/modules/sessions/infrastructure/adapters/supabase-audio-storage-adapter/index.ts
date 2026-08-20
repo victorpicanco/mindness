@@ -1,10 +1,11 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-
 import type {
   AudioStoragePort,
   UploadUrl,
 } from '@/modules/sessions/domain/ports/audio-storage-port/index.js'
-import { InfrastructureError } from '@/shared/errors/infrastructure-error/index.js'
+
+import { AudioStorageProviderError } from './errors.js'
+
+const BUCKET = 'session-audio'
 
 interface StorageResult {
   readonly data: unknown
@@ -27,17 +28,6 @@ export interface SupabaseAudioStorageClient {
   }
 }
 
-class AudioStorageProviderError extends InfrastructureError {
-  readonly code = 'sessions.AUDIO_STORAGE_PROVIDER_ERROR'
-
-  constructor(operation: string, cause?: unknown) {
-    super('Audio storage provider failed', {
-      context: { operation },
-      ...(cause === undefined ? {} : { cause }),
-    })
-  }
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -55,22 +45,25 @@ function splitObjectPath(path: string): { readonly directory: string; readonly f
 }
 
 export class SupabaseAudioStorageAdapter implements AudioStoragePort {
-  constructor(client: SupabaseAudioStorageClient)
-  constructor(client: SupabaseClient)
   constructor(private readonly client: SupabaseAudioStorageClient) {}
 
   async createUploadUrl(path: string): Promise<UploadUrl> {
     const result = await this.call('create_signed_upload_url', () =>
       this.bucket().createSignedUploadUrl(path, { upsert: true }),
     )
-    if (!isRecord(result.data)) {
-      throw new AudioStorageProviderError('create_signed_upload_url', result.data)
-    }
+    const uploadUrl = isRecord(result.data) ? readString(result.data, 'signedUrl') : null
+    const token = isRecord(result.data) ? readString(result.data, 'token') : null
 
-    const uploadUrl = readString(result.data, 'signedUrl')
-    const token = readString(result.data, 'token')
+    // The payload carries the signed URL and the upload token, so a malformed response is
+    // reported by naming the missing fields — never by attaching the payload as `cause`,
+    // which the error handler writes to the log.
     if (uploadUrl === null || token === null) {
-      throw new AudioStorageProviderError('create_signed_upload_url', result.data)
+      throw new AudioStorageProviderError('create_signed_upload_url', {
+        missingFields: [
+          ...(uploadUrl === null ? ['signedUrl'] : []),
+          ...(token === null ? ['token'] : []),
+        ],
+      })
     }
 
     return { uploadUrl, token }
@@ -82,7 +75,7 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
       this.bucket().list(directory, { search: fileName }),
     )
     if (!Array.isArray(result.data)) {
-      throw new AudioStorageProviderError('list', result.data)
+      throw new AudioStorageProviderError('list', { reason: 'listing_was_not_an_array' })
     }
 
     for (const entry of result.data) {
@@ -90,7 +83,7 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
 
       const metadata = entry.metadata
       if (!isRecord(metadata) || typeof metadata.size !== 'number') {
-        throw new AudioStorageProviderError('list', entry)
+        throw new AudioStorageProviderError('list', { reason: 'entry_without_numeric_size' })
       }
 
       return metadata.size
@@ -102,7 +95,7 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
   async downloadObject(path: string): Promise<Buffer> {
     const result = await this.call('download', () => this.bucket().download(path))
     if (!(result.data instanceof Blob)) {
-      throw new AudioStorageProviderError('download', result.data)
+      throw new AudioStorageProviderError('download', { reason: 'payload_was_not_a_blob' })
     }
 
     return Buffer.from(await result.data.arrayBuffer())
@@ -113,7 +106,7 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
   }
 
   private bucket(): SupabaseStorageFileApi {
-    return this.client.storage.from('session-audio')
+    return this.client.storage.from(BUCKET)
   }
 
   private async call(
@@ -122,7 +115,9 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
   ): Promise<StorageResult> {
     try {
       const result = await call()
-      if (result.error !== null) throw new AudioStorageProviderError(operation, result.error)
+      if (result.error !== null && result.error !== undefined) {
+        throw new AudioStorageProviderError(operation, result.error)
+      }
 
       return result
     } catch (error) {
@@ -131,3 +126,5 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
     }
   }
 }
+
+export { AudioStorageProviderError } from './errors.js'

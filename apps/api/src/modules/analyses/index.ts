@@ -1,4 +1,4 @@
-export { createAnalysesContainer } from './composition/container.js'
+export { createAnalysesContainer, createAnalysesPrismaClient } from './composition/container.js'
 export { registerAnalysesModule } from './composition/register.js'
 export type { AnalysesModuleDeps } from './composition/container.js'
 export {

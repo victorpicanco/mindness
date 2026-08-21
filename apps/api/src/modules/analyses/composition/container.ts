@@ -178,3 +178,5 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
 }
 
 export type AnalysesContainer = ReturnType<typeof createAnalysesContainer>
+
+export { createAnalysesPrismaClient } from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'

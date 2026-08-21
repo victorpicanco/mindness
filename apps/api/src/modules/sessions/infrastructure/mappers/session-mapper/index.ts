@@ -28,6 +28,8 @@ export class SessionMapper {
       expiredReason: row.expiredReason,
       expiredAt: row.expiredAt,
       recordedAt: row.recordedAt,
+      totalScore: row.totalScore ?? null,
+      completedAt: row.completedAt ?? null,
       audio:
         row.audio === undefined || row.audio === null ? null : this.audioMapper.toDomain(row.audio),
     })
@@ -77,6 +79,8 @@ export class SessionMapper {
       expiresAt: session.expiresAt,
       expiredAt: session.expiredAt,
       recordedAt: session.recordedAt,
+      totalScore: session.totalScore,
+      completedAt: session.completedAt,
     }
   }
 }

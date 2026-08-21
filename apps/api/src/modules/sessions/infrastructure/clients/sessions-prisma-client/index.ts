@@ -28,6 +28,8 @@ export interface SessionRow {
   readonly expiresAt: Date
   readonly expiredAt: Date | null
   readonly recordedAt: Date | null
+  readonly totalScore?: number | null
+  readonly completedAt?: Date | null
   readonly audio?: SessionAudioRow | null
 }
 
@@ -45,6 +47,8 @@ export interface SessionScalars {
   readonly expiresAt: Date
   readonly expiredAt: Date | null
   readonly recordedAt: Date | null
+  readonly totalScore: number | null
+  readonly completedAt: Date | null
 }
 
 export interface SessionFindByIdArgs {

@@ -25,6 +25,8 @@ export class Session {
     private expiredAtEpoch: number | null,
     private _audio: SessionAudio | null,
     private recordedAtEpoch: number | null,
+    private _totalScore: number | null,
+    private completedAtEpoch: number | null,
   ) {}
 
   get state(): SessionState {
@@ -55,6 +57,14 @@ export class Session {
     return this.recordedAtEpoch === null ? null : new Date(this.recordedAtEpoch)
   }
 
+  get totalScore(): number | null {
+    return this._totalScore
+  }
+
+  get completedAt(): Date | null {
+    return this.completedAtEpoch === null ? null : new Date(this.completedAtEpoch)
+  }
+
   static start(params: StartSessionParams): Session {
     const createdAtEpoch = params.createdAt.getTime()
 
@@ -67,6 +77,8 @@ export class Session {
       'in_progress',
       createdAtEpoch,
       createdAtEpoch + SESSION_DURATION_MILLISECONDS,
+      null,
+      null,
       null,
       null,
       null,
@@ -88,6 +100,8 @@ export class Session {
       params.expiredAt?.getTime() ?? null,
       params.audio ?? null,
       params.recordedAt?.getTime() ?? null,
+      params.totalScore ?? null,
+      params.completedAt?.getTime() ?? null,
     )
   }
 
@@ -119,6 +133,27 @@ export class Session {
     this._audio = audio
     this._state = 'processing'
     this.recordedAtEpoch = at.getTime()
+  }
+
+  complete(totalScore: number, at: Date): void {
+    if (this._state !== 'processing') {
+      throw new SessionNotInProgressError(this._state)
+    }
+
+    this._state = 'completed'
+    this._totalScore = totalScore
+    this.completedAtEpoch = at.getTime()
+  }
+
+  fail(_at: Date): void {
+    void _at
+
+    if (this._state !== 'processing') {
+      throw new SessionNotInProgressError(this._state)
+    }
+
+    this._state = 'failed'
+    this.completedAtEpoch = null
   }
 }
 

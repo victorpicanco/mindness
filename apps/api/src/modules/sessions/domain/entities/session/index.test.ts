@@ -11,6 +11,7 @@ const WITHIN_WINDOW = new Date('2026-08-18T12:14:59.999Z')
 const DEADLINE = new Date('2026-08-18T12:15:00.000Z')
 const AFTER_DEADLINE = new Date('2026-08-18T12:15:00.001Z')
 const RECORDED_AT = new Date('2026-08-18T12:07:00.000Z')
+const COMPLETED_AT = new Date('2026-08-18T12:08:00.000Z')
 const STALE_STATES = ['processing', 'expired', 'completed', 'failed', 'deleted'] as const
 
 describe('Session', () => {
@@ -88,6 +89,34 @@ describe('Session', () => {
   it('has no recorded instant before accepting audio', () => {
     expect(createSession().recordedAt).toBeNull()
   })
+
+  it('completes a processing session with its score and completion instant', () => {
+    const session = reconstituteWithState('processing')
+
+    session.complete(86, COMPLETED_AT)
+
+    expect(session.state).toBe('completed')
+    expect(session.totalScore).toBe(86)
+    expect(session.completedAt).toEqual(COMPLETED_AT)
+  })
+
+  it('fails a processing session', () => {
+    const session = reconstituteWithState('processing')
+
+    session.fail(COMPLETED_AT)
+
+    expect(session.state).toBe('failed')
+  })
+
+  it.each(['expired', 'completed', 'failed', 'deleted'] as const)(
+    'rejects completion and failure from the %s state',
+    (state) => {
+      const session = reconstituteWithState(state)
+
+      expect(() => session.complete(86, COMPLETED_AT)).toThrow(SessionNotInProgressError)
+      expect(() => session.fail(COMPLETED_AT)).toThrow(SessionNotInProgressError)
+    },
+  )
 
   it.each(STALE_STATES)('rejects audio acceptance from the %s state', (state) => {
     const session = reconstituteWithState(state)

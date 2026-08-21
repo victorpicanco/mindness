@@ -1,3 +1,6 @@
+import type { PrismaClient, Prisma } from '@/generated/prisma/client.js'
+import { DatabaseError } from '@/shared/errors/database-error/index.js'
+
 export interface TranscriptionRow {
   readonly id: string
   readonly sessionId: string
@@ -68,4 +71,60 @@ export interface AnalysesPrismaTransactionRunner {
     operation: (transaction: AnalysesPrismaClient) => Promise<T>,
     options: { readonly isolationLevel: 'Serializable' },
   ): Promise<T>
+}
+
+export function createAnalysesPrismaClient(
+  prisma: PrismaClient,
+): AnalysesPrismaClient & AnalysesPrismaTransactionRunner {
+  return {
+    transcription: {
+      findUnique: (args) => prisma.transcription.findUnique(args),
+      upsert: (args) =>
+        prisma.transcription.upsert({
+          where: args.where,
+          create: { ...args.create, words: toInputJson(args.create.words) },
+          update: { ...args.update, words: toInputJson(args.update.words) },
+        }),
+    },
+    analysis: {
+      findUnique: (args) => prisma.analysis.findUnique(args),
+      upsert: (args) =>
+        prisma.analysis.upsert({
+          where: args.where,
+          create: {
+            ...args.create,
+            guidance: toInputJson(args.create.guidance),
+            rhythmMetrics: toInputJson(args.create.rhythmMetrics),
+          },
+          update: {
+            ...args.update,
+            guidance: toInputJson(args.update.guidance),
+            rhythmMetrics: toInputJson(args.update.rhythmMetrics),
+          },
+        }),
+    },
+    analysisCostEntry: {
+      create: (args) => prisma.analysisCostEntry.create(args),
+      aggregate: (args) => prisma.analysisCostEntry.aggregate(args),
+    },
+    $transaction: async <T>(operation: (client: AnalysesPrismaClient) => Promise<T>) =>
+      operation(createAnalysesPrismaClient(prisma)),
+  }
+}
+
+interface JsonObject {
+  [key: string]: Prisma.InputJsonValue
+}
+
+function toInputJson(value: unknown): Prisma.InputJsonValue {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+  if (Array.isArray(value)) return value.map(toInputJson)
+  if (typeof value === 'object' && value !== null) {
+    const object: JsonObject = {}
+    for (const [key, entry] of Object.entries(value)) object[key] = toInputJson(entry)
+    return object
+  }
+  throw new DatabaseError('Invalid JSON value for analysis persistence')
 }

@@ -1,5 +1,4 @@
-import { DatabaseError } from '@/shared/errors/database-error/index.js'
-import type { PrismaClient, Prisma } from '@/generated/prisma/client.js'
+import type { PrismaClient } from '@/generated/prisma/client.js'
 import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
@@ -7,10 +6,7 @@ import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
 
 import { createAnalysesContainer, type AnalysesContainer } from './container.js'
-import type {
-  AnalysesPrismaClient,
-  AnalysesPrismaTransactionRunner,
-} from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
+import { createAnalysesPrismaClient } from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
 import {
   createFakeAccountsPort,
   createFakeSessionsPort,
@@ -63,7 +59,7 @@ export function createAnalysesIntegrationContainer(
   deps: AnalysesIntegrationDeps,
 ): AnalysesIntegrationContainer {
   const prisma = createPrismaClient({ databaseUrl: deps.databaseUrl, logQueries: false })
-  const analysesPrisma = createAnalysesPrismaAdapter(prisma)
+  const analysesPrisma = createAnalysesPrismaClient(prisma)
   const eventBus = new FakeEventBus()
   const clock = new ControllableClock(ANALYSES_TEST_NOW)
   const accounts = createFakeAccountsPort()
@@ -137,60 +133,4 @@ export function createAnalysesIntegrationContainer(
     },
     close: () => prisma.$disconnect(),
   }
-}
-
-function createAnalysesPrismaAdapter(
-  prisma: PrismaClient,
-): AnalysesPrismaClient & AnalysesPrismaTransactionRunner {
-  return {
-    transcription: {
-      findUnique: (args) => prisma.transcription.findUnique(args),
-      upsert: (args) =>
-        prisma.transcription.upsert({
-          where: args.where,
-          create: { ...args.create, words: toInputJson(args.create.words) },
-          update: { ...args.update, words: toInputJson(args.update.words) },
-        }),
-    },
-    analysis: {
-      findUnique: (args) => prisma.analysis.findUnique(args),
-      upsert: (args) =>
-        prisma.analysis.upsert({
-          where: args.where,
-          create: {
-            ...args.create,
-            guidance: toInputJson(args.create.guidance),
-            rhythmMetrics: toInputJson(args.create.rhythmMetrics),
-          },
-          update: {
-            ...args.update,
-            guidance: toInputJson(args.update.guidance),
-            rhythmMetrics: toInputJson(args.update.rhythmMetrics),
-          },
-        }),
-    },
-    analysisCostEntry: {
-      create: (args) => prisma.analysisCostEntry.create(args),
-      aggregate: (args) => prisma.analysisCostEntry.aggregate(args),
-    },
-    $transaction: async <T>(operation: (client: AnalysesPrismaClient) => Promise<T>) =>
-      operation(createAnalysesPrismaAdapter(prisma)),
-  }
-}
-
-interface JsonObject {
-  [key: string]: Prisma.InputJsonValue
-}
-
-function toInputJson(value: unknown): Prisma.InputJsonValue {
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value
-  }
-  if (Array.isArray(value)) return value.map(toInputJson)
-  if (typeof value === 'object' && value !== null) {
-    const object: JsonObject = {}
-    for (const [key, entry] of Object.entries(value)) object[key] = toInputJson(entry)
-    return object
-  }
-  throw new DatabaseError('Invalid JSON value for analysis persistence')
 }

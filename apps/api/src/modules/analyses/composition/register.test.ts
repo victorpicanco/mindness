@@ -21,7 +21,10 @@ describe('registerAnalysesModule', () => {
         geminiInputCostPerMtokMicros: 1,
         geminiOutputCostPerMtokMicros: 1,
       },
-      accountsFacade: { findPlan: () => Promise.resolve('free') },
+      accountsFacade: {
+        getAccountSnapshot: () =>
+          Promise.resolve({ accountId: 'account', plan: 'free' as const, createdAt: new Date() }),
+      },
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),

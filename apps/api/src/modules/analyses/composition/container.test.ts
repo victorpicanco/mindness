@@ -22,7 +22,6 @@ describe('createAnalysesContainer', () => {
         geminiInputCostPerMtokMicros: 1,
         geminiOutputCostPerMtokMicros: 1,
       },
-      accountsFacade: { findPlan: () => Promise.resolve('free') },
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),
@@ -99,7 +98,14 @@ function baseDeps() {
       geminiInputCostPerMtokMicros: 1,
       geminiOutputCostPerMtokMicros: 1,
     },
-    accountsFacade: { findPlan: () => Promise.resolve('free' as const) },
+    accountsFacade: {
+      getAccountSnapshot: () =>
+        Promise.resolve({
+          accountId: 'account',
+          plan: 'free' as const,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        }),
+    },
     sessionsFacade: {
       findProcessingContext: () => Promise.resolve(null),
       downloadAudio: () => Promise.resolve(Buffer.from('audio')),

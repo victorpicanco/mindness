@@ -32,6 +32,10 @@ import {
 } from '@/modules/analyses/infrastructure/adapters/gemini-evaluation-adapter/index.js'
 import { PrismaUnitOfWorkAdapter } from '@/modules/analyses/infrastructure/adapters/prisma-unit-of-work-adapter/index.js'
 import {
+  AccountsPortAdapter,
+  type AccountsPlanReader,
+} from '@/modules/analyses/infrastructure/module-adapters/accounts-port-adapter/index.js'
+import {
   SessionsAudioReaderAdapter,
   type SessionsAudioReader,
 } from '@/modules/analyses/infrastructure/module-adapters/sessions-audio-reader-adapter/index.js'
@@ -78,7 +82,7 @@ export interface AnalysesModuleDeps {
   readonly eventPublisher?: EventPublisher
   readonly eventSubscriber?: EventSubscriber
   readonly logger?: AnalysisLogger
-  readonly accountsFacade?: AccountsPort
+  readonly accountsFacade?: AccountsPlanReader
   readonly sessionsFacade?: SessionsProcessingContextReader & SessionsAudioReader
   readonly themesFacade?: ThemesTitleReader
   readonly deepgramClient?: DeepgramTranscriptionClient
@@ -106,7 +110,8 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
   const adapters = deps.adapters ?? {}
   const transactionContext = new AnalysesTransactionContext()
 
-  const accounts = adapters.accounts ?? required(deps.accountsFacade, 'accountsFacade')
+  const accounts =
+    adapters.accounts ?? new AccountsPortAdapter(required(deps.accountsFacade, 'accountsFacade'))
   const sessions =
     adapters.sessions ?? new SessionsPortAdapter(required(deps.sessionsFacade, 'sessionsFacade'))
   const themes =

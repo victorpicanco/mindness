@@ -6,9 +6,10 @@ import type { SessionProcessingContext } from '@/modules/analyses/domain/ports/s
 import type { TranscriptionResult } from '@/modules/analyses/domain/ports/transcription-port/index.js'
 import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluation-failed-error/index.js'
 import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
+import { AnalysisDeadlineExceededError } from '@/modules/analyses/domain/errors/analysis-deadline-exceeded-error/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ProcessSessionAudioUseCase } from './index.js'
 import type { ProcessSessionAudioDependencies } from './types.js'
@@ -159,6 +160,7 @@ const transcriptionResult: TranscriptionResult = {
 function createDependencies(): {
   readonly analyses: InMemoryAnalysesRepository
   readonly costs: InMemoryCostEntriesRepository
+  readonly clock: ControllableClock
   readonly dependencies: ProcessSessionAudioDependencies
   readonly evaluation: InMemoryEvaluationPort
   readonly events: FakeEventBus
@@ -190,6 +192,7 @@ function createDependencies(): {
   return {
     analyses,
     costs,
+    clock,
     dependencies: {
       accounts: new InMemoryAccountsPort(),
       analyses,
@@ -225,6 +228,9 @@ function createDependencies(): {
 }
 
 describe('ProcessSessionAudioUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
   it('processes, persists and publishes a completed analysis', async () => {
     const {
       analyses,
@@ -367,5 +373,71 @@ describe('ProcessSessionAudioUseCase', () => {
     expect(events.published).toMatchObject([
       { eventName: 'analysis_failed', payload: { reason: 'malformed_evaluation' } },
     ])
+  })
+
+  it('publishes a timeout and throws without calling external ports when the deadline elapsed', async () => {
+    const { analyses, costs, dependencies, events, transcription } = createDependencies()
+    const useCase = new ProcessSessionAudioUseCase({
+      ...dependencies,
+      sessions: new InMemorySessionsPort({
+        sessionId: 'session-1',
+        accountId: 'account-1',
+        themeId: 'theme-1',
+        audioPath: 'recordings/session-1.webm',
+        recordedAt: new Date('2026-08-21T15:24:59.000Z'),
+      }),
+    })
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toBeInstanceOf(
+      AnalysisDeadlineExceededError,
+    )
+
+    expect(transcription.received).toEqual([])
+    expect(analyses.saved).toEqual([])
+    expect(costs.saved).toEqual([])
+    expect(events.published).toMatchObject([{ eventName: 'analysis_timeout' }])
+  })
+
+  it('passes the remaining deadline to transcription and aborts it when the deadline expires', async () => {
+    vi.useFakeTimers()
+    const { clock, dependencies, events } = createDependencies()
+    let receivedDeadlineMs: number | null = null
+    let signalWasAborted = false
+    const useCase = new ProcessSessionAudioUseCase({
+      ...dependencies,
+      sessions: new InMemorySessionsPort({
+        sessionId: 'session-1',
+        accountId: 'account-1',
+        themeId: 'theme-1',
+        audioPath: 'recordings/session-1.webm',
+        recordedAt: new Date('2026-08-21T15:29:30.000Z'),
+      }),
+      transcription: {
+        transcribe: ({ deadlineMs, signal }) => {
+          receivedDeadlineMs = deadlineMs
+          return new Promise<TranscriptionResult>((_resolve, reject) => {
+            signal.addEventListener(
+              'abort',
+              () => {
+                signalWasAborted = signal.aborted
+                reject(new AnalysisDeadlineExceededError(deadlineMs))
+              },
+              { once: true },
+            )
+          })
+        },
+      },
+    })
+
+    const processing = useCase.execute({ sessionId: 'session-1' })
+    const rejected = expect(processing).rejects.toBeInstanceOf(AnalysisDeadlineExceededError)
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(270_000)
+    clock.advance(270_000)
+
+    await rejected
+    expect(receivedDeadlineMs).toBe(270_000)
+    expect(signalWasAborted).toBe(true)
+    expect(events.published).toMatchObject([{ eventName: 'analysis_timeout' }])
   })
 })

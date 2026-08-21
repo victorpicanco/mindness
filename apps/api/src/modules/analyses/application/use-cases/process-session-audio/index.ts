@@ -2,6 +2,8 @@ import { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
 import { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import { AnalysisCompleted } from '@/modules/analyses/domain/events/analysis-completed/index.js'
 import { AnalysisFailed } from '@/modules/analyses/domain/events/analysis-failed/index.js'
+import { AnalysisTimedOut } from '@/modules/analyses/domain/events/analysis-timed-out/index.js'
+import { AnalysisDeadlineExceededError } from '@/modules/analyses/domain/errors/analysis-deadline-exceeded-error/index.js'
 import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluation-failed-error/index.js'
 import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
 import { TranscriptionFailedError } from '@/modules/analyses/domain/errors/transcription-failed-error/index.js'
@@ -33,76 +35,112 @@ export class ProcessSessionAudioUseCase {
     const plan = await this.dependencies.accounts.findPlan(context.accountId)
     if (plan === null) return
 
+    const remainingMs =
+      ANALYSIS_DEADLINE_MS -
+      (this.dependencies.clock.now().getTime() - context.recordedAt.getTime())
+    if (remainingMs <= 0) {
+      await this.publishTimeout(context, plan)
+      throw new AnalysisDeadlineExceededError(remainingMs)
+    }
+
     const startedAt = this.dependencies.clock.now()
     const controller = new AbortController()
-    let transcriptionResult: TranscriptionResult
+    const deadlineTimer = setTimeout(() => controller.abort(), remainingMs)
     try {
-      const audio = await this.dependencies.audioReader.read(context.sessionId)
-      transcriptionResult = await this.dependencies.transcription.transcribe({
-        audio,
-        deadlineMs: ANALYSIS_DEADLINE_MS,
-        signal: controller.signal,
+      let transcriptionResult: TranscriptionResult
+      try {
+        const audio = await this.dependencies.audioReader.read(context.sessionId)
+        transcriptionResult = await this.dependencies.transcription.transcribe({
+          audio,
+          deadlineMs: remainingMs,
+          signal: controller.signal,
+        })
+      } catch (error) {
+        if (error instanceof AnalysisDeadlineExceededError) {
+          await this.publishTimeout(context, plan)
+          throw error
+        }
+        const failure = new TranscriptionFailedError('provider request failed', { cause: error })
+        await this.publishFailure({ context, plan, reason: 'transcription_failed' })
+        throw failure
+      }
+      const rhythm = calculateRhythm(transcriptionResult.words)
+      if (rhythm === null) {
+        const failure = new TranscriptionFailedError('transcription has no words')
+        await this.publishFailure({ context, plan, reason: 'transcription_failed' })
+        throw failure
+      }
+
+      const themeTitle = await this.dependencies.themes.findTitle(context.themeId)
+      if (themeTitle === null) return
+
+      let evaluation: EvaluationResult
+      try {
+        evaluation = await this.dependencies.evaluation.evaluate({
+          themeTitle,
+          transcript: transcriptionResult.text,
+          rhythm: rhythm.metrics,
+          signal: controller.signal,
+        })
+      } catch (error) {
+        if (error instanceof AnalysisDeadlineExceededError) {
+          await this.publishTimeout(context, plan)
+          throw error
+        }
+        const failure = translateEvaluationFailure(error)
+        await this.publishFailure({ context, plan, reason: failure.reason })
+        throw failure.error
+      }
+      const completedAt = this.dependencies.clock.now()
+      const persisted = createPersistedAnalysis({
+        context,
+        transcriptionResult,
+        evaluation,
+        rhythm,
+        startedAt,
+        completedAt,
+        dependencies: this.dependencies,
       })
-    } catch (error) {
-      const failure = new TranscriptionFailedError('provider request failed', { cause: error })
-      await this.publishFailure({ context, plan, reason: 'transcription_failed' })
-      throw failure
-    }
-    const rhythm = calculateRhythm(transcriptionResult.words)
-    if (rhythm === null) {
-      const failure = new TranscriptionFailedError('transcription has no words')
-      await this.publishFailure({ context, plan, reason: 'transcription_failed' })
-      throw failure
-    }
 
-    const themeTitle = await this.dependencies.themes.findTitle(context.themeId)
-    if (themeTitle === null) return
-
-    let evaluation: EvaluationResult
-    try {
-      evaluation = await this.dependencies.evaluation.evaluate({
-        themeTitle,
-        transcript: transcriptionResult.text,
-        rhythm: rhythm.metrics,
-        signal: controller.signal,
+      await this.dependencies.unitOfWork.run(async () => {
+        await this.dependencies.transcriptions.save(persisted.transcription)
+        await this.dependencies.analyses.save(persisted.analysis)
+        await this.dependencies.costs.save(persisted.costEntry)
       })
-    } catch (error) {
-      const failure = translateEvaluationFailure(error)
-      await this.publishFailure({ context, plan, reason: failure.reason })
-      throw failure.error
+      await this.dependencies.eventPublisher.publish(
+        AnalysisCompleted.create({
+          eventId: this.dependencies.idGenerator.generate(),
+          occurredAt: completedAt,
+          sessionId: context.sessionId,
+          accountId: context.accountId,
+          plan,
+          scores: {
+            clarity: persisted.analysis.clarityScore.value,
+            rhythm: persisted.analysis.rhythmScore.value,
+            fluency: persisted.analysis.fluencyScore.value,
+            mastery: persisted.analysis.masteryScore.value,
+            total: persisted.analysis.totalScore,
+          },
+          processingMs: persisted.analysis.processingMs,
+          costMicrosUsd: persisted.analysis.costMicrosUsd,
+        }),
+      )
+    } finally {
+      clearTimeout(deadlineTimer)
     }
-    const completedAt = this.dependencies.clock.now()
-    const persisted = createPersistedAnalysis({
-      context,
-      transcriptionResult,
-      evaluation,
-      rhythm,
-      startedAt,
-      completedAt,
-      dependencies: this.dependencies,
-    })
+  }
 
-    await this.dependencies.unitOfWork.run(async () => {
-      await this.dependencies.transcriptions.save(persisted.transcription)
-      await this.dependencies.analyses.save(persisted.analysis)
-      await this.dependencies.costs.save(persisted.costEntry)
-    })
+  private async publishTimeout(
+    context: { readonly sessionId: string; readonly accountId: string },
+    plan: 'free',
+  ): Promise<void> {
     await this.dependencies.eventPublisher.publish(
-      AnalysisCompleted.create({
+      AnalysisTimedOut.create({
         eventId: this.dependencies.idGenerator.generate(),
-        occurredAt: completedAt,
+        occurredAt: this.dependencies.clock.now(),
         sessionId: context.sessionId,
         accountId: context.accountId,
         plan,
-        scores: {
-          clarity: persisted.analysis.clarityScore.value,
-          rhythm: persisted.analysis.rhythmScore.value,
-          fluency: persisted.analysis.fluencyScore.value,
-          mastery: persisted.analysis.masteryScore.value,
-          total: persisted.analysis.totalScore,
-        },
-        processingMs: persisted.analysis.processingMs,
-        costMicrosUsd: persisted.analysis.costMicrosUsd,
       }),
     )
   }

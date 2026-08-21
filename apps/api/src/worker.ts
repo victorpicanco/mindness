@@ -7,6 +7,7 @@ import { DeepgramClient } from '@deepgram/sdk'
 import { GoogleGenAI } from '@google/genai'
 import { createClient } from '@supabase/supabase-js'
 import { Queue, UnrecoverableError, Worker } from 'bullmq'
+import type { FastifyInstance } from 'fastify'
 import { Redis } from 'ioredis'
 
 import type { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
@@ -14,10 +15,17 @@ import type { ReconcileOrphanAnalysesUseCase } from '@/modules/analyses/applicat
 import type { SweepExpiredSessionsUseCase } from '@/modules/sessions/application/use-cases/sweep-expired-sessions/index.js'
 import { loadConfig } from '@/config.js'
 import { createAccountsContainer } from '@/modules/accounts/composition/container.js'
-import { createAnalysesContainer, createAnalysesPrismaClient } from '@/modules/analyses/index.js'
+import {
+  createAnalysesPrismaClient,
+  registerAnalysesModule,
+  type AnalysesModuleDeps,
+} from '@/modules/analyses/index.js'
 import { createQuotaContainer } from '@/modules/quota/composition/container.js'
-import { createSessionsContainer } from '@/modules/sessions/composition/container.js'
-import { createSessionsFacade } from '@/modules/sessions/index.js'
+import {
+  createSessionsFacade,
+  registerSessionsModule,
+  type SessionsModuleDeps,
+} from '@/modules/sessions/index.js'
 import { createThemesContainer } from '@/modules/themes/composition/container.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { BaseError } from '@/shared/errors/base-error/index.js'
@@ -46,6 +54,29 @@ const SESSION_ANALYSIS_QUEUE_NAME = 'session-analysis'
 // analyses keeps AnalysisDeadlineExceededError internal to the module (LAW-001.3), so the
 // deadline is matched by its BaseError code instead of an instanceof check on the class.
 const ANALYSIS_DEADLINE_EXCEEDED_CODE = 'analyses.ANALYSIS_DEADLINE_EXCEEDED'
+
+export interface AnalysisPipelineModulesDeps {
+  readonly sessions: SessionsModuleDeps
+  readonly analyses: Omit<AnalysesModuleDeps, 'sessionsFacade'>
+}
+
+// D-12: this process publishes the three analysis lifecycle events and must also consume
+// `recording_submitted`, published by the HTTP process — so both modules are registered here too.
+export async function registerAnalysisPipelineModules(
+  app: FastifyInstance,
+  deps: AnalysisPipelineModulesDeps,
+) {
+  const sessionsContainer = await registerSessionsModule(app, deps.sessions)
+  const analysesContainer = registerAnalysesModule(app, {
+    ...deps.analyses,
+    sessionsFacade: createSessionsFacade({
+      findProcessingContext: sessionsContainer.useCases.findProcessingContext,
+      downloadAudio: sessionsContainer.useCases.downloadAudio,
+      listStuckProcessing: sessionsContainer.useCases.listStuckProcessingSessions,
+    }),
+  })
+  return { sessionsContainer, analysesContainer }
+}
 
 type AnalysisProcessor = (job: { readonly data: { readonly sessionId: string } }) => Promise<void>
 
@@ -202,44 +233,43 @@ export async function startWorker(): Promise<void> {
     idGenerator,
     accountsFacade: accountsContainer.facade,
   })
-  const sessionsContainer = createSessionsContainer({
-    prisma,
-    clock,
-    eventPublisher: eventBus,
-    idGenerator,
-    accountsFacade: accountsContainer.facade,
-    themesFacade: themesContainer.publicApi,
-    quotaFacade: quotaContainer.publicApi,
-    supabase: createClient(config.supabaseUrl, config.supabaseSecretKey),
-  })
   const redisConnection = new Redis(config.redisUrl, { maxRetriesPerRequest: null })
   const bullMqQueue = new Queue(SESSION_ANALYSIS_QUEUE_NAME, { connection: redisConnection })
-  const analysesContainer = createAnalysesContainer({
-    prisma: createAnalysesPrismaClient(prisma),
-    clock,
-    costRates: {
-      transcriptionCostPerMinuteMicros: config.deepgramCostPerMinuteMicros,
-      geminiInputCostPerMtokMicros: config.geminiInputCostPerMtokMicros,
-      geminiOutputCostPerMtokMicros: config.geminiOutputCostPerMtokMicros,
+  const { sessionsContainer, analysesContainer } = await registerAnalysisPipelineModules(app, {
+    sessions: {
+      prisma,
+      clock,
+      eventPublisher: eventBus,
+      eventSubscriber: eventBus,
+      idGenerator,
+      accountsFacade: accountsContainer.facade,
+      themesFacade: themesContainer.publicApi,
+      quotaFacade: quotaContainer.publicApi,
+      supabase: createClient(config.supabaseUrl, config.supabaseSecretKey),
     },
-    idGenerator,
-    eventPublisher: eventBus,
-    logger,
-    accountsFacade: accountsContainer.facade,
-    sessionsFacade: createSessionsFacade({
-      findProcessingContext: sessionsContainer.useCases.findProcessingContext,
-      downloadAudio: sessionsContainer.useCases.downloadAudio,
-      listStuckProcessing: sessionsContainer.useCases.listStuckProcessingSessions,
-    }),
-    themesFacade: themesContainer.publicApi,
-    deepgramClient: new DeepgramClient({ apiKey: config.deepgramApiKey }),
-    geminiClient: new GoogleGenAI({
-      vertexai: true,
-      project: config.googleCloudProject,
-      location: config.googleCloudLocation,
-    }),
-    geminiModel: config.geminiModel,
-    bullMqQueue,
+    analyses: {
+      prisma: createAnalysesPrismaClient(prisma),
+      clock,
+      costRates: {
+        transcriptionCostPerMinuteMicros: config.deepgramCostPerMinuteMicros,
+        geminiInputCostPerMtokMicros: config.geminiInputCostPerMtokMicros,
+        geminiOutputCostPerMtokMicros: config.geminiOutputCostPerMtokMicros,
+      },
+      idGenerator,
+      eventPublisher: eventBus,
+      eventSubscriber: eventBus,
+      logger,
+      accountsFacade: accountsContainer.facade,
+      themesFacade: themesContainer.publicApi,
+      deepgramClient: new DeepgramClient({ apiKey: config.deepgramApiKey }),
+      geminiClient: new GoogleGenAI({
+        vertexai: true,
+        project: config.googleCloudProject,
+        location: config.googleCloudLocation,
+      }),
+      geminiModel: config.geminiModel,
+      bullMqQueue,
+    },
   })
   const analysisWorker = createAnalysisWorker({
     processSessionAudio: analysesContainer.useCases.processSessionAudio,

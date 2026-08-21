@@ -24,6 +24,7 @@ export class Session {
     private _expiredReason: SessionExpiredReason | null,
     private expiredAtEpoch: number | null,
     private _audio: SessionAudio | null,
+    private recordedAtEpoch: number | null,
   ) {}
 
   get state(): SessionState {
@@ -50,6 +51,10 @@ export class Session {
     return this._audio
   }
 
+  get recordedAt(): Date | null {
+    return this.recordedAtEpoch === null ? null : new Date(this.recordedAtEpoch)
+  }
+
   static start(params: StartSessionParams): Session {
     const createdAtEpoch = params.createdAt.getTime()
 
@@ -62,6 +67,7 @@ export class Session {
       'in_progress',
       createdAtEpoch,
       createdAtEpoch + SESSION_DURATION_MILLISECONDS,
+      null,
       null,
       null,
       null,
@@ -81,6 +87,7 @@ export class Session {
       params.expiredReason,
       params.expiredAt?.getTime() ?? null,
       params.audio ?? null,
+      params.recordedAt?.getTime() ?? null,
     )
   }
 
@@ -111,6 +118,7 @@ export class Session {
 
     this._audio = audio
     this._state = 'processing'
+    this.recordedAtEpoch = at.getTime()
   }
 }
 

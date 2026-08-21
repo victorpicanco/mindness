@@ -27,6 +27,7 @@ export interface SessionRow {
   readonly createdAt: Date
   readonly expiresAt: Date
   readonly expiredAt: Date | null
+  readonly recordedAt: Date | null
   readonly audio?: SessionAudioRow | null
 }
 
@@ -43,6 +44,7 @@ export interface SessionScalars {
   readonly createdAt: Date
   readonly expiresAt: Date
   readonly expiredAt: Date | null
+  readonly recordedAt: Date | null
 }
 
 export interface SessionFindByIdArgs {

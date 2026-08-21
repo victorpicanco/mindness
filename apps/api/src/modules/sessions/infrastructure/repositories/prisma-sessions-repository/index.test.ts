@@ -26,6 +26,7 @@ const row: SessionRow = {
   createdAt: new Date('2026-08-19T12:00:00.000Z'),
   expiresAt: new Date('2026-08-19T12:15:00.000Z'),
   expiredAt: null,
+  recordedAt: null,
   audio: null,
 }
 

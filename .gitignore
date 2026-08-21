@@ -37,6 +37,8 @@ docs/*
 CLAUDE.md
 CLAUDE.local.md
 .claude/
+.agents/
+.codex/
 
 # MCPs
 .mcp.json

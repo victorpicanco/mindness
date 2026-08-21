@@ -12,7 +12,7 @@ import type { RhythmMetrics } from '@/modules/analyses/domain/value-objects/rhyt
 
 import { parseEvaluationResult } from './schemas.js'
 
-interface GeminiGenerateContentClient {
+export interface GeminiGenerateContentClient {
   readonly models: {
     generateContent(input: {
       readonly model: string

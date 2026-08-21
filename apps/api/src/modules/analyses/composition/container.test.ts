@@ -36,9 +36,6 @@ describe('createAnalysesContainer', () => {
             difficulty: 'easy',
           }),
       },
-      transcription: { transcribe: () => Promise.resolve(createTranscription()) },
-      evaluation: { evaluate: () => Promise.resolve(createEvaluation()) },
-      processingQueue: { enqueue: () => Promise.resolve() },
       adapters: {
         accounts: { findPlan: () => Promise.resolve('free') },
         sessions: { findProcessingContext: () => Promise.resolve(null) },
@@ -63,7 +60,61 @@ describe('createAnalysesContainer', () => {
       expect(error).toMatchObject({ context: { missingDependency: 'prisma' } })
     }
   })
+
+  it('mounts the Deepgram, Gemini and BullMQ adapters from raw clients when adapters overrides are not provided', () => {
+    const container = createAnalysesContainer({
+      ...baseDeps(),
+      deepgramClient: {
+        listen: { v1: { media: { transcribeFile: () => Promise.resolve(undefined) } } },
+      },
+      geminiClient: { models: { generateContent: () => Promise.resolve(undefined) } },
+      geminiModel: 'gemini-2.5-flash',
+      bullMqQueue: { add: () => Promise.resolve(undefined) },
+    })
+
+    expect(container.useCases.enqueueSessionAnalysis).toBeDefined()
+    expect(container.useCases.processSessionAudio).toBeDefined()
+  })
+
+  it('reports a missing deepgramClient dependency when adapters overrides are not provided', () => {
+    try {
+      createAnalysesContainer(baseDeps())
+      expect.unreachable('createAnalysesContainer should have thrown')
+    } catch (error) {
+      expect(error).toMatchObject({ context: { missingDependency: 'deepgramClient' } })
+    }
+  })
 })
+
+function baseDeps() {
+  return {
+    prisma: createPrismaStub(),
+    clock: { now: () => new Date('2026-01-01T00:00:00.000Z') },
+    idGenerator: { generate: () => 'generated-id' },
+    eventPublisher: { publish: () => Promise.resolve() },
+    eventSubscriber: { subscribe: () => undefined },
+    logger: createLoggerStub(),
+    costRates: {
+      transcriptionCostPerMinuteMicros: 1,
+      geminiInputCostPerMtokMicros: 1,
+      geminiOutputCostPerMtokMicros: 1,
+    },
+    accountsFacade: { findPlan: () => Promise.resolve('free' as const) },
+    sessionsFacade: {
+      findProcessingContext: () => Promise.resolve(null),
+      downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+    },
+    themesFacade: {
+      findThemeById: () =>
+        Promise.resolve({
+          themeId: 'theme',
+          title: 'Theme',
+          categorySlug: 'general' as const,
+          difficulty: 'easy' as const,
+        }),
+    },
+  }
+}
 
 function createPrismaStub(): AnalysesPrismaClient & AnalysesPrismaTransactionRunner {
   return {

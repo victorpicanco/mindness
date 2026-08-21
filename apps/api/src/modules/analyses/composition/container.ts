@@ -18,6 +18,18 @@ import type { UnitOfWork } from '@/modules/analyses/domain/ports/unit-of-work/in
 import type { AnalysesRepository } from '@/modules/analyses/domain/repositories/analyses-repository/index.js'
 import type { AnalysisCostEntriesRepository } from '@/modules/analyses/domain/repositories/analysis-cost-entries-repository/index.js'
 import type { TranscriptionsRepository } from '@/modules/analyses/domain/repositories/transcriptions-repository/index.js'
+import {
+  BullMqProcessingQueueAdapter,
+  type BullMqQueue,
+} from '@/modules/analyses/infrastructure/adapters/bullmq-processing-queue-adapter/index.js'
+import {
+  DeepgramTranscriptionAdapter,
+  type DeepgramTranscriptionClient,
+} from '@/modules/analyses/infrastructure/adapters/deepgram-transcription-adapter/index.js'
+import {
+  GeminiEvaluationAdapter,
+  type GeminiGenerateContentClient,
+} from '@/modules/analyses/infrastructure/adapters/gemini-evaluation-adapter/index.js'
 import { PrismaUnitOfWorkAdapter } from '@/modules/analyses/infrastructure/adapters/prisma-unit-of-work-adapter/index.js'
 import {
   SessionsAudioReaderAdapter,
@@ -69,9 +81,10 @@ export interface AnalysesModuleDeps {
   readonly accountsFacade?: AccountsPort
   readonly sessionsFacade?: SessionsProcessingContextReader & SessionsAudioReader
   readonly themesFacade?: ThemesTitleReader
-  readonly transcription?: TranscriptionPort
-  readonly evaluation?: EvaluationPort
-  readonly processingQueue?: ProcessingQueuePort
+  readonly deepgramClient?: DeepgramTranscriptionClient
+  readonly geminiClient?: GeminiGenerateContentClient
+  readonly geminiModel?: string
+  readonly bullMqQueue?: BullMqQueue
   readonly adapters?: AnalysesAdapterOverrides
 }
 
@@ -101,10 +114,18 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
   const audioReader =
     adapters.audioReader ??
     new SessionsAudioReaderAdapter(required(deps.sessionsFacade, 'sessionsFacade'))
-  const transcription = adapters.transcription ?? required(deps.transcription, 'transcription')
-  const evaluation = adapters.evaluation ?? required(deps.evaluation, 'evaluation')
+  const transcription =
+    adapters.transcription ??
+    new DeepgramTranscriptionAdapter(required(deps.deepgramClient, 'deepgramClient'))
+  const evaluation =
+    adapters.evaluation ??
+    new GeminiEvaluationAdapter(
+      required(deps.geminiClient, 'geminiClient'),
+      required(deps.geminiModel, 'geminiModel'),
+    )
   const processingQueue =
-    adapters.processingQueue ?? required(deps.processingQueue, 'processingQueue')
+    adapters.processingQueue ??
+    new BullMqProcessingQueueAdapter(required(deps.bullMqQueue, 'bullMqQueue'))
   const unitOfWork = adapters.unitOfWork ?? new PrismaUnitOfWorkAdapter(prisma, transactionContext)
   const analyses =
     adapters.analyses ??

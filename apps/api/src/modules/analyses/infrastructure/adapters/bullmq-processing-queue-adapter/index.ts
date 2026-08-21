@@ -6,7 +6,7 @@ type SessionAnalysisJob = {
   readonly sessionId: string
 }
 
-interface BullMqQueue {
+export interface BullMqQueue {
   add(name: string, data: SessionAnalysisJob, options: JobsOptions): Promise<unknown>
 }
 

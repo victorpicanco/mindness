@@ -19,7 +19,7 @@ interface DeepgramRequestOptions {
   readonly abortSignal: AbortSignal
 }
 
-interface DeepgramTranscriptionClient {
+export interface DeepgramTranscriptionClient {
   readonly listen: {
     readonly v1: {
       readonly media: {

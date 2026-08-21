@@ -35,9 +35,11 @@ describe('registerAnalysesModule', () => {
             difficulty: 'easy',
           }),
       },
-      transcription: { transcribe: () => Promise.resolve(createTranscription()) },
-      evaluation: { evaluate: () => Promise.resolve(createEvaluation()) },
-      processingQueue: { enqueue: () => Promise.resolve() },
+      adapters: {
+        transcription: { transcribe: () => Promise.resolve(createTranscription()) },
+        evaluation: { evaluate: () => Promise.resolve(createEvaluation()) },
+        processingQueue: { enqueue: () => Promise.resolve() },
+      },
     })
 
     expect(subscriptions).toContain('recording_submitted')

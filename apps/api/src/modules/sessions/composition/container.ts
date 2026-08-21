@@ -11,6 +11,7 @@ import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port
 import type { AudioStoragePort } from '@/modules/sessions/domain/ports/audio-storage-port/index.js'
 import type { Clock } from '@/modules/sessions/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/sessions/domain/ports/event-publisher/index.js'
+import type { EventSubscriber } from '@/modules/sessions/domain/ports/event-subscriber/index.js'
 import type { IdGenerator } from '@/modules/sessions/domain/ports/id-generator/index.js'
 import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/index.js'
@@ -63,6 +64,7 @@ export interface SessionsModuleDeps {
   readonly clock: Clock
   readonly idGenerator: IdGenerator
   readonly eventPublisher: EventPublisher
+  readonly eventSubscriber?: EventSubscriber
   // Each neighbour arrives either as the facade the bootstrap owns or, in tests, as the port
   // itself through `adapters` — never as both, and never as a throwaway stub.
   readonly accountsFacade?: AccountsIdentityReader
@@ -146,7 +148,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     requestAudioUploadUrl: new RequestAudioUploadUrlController(useCases.requestAudioUploadUrl),
     confirmAudioUpload: new ConfirmAudioUploadController(useCases.confirmAudioUpload),
   }
-  return { controllers, useCases }
+  return { controllers, useCases, repositories: { sessions }, ports: { quota } }
 }
 
 export type SessionsContainer = ReturnType<typeof createSessionsContainer>

@@ -8,5 +8,7 @@ export type TranscriptionWords = readonly [TranscriptionWord, ...TranscriptionWo
 
 export interface RhythmCalculationResult {
   readonly metrics: RhythmMetrics
+  readonly score: number
+  readonly guidance: string
 }
 import type { RhythmMetrics } from '@/modules/analyses/domain/value-objects/rhythm-metrics/index.js'

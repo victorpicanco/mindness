@@ -14,7 +14,11 @@ export class InMemoryTranscriptionAdapter implements TranscriptionPort {
     readonly signal: AbortSignal
   }[] = []
 
-  constructor(private readonly result: TranscriptionResult) {}
+  constructor(private result: TranscriptionResult) {}
+
+  setResult(result: TranscriptionResult): void {
+    this.result = result
+  }
 
   async transcribe(input: {
     readonly audio: Buffer

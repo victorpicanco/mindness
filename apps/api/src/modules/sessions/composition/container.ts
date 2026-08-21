@@ -3,6 +3,7 @@ import { DownloadSessionAudioUseCase } from '@/modules/sessions/application/use-
 import { ExpireSessionUseCase } from '@/modules/sessions/application/use-cases/expire-session/index.js'
 import { FindSessionProcessingContextUseCase } from '@/modules/sessions/application/use-cases/find-session-processing-context/index.js'
 import { GetActiveSessionUseCase } from '@/modules/sessions/application/use-cases/get-active-session/index.js'
+import { ListStuckProcessingSessionsUseCase } from '@/modules/sessions/application/use-cases/list-stuck-processing-sessions/index.js'
 import { RequestAudioUploadUrlUseCase } from '@/modules/sessions/application/use-cases/request-audio-upload-url/index.js'
 import { ResolveAccountIdentityUseCase } from '@/modules/sessions/application/use-cases/resolve-account-identity/index.js'
 import { StartSessionUseCase } from '@/modules/sessions/application/use-cases/start-session/index.js'
@@ -125,6 +126,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     expireSession: new ExpireSessionUseCase(expirationDependencies),
     findProcessingContext: new FindSessionProcessingContextUseCase({ sessions }),
     getActiveSession: new GetActiveSessionUseCase(expirationDependencies),
+    listStuckProcessingSessions: new ListStuckProcessingSessionsUseCase({ sessions }),
     requestAudioUploadUrl: new RequestAudioUploadUrlUseCase({
       sessions,
       audioStorage,

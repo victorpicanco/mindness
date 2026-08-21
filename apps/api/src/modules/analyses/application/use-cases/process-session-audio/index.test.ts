@@ -61,6 +61,10 @@ class InMemorySessionsPort {
   findProcessingContext(): Promise<SessionProcessingContext | null> {
     return Promise.resolve(this.context)
   }
+
+  listStuckProcessing(): Promise<readonly string[]> {
+    return Promise.resolve([])
+  }
 }
 
 class InMemoryAudioReader {

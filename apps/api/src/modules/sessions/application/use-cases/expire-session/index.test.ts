@@ -36,6 +36,7 @@ function createHarness(session: Session | null) {
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
     findExpiredInProgress: () => Promise.resolve([]),
+    findStuckProcessing: () => Promise.resolve([]),
     save: (value) => {
       saved.push(value)
       return Promise.resolve()

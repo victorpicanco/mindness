@@ -1,6 +1,7 @@
 import { OnRecordingSubmittedEnqueueAnalysis } from '@/modules/analyses/application/event-handlers/on-recording-submitted-enqueue-analysis/index.js'
 import { EnqueueSessionAnalysisUseCase } from '@/modules/analyses/application/use-cases/enqueue-session-analysis/index.js'
 import { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
+import { ReconcileOrphanAnalysesUseCase } from '@/modules/analyses/application/use-cases/reconcile-orphan-analyses/index.js'
 import type { ProcessingCostRates } from '@/modules/analyses/application/use-cases/process-session-audio/types.js'
 import type { AccountsPort } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
@@ -155,6 +156,12 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
     logger,
     processingQueue,
   })
+  const reconcileOrphanAnalyses = new ReconcileOrphanAnalysesUseCase({
+    sessions,
+    analyses,
+    processingQueue,
+    clock,
+  })
   const processSessionAudio = new ProcessSessionAudioUseCase({
     accounts,
     analyses,
@@ -178,7 +185,7 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
       onRecordingSubmitted: new OnRecordingSubmittedEnqueueAnalysis(enqueueSessionAnalysis, logger),
     },
     repositories: { analyses, costs, transcriptions },
-    useCases: { enqueueSessionAnalysis, processSessionAudio },
+    useCases: { enqueueSessionAnalysis, processSessionAudio, reconcileOrphanAnalyses },
   }
 }
 

@@ -1,7 +1,10 @@
 import type { SessionsPublicApi } from '@/modules/sessions/index.js'
 import type { SessionsPort } from '@/modules/analyses/domain/ports/sessions-port/index.js'
 
-export type SessionsProcessingContextReader = Pick<SessionsPublicApi, 'findProcessingContext'>
+export type SessionsProcessingContextReader = Pick<
+  SessionsPublicApi,
+  'findProcessingContext' | 'listStuckProcessing'
+>
 export class SessionsPortAdapter implements SessionsPort {
   constructor(private readonly sessions: SessionsProcessingContextReader) {}
 
@@ -16,5 +19,9 @@ export class SessionsPortAdapter implements SessionsPort {
           audioPath: context.audioPath,
           recordedAt: context.recordedAt,
         }
+  }
+
+  listStuckProcessing(before: Date, limit: number): Promise<readonly string[]> {
+    return this.sessions.listStuckProcessing(before, limit)
   }
 }

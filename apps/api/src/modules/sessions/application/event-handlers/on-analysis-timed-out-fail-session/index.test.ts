@@ -62,6 +62,7 @@ function createRepository(session: Session): SessionsRepository {
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
     findExpiredInProgress: () => Promise.resolve([]),
+    findStuckProcessing: () => Promise.resolve([]),
     save: () => Promise.resolve(),
   }
 }

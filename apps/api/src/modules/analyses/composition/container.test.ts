@@ -25,6 +25,7 @@ describe('createAnalysesContainer', () => {
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+        listStuckProcessing: () => Promise.resolve([]),
       },
       themesFacade: {
         findThemeById: () =>
@@ -37,7 +38,10 @@ describe('createAnalysesContainer', () => {
       },
       adapters: {
         accounts: { findPlan: () => Promise.resolve('free') },
-        sessions: { findProcessingContext: () => Promise.resolve(null) },
+        sessions: {
+          findProcessingContext: () => Promise.resolve(null),
+          listStuckProcessing: () => Promise.resolve([]),
+        },
         audioReader: { read: () => Promise.resolve(Buffer.from('audio')) },
         themes: { findTitle: () => Promise.resolve('Theme') },
         transcription: { transcribe: () => Promise.resolve(createTranscription()) },
@@ -109,6 +113,7 @@ function baseDeps() {
     sessionsFacade: {
       findProcessingContext: () => Promise.resolve(null),
       downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+      listStuckProcessing: () => Promise.resolve([]),
     },
     themesFacade: {
       findThemeById: () =>

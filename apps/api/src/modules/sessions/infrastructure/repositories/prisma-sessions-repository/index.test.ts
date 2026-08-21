@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type {
   SessionFindActiveArgs,
-  SessionFindExpiredArgs,
+  SessionFindStaleArgs,
   SessionRow,
   SessionsPrismaClient,
   SessionUpsertArgs,
@@ -33,20 +33,20 @@ const row: SessionRow = {
 interface FakeClient {
   readonly client: SessionsPrismaClient
   readonly activeQueries: SessionFindActiveArgs[]
-  readonly expiredQueries: SessionFindExpiredArgs[]
+  readonly findManyQueries: SessionFindStaleArgs[]
   readonly upserts: SessionUpsertArgs[]
 }
 
 function createFakeClient(
-  options: { active?: SessionRow | null; expired?: SessionRow[] } = {},
+  options: { active?: SessionRow | null; findMany?: SessionRow[] } = {},
 ): FakeClient {
   const activeQueries: SessionFindActiveArgs[] = []
-  const expiredQueries: SessionFindExpiredArgs[] = []
+  const findManyQueries: SessionFindStaleArgs[] = []
   const upserts: SessionUpsertArgs[] = []
 
   return {
     activeQueries,
-    expiredQueries,
+    findManyQueries,
     upserts,
     client: {
       session: {
@@ -56,8 +56,8 @@ function createFakeClient(
           return Promise.resolve(options.active ?? null)
         },
         findMany: (args) => {
-          expiredQueries.push(args)
-          return Promise.resolve(options.expired ?? [])
+          findManyQueries.push(args)
+          return Promise.resolve(options.findMany ?? [])
         },
         upsert: (args) => {
           upserts.push(args)
@@ -89,13 +89,28 @@ describe('PrismaSessionsRepository', () => {
 
   it('finds expired in-progress sessions within the requested batch size', async () => {
     const before = new Date('2026-08-19T12:15:00.000Z')
-    const fake = createFakeClient({ expired: [row] })
+    const fake = createFakeClient({ findMany: [row] })
     const repository = createRepository(fake)
 
     await expect(repository.findExpiredInProgress(before, 20)).resolves.toHaveLength(1)
-    expect(fake.expiredQueries).toEqual([
+    expect(fake.findManyQueries).toEqual([
       {
         where: { state: 'in_progress', expiresAt: { lte: before } },
+        include: { audio: true },
+        take: 20,
+      },
+    ])
+  })
+
+  it('finds processing sessions stuck without a recent recording within the requested batch size', async () => {
+    const before = new Date('2026-08-19T12:15:00.000Z')
+    const fake = createFakeClient({ findMany: [row] })
+    const repository = createRepository(fake)
+
+    await expect(repository.findStuckProcessing(before, 20)).resolves.toHaveLength(1)
+    expect(fake.findManyQueries).toEqual([
+      {
+        where: { state: 'processing', recordedAt: { lte: before } },
         include: { audio: true },
         take: 20,
       },

@@ -38,6 +38,13 @@ export function createFakeSessionsPort(): FakeSessionsPort {
   const contexts = new Map<string, SessionProcessingContext>()
   return {
     findProcessingContext: (sessionId) => Promise.resolve(contexts.get(sessionId) ?? null),
+    listStuckProcessing: (before, limit) =>
+      Promise.resolve(
+        [...contexts.values()]
+          .filter((context) => context.recordedAt.getTime() <= before.getTime())
+          .slice(0, limit)
+          .map((context) => context.sessionId),
+      ),
     setContext: (context) => contexts.set(context.sessionId, context),
     reset: () => contexts.clear(),
   }

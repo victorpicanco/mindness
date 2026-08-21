@@ -28,6 +28,7 @@ describe('registerAnalysesModule', () => {
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+        listStuckProcessing: () => Promise.resolve([]),
       },
       themesFacade: {
         findThemeById: () =>

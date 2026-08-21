@@ -10,6 +10,7 @@ import { Queue, UnrecoverableError, Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 
 import type { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
+import type { ReconcileOrphanAnalysesUseCase } from '@/modules/analyses/application/use-cases/reconcile-orphan-analyses/index.js'
 import type { SweepExpiredSessionsUseCase } from '@/modules/sessions/application/use-cases/sweep-expired-sessions/index.js'
 import { loadConfig } from '@/config.js'
 import { createAccountsContainer } from '@/modules/accounts/composition/container.js'
@@ -29,6 +30,13 @@ import { SystemClock } from '@/shared/time/system-clock/index.js'
 
 // D-04 requires expired in-progress sessions to be swept at least once per minute.
 export const SWEEP_INTERVAL_MS = 60_000
+
+// T-040 / D-04: a session stuck in `processing` for more than 60s without an `Analysis` lost
+// its job between the sessions commit and the BullMQ `add`; the sweep reenqueues it with the
+// same `jobId`, which BullMQ ignores if a job already exists.
+export const ORPHAN_ANALYSIS_STALE_AFTER_MS = 60_000
+export const ORPHAN_ANALYSIS_RECONCILIATION_INTERVAL_MS = 60_000
+export const ORPHAN_ANALYSIS_RECONCILIATION_LIMIT = 100
 
 // Must match the queue name the producer side (main.ts, T-041) uses for its BullMQ Queue.
 // BullMQ has no runtime cross-check for this, so a mismatch here means jobs are enqueued
@@ -117,6 +125,45 @@ export function registerExpiredSessionSweep(deps: WorkerSweepDeps): StopSweep {
   }, SWEEP_INTERVAL_MS)
 }
 
+type ReconcileOrphanAnalyses = Pick<ReconcileOrphanAnalysesUseCase, 'execute'>
+
+export interface WorkerReconciliationSweepDeps {
+  readonly reconcileOrphanAnalyses: ReconcileOrphanAnalyses
+  readonly logger: WorkerSweepLogger
+  readonly schedule?: (callback: () => void, interval: number) => StopSweep
+}
+
+async function reconcileOrphanAnalyses(deps: WorkerReconciliationSweepDeps): Promise<void> {
+  try {
+    await deps.reconcileOrphanAnalyses.execute({
+      staleAfterMs: ORPHAN_ANALYSIS_STALE_AFTER_MS,
+      limit: ORPHAN_ANALYSIS_RECONCILIATION_LIMIT,
+    })
+  } catch (error) {
+    deps.logger.error({ err: error }, 'Failed to reconcile orphan analyses')
+  }
+}
+
+export function registerOrphanAnalysisReconciliationSweep(
+  deps: WorkerReconciliationSweepDeps,
+): StopSweep {
+  const schedule =
+    deps.schedule ??
+    ((callback, interval) => {
+      const timer = setInterval(callback, interval)
+      // The sweep must never be the reason the process stays alive on shutdown.
+      timer.unref()
+
+      return () => {
+        clearInterval(timer)
+      }
+    })
+
+  return schedule(() => {
+    void reconcileOrphanAnalyses(deps)
+  }, ORPHAN_ANALYSIS_RECONCILIATION_INTERVAL_MS)
+}
+
 export async function startWorker(): Promise<void> {
   const config = loadConfig(process.env)
   const logger = createLogger({ level: config.logLevel, pretty: config.nodeEnv !== 'production' })
@@ -182,6 +229,7 @@ export async function startWorker(): Promise<void> {
     sessionsFacade: createSessionsFacade({
       findProcessingContext: sessionsContainer.useCases.findProcessingContext,
       downloadAudio: sessionsContainer.useCases.downloadAudio,
+      listStuckProcessing: sessionsContainer.useCases.listStuckProcessingSessions,
     }),
     themesFacade: themesContainer.publicApi,
     deepgramClient: new DeepgramClient({ apiKey: config.deepgramApiKey }),
@@ -208,8 +256,13 @@ export async function startWorker(): Promise<void> {
     sweepExpiredSessions: sessionsContainer.useCases.sweepExpiredSessions,
     logger,
   })
+  const stopOrphanAnalysisReconciliation = registerOrphanAnalysisReconciliationSweep({
+    reconcileOrphanAnalyses: analysesContainer.useCases.reconcileOrphanAnalyses,
+    logger,
+  })
   app.addHook('onClose', async () => {
     stopSweep()
+    stopOrphanAnalysisReconciliation()
     await bullMqQueue.close()
     await closeAnalysisWorker(analysisWorker, redisConnection)
   })

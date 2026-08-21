@@ -7,6 +7,10 @@ import {
   closeAnalysisWorker,
   createAnalysisWorker,
   registerExpiredSessionSweep,
+  registerOrphanAnalysisReconciliationSweep,
+  ORPHAN_ANALYSIS_RECONCILIATION_INTERVAL_MS,
+  ORPHAN_ANALYSIS_RECONCILIATION_LIMIT,
+  ORPHAN_ANALYSIS_STALE_AFTER_MS,
   SWEEP_INTERVAL_MS,
 } from './worker.js'
 
@@ -58,6 +62,61 @@ describe('registerExpiredSessionSweep', () => {
     await new Promise<void>((resolve) => queueMicrotask(resolve))
 
     expect(executions).toBe(2)
+
+    stopSweep()
+    expect(stopped).toBe(true)
+  })
+})
+
+describe('registerOrphanAnalysisReconciliationSweep', () => {
+  it('registers the configured interval, sweeps with the stale threshold and limit, and continues after a failure', async () => {
+    let registeredCallback: (() => void) | undefined
+    let registeredInterval: number | undefined
+    let executions = 0
+    let stopped = false
+    const loggedErrors: unknown[] = []
+    const reconcileInputs: { staleAfterMs: number; limit: number }[] = []
+
+    const stopSweep = registerOrphanAnalysisReconciliationSweep({
+      reconcileOrphanAnalyses: {
+        execute: async (input) => {
+          await Promise.resolve()
+          executions += 1
+          reconcileInputs.push(input)
+          if (executions === 1) throw new DatabaseError('Reconciliation failed')
+          return { reconciledCount: 0 }
+        },
+      },
+      logger: {
+        error: ({ err }) => {
+          loggedErrors.push(err)
+        },
+      },
+      schedule: (callback, interval) => {
+        registeredCallback = callback
+        registeredInterval = interval
+        return () => {
+          stopped = true
+        }
+      },
+    })
+
+    expect(registeredInterval).toBe(ORPHAN_ANALYSIS_RECONCILIATION_INTERVAL_MS)
+
+    registeredCallback?.()
+    await new Promise<void>((resolve) => queueMicrotask(resolve))
+
+    expect(executions).toBe(1)
+    expect(loggedErrors).toHaveLength(1)
+
+    registeredCallback?.()
+    await new Promise<void>((resolve) => queueMicrotask(resolve))
+
+    expect(executions).toBe(2)
+    expect(reconcileInputs).toEqual([
+      { staleAfterMs: ORPHAN_ANALYSIS_STALE_AFTER_MS, limit: ORPHAN_ANALYSIS_RECONCILIATION_LIMIT },
+      { staleAfterMs: ORPHAN_ANALYSIS_STALE_AFTER_MS, limit: ORPHAN_ANALYSIS_RECONCILIATION_LIMIT },
+    ])
 
     stopSweep()
     expect(stopped).toBe(true)

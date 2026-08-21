@@ -35,6 +35,7 @@ function createHarness(session: Session | null, now: Date = INSIDE_WINDOW) {
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
     findExpiredInProgress: () => Promise.resolve([]),
+    findStuckProcessing: () => Promise.resolve([]),
     save: () => Promise.resolve(),
   }
   const audioStorage: AudioStoragePort = {

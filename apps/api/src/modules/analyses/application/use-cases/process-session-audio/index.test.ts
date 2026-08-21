@@ -4,6 +4,8 @@ import type { AccountPlan } from '@/modules/analyses/domain/ports/accounts-port/
 import type { EvaluationResult } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 import type { SessionProcessingContext } from '@/modules/analyses/domain/ports/sessions-port/index.js'
 import type { TranscriptionResult } from '@/modules/analyses/domain/ports/transcription-port/index.js'
+import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluation-failed-error/index.js'
+import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
 import { describe, expect, it } from 'vitest'
@@ -14,8 +16,8 @@ import type { ProcessSessionAudioDependencies } from './types.js'
 class InMemoryAnalysesRepository {
   readonly saved: Analysis[] = []
 
-  findBySessionId(): Promise<Analysis | null> {
-    return Promise.resolve(null)
+  findBySessionId(sessionId: string): Promise<Analysis | null> {
+    return Promise.resolve(this.saved.find((analysis) => analysis.sessionId === sessionId) ?? null)
   }
 
   save(analysis: Analysis): Promise<void> {
@@ -270,6 +272,100 @@ describe('ProcessSessionAudioUseCase', () => {
           costMicrosUsd: 502,
         },
       },
+    ])
+  })
+
+  it('does not reprocess an existing analysis', async () => {
+    const { analyses, dependencies, events, transcription } = createDependencies()
+    const useCase = new ProcessSessionAudioUseCase(dependencies)
+
+    await useCase.execute({ sessionId: 'session-1' })
+    await useCase.execute({ sessionId: 'session-1' })
+
+    expect(analyses.saved).toHaveLength(1)
+    expect(transcription.received).toHaveLength(1)
+    expect(events.published).toHaveLength(1)
+  })
+
+  it('publishes a transcription failure without persisting when transcription fails', async () => {
+    const { analyses, costs, dependencies, events, transcriptions } = createDependencies()
+    const original = new EvaluationFailedError('provider unavailable')
+    const useCase = new ProcessSessionAudioUseCase({
+      ...dependencies,
+      transcription: {
+        transcribe: () => Promise.reject(original),
+      },
+    })
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toMatchObject({
+      code: 'analyses.TRANSCRIPTION_FAILED',
+      cause: original,
+    })
+
+    expect(transcriptions.saved).toEqual([])
+    expect(analyses.saved).toEqual([])
+    expect(costs.saved).toEqual([])
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'transcription_failed' } },
+    ])
+  })
+
+  it('publishes a transcription failure before calculating rhythm for an empty transcript', async () => {
+    const { analyses, costs, dependencies, events, transcriptions } = createDependencies()
+    const useCase = new ProcessSessionAudioUseCase({
+      ...dependencies,
+      transcription: {
+        transcribe: () => Promise.resolve({ ...transcriptionResult, words: [] }),
+      },
+    })
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toMatchObject({
+      code: 'analyses.TRANSCRIPTION_FAILED',
+    })
+
+    expect(transcriptions.saved).toEqual([])
+    expect(analyses.saved).toEqual([])
+    expect(costs.saved).toEqual([])
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'transcription_failed' } },
+    ])
+  })
+
+  it('publishes an evaluation failure without persisting when evaluation fails', async () => {
+    const { analyses, costs, dependencies, events, transcriptions } = createDependencies()
+    const original = new EvaluationFailedError('provider unavailable')
+    const useCase = new ProcessSessionAudioUseCase({
+      ...dependencies,
+      evaluation: {
+        evaluate: () => Promise.reject(original),
+      },
+    })
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toBe(original)
+
+    expect(transcriptions.saved).toEqual([])
+    expect(analyses.saved).toEqual([])
+    expect(costs.saved).toEqual([])
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'evaluation_failed' } },
+    ])
+  })
+
+  it('publishes a malformed evaluation failure without persisting an analysis', async () => {
+    const { analyses, dependencies, events } = createDependencies()
+    const malformed = new MalformedEvaluationError('schema')
+    const useCase = new ProcessSessionAudioUseCase({
+      ...dependencies,
+      evaluation: {
+        evaluate: () => Promise.reject(malformed),
+      },
+    })
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toBe(malformed)
+
+    expect(analyses.saved).toEqual([])
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'malformed_evaluation' } },
     ])
   })
 })

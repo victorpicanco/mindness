@@ -1,9 +1,15 @@
 import { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
 import { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import { AnalysisCompleted } from '@/modules/analyses/domain/events/analysis-completed/index.js'
+import { AnalysisFailed } from '@/modules/analyses/domain/events/analysis-failed/index.js'
+import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluation-failed-error/index.js'
+import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
+import { TranscriptionFailedError } from '@/modules/analyses/domain/errors/transcription-failed-error/index.js'
 import { CostCalculator } from '@/modules/analyses/domain/services/cost-calculator/index.js'
 import { RhythmCalculator } from '@/modules/analyses/domain/services/rhythm-calculator/index.js'
 import { PillarScore } from '@/modules/analyses/domain/value-objects/pillar-score/index.js'
+import type { EvaluationResult } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
+import type { TranscriptionResult } from '@/modules/analyses/domain/ports/transcription-port/index.js'
 
 import type {
   PersistedAnalysis,
@@ -29,24 +35,42 @@ export class ProcessSessionAudioUseCase {
 
     const startedAt = this.dependencies.clock.now()
     const controller = new AbortController()
-    const audio = await this.dependencies.audioReader.read(context.sessionId)
-    const transcriptionResult = await this.dependencies.transcription.transcribe({
-      audio,
-      deadlineMs: ANALYSIS_DEADLINE_MS,
-      signal: controller.signal,
-    })
+    let transcriptionResult: TranscriptionResult
+    try {
+      const audio = await this.dependencies.audioReader.read(context.sessionId)
+      transcriptionResult = await this.dependencies.transcription.transcribe({
+        audio,
+        deadlineMs: ANALYSIS_DEADLINE_MS,
+        signal: controller.signal,
+      })
+    } catch (error) {
+      const failure = new TranscriptionFailedError('provider request failed', { cause: error })
+      await this.publishFailure({ context, plan, reason: 'transcription_failed' })
+      throw failure
+    }
     const rhythm = calculateRhythm(transcriptionResult.words)
-    if (rhythm === null) return
+    if (rhythm === null) {
+      const failure = new TranscriptionFailedError('transcription has no words')
+      await this.publishFailure({ context, plan, reason: 'transcription_failed' })
+      throw failure
+    }
 
     const themeTitle = await this.dependencies.themes.findTitle(context.themeId)
     if (themeTitle === null) return
 
-    const evaluation = await this.dependencies.evaluation.evaluate({
-      themeTitle,
-      transcript: transcriptionResult.text,
-      rhythm: rhythm.metrics,
-      signal: controller.signal,
-    })
+    let evaluation: EvaluationResult
+    try {
+      evaluation = await this.dependencies.evaluation.evaluate({
+        themeTitle,
+        transcript: transcriptionResult.text,
+        rhythm: rhythm.metrics,
+        signal: controller.signal,
+      })
+    } catch (error) {
+      const failure = translateEvaluationFailure(error)
+      await this.publishFailure({ context, plan, reason: failure.reason })
+      throw failure.error
+    }
     const completedAt = this.dependencies.clock.now()
     const persisted = createPersistedAnalysis({
       context,
@@ -81,6 +105,40 @@ export class ProcessSessionAudioUseCase {
         costMicrosUsd: persisted.analysis.costMicrosUsd,
       }),
     )
+  }
+
+  private async publishFailure(input: {
+    readonly context: { readonly sessionId: string; readonly accountId: string }
+    readonly plan: 'free'
+    readonly reason: 'transcription_failed' | 'evaluation_failed' | 'malformed_evaluation'
+  }): Promise<void> {
+    await this.dependencies.eventPublisher.publish(
+      AnalysisFailed.create({
+        eventId: this.dependencies.idGenerator.generate(),
+        occurredAt: this.dependencies.clock.now(),
+        sessionId: input.context.sessionId,
+        accountId: input.context.accountId,
+        plan: input.plan,
+        reason: input.reason,
+      }),
+    )
+  }
+}
+
+function translateEvaluationFailure(error: unknown): {
+  readonly error: EvaluationFailedError | MalformedEvaluationError
+  readonly reason: 'evaluation_failed' | 'malformed_evaluation'
+} {
+  if (error instanceof MalformedEvaluationError) {
+    return { error, reason: 'malformed_evaluation' }
+  }
+  if (error instanceof EvaluationFailedError) {
+    return { error, reason: 'evaluation_failed' }
+  }
+
+  return {
+    error: new EvaluationFailedError('provider request failed', { cause: error }),
+    reason: 'evaluation_failed',
   }
 }
 

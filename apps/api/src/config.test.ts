@@ -15,6 +15,15 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   SUPABASE_SECRET_KEY: 'secret-key',
   EMAIL_CONFIRMATION_REDIRECT_URL: 'https://app.mindness.test/auth/confirmed',
   ACCOUNTS_CONSENT_VERSION: '2026-08-15',
+  REDIS_URL: 'redis://localhost:6379',
+  DEEPGRAM_API_KEY: 'deepgram-api-key',
+  GOOGLE_CLOUD_PROJECT: 'mindness-test',
+  GOOGLE_CLOUD_LOCATION: 'us-central1',
+  GEMINI_MODEL: 'gemini-2.5-flash',
+  DEEPGRAM_COST_PER_MINUTE_MICROS: '4800',
+  GEMINI_INPUT_COST_PER_MTOK_MICROS: '300000',
+  GEMINI_OUTPUT_COST_PER_MTOK_MICROS: '2500000',
+  ANALYSIS_QUEUE_CONCURRENCY: '5',
 }
 
 describe('loadConfig', () => {
@@ -32,6 +41,15 @@ describe('loadConfig', () => {
       supabaseSecretKey: 'secret-key',
       emailConfirmationRedirectUrl: 'https://app.mindness.test/auth/confirmed',
       accountsConsentVersion: '2026-08-15',
+      redisUrl: 'redis://localhost:6379',
+      deepgramApiKey: 'deepgram-api-key',
+      googleCloudProject: 'mindness-test',
+      googleCloudLocation: 'us-central1',
+      geminiModel: 'gemini-2.5-flash',
+      deepgramCostPerMinuteMicros: 4800,
+      geminiInputCostPerMtokMicros: 300000,
+      geminiOutputCostPerMtokMicros: 2500000,
+      analysisQueueConcurrency: 5,
     })
   })
 
@@ -63,5 +81,25 @@ describe('loadConfig', () => {
 
   it('rejects a non-numeric PORT', () => {
     expect(() => loadConfig({ ...VALID_ENV, PORT: 'not-a-number' })).toThrow(ValidationFailedError)
+  })
+
+  it('lists REDIS_URL when it is missing', () => {
+    const envWithoutRedisUrl = { ...VALID_ENV }
+    delete envWithoutRedisUrl.REDIS_URL
+
+    let caught: unknown
+    try {
+      loadConfig(envWithoutRedisUrl)
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBeInstanceOf(ValidationFailedError)
+    if (!(caught instanceof ValidationFailedError)) return
+
+    expect(caught.context.issues).toContainEqual({
+      field: 'REDIS_URL',
+      message: 'Missing required environment variable: REDIS_URL',
+    })
   })
 })

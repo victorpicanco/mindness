@@ -16,6 +16,15 @@ const EnvSchema = Type.Object({
   SUPABASE_SECRET_KEY: Type.String(),
   EMAIL_CONFIRMATION_REDIRECT_URL: Type.String(),
   ACCOUNTS_CONSENT_VERSION: Type.String(),
+  REDIS_URL: Type.String(),
+  DEEPGRAM_API_KEY: Type.String(),
+  GOOGLE_CLOUD_PROJECT: Type.String(),
+  GOOGLE_CLOUD_LOCATION: Type.String(),
+  GEMINI_MODEL: Type.String(),
+  DEEPGRAM_COST_PER_MINUTE_MICROS: Type.Integer(),
+  GEMINI_INPUT_COST_PER_MTOK_MICROS: Type.Integer(),
+  GEMINI_OUTPUT_COST_PER_MTOK_MICROS: Type.Integer(),
+  ANALYSIS_QUEUE_CONCURRENCY: Type.Integer(),
 })
 
 const STRING_ENV_KEYS = [
@@ -27,8 +36,20 @@ const STRING_ENV_KEYS = [
   'SUPABASE_SECRET_KEY',
   'EMAIL_CONFIRMATION_REDIRECT_URL',
   'ACCOUNTS_CONSENT_VERSION',
+  'REDIS_URL',
+  'DEEPGRAM_API_KEY',
+  'GOOGLE_CLOUD_PROJECT',
+  'GOOGLE_CLOUD_LOCATION',
+  'GEMINI_MODEL',
 ] as const
-const NUMERIC_ENV_KEYS = ['PORT', 'WORKER_HEALTH_PORT'] as const
+const NUMERIC_ENV_KEYS = [
+  'PORT',
+  'WORKER_HEALTH_PORT',
+  'DEEPGRAM_COST_PER_MINUTE_MICROS',
+  'GEMINI_INPUT_COST_PER_MTOK_MICROS',
+  'GEMINI_OUTPUT_COST_PER_MTOK_MICROS',
+  'ANALYSIS_QUEUE_CONCURRENCY',
+] as const
 
 export interface Config {
   readonly nodeEnv: string
@@ -41,6 +62,15 @@ export interface Config {
   readonly supabaseSecretKey: string
   readonly emailConfirmationRedirectUrl: string
   readonly accountsConsentVersion: string
+  readonly redisUrl: string
+  readonly deepgramApiKey: string
+  readonly googleCloudProject: string
+  readonly googleCloudLocation: string
+  readonly geminiModel: string
+  readonly deepgramCostPerMinuteMicros: number
+  readonly geminiInputCostPerMtokMicros: number
+  readonly geminiOutputCostPerMtokMicros: number
+  readonly analysisQueueConcurrency: number
 }
 
 function buildCandidate(env: NodeJS.ProcessEnv): Record<string, unknown> {
@@ -92,5 +122,14 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
     supabaseSecretKey: candidate.SUPABASE_SECRET_KEY,
     emailConfirmationRedirectUrl: candidate.EMAIL_CONFIRMATION_REDIRECT_URL,
     accountsConsentVersion: candidate.ACCOUNTS_CONSENT_VERSION,
+    redisUrl: candidate.REDIS_URL,
+    deepgramApiKey: candidate.DEEPGRAM_API_KEY,
+    googleCloudProject: candidate.GOOGLE_CLOUD_PROJECT,
+    googleCloudLocation: candidate.GOOGLE_CLOUD_LOCATION,
+    geminiModel: candidate.GEMINI_MODEL,
+    deepgramCostPerMinuteMicros: candidate.DEEPGRAM_COST_PER_MINUTE_MICROS,
+    geminiInputCostPerMtokMicros: candidate.GEMINI_INPUT_COST_PER_MTOK_MICROS,
+    geminiOutputCostPerMtokMicros: candidate.GEMINI_OUTPUT_COST_PER_MTOK_MICROS,
+    analysisQueueConcurrency: candidate.ANALYSIS_QUEUE_CONCURRENCY,
   })
 }

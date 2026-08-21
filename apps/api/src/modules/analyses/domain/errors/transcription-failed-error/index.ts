@@ -1,0 +1,9 @@
+import { InfrastructureError } from '@/shared/errors/infrastructure-error/index.js'
+
+export class TranscriptionFailedError extends InfrastructureError {
+  readonly code = 'analyses.TRANSCRIPTION_FAILED'
+
+  constructor(reason: string) {
+    super('Transcription failed', { context: { reason } })
+  }
+}

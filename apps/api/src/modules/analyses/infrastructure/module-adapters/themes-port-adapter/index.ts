@@ -5,6 +5,7 @@ import { NotFoundError } from '@/shared/errors/categories/not-found-error/index.
 export type ThemesTitleReader = Pick<ThemesPublicApi, 'findThemeById'>
 export class ThemesPortAdapter implements ThemesPort {
   constructor(private readonly themes: ThemesTitleReader) {}
+
   async findTitle(themeId: string): Promise<string | null> {
     try {
       return (await this.themes.findThemeById(themeId)).title

@@ -6,11 +6,19 @@ import type {
 
 export class FindSessionProcessingContextUseCase {
   constructor(private readonly dependencies: FindSessionProcessingContextDependencies) {}
+
   async execute(
     input: FindSessionProcessingContextInput,
   ): Promise<SessionProcessingContext | null> {
     const session = await this.dependencies.sessions.findById(input.sessionId)
-    if (session === null || session.audio === null || session.recordedAt === null) return null
+    if (
+      session === null ||
+      session.state !== 'processing' ||
+      session.audio === null ||
+      session.recordedAt === null
+    ) {
+      return null
+    }
     return {
       sessionId: session.id,
       accountId: session.accountId,

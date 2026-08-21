@@ -1,4 +1,4 @@
-import { AnalysisDeadlineExceededError } from '@/modules/analyses/domain/errors/analysis-deadline-exceeded-error/index.js'
+import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluation-failed-error/index.js'
 import type { BaseError } from '@/shared/errors/base-error/index.js'
 import type {
   EvaluationPort,
@@ -63,10 +63,10 @@ export class InMemoryEvaluationAdapter implements EvaluationPort {
 
     await new Promise<void>((_resolve, reject) => {
       if (signal.aborted) {
-        reject(new AnalysisDeadlineExceededError(0))
+        reject(new EvaluationFailedError('request aborted'))
         return
       }
-      signal.addEventListener('abort', () => reject(new AnalysisDeadlineExceededError(0)), {
+      signal.addEventListener('abort', () => reject(new EvaluationFailedError('request aborted')), {
         once: true,
       })
     })

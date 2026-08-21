@@ -22,4 +22,14 @@ describe('TranscriptionMapper', () => {
     expect(transcription).toBeInstanceOf(Transcription)
     expect(mapper.toData(transcription)).toEqual(row)
   })
+
+  it('preserves the fractional audio duration Deepgram measures', () => {
+    const mapper = new TranscriptionMapper()
+    const fractionalRow = { ...row, durationSeconds: 62.34 }
+
+    const transcription = mapper.toDomain(fractionalRow)
+
+    expect(transcription.durationSeconds).toBe(62.34)
+    expect(mapper.toData(transcription).durationSeconds).toBe(62.34)
+  })
 })

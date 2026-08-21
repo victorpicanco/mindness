@@ -1,11 +1,13 @@
 import type { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
 import type { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import type { AccountPlan } from '@/modules/analyses/domain/ports/accounts-port/index.js'
+import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
 import type { EvaluationResult } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 import type { SessionProcessingContext } from '@/modules/analyses/domain/ports/sessions-port/index.js'
 import type { TranscriptionResult } from '@/modules/analyses/domain/ports/transcription-port/index.js'
 import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluation-failed-error/index.js'
 import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
+import { TranscriptionFailedError } from '@/modules/analyses/domain/errors/transcription-failed-error/index.js'
 import { AnalysisDeadlineExceededError } from '@/modules/analyses/domain/errors/analysis-deadline-exceeded-error/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
@@ -54,26 +56,33 @@ class InMemoryCostEntriesRepository {
 }
 
 class InMemorySessionsPort {
-  constructor(private readonly context: SessionProcessingContext) {}
+  constructor(private readonly context: SessionProcessingContext | null) {}
 
-  findProcessingContext(): Promise<SessionProcessingContext> {
+  findProcessingContext(): Promise<SessionProcessingContext | null> {
     return Promise.resolve(this.context)
   }
 }
 
 class InMemoryAudioReader {
-  readonly readSessionIds: string[] = []
-
-  read(sessionId: string): Promise<Buffer> {
-    this.readSessionIds.push(sessionId)
+  read(): Promise<Buffer> {
     return Promise.resolve(Buffer.from('audio'))
   }
 }
 
 class InMemoryTranscriptionPort {
+  private failure: Error | null = null
+  private hangs = false
   readonly received: { readonly audio: Buffer; readonly deadlineMs: number }[] = []
 
   constructor(private readonly result: TranscriptionResult) {}
+
+  failNext(error: Error): void {
+    this.failure = error
+  }
+
+  hangUntilAborted(): void {
+    this.hangs = true
+  }
 
   transcribe(input: {
     readonly audio: Buffer
@@ -81,17 +90,37 @@ class InMemoryTranscriptionPort {
     readonly signal: AbortSignal
   }): Promise<TranscriptionResult> {
     this.received.push({ audio: input.audio, deadlineMs: input.deadlineMs })
-    return Promise.resolve(this.result)
+
+    if (this.failure !== null) {
+      const failure = this.failure
+      this.failure = null
+      return Promise.reject(failure)
+    }
+
+    if (!this.hangs) return Promise.resolve(this.result)
+    this.hangs = false
+
+    return new Promise<TranscriptionResult>((_resolve, reject) => {
+      input.signal.addEventListener(
+        'abort',
+        () => reject(new TranscriptionFailedError('request aborted')),
+        { once: true },
+      )
+    })
   }
 }
 
 class InMemoryThemesPort {
-  findTitle(): Promise<string> {
-    return Promise.resolve('Speaking with confidence')
+  constructor(private readonly title: string | null = 'Speaking with confidence') {}
+
+  findTitle(): Promise<string | null> {
+    return Promise.resolve(this.title)
   }
 }
 
 class InMemoryEvaluationPort {
+  private failure: Error | null = null
+  private hangs = false
   readonly received: {
     readonly themeTitle: string
     readonly transcript: string
@@ -102,6 +131,14 @@ class InMemoryEvaluationPort {
     private readonly result: EvaluationResult,
     private readonly clock: ControllableClock,
   ) {}
+
+  failNext(error: Error): void {
+    this.failure = error
+  }
+
+  hangUntilAborted(): void {
+    this.hangs = true
+  }
 
   evaluate(input: {
     readonly themeTitle: string
@@ -114,14 +151,42 @@ class InMemoryEvaluationPort {
       transcript: input.transcript,
       rhythm: input.rhythm,
     })
-    this.clock.advance(1_500)
-    return Promise.resolve(this.result)
+
+    if (this.failure !== null) {
+      const failure = this.failure
+      this.failure = null
+      return Promise.reject(failure)
+    }
+
+    if (!this.hangs) {
+      this.clock.advance(1_500)
+      return Promise.resolve(this.result)
+    }
+    this.hangs = false
+
+    return new Promise<EvaluationResult>((_resolve, reject) => {
+      input.signal.addEventListener(
+        'abort',
+        () => reject(new EvaluationFailedError('request aborted')),
+        { once: true },
+      )
+    })
   }
 }
 
 class InMemoryAccountsPort {
-  findPlan(): Promise<AccountPlan> {
-    return Promise.resolve('free')
+  constructor(private readonly plan: AccountPlan | null = 'free') {}
+
+  findPlan(): Promise<AccountPlan | null> {
+    return Promise.resolve(this.plan)
+  }
+}
+
+class InMemoryAnalysisLogger implements AnalysisLogger {
+  readonly warnings: { readonly context: unknown; readonly message: string }[] = []
+
+  warn(context: unknown, message: string): void {
+    this.warnings.push({ context, message })
   }
 }
 
@@ -143,6 +208,14 @@ class InMemoryUnitOfWork {
   }
 }
 
+const processingContext: SessionProcessingContext = {
+  sessionId: 'session-1',
+  accountId: 'account-1',
+  themeId: 'theme-1',
+  audioPath: 'recordings/session-1.webm',
+  recordedAt: new Date('2026-08-21T15:29:00.000Z'),
+}
+
 const transcriptionResult: TranscriptionResult = {
   text: 'Eu apresento a ideia com clareza',
   words: [
@@ -157,13 +230,16 @@ const transcriptionResult: TranscriptionResult = {
   durationSeconds: 3,
 }
 
-function createDependencies(): {
+function createDependencies(
+  overrides: { readonly context?: SessionProcessingContext | null } = {},
+): {
   readonly analyses: InMemoryAnalysesRepository
   readonly costs: InMemoryCostEntriesRepository
   readonly clock: ControllableClock
   readonly dependencies: ProcessSessionAudioDependencies
   readonly evaluation: InMemoryEvaluationPort
   readonly events: FakeEventBus
+  readonly logger: InMemoryAnalysisLogger
   readonly transcription: InMemoryTranscriptionPort
   readonly transcriptions: InMemoryTranscriptionsRepository
   readonly unitOfWork: InMemoryUnitOfWork
@@ -172,6 +248,7 @@ function createDependencies(): {
   const analyses = new InMemoryAnalysesRepository()
   const costs = new InMemoryCostEntriesRepository()
   const events = new FakeEventBus()
+  const logger = new InMemoryAnalysisLogger()
   const transcription = new InMemoryTranscriptionPort(transcriptionResult)
   const evaluation = new InMemoryEvaluationPort(
     {
@@ -188,6 +265,7 @@ function createDependencies(): {
   )
   const transcriptions = new InMemoryTranscriptionsRepository()
   const unitOfWork = new InMemoryUnitOfWork()
+  const context = overrides.context === undefined ? processingContext : overrides.context
 
   return {
     analyses,
@@ -207,13 +285,8 @@ function createDependencies(): {
       evaluation,
       eventPublisher: events,
       idGenerator: new SequentialIdGenerator(),
-      sessions: new InMemorySessionsPort({
-        sessionId: 'session-1',
-        accountId: 'account-1',
-        themeId: 'theme-1',
-        audioPath: 'recordings/session-1.webm',
-        recordedAt: new Date('2026-08-21T15:29:00.000Z'),
-      }),
+      logger,
+      sessions: new InMemorySessionsPort(context),
       themes: new InMemoryThemesPort(),
       transcription,
       transcriptions,
@@ -221,6 +294,7 @@ function createDependencies(): {
     },
     evaluation,
     events,
+    logger,
     transcription,
     transcriptions,
     unitOfWork,
@@ -293,15 +367,44 @@ describe('ProcessSessionAudioUseCase', () => {
     expect(events.published).toHaveLength(1)
   })
 
-  it('publishes a transcription failure without persisting when transcription fails', async () => {
-    const { analyses, costs, dependencies, events, transcriptions } = createDependencies()
-    const original = new EvaluationFailedError('provider unavailable')
+  it('logs and returns silently when the session has no processing context', async () => {
+    const { dependencies, events, logger, transcription } = createDependencies({ context: null })
+    const useCase = new ProcessSessionAudioUseCase(dependencies)
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).resolves.toBeUndefined()
+
+    expect(transcription.received).toEqual([])
+    expect(events.published).toEqual([])
+    expect(logger.warnings).toMatchObject([
+      { context: { sessionId: 'session-1' }, message: 'analysis_target_missing' },
+    ])
+  })
+
+  it('logs and returns silently when the account plan does not resolve', async () => {
+    const { dependencies, events, logger, transcription } = createDependencies()
     const useCase = new ProcessSessionAudioUseCase({
       ...dependencies,
-      transcription: {
-        transcribe: () => Promise.reject(original),
-      },
+      accounts: { findPlan: () => Promise.resolve(null) },
     })
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).resolves.toBeUndefined()
+
+    expect(transcription.received).toEqual([])
+    expect(events.published).toEqual([])
+    expect(logger.warnings).toMatchObject([
+      {
+        context: { sessionId: 'session-1', accountId: 'account-1' },
+        message: 'analysis_target_missing',
+      },
+    ])
+  })
+
+  it('publishes a transcription failure without persisting when transcription fails', async () => {
+    const { analyses, costs, dependencies, events, transcription, transcriptions } =
+      createDependencies()
+    const original = new EvaluationFailedError('provider unavailable')
+    transcription.failNext(original)
+    const useCase = new ProcessSessionAudioUseCase(dependencies)
 
     await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toMatchObject({
       code: 'analyses.TRANSCRIPTION_FAILED',
@@ -334,6 +437,50 @@ describe('ProcessSessionAudioUseCase', () => {
     expect(costs.saved).toEqual([])
     expect(events.published).toMatchObject([
       { eventName: 'analysis_failed', payload: { reason: 'transcription_failed' } },
+    ])
+  })
+
+  it('publishes a transcription failure when the speech duration is zero', async () => {
+    const { analyses, costs, dependencies, events, transcriptions } = createDependencies()
+    const useCase = new ProcessSessionAudioUseCase({
+      ...dependencies,
+      transcription: {
+        transcribe: () =>
+          Promise.resolve({
+            ...transcriptionResult,
+            words: [{ word: 'Eu', start: 1, end: 1, confidence: 0.9 }],
+          }),
+      },
+    })
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toMatchObject({
+      code: 'analyses.TRANSCRIPTION_FAILED',
+    })
+
+    expect(transcriptions.saved).toEqual([])
+    expect(analyses.saved).toEqual([])
+    expect(costs.saved).toEqual([])
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'transcription_failed' } },
+    ])
+  })
+
+  it('publishes an evaluation failure and throws when the theme title does not resolve', async () => {
+    const { analyses, costs, dependencies, events, transcriptions } = createDependencies()
+    const useCase = new ProcessSessionAudioUseCase({
+      ...dependencies,
+      themes: new InMemoryThemesPort(null),
+    })
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toMatchObject({
+      code: 'analyses.EVALUATION_FAILED',
+    })
+
+    expect(transcriptions.saved).toEqual([])
+    expect(analyses.saved).toEqual([])
+    expect(costs.saved).toEqual([])
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'evaluation_failed' } },
     ])
   })
 
@@ -376,17 +523,10 @@ describe('ProcessSessionAudioUseCase', () => {
   })
 
   it('publishes a timeout and throws without calling external ports when the deadline elapsed', async () => {
-    const { analyses, costs, dependencies, events, transcription } = createDependencies()
-    const useCase = new ProcessSessionAudioUseCase({
-      ...dependencies,
-      sessions: new InMemorySessionsPort({
-        sessionId: 'session-1',
-        accountId: 'account-1',
-        themeId: 'theme-1',
-        audioPath: 'recordings/session-1.webm',
-        recordedAt: new Date('2026-08-21T15:24:59.000Z'),
-      }),
+    const { analyses, costs, dependencies, events, transcription } = createDependencies({
+      context: { ...processingContext, recordedAt: new Date('2026-08-21T15:24:59.000Z') },
     })
+    const useCase = new ProcessSessionAudioUseCase(dependencies)
 
     await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toBeInstanceOf(
       AnalysisDeadlineExceededError,
@@ -398,36 +538,13 @@ describe('ProcessSessionAudioUseCase', () => {
     expect(events.published).toMatchObject([{ eventName: 'analysis_timeout' }])
   })
 
-  it('passes the remaining deadline to transcription and aborts it when the deadline expires', async () => {
+  it('classifies an aborted transcription as a timeout even though the provider rejects with an infrastructure error', async () => {
     vi.useFakeTimers()
-    const { clock, dependencies, events } = createDependencies()
-    let receivedDeadlineMs: number | null = null
-    let signalWasAborted = false
-    const useCase = new ProcessSessionAudioUseCase({
-      ...dependencies,
-      sessions: new InMemorySessionsPort({
-        sessionId: 'session-1',
-        accountId: 'account-1',
-        themeId: 'theme-1',
-        audioPath: 'recordings/session-1.webm',
-        recordedAt: new Date('2026-08-21T15:29:30.000Z'),
-      }),
-      transcription: {
-        transcribe: ({ deadlineMs, signal }) => {
-          receivedDeadlineMs = deadlineMs
-          return new Promise<TranscriptionResult>((_resolve, reject) => {
-            signal.addEventListener(
-              'abort',
-              () => {
-                signalWasAborted = signal.aborted
-                reject(new AnalysisDeadlineExceededError(deadlineMs))
-              },
-              { once: true },
-            )
-          })
-        },
-      },
+    const { clock, dependencies, events, transcription } = createDependencies({
+      context: { ...processingContext, recordedAt: new Date('2026-08-21T15:29:30.000Z') },
     })
+    transcription.hangUntilAborted()
+    const useCase = new ProcessSessionAudioUseCase(dependencies)
 
     const processing = useCase.execute({ sessionId: 'session-1' })
     const rejected = expect(processing).rejects.toBeInstanceOf(AnalysisDeadlineExceededError)
@@ -436,8 +553,25 @@ describe('ProcessSessionAudioUseCase', () => {
     clock.advance(270_000)
 
     await rejected
-    expect(receivedDeadlineMs).toBe(270_000)
-    expect(signalWasAborted).toBe(true)
+    expect(transcription.received).toMatchObject([{ deadlineMs: 270_000 }])
+    expect(events.published).toMatchObject([{ eventName: 'analysis_timeout' }])
+  })
+
+  it('classifies an aborted evaluation as a timeout even though the provider rejects with an infrastructure error', async () => {
+    vi.useFakeTimers()
+    const { clock, dependencies, events, evaluation } = createDependencies({
+      context: { ...processingContext, recordedAt: new Date('2026-08-21T15:29:30.000Z') },
+    })
+    evaluation.hangUntilAborted()
+    const useCase = new ProcessSessionAudioUseCase(dependencies)
+
+    const processing = useCase.execute({ sessionId: 'session-1' })
+    const rejected = expect(processing).rejects.toBeInstanceOf(AnalysisDeadlineExceededError)
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(270_000)
+    clock.advance(270_000)
+
+    await rejected
     expect(events.published).toMatchObject([{ eventName: 'analysis_timeout' }])
   })
 })

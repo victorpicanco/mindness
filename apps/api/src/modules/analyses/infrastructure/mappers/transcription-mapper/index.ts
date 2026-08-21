@@ -38,6 +38,7 @@ export class TranscriptionMapper {
       createdAt: row.createdAt,
     })
   }
+
   toData(transcription: Transcription): TranscriptionRow {
     return {
       id: transcription.id,

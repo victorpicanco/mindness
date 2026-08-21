@@ -21,10 +21,10 @@ const EnvSchema = Type.Object({
   GOOGLE_CLOUD_PROJECT: Type.String(),
   GOOGLE_CLOUD_LOCATION: Type.String(),
   GEMINI_MODEL: Type.String(),
-  DEEPGRAM_COST_PER_MINUTE_MICROS: Type.Integer(),
-  GEMINI_INPUT_COST_PER_MTOK_MICROS: Type.Integer(),
-  GEMINI_OUTPUT_COST_PER_MTOK_MICROS: Type.Integer(),
-  ANALYSIS_QUEUE_CONCURRENCY: Type.Integer(),
+  DEEPGRAM_COST_PER_MINUTE_MICROS: Type.Integer({ minimum: 1 }),
+  GEMINI_INPUT_COST_PER_MTOK_MICROS: Type.Integer({ minimum: 1 }),
+  GEMINI_OUTPUT_COST_PER_MTOK_MICROS: Type.Integer({ minimum: 1 }),
+  ANALYSIS_QUEUE_CONCURRENCY: Type.Integer({ minimum: 1 }),
 })
 
 const STRING_ENV_KEYS = [

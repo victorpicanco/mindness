@@ -1,3 +1,4 @@
+import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
 import { describe, expect, it } from 'vitest'
@@ -37,11 +38,26 @@ class SequentialIdGenerator {
   }
 }
 
-class InMemoryMonthlyCostAlertLogger {
-  readonly warnings: { readonly totalMicros: number }[] = []
+function isCostAlertContext(value: unknown): value is { readonly totalMicros: number } {
+  return typeof value === 'object' && value !== null && 'totalMicros' in value
+}
 
-  warn(context: { readonly totalMicros: number }, message: string): void {
-    if (message === 'monthly_cost_alert_threshold_reached') this.warnings.push(context)
+function isTargetMissingContext(
+  value: unknown,
+): value is { readonly sessionId: string; readonly accountId?: string } {
+  return typeof value === 'object' && value !== null && 'sessionId' in value
+}
+
+class InMemoryAnalysisLogger implements AnalysisLogger {
+  readonly costAlerts: { readonly totalMicros: number }[] = []
+  readonly targetMissing: { readonly sessionId: string; readonly accountId?: string }[] = []
+
+  warn(context: unknown): void {
+    if (isCostAlertContext(context)) {
+      this.costAlerts.push(context)
+      return
+    }
+    if (isTargetMissingContext(context)) this.targetMissing.push(context)
   }
 }
 
@@ -57,21 +73,24 @@ class InMemoryProcessingQueue {
 const MONTHLY_COST_ALERT_MICROS = 240_000_000
 const MONTHLY_COST_CAP_MICROS = 300_000_000
 
-function createDependencies(totalMicros: number): {
+function createDependencies(
+  totalMicros: number,
+  plan: 'free' | null = 'free',
+): {
   readonly dependencies: EnqueueSessionAnalysisDependencies
   readonly costs: InMemoryAnalysisCostEntriesRepository
   readonly eventBus: FakeEventBus
-  readonly logger: InMemoryMonthlyCostAlertLogger
+  readonly logger: InMemoryAnalysisLogger
   readonly queue: InMemoryProcessingQueue
 } {
   const costs = new InMemoryAnalysisCostEntriesRepository(totalMicros)
   const eventBus = new FakeEventBus()
-  const logger = new InMemoryMonthlyCostAlertLogger()
+  const logger = new InMemoryAnalysisLogger()
   const queue = new InMemoryProcessingQueue()
 
   return {
     dependencies: {
-      accounts: new InMemoryAccountsPort(),
+      accounts: new InMemoryAccountsPort(plan),
       clock: new ControllableClock(new Date('2026-08-21T15:30:00.000Z')),
       costs,
       eventPublisher: eventBus,
@@ -136,6 +155,20 @@ describe('EnqueueSessionAnalysisUseCase', () => {
 
     expect(queue.enqueued).toEqual([{ sessionId: 'session-1' }])
     expect(eventBus.published).toEqual([])
-    expect(logger.warnings).toEqual([{ totalMicros: MONTHLY_COST_ALERT_MICROS + 1 }])
+    expect(logger.costAlerts).toEqual([{ totalMicros: MONTHLY_COST_ALERT_MICROS + 1 }])
+  })
+
+  it('logs and enqueues anyway when the plan does not resolve above the monthly cap', async () => {
+    const { dependencies, eventBus, logger, queue } = createDependencies(
+      MONTHLY_COST_CAP_MICROS,
+      null,
+    )
+    const useCase = new EnqueueSessionAnalysisUseCase(dependencies)
+
+    await useCase.execute({ sessionId: 'session-1', accountId: 'account-1' })
+
+    expect(queue.enqueued).toEqual([{ sessionId: 'session-1' }])
+    expect(eventBus.published).toEqual([])
+    expect(logger.targetMissing).toEqual([{ sessionId: 'session-1', accountId: 'account-1' }])
   })
 })

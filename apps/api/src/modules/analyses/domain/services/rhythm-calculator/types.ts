@@ -1,3 +1,5 @@
+import type { RhythmMetrics } from '@/modules/analyses/domain/value-objects/rhythm-metrics/index.js'
+
 export interface TranscriptionWord {
   readonly word: string
   readonly start: number
@@ -11,4 +13,3 @@ export interface RhythmCalculationResult {
   readonly score: number
   readonly guidance: string
 }
-import type { RhythmMetrics } from '@/modules/analyses/domain/value-objects/rhythm-metrics/index.js'

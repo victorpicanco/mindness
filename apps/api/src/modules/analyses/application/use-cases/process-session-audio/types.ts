@@ -1,6 +1,8 @@
 import type { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
+import type { AnalysisCostEntry } from '@/modules/analyses/domain/entities/analysis-cost-entry/index.js'
 import type { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import type { AccountsPort } from '@/modules/analyses/domain/ports/accounts-port/index.js'
+import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
 import type { AudioReaderPort } from '@/modules/analyses/domain/ports/audio-reader-port/index.js'
 import type { Clock } from '@/modules/analyses/domain/ports/clock/index.js'
 import type { EvaluationPort } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
@@ -11,10 +13,7 @@ import type { ThemesPort } from '@/modules/analyses/domain/ports/themes-port/ind
 import type { TranscriptionPort } from '@/modules/analyses/domain/ports/transcription-port/index.js'
 import type { UnitOfWork } from '@/modules/analyses/domain/ports/unit-of-work/index.js'
 import type { AnalysesRepository } from '@/modules/analyses/domain/repositories/analyses-repository/index.js'
-import type {
-  AnalysisCostEntriesRepository,
-  AnalysisCostEntry,
-} from '@/modules/analyses/domain/repositories/analysis-cost-entries-repository/index.js'
+import type { AnalysisCostEntriesRepository } from '@/modules/analyses/domain/repositories/analysis-cost-entries-repository/index.js'
 import type { TranscriptionsRepository } from '@/modules/analyses/domain/repositories/transcriptions-repository/index.js'
 
 export interface ProcessingCostRates {
@@ -33,6 +32,7 @@ export interface ProcessSessionAudioDependencies {
   readonly evaluation: EvaluationPort
   readonly eventPublisher: EventPublisher
   readonly idGenerator: IdGenerator
+  readonly logger: AnalysisLogger
   readonly sessions: SessionsPort
   readonly themes: ThemesPort
   readonly transcription: TranscriptionPort

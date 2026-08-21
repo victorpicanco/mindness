@@ -1,3 +1,4 @@
+import type { AccountPlan } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { IntegrationEvent } from '@/shared/messaging/integration-event/index.js'
 
 const ANALYSIS_TIMEOUT = 'analysis_timeout'
@@ -6,7 +7,7 @@ const ANALYSIS_TIMEOUT_VERSION = 1
 export interface AnalysisTimedOutPayload {
   readonly sessionId: string
   readonly accountId: string
-  readonly plan: 'free'
+  readonly plan: AccountPlan
 }
 
 export interface CreateAnalysisTimedOutParams extends AnalysisTimedOutPayload {

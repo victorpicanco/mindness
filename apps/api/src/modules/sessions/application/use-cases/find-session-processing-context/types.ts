@@ -1,15 +1,10 @@
+import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
+
 export interface FindSessionProcessingContextInput {
   readonly sessionId: string
 }
-export interface SessionForProcessingContext {
-  readonly id: string
-  readonly accountId: string
-  readonly themeId: string
-  readonly audio: { readonly storagePath: string } | null
-  readonly recordedAt: Date | null
-}
 export interface FindSessionProcessingContextDependencies {
-  readonly sessions: { findById(sessionId: string): Promise<SessionForProcessingContext | null> }
+  readonly sessions: Pick<SessionsRepository, 'findById'>
 }
 export interface SessionProcessingContext {
   readonly sessionId: string

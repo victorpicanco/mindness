@@ -21,19 +21,24 @@ export class EnqueueSessionAnalysisUseCase {
 
     if (monthlyCostMicros >= MONTHLY_COST_CAP_MICROS) {
       const plan = await this.dependencies.accounts.findPlan(input.accountId)
-      if (plan === null) return
+      if (plan !== null) {
+        await this.dependencies.eventPublisher.publish(
+          AnalysisFailed.create({
+            eventId: this.dependencies.idGenerator.generate(),
+            occurredAt: now,
+            sessionId: input.sessionId,
+            accountId: input.accountId,
+            plan,
+            reason: 'monthly_cost_cap_reached',
+          }),
+        )
+        return
+      }
 
-      await this.dependencies.eventPublisher.publish(
-        AnalysisFailed.create({
-          eventId: this.dependencies.idGenerator.generate(),
-          occurredAt: now,
-          sessionId: input.sessionId,
-          accountId: input.accountId,
-          plan,
-          reason: 'monthly_cost_cap_reached',
-        }),
+      this.dependencies.logger.warn(
+        { sessionId: input.sessionId, accountId: input.accountId },
+        'analysis_target_missing',
       )
-      return
     }
 
     if (monthlyCostMicros > MONTHLY_COST_ALERT_MICROS) {

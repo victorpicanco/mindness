@@ -19,11 +19,12 @@ const AlternativeSchema = Type.Object({
 
 export const TranscriptionResponseSchema = Type.Object({
   results: Type.Object({
-    channels: Type.Tuple([
+    channels: Type.Array(
       Type.Object({
-        alternatives: Type.Tuple([AlternativeSchema]),
+        alternatives: Type.Array(AlternativeSchema, { minItems: 1 }),
       }),
-    ]),
+      { minItems: 1 },
+    ),
   }),
   metadata: Type.Object({
     duration: Type.Number(),
@@ -35,7 +36,11 @@ export function parseTranscriptionResult(raw: unknown): TranscriptionResult {
     throw new TranscriptionFailedError('malformed response')
   }
 
-  const alternative = raw.results.channels[0].alternatives[0]
+  const [channel] = raw.results.channels
+  if (channel === undefined) throw new TranscriptionFailedError('malformed response')
+
+  const [alternative] = channel.alternatives
+  if (alternative === undefined) throw new TranscriptionFailedError('malformed response')
 
   return {
     text: alternative.transcript,

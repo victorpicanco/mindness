@@ -1,7 +1,5 @@
-import type {
-  AnalysisCostEntriesRepository,
-  AnalysisCostEntry,
-} from '@/modules/analyses/domain/repositories/analysis-cost-entries-repository/index.js'
+import type { AnalysisCostEntry } from '@/modules/analyses/domain/entities/analysis-cost-entry/index.js'
+import type { AnalysisCostEntriesRepository } from '@/modules/analyses/domain/repositories/analysis-cost-entries-repository/index.js'
 import type { AnalysesPrismaClient } from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
 import type { AnalysesTransactionContext } from '@/modules/analyses/infrastructure/clients/analyses-transaction-context/index.js'
 import type { AnalysisCostEntryMapper } from '@/modules/analyses/infrastructure/mappers/analysis-cost-entry-mapper/index.js'
@@ -13,6 +11,7 @@ export class PrismaAnalysisCostEntriesRepository implements AnalysisCostEntriesR
     private readonly context: AnalysesTransactionContext,
     private readonly mapper: AnalysisCostEntryMapper,
   ) {}
+
   async save(entry: AnalysisCostEntry): Promise<void> {
     try {
       await this.client().analysisCostEntry.create({ data: this.mapper.toData(entry) })
@@ -23,6 +22,7 @@ export class PrismaAnalysisCostEntriesRepository implements AnalysisCostEntriesR
       })
     }
   }
+
   async sumMicrosBetween(from: Date, to: Date): Promise<number> {
     try {
       const result = await this.client().analysisCostEntry.aggregate({
@@ -37,6 +37,7 @@ export class PrismaAnalysisCostEntriesRepository implements AnalysisCostEntriesR
       })
     }
   }
+
   private client(): AnalysesPrismaClient {
     return this.context.current() ?? this.prisma
   }

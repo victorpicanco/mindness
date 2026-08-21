@@ -16,9 +16,11 @@ interface SessionsPublicApiDependencies {
 }
 export class SessionsPublicApiImpl implements SessionsPublicApi {
   constructor(private readonly dependencies: SessionsPublicApiDependencies) {}
+
   findProcessingContext(sessionId: string): Promise<SessionProcessingContext | null> {
     return this.dependencies.findProcessingContext.execute({ sessionId })
   }
+
   downloadAudio(sessionId: string): Promise<Buffer> {
     return this.dependencies.downloadAudio.execute({ sessionId })
   }

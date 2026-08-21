@@ -1,8 +1,7 @@
 export interface CalculateProcessingCostInput {
   readonly durationSeconds: number
   readonly inputTokens: number
-  readonly candidatesTokenCount: number
-  readonly thoughtsTokenCount: number
+  readonly outputTokens: number
   readonly transcriptionCostPerMinuteMicros: number
   readonly geminiInputCostPerMtokMicros: number
   readonly geminiOutputCostPerMtokMicros: number

@@ -28,6 +28,19 @@ describe('Transcription', () => {
     expect(transcription.createdAt).toEqual(CREATED_AT)
   })
 
+  it('does not produce NaN average confidence when there are no words', () => {
+    const transcription = Transcription.create({
+      transcriptionId: 'transcription-id',
+      sessionId: 'session-id',
+      text: '',
+      words: [],
+      durationSeconds: 0,
+      createdAt: CREATED_AT,
+    })
+
+    expect(transcription.averageConfidence).toBe(0)
+  })
+
   it('reconstitutes every persisted transcription field', () => {
     const transcription = Transcription.reconstitute({
       transcriptionId: 'transcription-id',

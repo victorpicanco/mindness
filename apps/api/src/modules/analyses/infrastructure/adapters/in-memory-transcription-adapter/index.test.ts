@@ -47,7 +47,7 @@ describe('InMemoryTranscriptionAdapter', () => {
     controller.abort()
 
     await expect(transcription).rejects.toMatchObject({
-      code: 'analyses.ANALYSIS_DEADLINE_EXCEEDED',
+      code: 'analyses.TRANSCRIPTION_FAILED',
     })
   })
 })

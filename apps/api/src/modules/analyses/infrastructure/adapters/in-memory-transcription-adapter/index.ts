@@ -1,4 +1,4 @@
-import { AnalysisDeadlineExceededError } from '@/modules/analyses/domain/errors/analysis-deadline-exceeded-error/index.js'
+import { TranscriptionFailedError } from '@/modules/analyses/domain/errors/transcription-failed-error/index.js'
 import type { BaseError } from '@/shared/errors/base-error/index.js'
 import type {
   TranscriptionPort,
@@ -22,7 +22,7 @@ export class InMemoryTranscriptionAdapter implements TranscriptionPort {
     readonly signal: AbortSignal
   }): Promise<TranscriptionResult> {
     this.received.push(input)
-    await this.applySimulation(input.signal, input.deadlineMs)
+    await this.applySimulation(input.signal)
     return this.result
   }
 
@@ -34,7 +34,7 @@ export class InMemoryTranscriptionAdapter implements TranscriptionPort {
     this.hangs = true
   }
 
-  private async applySimulation(signal: AbortSignal, deadlineMs: number): Promise<void> {
+  private async applySimulation(signal: AbortSignal): Promise<void> {
     if (this.failure !== null) {
       const failure = this.failure
       this.failure = null
@@ -45,12 +45,12 @@ export class InMemoryTranscriptionAdapter implements TranscriptionPort {
 
     await new Promise<void>((_resolve, reject) => {
       if (signal.aborted) {
-        reject(new AnalysisDeadlineExceededError(deadlineMs))
+        reject(new TranscriptionFailedError('request aborted'))
         return
       }
       signal.addEventListener(
         'abort',
-        () => reject(new AnalysisDeadlineExceededError(deadlineMs)),
+        () => reject(new TranscriptionFailedError('request aborted')),
         {
           once: true,
         },

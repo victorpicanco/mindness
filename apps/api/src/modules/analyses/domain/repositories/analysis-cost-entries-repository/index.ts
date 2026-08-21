@@ -1,12 +1,4 @@
-export interface AnalysisCostEntry {
-  readonly id: string
-  readonly sessionId: string
-  readonly accountId: string
-  readonly transcriptionMicrosUsd: number
-  readonly evaluationMicrosUsd: number
-  readonly totalMicrosUsd: number
-  readonly incurredAt: Date
-}
+import type { AnalysisCostEntry } from '@/modules/analyses/domain/entities/analysis-cost-entry/index.js'
 
 export interface AnalysisCostEntriesRepository {
   save(entry: AnalysisCostEntry): Promise<void>

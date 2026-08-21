@@ -4,7 +4,7 @@ model Transcription {
   text              String
   words             Json
   averageConfidence Float    @map("average_confidence")
-  durationSeconds   Int      @map("duration_seconds")
+  durationSeconds   Float    @map("duration_seconds")
   createdAt         DateTime @map("created_at") @db.Timestamptz(6)
 
   @@map("transcriptions")

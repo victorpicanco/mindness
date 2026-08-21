@@ -7,8 +7,7 @@ describe('CostCalculator', () => {
     const cost = CostCalculator.calculate({
       durationSeconds: 60,
       inputTokens: 0,
-      candidatesTokenCount: 0,
-      thoughtsTokenCount: 0,
+      outputTokens: 0,
       transcriptionCostPerMinuteMicros: 20_000,
       geminiInputCostPerMtokMicros: 1_250_000,
       geminiOutputCostPerMtokMicros: 5_000_000,
@@ -19,12 +18,11 @@ describe('CostCalculator', () => {
     expect(cost.totalMicrosUsd).toBe(20_000)
   })
 
-  it('adds candidate and thought tokens to the billed evaluation output', () => {
+  it('bills the evaluation output tokens already summed by the evaluation port', () => {
     const cost = CostCalculator.calculate({
       durationSeconds: 0,
       inputTokens: 1_000_000,
-      candidatesTokenCount: 2,
-      thoughtsTokenCount: 3,
+      outputTokens: 5,
       transcriptionCostPerMinuteMicros: 20_000,
       geminiInputCostPerMtokMicros: 1_250_000,
       geminiOutputCostPerMtokMicros: 1_000_000,
@@ -38,8 +36,7 @@ describe('CostCalculator', () => {
     const cost = CostCalculator.calculate({
       durationSeconds: 1,
       inputTokens: 1,
-      candidatesTokenCount: 1,
-      thoughtsTokenCount: 0,
+      outputTokens: 1,
       transcriptionCostPerMinuteMicros: 59,
       geminiInputCostPerMtokMicros: 999_999,
       geminiOutputCostPerMtokMicros: 999_999,

@@ -1,3 +1,4 @@
+import type { AccountPlan } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { IntegrationEvent } from '@/shared/messaging/integration-event/index.js'
 
 const ANALYSIS_COMPLETED = 'analysis_completed'
@@ -14,7 +15,7 @@ export interface AnalysisScores {
 export interface AnalysisCompletedPayload {
   readonly sessionId: string
   readonly accountId: string
-  readonly plan: 'free'
+  readonly plan: AccountPlan
   readonly scores: AnalysisScores
   readonly processingMs: number
   readonly costMicrosUsd: number

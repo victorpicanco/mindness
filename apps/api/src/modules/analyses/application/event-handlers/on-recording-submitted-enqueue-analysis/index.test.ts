@@ -1,3 +1,4 @@
+import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
 import type { IntegrationEvent } from '@/shared/messaging/integration-event/index.js'
 import { describe, expect, it } from 'vitest'
 
@@ -9,6 +10,18 @@ class FakeEnqueueSessionAnalysisUseCase {
   execute(input: { readonly sessionId: string; readonly accountId: string }): Promise<void> {
     this.received.push(input)
     return Promise.resolve()
+  }
+}
+
+function isEventIdContext(value: unknown): value is { readonly eventId: string } {
+  return typeof value === 'object' && value !== null && 'eventId' in value
+}
+
+class InMemoryAnalysisLogger implements AnalysisLogger {
+  readonly rejectedPayloads: { readonly eventId: string }[] = []
+
+  warn(context: unknown): void {
+    if (isEventIdContext(context)) this.rejectedPayloads.push(context)
   }
 }
 
@@ -25,7 +38,7 @@ function createEvent(payload: unknown): IntegrationEvent<string, unknown> {
 describe('OnRecordingSubmittedEnqueueAnalysis', () => {
   it('enqueues the session identified by a recording submitted event', async () => {
     const useCase = new FakeEnqueueSessionAnalysisUseCase()
-    const handler = new OnRecordingSubmittedEnqueueAnalysis(useCase)
+    const handler = new OnRecordingSubmittedEnqueueAnalysis(useCase, new InMemoryAnalysisLogger())
 
     await handler.handle(
       createEvent({ sessionId: 'session-1', accountId: 'account-1', durationSeconds: 90 }),
@@ -34,27 +47,28 @@ describe('OnRecordingSubmittedEnqueueAnalysis', () => {
     expect(useCase.received).toEqual([{ sessionId: 'session-1', accountId: 'account-1' }])
   })
 
-  it('rejects an unexpected payload without invoking the use case', async () => {
+  it('rejects an unexpected payload without invoking the use case, and logs it', async () => {
     const useCase = new FakeEnqueueSessionAnalysisUseCase()
-    const handler = new OnRecordingSubmittedEnqueueAnalysis(useCase)
+    const logger = new InMemoryAnalysisLogger()
+    const handler = new OnRecordingSubmittedEnqueueAnalysis(useCase, logger)
 
     await handler.handle(createEvent({ sessionId: 'session-1' }))
 
     expect(useCase.received).toEqual([])
+    expect(logger.rejectedPayloads).toEqual([{ eventId: 'event-1' }])
   })
 
-  it('does not enqueue twice when the same event is delivered twice', async () => {
+  it('relies on the queue job id for idempotency instead of tracking handled events itself', async () => {
     const useCase = new FakeEnqueueSessionAnalysisUseCase()
-    const handler = new OnRecordingSubmittedEnqueueAnalysis(useCase)
-    const event = createEvent({
-      sessionId: 'session-1',
-      accountId: 'account-1',
-      durationSeconds: 90,
-    })
+    const handler = new OnRecordingSubmittedEnqueueAnalysis(useCase, new InMemoryAnalysisLogger())
+    const event = createEvent({ sessionId: 'session-1', accountId: 'account-1' })
 
     await handler.handle(event)
     await handler.handle(event)
 
-    expect(useCase.received).toEqual([{ sessionId: 'session-1', accountId: 'account-1' }])
+    expect(useCase.received).toEqual([
+      { sessionId: 'session-1', accountId: 'account-1' },
+      { sessionId: 'session-1', accountId: 'account-1' },
+    ])
   })
 })

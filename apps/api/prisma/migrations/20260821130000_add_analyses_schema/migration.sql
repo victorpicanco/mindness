@@ -5,7 +5,7 @@ CREATE TABLE "transcriptions" (
     "text" TEXT NOT NULL,
     "words" JSONB NOT NULL,
     "average_confidence" DOUBLE PRECISION NOT NULL,
-    "duration_seconds" INTEGER NOT NULL,
+    "duration_seconds" DOUBLE PRECISION NOT NULL,
     "created_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "transcriptions_pkey" PRIMARY KEY ("id")
@@ -53,3 +53,7 @@ CREATE UNIQUE INDEX "analysis_cost_entries_session_id_key" ON "analysis_cost_ent
 
 -- CreateIndex
 CREATE INDEX "analysis_cost_entries_incurred_at_idx" ON "analysis_cost_entries"("incurred_at");
+
+ALTER TABLE "transcriptions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "analyses" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "analysis_cost_entries" ENABLE ROW LEVEL SECURITY;

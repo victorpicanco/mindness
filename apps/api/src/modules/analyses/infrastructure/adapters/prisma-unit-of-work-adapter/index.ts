@@ -7,6 +7,7 @@ export class PrismaUnitOfWorkAdapter implements UnitOfWork {
     private readonly prisma: AnalysesPrismaTransactionRunner,
     private readonly context: AnalysesTransactionContext,
   ) {}
+
   run<T>(operation: () => Promise<T>): Promise<T> {
     return this.prisma.$transaction((transaction) => this.context.run(transaction, operation), {
       isolationLevel: 'Serializable',

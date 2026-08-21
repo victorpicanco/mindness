@@ -1,3 +1,4 @@
+import type { AccountPlan } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { IntegrationEvent } from '@/shared/messaging/integration-event/index.js'
 
 const ANALYSIS_FAILED = 'analysis_failed'
@@ -9,7 +10,7 @@ export type AnalysisFailureReason =
 export interface AnalysisFailedPayload {
   readonly sessionId: string
   readonly accountId: string
-  readonly plan: 'free'
+  readonly plan: AccountPlan
   readonly reason: AnalysisFailureReason
 }
 

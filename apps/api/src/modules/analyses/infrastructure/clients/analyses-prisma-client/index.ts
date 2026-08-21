@@ -39,7 +39,7 @@ export interface AnalysesPrismaClient {
       readonly where: { readonly sessionId: string }
     }): Promise<TranscriptionRow | null>
     upsert(args: {
-      readonly where: { readonly id: string }
+      readonly where: { readonly sessionId: string }
       readonly create: TranscriptionRow
       readonly update: TranscriptionRow
     }): Promise<TranscriptionRow>
@@ -49,7 +49,7 @@ export interface AnalysesPrismaClient {
       readonly where: { readonly sessionId: string }
     }): Promise<AnalysisRow | null>
     upsert(args: {
-      readonly where: { readonly id: string }
+      readonly where: { readonly sessionId: string }
       readonly create: AnalysisRow
       readonly update: AnalysisRow
     }): Promise<AnalysisRow>

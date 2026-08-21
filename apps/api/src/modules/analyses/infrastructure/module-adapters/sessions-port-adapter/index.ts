@@ -4,6 +4,7 @@ import type { SessionsPort } from '@/modules/analyses/domain/ports/sessions-port
 export type SessionsProcessingContextReader = Pick<SessionsPublicApi, 'findProcessingContext'>
 export class SessionsPortAdapter implements SessionsPort {
   constructor(private readonly sessions: SessionsProcessingContextReader) {}
+
   async findProcessingContext(sessionId: string) {
     const context = await this.sessions.findProcessingContext(sessionId)
     return context === null

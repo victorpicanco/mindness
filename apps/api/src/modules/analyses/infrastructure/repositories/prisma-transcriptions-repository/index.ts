@@ -11,6 +11,7 @@ export class PrismaTranscriptionsRepository implements TranscriptionsRepository 
     private readonly context: AnalysesTransactionContext,
     private readonly mapper: TranscriptionMapper,
   ) {}
+
   async findBySessionId(sessionId: string): Promise<Transcription | null> {
     try {
       const row = await this.client().transcription.findUnique({ where: { sessionId } })
@@ -19,11 +20,12 @@ export class PrismaTranscriptionsRepository implements TranscriptionsRepository 
       throw new DatabaseError('Failed to find transcription', { cause, context: { sessionId } })
     }
   }
+
   async save(transcription: Transcription): Promise<void> {
     try {
       const data = this.mapper.toData(transcription)
       await this.client().transcription.upsert({
-        where: { id: transcription.id },
+        where: { sessionId: transcription.sessionId },
         create: data,
         update: data,
       })
@@ -34,6 +36,7 @@ export class PrismaTranscriptionsRepository implements TranscriptionsRepository 
       })
     }
   }
+
   private client(): AnalysesPrismaClient {
     return this.context.current() ?? this.prisma
   }

@@ -45,6 +45,8 @@ export class Transcription {
 }
 
 function calculateAverageConfidence(words: readonly TranscriptionWord[]): number {
+  if (words.length === 0) return 0
+
   const confidenceSum = words.reduce((sum, word) => sum + word.confidence, 0)
 
   return confidenceSum / words.length

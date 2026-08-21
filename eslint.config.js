@@ -84,6 +84,7 @@ function moduleConfigs(self) {
             '@/generated/prisma/*',
             'fastify',
             '@fastify/*',
+            'typebox',
             'pg-boss',
             'bullmq',
             'ioredis',

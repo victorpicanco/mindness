@@ -74,6 +74,7 @@ export class AnalysisMapper {
       createdAt: row.createdAt,
     })
   }
+
   toData(analysis: Analysis): AnalysisRow {
     return {
       id: analysis.id,

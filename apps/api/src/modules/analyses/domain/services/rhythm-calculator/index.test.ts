@@ -67,7 +67,7 @@ describe('RhythmCalculator', () => {
   )
 
   it.each([
-    { wordsPerMinute: 1, longPauseCount: 10 },
+    { wordsPerMinute: 40, longPauseCount: 10 },
     { wordsPerMinute: 500, longPauseCount: 0 },
   ])('keeps the score within the allowed range', ({ wordsPerMinute, longPauseCount }) => {
     const score = RhythmCalculator.calculate(wordsAt(wordsPerMinute, longPauseCount)).score
@@ -119,6 +119,11 @@ function wordsAt(wordsPerMinute: number, longPauseCount: number): TranscriptionW
   const wordDurationSeconds = 0.1
   const longPauseSeconds = 2.1
   const normalPauseCount = wordsPerMinute - 1 - longPauseCount
+  if (normalPauseCount <= 0) {
+    throw new RangeError(
+      `wordsAt: longPauseCount (${longPauseCount}) leaves no room for a normal pause among ${wordsPerMinute} words`,
+    )
+  }
   const normalPauseSeconds =
     (60 - wordsPerMinute * wordDurationSeconds - longPauseCount * longPauseSeconds) /
     normalPauseCount

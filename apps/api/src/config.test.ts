@@ -83,6 +83,15 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...VALID_ENV, PORT: 'not-a-number' })).toThrow(ValidationFailedError)
   })
 
+  it.each([
+    'ANALYSIS_QUEUE_CONCURRENCY',
+    'DEEPGRAM_COST_PER_MINUTE_MICROS',
+    'GEMINI_INPUT_COST_PER_MTOK_MICROS',
+    'GEMINI_OUTPUT_COST_PER_MTOK_MICROS',
+  ] as const)('rejects %s when it is zero', (key) => {
+    expect(() => loadConfig({ ...VALID_ENV, [key]: '0' })).toThrow(ValidationFailedError)
+  })
+
   it('lists REDIS_URL when it is missing', () => {
     const envWithoutRedisUrl = { ...VALID_ENV }
     delete envWithoutRedisUrl.REDIS_URL

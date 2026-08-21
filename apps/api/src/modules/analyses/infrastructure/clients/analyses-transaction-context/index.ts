@@ -8,6 +8,7 @@ export class AnalysesTransactionContext {
   run<T>(client: AnalysesPrismaClient, operation: () => Promise<T>): Promise<T> {
     return this.storage.run(client, operation)
   }
+
   current(): AnalysesPrismaClient | undefined {
     return this.storage.getStore()
   }

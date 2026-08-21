@@ -8,16 +8,15 @@ export class CostCalculator {
     const transcriptionMicrosUsd = Math.ceil(
       (input.durationSeconds * input.transcriptionCostPerMinuteMicros) / SECONDS_PER_MINUTE,
     )
-    const outputTokens = input.candidatesTokenCount + input.thoughtsTokenCount
     const evaluationMicrosUsd =
       Math.ceil((input.inputTokens * input.geminiInputCostPerMtokMicros) / TOKENS_PER_MILLION) +
-      Math.ceil((outputTokens * input.geminiOutputCostPerMtokMicros) / TOKENS_PER_MILLION)
+      Math.ceil((input.outputTokens * input.geminiOutputCostPerMtokMicros) / TOKENS_PER_MILLION)
 
     return {
       transcriptionMicrosUsd,
       evaluationMicrosUsd,
       totalMicrosUsd: transcriptionMicrosUsd + evaluationMicrosUsd,
-      outputTokens,
+      outputTokens: input.outputTokens,
     }
   }
 }

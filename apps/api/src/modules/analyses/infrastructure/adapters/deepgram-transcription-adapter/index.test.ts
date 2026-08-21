@@ -99,8 +99,49 @@ describe('DeepgramTranscriptionAdapter', () => {
     ])
   })
 
+  it('accepts a response carrying more than one channel or alternative and uses the first', async () => {
+    const client = new FakeDeepgramClient()
+    client.response = {
+      results: {
+        channels: [
+          {
+            alternatives: [
+              {
+                transcript: 'Primeira alternativa.',
+                confidence: 0.91,
+                words: [{ word: 'Primeira', start: 0, end: 0.2, confidence: 0.95 }],
+              },
+              {
+                transcript: 'Segunda alternativa.',
+                confidence: 0.4,
+                words: [{ word: 'Segunda', start: 0, end: 0.2, confidence: 0.4 }],
+              },
+            ],
+          },
+          { alternatives: [{ transcript: 'Outro canal.', confidence: 0.5, words: [] }] },
+        ],
+      },
+      metadata: { duration: 1.2 },
+    }
+    const adapter = new DeepgramTranscriptionAdapter(client)
+    const controller = new AbortController()
+
+    await expect(
+      adapter.transcribe({
+        audio: Buffer.from('audio'),
+        deadlineMs: 1_000,
+        signal: controller.signal,
+      }),
+    ).resolves.toMatchObject({ text: 'Primeira alternativa.' })
+  })
+
   it.each([
     ['missing alternative', { results: { channels: [{}] }, metadata: { duration: 1 } }],
+    ['no channels', { results: { channels: [] }, metadata: { duration: 1 } }],
+    [
+      'no alternatives',
+      { results: { channels: [{ alternatives: [] }] }, metadata: { duration: 1 } },
+    ],
     [
       'word missing start',
       {

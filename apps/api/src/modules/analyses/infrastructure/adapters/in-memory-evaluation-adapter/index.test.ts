@@ -56,7 +56,7 @@ describe('InMemoryEvaluationAdapter', () => {
     const evaluation = adapter.evaluate(createInput(controller.signal))
     controller.abort()
 
-    await expect(evaluation).rejects.toMatchObject({ code: 'analyses.ANALYSIS_DEADLINE_EXCEEDED' })
+    await expect(evaluation).rejects.toMatchObject({ code: 'analyses.EVALUATION_FAILED' })
   })
 
   it('validates a configured provider payload with the production parser', async () => {

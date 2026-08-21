@@ -11,6 +11,7 @@ export class PrismaAnalysesRepository implements AnalysesRepository {
     private readonly context: AnalysesTransactionContext,
     private readonly mapper: AnalysisMapper,
   ) {}
+
   async findBySessionId(sessionId: string): Promise<Analysis | null> {
     try {
       const row = await this.client().analysis.findUnique({ where: { sessionId } })
@@ -19,11 +20,12 @@ export class PrismaAnalysesRepository implements AnalysesRepository {
       throw new DatabaseError('Failed to find analysis', { cause, context: { sessionId } })
     }
   }
+
   async save(analysis: Analysis): Promise<void> {
     try {
       const data = this.mapper.toData(analysis)
       await this.client().analysis.upsert({
-        where: { id: analysis.id },
+        where: { sessionId: analysis.sessionId },
         create: data,
         update: data,
       })
@@ -34,6 +36,7 @@ export class PrismaAnalysesRepository implements AnalysesRepository {
       })
     }
   }
+
   private client(): AnalysesPrismaClient {
     return this.context.current() ?? this.prisma
   }

@@ -43,6 +43,7 @@ export interface AnalysesIntegrationContainer {
   readonly transcription: InMemoryTranscriptionAdapter
   readonly evaluation: InMemoryEvaluationAdapter
   readonly processingQueue: InMemoryProcessingQueueAdapter
+  readonly logger: IntegrationAnalysisLogger
   reset(): void
   close(): Promise<void>
 }
@@ -123,6 +124,7 @@ export function createAnalysesIntegrationContainer(
     transcription,
     evaluation,
     processingQueue,
+    logger,
     reset: () => {
       eventBus.published.length = 0
       clock.set(ANALYSES_TEST_NOW)
@@ -131,6 +133,7 @@ export function createAnalysesIntegrationContainer(
       themes.reset()
       processingQueue.enqueued.length = 0
       evaluation.reset()
+      logger.messages.length = 0
     },
     close: () => prisma.$disconnect(),
   }

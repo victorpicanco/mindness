@@ -52,6 +52,13 @@ export class InMemoryEvaluationAdapter implements EvaluationPort {
     this.hasResponse = true
   }
 
+  reset(): void {
+    this.failure = null
+    this.hangs = false
+    this.response = undefined
+    this.hasResponse = false
+  }
+
   private async applySimulation(signal: AbortSignal): Promise<void> {
     if (this.failure !== null) {
       const failure = this.failure

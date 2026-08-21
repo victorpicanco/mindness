@@ -130,6 +130,7 @@ export function createAnalysesIntegrationContainer(
       sessions.reset()
       themes.reset()
       processingQueue.enqueued.length = 0
+      evaluation.reset()
     },
     close: () => prisma.$disconnect(),
   }

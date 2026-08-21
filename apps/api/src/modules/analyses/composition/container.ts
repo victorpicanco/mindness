@@ -151,6 +151,7 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
     eventHandlers: {
       onRecordingSubmitted: new OnRecordingSubmittedEnqueueAnalysis(enqueueSessionAnalysis, logger),
     },
+    repositories: { analyses, costs, transcriptions },
     useCases: { enqueueSessionAnalysis, processSessionAudio },
   }
 }

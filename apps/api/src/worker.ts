@@ -3,15 +3,23 @@ import 'dotenv/config'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { DeepgramClient } from '@deepgram/sdk'
+import { GoogleGenAI } from '@google/genai'
 import { createClient } from '@supabase/supabase-js'
+import { Queue, UnrecoverableError, Worker } from 'bullmq'
+import { Redis } from 'ioredis'
 
+import type { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
 import type { SweepExpiredSessionsUseCase } from '@/modules/sessions/application/use-cases/sweep-expired-sessions/index.js'
 import { loadConfig } from '@/config.js'
 import { createAccountsContainer } from '@/modules/accounts/composition/container.js'
+import { createAnalysesContainer, createAnalysesPrismaClient } from '@/modules/analyses/index.js'
 import { createQuotaContainer } from '@/modules/quota/composition/container.js'
 import { createSessionsContainer } from '@/modules/sessions/composition/container.js'
+import { createSessionsFacade } from '@/modules/sessions/index.js'
 import { createThemesContainer } from '@/modules/themes/composition/container.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
+import { BaseError } from '@/shared/errors/base-error/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
 import { registerHealthRoute } from '@/shared/http/health-route/index.js'
 import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
@@ -21,6 +29,53 @@ import { SystemClock } from '@/shared/time/system-clock/index.js'
 
 // D-04 requires expired in-progress sessions to be swept at least once per minute.
 export const SWEEP_INTERVAL_MS = 60_000
+
+// Must match the queue name the producer side (main.ts, T-041) uses for its BullMQ Queue.
+// BullMQ has no runtime cross-check for this, so a mismatch here means jobs are enqueued
+// but silently never picked up by this worker.
+const SESSION_ANALYSIS_QUEUE_NAME = 'session-analysis'
+
+// analyses keeps AnalysisDeadlineExceededError internal to the module (LAW-001.3), so the
+// deadline is matched by its BaseError code instead of an instanceof check on the class.
+const ANALYSIS_DEADLINE_EXCEEDED_CODE = 'analyses.ANALYSIS_DEADLINE_EXCEEDED'
+
+type AnalysisProcessor = (job: { readonly data: { readonly sessionId: string } }) => Promise<void>
+
+export interface AnalysisWorkerHandle {
+  close(): Promise<void>
+}
+
+export interface CreateAnalysisWorkerDeps {
+  readonly processSessionAudio: Pick<ProcessSessionAudioUseCase, 'execute'>
+  readonly concurrency: number
+  readonly createWorker: (
+    processor: AnalysisProcessor,
+    options: { readonly concurrency: number },
+  ) => AnalysisWorkerHandle
+}
+
+export function createAnalysisWorker(deps: CreateAnalysisWorkerDeps): AnalysisWorkerHandle {
+  const processor: AnalysisProcessor = async (job) => {
+    try {
+      await deps.processSessionAudio.execute({ sessionId: job.data.sessionId })
+    } catch (error) {
+      if (error instanceof BaseError && error.code === ANALYSIS_DEADLINE_EXCEEDED_CODE) {
+        throw new UnrecoverableError(error.message)
+      }
+      throw error
+    }
+  }
+
+  return deps.createWorker(processor, { concurrency: deps.concurrency })
+}
+
+export async function closeAnalysisWorker(
+  worker: Pick<AnalysisWorkerHandle, 'close'>,
+  connection: { disconnect(): void },
+): Promise<void> {
+  await worker.close()
+  connection.disconnect()
+}
 
 type SweepExpiredSessions = Pick<SweepExpiredSessionsUseCase, 'execute'>
 
@@ -110,14 +165,53 @@ export async function startWorker(): Promise<void> {
     quotaFacade: quotaContainer.publicApi,
     supabase: createClient(config.supabaseUrl, config.supabaseSecretKey),
   })
+  const redisConnection = new Redis(config.redisUrl, { maxRetriesPerRequest: null })
+  const bullMqQueue = new Queue(SESSION_ANALYSIS_QUEUE_NAME, { connection: redisConnection })
+  const analysesContainer = createAnalysesContainer({
+    prisma: createAnalysesPrismaClient(prisma),
+    clock,
+    costRates: {
+      transcriptionCostPerMinuteMicros: config.deepgramCostPerMinuteMicros,
+      geminiInputCostPerMtokMicros: config.geminiInputCostPerMtokMicros,
+      geminiOutputCostPerMtokMicros: config.geminiOutputCostPerMtokMicros,
+    },
+    idGenerator,
+    eventPublisher: eventBus,
+    logger,
+    accountsFacade: accountsContainer.facade,
+    sessionsFacade: createSessionsFacade({
+      findProcessingContext: sessionsContainer.useCases.findProcessingContext,
+      downloadAudio: sessionsContainer.useCases.downloadAudio,
+    }),
+    themesFacade: themesContainer.publicApi,
+    deepgramClient: new DeepgramClient({ apiKey: config.deepgramApiKey }),
+    geminiClient: new GoogleGenAI({
+      vertexai: true,
+      project: config.googleCloudProject,
+      location: config.googleCloudLocation,
+    }),
+    geminiModel: config.geminiModel,
+    bullMqQueue,
+  })
+  const analysisWorker = createAnalysisWorker({
+    processSessionAudio: analysesContainer.useCases.processSessionAudio,
+    concurrency: config.analysisQueueConcurrency,
+    createWorker: (processor, options) =>
+      new Worker(SESSION_ANALYSIS_QUEUE_NAME, processor, {
+        ...options,
+        connection: redisConnection,
+      }),
+  })
 
   registerHealthRoute(app)
   const stopSweep = registerExpiredSessionSweep({
     sweepExpiredSessions: sessionsContainer.useCases.sweepExpiredSessions,
     logger,
   })
-  app.addHook('onClose', () => {
+  app.addHook('onClose', async () => {
     stopSweep()
+    await bullMqQueue.close()
+    await closeAnalysisWorker(analysisWorker, redisConnection)
   })
 
   await app.listen({ port: config.workerHealthPort })

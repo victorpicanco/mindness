@@ -132,4 +132,22 @@ describe('SessionMapper', () => {
     expect(session.audio?.id).toBe(AUDIO_ID)
     expect(session.audio?.id).not.toBe(session.id)
   })
+
+  it('preserves when a deleted session was deleted while mapping it to and from persistence', () => {
+    const deletedAt = new Date('2026-08-19T12:10:00.000Z')
+    const mapper = createMapper()
+    const session = mapper.toDomain({ ...row, state: 'deleted', deletedAt })
+
+    expect(session.deletedAt).toEqual(deletedAt)
+    expect(mapper.toCreateData(session).deletedAt).toEqual(deletedAt)
+    expect(mapper.toUpdateData(session).deletedAt).toEqual(deletedAt)
+  })
+
+  it('maps a session that was never deleted with a null deletedAt value', () => {
+    const mapper = createMapper()
+    const session = mapper.toDomain(row)
+
+    expect(session.deletedAt).toBeNull()
+    expect(mapper.toCreateData(session).deletedAt).toBeNull()
+  })
 })

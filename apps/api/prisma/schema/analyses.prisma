@@ -11,18 +11,19 @@ model Transcription {
 }
 
 model Analysis {
-  id            String   @id @db.Uuid
-  sessionId     String   @unique @map("session_id") @db.Uuid
-  clarityScore  Int      @map("clarity_score")
-  rhythmScore   Int      @map("rhythm_score")
-  fluencyScore  Int      @map("fluency_score")
-  masteryScore  Int      @map("mastery_score")
-  totalScore    Int      @map("total_score")
+  id            String    @id @db.Uuid
+  sessionId     String    @unique @map("session_id") @db.Uuid
+  clarityScore  Int       @map("clarity_score")
+  rhythmScore   Int       @map("rhythm_score")
+  fluencyScore  Int       @map("fluency_score")
+  masteryScore  Int       @map("mastery_score")
+  totalScore    Int       @map("total_score")
   guidance      Json
-  rhythmMetrics Json     @map("rhythm_metrics")
-  processingMs  Int      @map("processing_ms")
-  costMicrosUsd Int      @map("cost_micros_usd")
-  createdAt     DateTime @map("created_at") @db.Timestamptz(6)
+  rhythmMetrics Json      @map("rhythm_metrics")
+  processingMs  Int       @map("processing_ms")
+  costMicrosUsd Int       @map("cost_micros_usd")
+  createdAt     DateTime  @map("created_at") @db.Timestamptz(6)
+  viewedAt      DateTime? @map("viewed_at") @db.Timestamptz(6)
 
   @@map("analyses")
 }

@@ -32,18 +32,31 @@ export async function registerSessionsModule(
     container.repositories.sessions,
     container.ports.quota,
   )
-  const subscriber = deps.eventSubscriber
-  if (subscriber !== undefined) {
-    subscriber.subscribe('analysis_completed', async (event) => {
-      if (isAnalysisCompleted(event)) await completedHandler.handle(event)
-    })
-    subscriber.subscribe('analysis_failed', async (event) => {
-      if (isAnalysisFailed(event)) await failedHandler.handle(event)
-    })
-    subscriber.subscribe('analysis_timeout', async (event) => {
-      if (isAnalysisTimedOut(event)) await timedOutHandler.handle(event)
-    })
+  const reject = (event: IntegrationEvent): void => {
+    app.log.warn(
+      { eventId: event.eventId, eventName: event.eventName },
+      'analysis_event_payload_rejected',
+    )
   }
+
+  deps.eventSubscriber.subscribe('analysis_completed', async (event) => {
+    const completed = parseAnalysisCompleted(event)
+    if (completed === null) return reject(event)
+
+    await completedHandler.handle(completed)
+  })
+  deps.eventSubscriber.subscribe('analysis_failed', async (event) => {
+    const failed = parseSessionEvent(event, 'analysis_failed')
+    if (failed === null) return reject(event)
+
+    await failedHandler.handle(failed)
+  })
+  deps.eventSubscriber.subscribe('analysis_timeout', async (event) => {
+    const timedOut = parseSessionEvent(event, 'analysis_timeout')
+    if (timedOut === null) return reject(event)
+
+    await timedOutHandler.handle(timedOut)
+  })
 
   await app.register(async (scope) => {
     registerSessionsErrorHandler(scope)
@@ -56,14 +69,47 @@ export async function registerSessionsModule(
   return container
 }
 
-function isAnalysisCompleted(event: IntegrationEvent): event is AnalysisCompletedEvent {
-  return event.eventName === 'analysis_completed'
+function readSessionId(event: IntegrationEvent, eventName: string): string | null {
+  if (event.eventName !== eventName) return null
+  const payload: unknown = event.payload
+  if (typeof payload !== 'object' || payload === null) return null
+  if (!('sessionId' in payload) || typeof payload.sessionId !== 'string') return null
+
+  return payload.sessionId
 }
 
-function isAnalysisFailed(event: IntegrationEvent): event is AnalysisFailedEvent {
-  return event.eventName === 'analysis_failed'
+function parseSessionEvent(
+  event: IntegrationEvent,
+  eventName: 'analysis_failed',
+): AnalysisFailedEvent | null
+function parseSessionEvent(
+  event: IntegrationEvent,
+  eventName: 'analysis_timeout',
+): AnalysisTimedOutEvent | null
+function parseSessionEvent(
+  event: IntegrationEvent,
+  eventName: 'analysis_failed' | 'analysis_timeout',
+): AnalysisFailedEvent | AnalysisTimedOutEvent | null {
+  const sessionId = readSessionId(event, eventName)
+  if (sessionId === null) return null
+
+  return { ...event, eventName, payload: { sessionId } }
 }
 
-function isAnalysisTimedOut(event: IntegrationEvent): event is AnalysisTimedOutEvent {
-  return event.eventName === 'analysis_timeout'
+function parseAnalysisCompleted(event: IntegrationEvent): AnalysisCompletedEvent | null {
+  const sessionId = readSessionId(event, 'analysis_completed')
+  if (sessionId === null) return null
+
+  const payload: unknown = event.payload
+  if (typeof payload !== 'object' || payload === null) return null
+  if (!('scores' in payload)) return null
+  const scores: unknown = payload.scores
+  if (typeof scores !== 'object' || scores === null) return null
+  if (!('total' in scores) || typeof scores.total !== 'number') return null
+
+  return {
+    ...event,
+    eventName: 'analysis_completed',
+    payload: { sessionId, scores: { total: scores.total } },
+  }
 }

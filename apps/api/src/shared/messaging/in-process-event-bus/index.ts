@@ -1,5 +1,6 @@
 import type { Logger } from 'pino'
 
+import { EventHandlerFailedError } from '@/shared/errors/event-handler-failed-error/index.js'
 import type { EventBus, IntegrationEvent } from '@/shared/messaging/integration-event/index.js'
 
 type EventHandler = (event: IntegrationEvent) => Promise<void>
@@ -18,17 +19,26 @@ export class InProcessEventBus implements EventBus {
   async publish(event: IntegrationEvent): Promise<void> {
     const handlers = this.handlersByEventName.get(event.eventName) ?? []
 
-    await Promise.all(
-      handlers.map(async (handler) => {
-        try {
-          await handler(event)
-        } catch (error) {
-          this.logger.error(
-            { err: error, eventId: event.eventId, eventName: event.eventName },
-            'event handler failed',
-          )
-        }
-      }),
-    )
+    const outcomes = await Promise.allSettled(handlers.map((handler) => handler(event)))
+    const failures = outcomes.filter((outcome) => outcome.status === 'rejected')
+    if (failures.length === 0) return
+
+    for (const failure of failures) {
+      this.logger.error(
+        { err: failure.reason, eventId: event.eventId, eventName: event.eventName },
+        'event handler failed',
+      )
+    }
+
+    // LAW-009: a handler that failed did not take effect, so the publisher has to learn about
+    // it — swallowing here is what leaves a session stuck with no automatic recovery.
+    throw new EventHandlerFailedError({
+      context: {
+        eventName: event.eventName,
+        eventId: event.eventId,
+        failedHandlers: failures.length,
+      },
+      cause: failures[0]?.reason,
+    })
   }
 }

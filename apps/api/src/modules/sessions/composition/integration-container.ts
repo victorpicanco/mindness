@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@/generated/prisma/client.js'
+import type { DestinationStream } from 'pino'
 import { SupabaseAudioStorageAdapter } from '@/modules/sessions/infrastructure/adapters/supabase-audio-storage-adapter/index.js'
 import { registerSessionsModule } from '@/modules/sessions/index.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
@@ -34,6 +35,7 @@ export interface SessionsIntegrationContainer {
   readonly themes: FakeThemesPort
   readonly quota: FakeQuotaPort
   readonly storage: InMemorySupabaseStorageClient
+  readonly logs: readonly string[]
   readonly container: Awaited<ReturnType<typeof registerSessionsModule>>
   reset(): void
   close(): Promise<void>
@@ -42,14 +44,20 @@ export interface SessionsIntegrationContainer {
 export async function createSessionsIntegrationContainer(
   deps: SessionsIntegrationDeps,
 ): Promise<SessionsIntegrationContainer> {
-  const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })
+  const logs: string[] = []
+  const destination: DestinationStream = {
+    write: (chunk) => {
+      logs.push(...chunk.split('\n').filter(Boolean))
+    },
+  }
+  const app = buildApp({ logger: createLogger({ level: 'debug', pretty: false }, destination) })
   const prisma = createPrismaClient({ databaseUrl: deps.databaseUrl, logQueries: false })
   const eventBus = new FakeEventBus()
   const clock = new ControllableClock(SESSIONS_TEST_NOW)
   const accounts = createFakeAccountsPort()
   const themes = createFakeThemesPort()
   const quota = createFakeQuotaPort()
-  const storage = createInMemorySupabaseStorageClient()
+  const storage = createInMemorySupabaseStorageClient(clock)
   const container = await registerSessionsModule(app, {
     prisma,
     clock,
@@ -74,8 +82,10 @@ export async function createSessionsIntegrationContainer(
     themes,
     quota,
     storage,
+    logs,
     container,
     reset: () => {
+      logs.length = 0
       eventBus.published.length = 0
       clock.set(SESSIONS_TEST_NOW)
       accounts.reset()

@@ -3,7 +3,9 @@ import { NotFoundError } from '@/shared/errors/categories/not-found-error/index.
 export class AnalysisNotFoundError extends NotFoundError {
   readonly code = 'analyses.ANALYSIS_NOT_FOUND'
 
-  constructor(sessionId: string) {
-    super('Analysis not found', { context: { sessionId } })
+  constructor(sessionId: string, reason?: string) {
+    super('Analysis not found', {
+      context: reason === undefined ? { sessionId } : { sessionId, reason },
+    })
   }
 }

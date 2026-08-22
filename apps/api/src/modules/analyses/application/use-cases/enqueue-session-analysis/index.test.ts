@@ -38,26 +38,11 @@ class SequentialIdGenerator {
   }
 }
 
-function isCostAlertContext(value: unknown): value is { readonly totalMicros: number } {
-  return typeof value === 'object' && value !== null && 'totalMicros' in value
-}
-
-function isTargetMissingContext(
-  value: unknown,
-): value is { readonly sessionId: string; readonly accountId?: string } {
-  return typeof value === 'object' && value !== null && 'sessionId' in value
-}
-
 class InMemoryAnalysisLogger implements AnalysisLogger {
-  readonly costAlerts: { readonly totalMicros: number }[] = []
-  readonly targetMissing: { readonly sessionId: string; readonly accountId?: string }[] = []
+  readonly warnings: { readonly context: unknown; readonly message: string }[] = []
 
-  warn(context: unknown): void {
-    if (isCostAlertContext(context)) {
-      this.costAlerts.push(context)
-      return
-    }
-    if (isTargetMissingContext(context)) this.targetMissing.push(context)
+  warn(context: unknown, message: string): void {
+    this.warnings.push({ context, message })
   }
 }
 
@@ -155,10 +140,15 @@ describe('EnqueueSessionAnalysisUseCase', () => {
 
     expect(queue.enqueued).toEqual([{ sessionId: 'session-1' }])
     expect(eventBus.published).toEqual([])
-    expect(logger.costAlerts).toEqual([{ totalMicros: MONTHLY_COST_ALERT_MICROS + 1 }])
+    expect(logger.warnings).toEqual([
+      {
+        context: { totalMicros: MONTHLY_COST_ALERT_MICROS + 1 },
+        message: 'monthly_cost_alert_threshold_reached',
+      },
+    ])
   })
 
-  it('logs and enqueues anyway when the plan does not resolve above the monthly cap', async () => {
+  it('holds the monthly cap even when the plan does not resolve', async () => {
     const { dependencies, eventBus, logger, queue } = createDependencies(
       MONTHLY_COST_CAP_MICROS,
       null,
@@ -167,8 +157,13 @@ describe('EnqueueSessionAnalysisUseCase', () => {
 
     await useCase.execute({ sessionId: 'session-1', accountId: 'account-1' })
 
-    expect(queue.enqueued).toEqual([{ sessionId: 'session-1' }])
+    expect(queue.enqueued).toEqual([])
     expect(eventBus.published).toEqual([])
-    expect(logger.targetMissing).toEqual([{ sessionId: 'session-1', accountId: 'account-1' }])
+    expect(logger.warnings).toEqual([
+      {
+        context: { sessionId: 'session-1', accountId: 'account-1' },
+        message: 'analysis_account_missing',
+      },
+    ])
   })
 })

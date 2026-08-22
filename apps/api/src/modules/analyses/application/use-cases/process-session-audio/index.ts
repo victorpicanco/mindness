@@ -42,7 +42,7 @@ export class ProcessSessionAudioUseCase {
     if (plan === null) {
       this.dependencies.logger.warn(
         { sessionId: context.sessionId, accountId: context.accountId },
-        'analysis_target_missing',
+        'analysis_account_missing',
       )
       return
     }

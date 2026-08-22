@@ -398,7 +398,7 @@ describe('ProcessSessionAudioUseCase', () => {
     expect(logger.warnings).toMatchObject([
       {
         context: { sessionId: 'session-1', accountId: 'account-1' },
-        message: 'analysis_target_missing',
+        message: 'analysis_account_missing',
       },
     ])
   })

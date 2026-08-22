@@ -38,7 +38,12 @@ export class ListSessionHistoryUseCase {
     const newest = items[0]
 
     if (oldest === undefined || newest === undefined) {
-      return { items: [], nextCursor: null }
+      return {
+        items: [],
+        nextCursor: null,
+        pageSize: HISTORY_PAGE_SIZE,
+        timeZone: profile.timeZone,
+      }
     }
 
     const candidates = await this.dependencies.sessions.findCompletedBetween(
@@ -71,6 +76,8 @@ export class ListSessionHistoryUseCase {
     return {
       items: historyItems,
       nextCursor: hasNext ? oldest.id : null,
+      pageSize: HISTORY_PAGE_SIZE,
+      timeZone: profile.timeZone,
     }
   }
 }

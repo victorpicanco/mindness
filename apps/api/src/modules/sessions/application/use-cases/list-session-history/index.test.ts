@@ -137,6 +137,8 @@ describe('ListSessionHistoryUseCase', () => {
         },
       ],
       nextCursor: null,
+      pageSize: 20,
+      timeZone: 'America/Sao_Paulo',
     })
   })
 
@@ -155,6 +157,7 @@ describe('ListSessionHistoryUseCase', () => {
 
     expect(result.items).toHaveLength(20)
     expect(result.nextCursor).toBe('session-20')
+    expect(result.pageSize).toBe(20)
   })
 
   it('returns an empty page without querying the best-of-day window', async () => {
@@ -162,7 +165,12 @@ describe('ListSessionHistoryUseCase', () => {
 
     await expect(
       harness.useCase.execute({ accountId: 'account-1', cursor: null }),
-    ).resolves.toEqual({ items: [], nextCursor: null })
+    ).resolves.toEqual({
+      items: [],
+      nextCursor: null,
+      pageSize: 20,
+      timeZone: 'America/Sao_Paulo',
+    })
     expect(harness.completedBetweenCalls()).toBe(0)
   })
 
@@ -218,5 +226,7 @@ describe('ListSessionHistoryUseCase', () => {
 
     expect(saoPauloResult.items.map((item) => item.bestOfDay)).toEqual([true, true])
     expect(tokyoResult.items.map((item) => item.bestOfDay)).toEqual([true, false])
+    expect(saoPauloResult.timeZone).toBe('America/Sao_Paulo')
+    expect(tokyoResult.timeZone).toBe('Asia/Tokyo')
   })
 })

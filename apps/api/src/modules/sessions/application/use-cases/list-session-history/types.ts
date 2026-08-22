@@ -23,6 +23,8 @@ export interface SessionHistoryItem {
 export interface ListSessionHistoryOutput {
   readonly items: readonly SessionHistoryItem[]
   readonly nextCursor: string | null
+  readonly pageSize: number
+  readonly timeZone: string
 }
 
 export interface ListSessionHistoryDependencies {

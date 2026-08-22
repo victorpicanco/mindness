@@ -56,6 +56,29 @@ export class PrismaSessionsRepository implements SessionsRepository {
     }
   }
 
+  async listByAccount(input: {
+    readonly accountId: string
+    readonly limit: number
+    readonly cursor: string | null
+  }): Promise<Session[]> {
+    try {
+      const rows = await this.client().session.findMany({
+        where: { accountId: input.accountId, state: { not: 'deleted' } },
+        include: { audio: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: input.limit,
+        ...(input.cursor === null ? {} : { cursor: { id: input.cursor }, skip: 1 }),
+      })
+
+      return rows.map((row) => this.mapper.toDomain(row))
+    } catch (error) {
+      throw new DatabaseError('Failed to list sessions for the account', {
+        cause: error,
+        context: { accountId: input.accountId, limit: input.limit },
+      })
+    }
+  }
+
   async findExpiredInProgress(before: Date, limit: number): Promise<Session[]> {
     try {
       const rows = await this.client().session.findMany({

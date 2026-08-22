@@ -85,10 +85,21 @@ export interface SessionFindStuckProcessingArgs {
 
 // A single, non-generic `findMany` overload keeps the real PrismaClient's generic `findMany`
 // structurally assignable; a top-level union of the two args interfaces breaks that inference.
-export interface SessionFindStaleArgs {
-  readonly where: SessionFindExpiredArgs['where'] | SessionFindStuckProcessingArgs['where']
+export interface SessionFindManyArgs {
+  readonly where:
+    | SessionFindExpiredArgs['where']
+    | SessionFindStuckProcessingArgs['where']
+    | { readonly accountId: string; readonly state: { readonly not: 'deleted' } }
+    | {
+        readonly accountId: string
+        readonly state: 'completed'
+        readonly createdAt: { readonly gte: Date; readonly lte: Date }
+      }
   readonly include: { readonly audio: true }
-  readonly take: number
+  readonly take?: number
+  readonly orderBy?: [{ readonly createdAt: 'desc' }, { readonly id: 'desc' }]
+  readonly cursor?: { readonly id: string }
+  readonly skip?: number
 }
 
 export interface SessionAudioCreateData {
@@ -130,7 +141,7 @@ export interface SessionsPrismaClient {
   readonly session: {
     findUnique(args: SessionFindByIdArgs): Promise<SessionRow | null>
     findFirst(args: SessionFindActiveArgs): Promise<SessionRow | null>
-    findMany(args: SessionFindStaleArgs): Promise<SessionRow[]>
+    findMany(args: SessionFindManyArgs): Promise<SessionRow[]>
     upsert(args: SessionUpsertArgs): Promise<SessionRow>
   }
 }

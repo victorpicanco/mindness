@@ -35,6 +35,7 @@ function createHarness(initialSessions: Session[]) {
     findById: (sessionId) =>
       Promise.resolve(sessions.find((session) => session.id === sessionId) ?? null),
     findActiveByAccountId: () => Promise.resolve(null),
+    listByAccount: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     findExpiredInProgress: (before, limit) => {
       limits.push(limit)

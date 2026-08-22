@@ -65,6 +65,7 @@ function createDependencies(input?: {
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(input?.activeSession ?? null),
     findActiveByAccountId: () => Promise.resolve(input?.activeSession ?? null),
+    listByAccount: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     save: (session) => {

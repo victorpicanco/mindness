@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
+import { DatabaseError } from '@/shared/errors/database-error/index.js'
 import type {
   SessionFindActiveArgs,
-  SessionFindStaleArgs,
+  SessionFindManyArgs,
   SessionRow,
   SessionsPrismaClient,
   SessionUpsertArgs,
@@ -33,15 +34,15 @@ const row: SessionRow = {
 interface FakeClient {
   readonly client: SessionsPrismaClient
   readonly activeQueries: SessionFindActiveArgs[]
-  readonly findManyQueries: SessionFindStaleArgs[]
+  readonly findManyQueries: SessionFindManyArgs[]
   readonly upserts: SessionUpsertArgs[]
 }
 
 function createFakeClient(
-  options: { active?: SessionRow | null; findMany?: SessionRow[] } = {},
+  options: { active?: SessionRow | null; findMany?: SessionRow[]; findManyError?: Error } = {},
 ): FakeClient {
   const activeQueries: SessionFindActiveArgs[] = []
-  const findManyQueries: SessionFindStaleArgs[] = []
+  const findManyQueries: SessionFindManyArgs[] = []
   const upserts: SessionUpsertArgs[] = []
 
   return {
@@ -57,6 +58,7 @@ function createFakeClient(
         },
         findMany: (args) => {
           findManyQueries.push(args)
+          if (options.findManyError !== undefined) return Promise.reject(options.findManyError)
           return Promise.resolve(options.findMany ?? [])
         },
         upsert: (args) => {
@@ -115,6 +117,46 @@ describe('PrismaSessionsRepository', () => {
         take: 20,
       },
     ])
+  })
+
+  it('lists non-deleted sessions by account with the requested cursor page', async () => {
+    const fake = createFakeClient({ findMany: [row] })
+    const repository = createRepository(fake)
+
+    await expect(
+      repository.listByAccount({ accountId: row.accountId, limit: 21, cursor: null }),
+    ).resolves.toMatchObject([{ id: row.id }])
+    expect(fake.findManyQueries).toEqual([
+      {
+        where: { accountId: row.accountId, state: { not: 'deleted' } },
+        include: { audio: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 21,
+      },
+    ])
+
+    await expect(
+      repository.listByAccount({ accountId: row.accountId, limit: 21, cursor: row.id }),
+    ).resolves.toMatchObject([{ id: row.id }])
+    expect(fake.findManyQueries[1]).toEqual({
+      where: { accountId: row.accountId, state: { not: 'deleted' } },
+      include: { audio: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 21,
+      cursor: { id: row.id },
+      skip: 1,
+    })
+  })
+
+  it('translates a paginated history lookup failure into a database error', async () => {
+    const fake = createFakeClient({
+      findManyError: new DatabaseError('Database unavailable', { context: {} }),
+    })
+    const repository = createRepository(fake)
+
+    await expect(
+      repository.listByAccount({ accountId: row.accountId, limit: 21, cursor: null }),
+    ).rejects.toBeInstanceOf(DatabaseError)
   })
 
   it('persists a session and its accepted audio in one upsert', async () => {

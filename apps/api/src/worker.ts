@@ -73,6 +73,7 @@ export async function registerAnalysisPipelineModules(
       findProcessingContext: sessionsContainer.useCases.findProcessingContext,
       downloadAudio: sessionsContainer.useCases.downloadAudio,
       listStuckProcessing: sessionsContainer.useCases.listStuckProcessingSessions,
+      checkReadability: sessionsContainer.useCases.checkReadability,
     }),
   })
   return { sessionsContainer, analysesContainer }

@@ -67,7 +67,7 @@ export async function registerAnalysisPipelineModules(
   deps: AnalysisPipelineModulesDeps,
 ) {
   const sessionsContainer = await registerSessionsModule(app, deps.sessions)
-  const analysesContainer = registerAnalysesModule(app, {
+  const analysesContainer = await registerAnalysesModule(app, {
     ...deps.analyses,
     sessionsFacade: createSessionsFacade({
       findProcessingContext: sessionsContainer.useCases.findProcessingContext,

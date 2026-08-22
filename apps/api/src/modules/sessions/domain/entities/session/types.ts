@@ -24,5 +24,6 @@ export interface ReconstituteSessionParams extends StartSessionParams {
   readonly totalScore?: number | null
   readonly completedAt?: Date | null
   readonly failedAt?: Date | null
+  readonly deletedAt?: Date | null
   readonly audio?: SessionAudio | null
 }

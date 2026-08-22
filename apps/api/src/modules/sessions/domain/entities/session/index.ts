@@ -1,6 +1,7 @@
 import type { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import type { SessionAudio } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
+import { SessionNotDeletableError } from '@/modules/sessions/domain/errors/session-not-deletable-error/index.js'
 
 import type {
   ReconstituteSessionParams,
@@ -28,6 +29,7 @@ export class Session {
     private _totalScore: number | null,
     private completedAtEpoch: number | null,
     private failedAtEpoch: number | null,
+    private deletedAtEpoch: number | null,
   ) {}
 
   get state(): SessionState {
@@ -70,6 +72,10 @@ export class Session {
     return this.failedAtEpoch === null ? null : new Date(this.failedAtEpoch)
   }
 
+  get deletedAt(): Date | null {
+    return this.deletedAtEpoch === null ? null : new Date(this.deletedAtEpoch)
+  }
+
   static start(params: StartSessionParams): Session {
     const createdAtEpoch = params.createdAt.getTime()
 
@@ -82,6 +88,7 @@ export class Session {
       'in_progress',
       createdAtEpoch,
       createdAtEpoch + SESSION_DURATION_MILLISECONDS,
+      null,
       null,
       null,
       null,
@@ -109,6 +116,7 @@ export class Session {
       params.totalScore ?? null,
       params.completedAt?.getTime() ?? null,
       params.failedAt?.getTime() ?? null,
+      params.deletedAt?.getTime() ?? null,
     )
   }
 
@@ -159,6 +167,15 @@ export class Session {
 
     this._state = 'failed'
     this.failedAtEpoch = at.getTime()
+  }
+
+  delete(at: Date): void {
+    if (this._state !== 'completed' && this._state !== 'failed' && this._state !== 'expired') {
+      throw new SessionNotDeletableError(this._state)
+    }
+
+    this._state = 'deleted'
+    this.deletedAtEpoch = at.getTime()
   }
 }
 

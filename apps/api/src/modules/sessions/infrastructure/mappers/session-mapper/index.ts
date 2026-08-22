@@ -27,6 +27,10 @@ export class SessionMapper {
       expiresAt: row.expiresAt,
       expiredReason: row.expiredReason,
       expiredAt: row.expiredAt,
+      recordedAt: row.recordedAt,
+      totalScore: row.totalScore ?? null,
+      completedAt: row.completedAt ?? null,
+      failedAt: row.failedAt ?? null,
       audio:
         row.audio === undefined || row.audio === null ? null : this.audioMapper.toDomain(row.audio),
     })
@@ -75,6 +79,10 @@ export class SessionMapper {
       createdAt: session.createdAt,
       expiresAt: session.expiresAt,
       expiredAt: session.expiredAt,
+      recordedAt: session.recordedAt,
+      totalScore: session.totalScore,
+      completedAt: session.completedAt,
+      failedAt: session.failedAt,
     }
   }
 }

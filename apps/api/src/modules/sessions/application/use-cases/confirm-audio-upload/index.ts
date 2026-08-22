@@ -67,16 +67,20 @@ export class ConfirmAudioUploadUseCase {
     await this.dependencies.unitOfWork.run(async () => {
       session.acceptAudio(audio, now)
       await this.dependencies.sessions.save(session)
-      await this.dependencies.eventPublisher.publish(
-        RecordingSubmitted.create({
-          eventId: this.dependencies.idGenerator.generate(),
-          occurredAt: now,
-          sessionId: session.id,
-          accountId: session.accountId,
-          durationSeconds: audio.durationSeconds,
-        }),
-      )
     })
+
+    // The subscriber of this event enqueues the analysis job, which is network I/O against
+    // Redis: inside the transaction it would hold a Serializable transaction open for the
+    // whole round trip, and would fire for a transaction that still might roll back.
+    await this.dependencies.eventPublisher.publish(
+      RecordingSubmitted.create({
+        eventId: this.dependencies.idGenerator.generate(),
+        occurredAt: now,
+        sessionId: session.id,
+        accountId: session.accountId,
+        durationSeconds: audio.durationSeconds,
+      }),
+    )
   }
 
   // A-12: removing the orphan is best effort by design — the caller must still see why the

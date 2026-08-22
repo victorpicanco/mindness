@@ -11,6 +11,7 @@ export default defineConfig({
       'dist',
       'src/modules/**/presentation/integration/**',
       'src/tests/e2e/**',
+      'src/tests/providers/**',
     ],
   },
 })

@@ -1,0 +1,41 @@
+model Transcription {
+  id                String   @id @db.Uuid
+  sessionId         String   @unique @map("session_id") @db.Uuid
+  text              String
+  words             Json
+  averageConfidence Float    @map("average_confidence")
+  durationSeconds   Float    @map("duration_seconds")
+  createdAt         DateTime @map("created_at") @db.Timestamptz(6)
+
+  @@map("transcriptions")
+}
+
+model Analysis {
+  id            String   @id @db.Uuid
+  sessionId     String   @unique @map("session_id") @db.Uuid
+  clarityScore  Int      @map("clarity_score")
+  rhythmScore   Int      @map("rhythm_score")
+  fluencyScore  Int      @map("fluency_score")
+  masteryScore  Int      @map("mastery_score")
+  totalScore    Int      @map("total_score")
+  guidance      Json
+  rhythmMetrics Json     @map("rhythm_metrics")
+  processingMs  Int      @map("processing_ms")
+  costMicrosUsd Int      @map("cost_micros_usd")
+  createdAt     DateTime @map("created_at") @db.Timestamptz(6)
+
+  @@map("analyses")
+}
+
+model AnalysisCostEntry {
+  id                     String   @id @db.Uuid
+  sessionId              String   @unique @map("session_id") @db.Uuid
+  accountId              String   @map("account_id") @db.Uuid
+  transcriptionMicrosUsd Int      @map("transcription_micros_usd")
+  evaluationMicrosUsd    Int      @map("evaluation_micros_usd")
+  totalMicrosUsd         Int      @map("total_micros_usd")
+  incurredAt             DateTime @map("incurred_at") @db.Timestamptz(6)
+
+  @@index([incurredAt])
+  @@map("analysis_cost_entries")
+}

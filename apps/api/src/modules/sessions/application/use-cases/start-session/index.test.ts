@@ -66,6 +66,7 @@ function createDependencies(input?: {
     findById: () => Promise.resolve(input?.activeSession ?? null),
     findActiveByAccountId: () => Promise.resolve(input?.activeSession ?? null),
     findExpiredInProgress: () => Promise.resolve([]),
+    findStuckProcessing: () => Promise.resolve([]),
     save: (session) => {
       operations.push('save')
       if (input?.saveError !== undefined) return Promise.reject(input.saveError)

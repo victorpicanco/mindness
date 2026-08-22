@@ -55,6 +55,7 @@ export async function createSessionsIntegrationContainer(
     clock,
     idGenerator: new UuidGenerator(),
     eventPublisher: eventBus,
+    eventSubscriber: eventBus,
     adapters: {
       accounts,
       themes,

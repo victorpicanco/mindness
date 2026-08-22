@@ -12,6 +12,11 @@ export class FakeEventBus implements EventBus {
     this.handlersByEventName.set(eventName, handlers)
   }
 
+  async deliver(event: IntegrationEvent): Promise<void> {
+    const handlers = this.handlersByEventName.get(event.eventName) ?? []
+    await Promise.all(handlers.map((handler) => handler(event)))
+  }
+
   publish(event: IntegrationEvent): Promise<void> {
     this.published.push(event)
     return Promise.resolve()

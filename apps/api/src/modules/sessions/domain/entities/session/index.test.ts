@@ -10,6 +10,8 @@ const CREATED_AT = new Date('2026-08-18T12:00:00.000Z')
 const WITHIN_WINDOW = new Date('2026-08-18T12:14:59.999Z')
 const DEADLINE = new Date('2026-08-18T12:15:00.000Z')
 const AFTER_DEADLINE = new Date('2026-08-18T12:15:00.001Z')
+const RECORDED_AT = new Date('2026-08-18T12:07:00.000Z')
+const COMPLETED_AT = new Date('2026-08-18T12:08:00.000Z')
 const STALE_STATES = ['processing', 'expired', 'completed', 'failed', 'deleted'] as const
 
 describe('Session', () => {
@@ -62,7 +64,61 @@ describe('Session', () => {
 
     expect(session.state).toBe('processing')
     expect(session.audio).toBe(audio)
+    expect(session.recordedAt).toEqual(WITHIN_WINDOW)
   })
+
+  it('preserves the accepted recording instant when reconstituted', () => {
+    const session = Session.reconstitute({
+      sessionId: 'session-id',
+      accountId: 'account-id',
+      themeId: 'theme-id',
+      configuration: createConfiguration(),
+      quotaReservationId: 'reservation-id',
+      state: 'processing',
+      createdAt: CREATED_AT,
+      expiresAt: DEADLINE,
+      expiredReason: null,
+      expiredAt: null,
+      audio: createAudio(),
+      recordedAt: RECORDED_AT,
+    })
+
+    expect(session.recordedAt).toEqual(RECORDED_AT)
+  })
+
+  it('has no recorded instant before accepting audio', () => {
+    expect(createSession().recordedAt).toBeNull()
+  })
+
+  it('completes a processing session with its score and completion instant', () => {
+    const session = reconstituteWithState('processing')
+
+    session.complete(86, COMPLETED_AT)
+
+    expect(session.state).toBe('completed')
+    expect(session.totalScore).toBe(86)
+    expect(session.completedAt).toEqual(COMPLETED_AT)
+  })
+
+  it('fails a processing session and records when it failed', () => {
+    const session = reconstituteWithState('processing')
+
+    session.fail(COMPLETED_AT)
+
+    expect(session.state).toBe('failed')
+    expect(session.failedAt).toEqual(COMPLETED_AT)
+    expect(session.completedAt).toBeNull()
+  })
+
+  it.each(['expired', 'completed', 'failed', 'deleted'] as const)(
+    'rejects completion and failure from the %s state',
+    (state) => {
+      const session = reconstituteWithState(state)
+
+      expect(() => session.complete(86, COMPLETED_AT)).toThrow(SessionNotInProgressError)
+      expect(() => session.fail(COMPLETED_AT)).toThrow(SessionNotInProgressError)
+    },
+  )
 
   it.each(STALE_STATES)('rejects audio acceptance from the %s state', (state) => {
     const session = reconstituteWithState(state)
@@ -135,6 +191,7 @@ function reconstituteWithState(state: (typeof STALE_STATES)[number]): Session {
     expiresAt: DEADLINE,
     expiredReason: state === 'expired' ? 'timeout' : null,
     expiredAt: state === 'expired' ? DEADLINE : null,
+    recordedAt: null,
   })
 }
 

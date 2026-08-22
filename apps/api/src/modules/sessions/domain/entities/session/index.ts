@@ -24,6 +24,10 @@ export class Session {
     private _expiredReason: SessionExpiredReason | null,
     private expiredAtEpoch: number | null,
     private _audio: SessionAudio | null,
+    private recordedAtEpoch: number | null,
+    private _totalScore: number | null,
+    private completedAtEpoch: number | null,
+    private failedAtEpoch: number | null,
   ) {}
 
   get state(): SessionState {
@@ -50,6 +54,22 @@ export class Session {
     return this._audio
   }
 
+  get recordedAt(): Date | null {
+    return this.recordedAtEpoch === null ? null : new Date(this.recordedAtEpoch)
+  }
+
+  get totalScore(): number | null {
+    return this._totalScore
+  }
+
+  get completedAt(): Date | null {
+    return this.completedAtEpoch === null ? null : new Date(this.completedAtEpoch)
+  }
+
+  get failedAt(): Date | null {
+    return this.failedAtEpoch === null ? null : new Date(this.failedAtEpoch)
+  }
+
   static start(params: StartSessionParams): Session {
     const createdAtEpoch = params.createdAt.getTime()
 
@@ -62,6 +82,10 @@ export class Session {
       'in_progress',
       createdAtEpoch,
       createdAtEpoch + SESSION_DURATION_MILLISECONDS,
+      null,
+      null,
+      null,
+      null,
       null,
       null,
       null,
@@ -81,6 +105,10 @@ export class Session {
       params.expiredReason,
       params.expiredAt?.getTime() ?? null,
       params.audio ?? null,
+      params.recordedAt?.getTime() ?? null,
+      params.totalScore ?? null,
+      params.completedAt?.getTime() ?? null,
+      params.failedAt?.getTime() ?? null,
     )
   }
 
@@ -111,6 +139,26 @@ export class Session {
 
     this._audio = audio
     this._state = 'processing'
+    this.recordedAtEpoch = at.getTime()
+  }
+
+  complete(totalScore: number, at: Date): void {
+    if (this._state !== 'processing') {
+      throw new SessionNotInProgressError(this._state)
+    }
+
+    this._state = 'completed'
+    this._totalScore = totalScore
+    this.completedAtEpoch = at.getTime()
+  }
+
+  fail(at: Date): void {
+    if (this._state !== 'processing') {
+      throw new SessionNotInProgressError(this._state)
+    }
+
+    this._state = 'failed'
+    this.failedAtEpoch = at.getTime()
   }
 }
 

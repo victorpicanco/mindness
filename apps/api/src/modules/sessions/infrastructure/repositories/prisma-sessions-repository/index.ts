@@ -73,6 +73,23 @@ export class PrismaSessionsRepository implements SessionsRepository {
     }
   }
 
+  async findStuckProcessing(before: Date, limit: number): Promise<Session[]> {
+    try {
+      const rows = await this.client().session.findMany({
+        where: { state: 'processing', recordedAt: { lte: before } },
+        include: { audio: true },
+        take: limit,
+      })
+
+      return rows.map((row) => this.mapper.toDomain(row))
+    } catch (error) {
+      throw new DatabaseError('Failed to find sessions stuck in processing', {
+        cause: error,
+        context: { before: before.toISOString(), limit },
+      })
+    }
+  }
+
   async save(session: Session): Promise<void> {
     try {
       await this.client().session.upsert({

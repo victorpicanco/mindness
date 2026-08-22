@@ -2,7 +2,7 @@ import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
 
-const API_MODULES = ['accounts', 'themes', 'quota', 'sessions']
+const API_MODULES = ['accounts', 'themes', 'quota', 'sessions', 'analyses']
 
 const CROSS_MODULE_MESSAGE =
   "LAW-001.4 / LAW-008.4: import the other module's index.ts, and only from module-adapters/."
@@ -46,6 +46,10 @@ function moduleConfigs(self) {
             'typebox',
             'pino',
             'pg-boss',
+            'bullmq',
+            'ioredis',
+            '@deepgram/sdk',
+            '@google/genai',
           ],
           message:
             'LAW-002.1: domain does not import frameworks, ORMs, validation or transport libs.',
@@ -80,7 +84,12 @@ function moduleConfigs(self) {
             '@/generated/prisma/*',
             'fastify',
             '@fastify/*',
+            'typebox',
             'pg-boss',
+            'bullmq',
+            'ioredis',
+            '@deepgram/sdk',
+            '@google/genai',
           ],
           message: 'LAW-003.6: a use case depends on a domain interface, not on technology.',
         },

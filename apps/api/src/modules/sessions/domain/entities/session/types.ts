@@ -20,5 +20,9 @@ export interface ReconstituteSessionParams extends StartSessionParams {
   readonly expiresAt: Date
   readonly expiredReason: SessionExpiredReason | null
   readonly expiredAt: Date | null
+  readonly recordedAt: Date | null
+  readonly totalScore?: number | null
+  readonly completedAt?: Date | null
+  readonly failedAt?: Date | null
   readonly audio?: SessionAudio | null
 }

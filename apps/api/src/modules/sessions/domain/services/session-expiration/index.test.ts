@@ -88,6 +88,7 @@ describe('SessionExpiration', () => {
         expiresAt: new Date('2026-08-18T12:15:00.000Z'),
         expiredReason: state === 'expired' ? 'timeout' : null,
         expiredAt: state === 'expired' ? CREATED_AT : null,
+        recordedAt: null,
       })
 
       const outcome = SessionExpiration.expire({

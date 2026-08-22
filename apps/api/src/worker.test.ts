@@ -218,7 +218,10 @@ describe('registerAnalysisPipelineModules', () => {
         eventPublisher: { publish: () => Promise.resolve() },
         eventSubscriber,
         adapters: {
-          accounts: { resolveAccountId: () => Promise.resolve(null) },
+          accounts: {
+            resolveAccountId: () => Promise.resolve(null),
+            findProfile: () => Promise.resolve(null),
+          },
           themes: { drawEligibleTheme: () => Promise.resolve(null) },
           quota: {
             reserveForSession: () =>

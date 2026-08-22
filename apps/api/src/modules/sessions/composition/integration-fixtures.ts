@@ -11,7 +11,10 @@ import type {
 import { readFile } from 'node:fs/promises'
 
 import type { PrismaClient } from '@/generated/prisma/client.js'
-import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
+import type {
+  AccountPlan,
+  AccountsPort,
+} from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { SupabaseAudioStorageClient } from '@/modules/sessions/infrastructure/adapters/supabase-audio-storage-adapter/index.js'
 
 import { FakeQuotaExhaustedError, FakeStorageObjectNotFoundError } from './errors.js'
@@ -22,6 +25,10 @@ const SESSIONS_TABLES = ['session_audios', 'sessions']
 
 export interface FakeAccountsPort extends AccountsPort {
   registerIdentity(accessToken: string, accountId: string | null): void
+  registerProfile(
+    accountId: string,
+    profile: { readonly plan: AccountPlan; readonly timeZone: string },
+  ): void
   reset(): void
 }
 
@@ -69,14 +76,23 @@ export function createFakeThemesPort(): FakeThemesPort {
 
 export function createFakeAccountsPort(): FakeAccountsPort {
   const accountsByToken = new Map<string, string | null>()
+  const profilesByAccountId = new Map<
+    string,
+    { readonly plan: AccountPlan; readonly timeZone: string }
+  >()
 
   return {
     resolveAccountId: (accessToken) => Promise.resolve(accountsByToken.get(accessToken) ?? null),
+    findProfile: (accountId) => Promise.resolve(profilesByAccountId.get(accountId) ?? null),
     registerIdentity: (accessToken, accountId) => {
       accountsByToken.set(accessToken, accountId)
     },
+    registerProfile: (accountId, profile) => {
+      profilesByAccountId.set(accountId, profile)
+    },
     reset: () => {
       accountsByToken.clear()
+      profilesByAccountId.clear()
     },
   }
 }

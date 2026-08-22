@@ -9,5 +9,5 @@ export interface ResolveAccountIdentityOutput {
 }
 
 export interface ResolveAccountIdentityDependencies {
-  readonly accounts: AccountsPort
+  readonly accounts: Pick<AccountsPort, 'resolveAccountId'>
 }

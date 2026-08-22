@@ -30,6 +30,7 @@ export class SessionMapper {
       recordedAt: row.recordedAt,
       totalScore: row.totalScore ?? null,
       completedAt: row.completedAt ?? null,
+      failedAt: row.failedAt ?? null,
       audio:
         row.audio === undefined || row.audio === null ? null : this.audioMapper.toDomain(row.audio),
     })
@@ -81,6 +82,7 @@ export class SessionMapper {
       recordedAt: session.recordedAt,
       totalScore: session.totalScore,
       completedAt: session.completedAt,
+      failedAt: session.failedAt,
     }
   }
 }

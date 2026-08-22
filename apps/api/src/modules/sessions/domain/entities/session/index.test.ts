@@ -100,12 +100,14 @@ describe('Session', () => {
     expect(session.completedAt).toEqual(COMPLETED_AT)
   })
 
-  it('fails a processing session', () => {
+  it('fails a processing session and records when it failed', () => {
     const session = reconstituteWithState('processing')
 
     session.fail(COMPLETED_AT)
 
     expect(session.state).toBe('failed')
+    expect(session.failedAt).toEqual(COMPLETED_AT)
+    expect(session.completedAt).toBeNull()
   })
 
   it.each(['expired', 'completed', 'failed', 'deleted'] as const)(

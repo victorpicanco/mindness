@@ -27,6 +27,7 @@ export class Session {
     private recordedAtEpoch: number | null,
     private _totalScore: number | null,
     private completedAtEpoch: number | null,
+    private failedAtEpoch: number | null,
   ) {}
 
   get state(): SessionState {
@@ -65,6 +66,10 @@ export class Session {
     return this.completedAtEpoch === null ? null : new Date(this.completedAtEpoch)
   }
 
+  get failedAt(): Date | null {
+    return this.failedAtEpoch === null ? null : new Date(this.failedAtEpoch)
+  }
+
   static start(params: StartSessionParams): Session {
     const createdAtEpoch = params.createdAt.getTime()
 
@@ -77,6 +82,7 @@ export class Session {
       'in_progress',
       createdAtEpoch,
       createdAtEpoch + SESSION_DURATION_MILLISECONDS,
+      null,
       null,
       null,
       null,
@@ -102,6 +108,7 @@ export class Session {
       params.recordedAt?.getTime() ?? null,
       params.totalScore ?? null,
       params.completedAt?.getTime() ?? null,
+      params.failedAt?.getTime() ?? null,
     )
   }
 
@@ -145,15 +152,13 @@ export class Session {
     this.completedAtEpoch = at.getTime()
   }
 
-  fail(_at: Date): void {
-    void _at
-
+  fail(at: Date): void {
     if (this._state !== 'processing') {
       throw new SessionNotInProgressError(this._state)
     }
 
     this._state = 'failed'
-    this.completedAtEpoch = null
+    this.failedAtEpoch = at.getTime()
   }
 }
 

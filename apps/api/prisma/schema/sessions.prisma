@@ -41,9 +41,11 @@ model Session {
   recordedAt         DateTime?             @map("recorded_at") @db.Timestamptz(6)
   totalScore         Int?                  @map("total_score")
   completedAt        DateTime?             @map("completed_at") @db.Timestamptz(6)
+  failedAt           DateTime?             @map("failed_at") @db.Timestamptz(6)
   audio              SessionAudio?
 
   @@index([accountId, state])
+  @@index([state, recordedAt])
   @@index([state, expiresAt])
   @@map("sessions")
 }

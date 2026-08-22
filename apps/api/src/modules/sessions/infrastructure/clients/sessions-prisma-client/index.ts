@@ -30,6 +30,7 @@ export interface SessionRow {
   readonly recordedAt: Date | null
   readonly totalScore?: number | null
   readonly completedAt?: Date | null
+  readonly failedAt?: Date | null
   readonly audio?: SessionAudioRow | null
 }
 
@@ -49,6 +50,7 @@ export interface SessionScalars {
   readonly recordedAt: Date | null
   readonly totalScore: number | null
   readonly completedAt: Date | null
+  readonly failedAt: Date | null
 }
 
 export interface SessionFindByIdArgs {

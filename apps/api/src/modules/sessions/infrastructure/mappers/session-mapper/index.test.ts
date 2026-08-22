@@ -23,6 +23,7 @@ const row: SessionRow = {
   recordedAt: new Date('2026-08-19T12:04:00.000Z'),
   totalScore: 86,
   completedAt: null,
+  failedAt: new Date('2026-08-19T12:09:00.000Z'),
   audio: {
     id: AUDIO_ID,
     sessionId: '6f3a143d-6853-48f0-b414-a57d8b65f101',
@@ -56,6 +57,7 @@ describe('SessionMapper', () => {
       recordedAt: row.recordedAt,
       totalScore: row.totalScore,
       completedAt: row.completedAt,
+      failedAt: row.failedAt,
     })
     expect(session.configuration).toMatchObject({
       difficulty: row.difficulty,
@@ -88,6 +90,7 @@ describe('SessionMapper', () => {
       recordedAt: row.recordedAt,
       totalScore: row.totalScore,
       completedAt: row.completedAt,
+      failedAt: row.failedAt,
     })
     expect(created.audio).toEqual({
       create: {

@@ -73,6 +73,7 @@ function createHarness(session: Session | null) {
   }
   const audioStorage: AudioStoragePort = {
     createUploadUrl: () => Promise.resolve({ uploadUrl: '', token: '' }),
+    createDownloadUrl: () => Promise.resolve(''),
     getObjectSize: () => {
       calls.push('size')
       return Promise.resolve(objectSize)

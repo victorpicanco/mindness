@@ -52,7 +52,12 @@ export interface FakeQuotaPort extends QuotaPort {
 export interface InMemorySupabaseStorageClient extends SupabaseAudioStorageClient {
   putObject(path: string, buffer: Buffer): void
   hasObject(path: string): boolean
+  isSignedUrlValidAt(url: string, at: Date): boolean
   reset(): void
+}
+
+interface Clock {
+  now(): Date
 }
 
 function themeKey(categorySlug: string, difficulty: Difficulty): string {
@@ -147,8 +152,9 @@ export function createFakeQuotaPort(): FakeQuotaPort {
   }
 }
 
-export function createInMemorySupabaseStorageClient(): InMemorySupabaseStorageClient {
+export function createInMemorySupabaseStorageClient(clock?: Clock): InMemorySupabaseStorageClient {
   const objects = new Map<string, Buffer>()
+  const storageClock = clock ?? { now: () => new Date() }
 
   function objectPath(directory: string, fileName: string): string {
     return directory.length === 0 ? fileName : `${directory}/${fileName}`
@@ -160,6 +166,20 @@ export function createInMemorySupabaseStorageClient(): InMemorySupabaseStorageCl
         data: { signedUrl: `memory://session-audio/${path}`, token: `token-${path}` },
         error: null,
       }),
+    createSignedUrl: (path: string, expiresIn: number) => {
+      const exists = objects.has(path)
+      const expiresAt = storageClock.now().getTime() + expiresIn * 1_000
+
+      return Promise.resolve({
+        data: exists
+          ? `memory://session-audio/${path}?token=token-${path}&expiresAt=${expiresAt}`
+          : null,
+        error: exists ? null : new FakeStorageObjectNotFoundError(),
+      }).then((result) => ({
+        data: result.data === null ? null : { signedUrl: result.data },
+        error: result.error,
+      }))
+    },
     // Supabase filters `search` as a prefix over the names inside the directory.
     list: (directory: string, options: { readonly search: string }) => {
       const prefix = objectPath(directory, options.search)
@@ -191,6 +211,17 @@ export function createInMemorySupabaseStorageClient(): InMemorySupabaseStorageCl
       objects.set(path, Buffer.from(buffer))
     },
     hasObject: (path) => objects.has(path),
+    isSignedUrlValidAt: (url, at) => {
+      try {
+        const expiresAt = new URL(url).searchParams.get('expiresAt')
+        if (expiresAt === null) return false
+
+        const expiresAtMs = Number(expiresAt)
+        return Number.isFinite(expiresAtMs) && at.getTime() <= expiresAtMs
+      } catch {
+        return false
+      }
+    },
     reset: () => {
       objects.clear()
     },

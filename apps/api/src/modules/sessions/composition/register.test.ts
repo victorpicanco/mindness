@@ -100,6 +100,7 @@ function createDependencies(
       },
       audioStorage: {
         createUploadUrl: () => Promise.resolve({ uploadUrl: 'memory://upload', token: 'token' }),
+        createDownloadUrl: () => Promise.resolve('memory://download'),
         getObjectSize: () => Promise.resolve(null),
         downloadObject: () => Promise.resolve(Buffer.from('audio')),
         removeObject: () => Promise.resolve(),

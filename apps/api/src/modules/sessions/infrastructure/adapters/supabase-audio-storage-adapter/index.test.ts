@@ -15,6 +15,10 @@ function createStorageClient() {
     data: { signedUrl: 'https://storage.test/upload', token: 'upload-token' },
     error: null,
   }
+  let createDownloadUrlResult: StorageResult = {
+    data: { signedUrl: 'https://storage.test/download' },
+    error: null,
+  }
   let listResult: StorageResult = {
     data: [{ name: 'audio', metadata: { size: 1_024 } }],
     error: null,
@@ -37,6 +41,10 @@ function createStorageClient() {
               calls.push(`createSignedUploadUrl:${path}:${String(options.upsert)}`)
               return Promise.resolve(createUploadUrlResult)
             },
+            createSignedUrl(path: string, expiresIn: number) {
+              calls.push(`createSignedUrl:${path}:${expiresIn}`)
+              return Promise.resolve(createDownloadUrlResult)
+            },
             list(path: string, options: { readonly search: string }) {
               calls.push(`list:${path}:${options.search}`)
               return Promise.resolve(listResult)
@@ -55,6 +63,9 @@ function createStorageClient() {
     },
     setCreateUploadUrlResult(result: StorageResult) {
       createUploadUrlResult = result
+    },
+    setCreateDownloadUrlResult(result: StorageResult) {
+      createDownloadUrlResult = result
     },
     setListResult(result: StorageResult) {
       listResult = result
@@ -81,6 +92,54 @@ describe('SupabaseAudioStorageAdapter', () => {
       'from:session-audio',
       'createSignedUploadUrl:account-1/session-1/audio:true',
     ])
+  })
+
+  it('creates a signed download URL with the requested expiry', async () => {
+    const storage = createStorageClient()
+    const adapter = new SupabaseAudioStorageAdapter(storage.client)
+
+    await expect(adapter.createDownloadUrl('account-1/session-1/audio', 120)).resolves.toBe(
+      'https://storage.test/download',
+    )
+    expect(storage.calls).toEqual([
+      'from:session-audio',
+      'createSignedUrl:account-1/session-1/audio:120',
+    ])
+  })
+
+  it('translates errors while creating a signed download URL', async () => {
+    const storage = createStorageClient()
+    const error = { code: 'storage_error' }
+    storage.setCreateDownloadUrlResult({ data: null, error })
+    const adapter = new SupabaseAudioStorageAdapter(storage.client)
+
+    await expect(adapter.createDownloadUrl('account-1/session-1/audio', 120)).rejects.toMatchObject(
+      {
+        cause: error,
+        context: { operation: 'create_signed_url' },
+      },
+    )
+  })
+
+  it('does not leak a malformed signed download URL response', async () => {
+    const storage = createStorageClient()
+    storage.setCreateDownloadUrlResult({
+      data: { signed_url: 'https://storage.test/secret-download' },
+      error: null,
+    })
+    const adapter = new SupabaseAudioStorageAdapter(storage.client)
+
+    const error = await adapter
+      .createDownloadUrl('account-1/session-1/audio', 120)
+      .then(() => null)
+      .catch((raised: unknown) => raised)
+
+    expect(error).toBeInstanceOf(InfrastructureError)
+    expect(error).toMatchObject({
+      cause: { missingFields: ['signedUrl'] },
+      context: { operation: 'create_signed_url' },
+    })
+    expect(JSON.stringify(error)).not.toContain('secret-download')
   })
 
   it('returns the stored object size when the object exists', async () => {

@@ -159,6 +159,54 @@ describe('PrismaSessionsRepository', () => {
     ).rejects.toBeInstanceOf(DatabaseError)
   })
 
+  it('finds completed sessions inside a time window without applying pagination', async () => {
+    const from = new Date('2026-08-19T00:00:00.000Z')
+    const to = new Date('2026-08-20T00:00:00.000Z')
+    const fake = createFakeClient({ findMany: [{ ...row, state: 'completed' }] })
+    const repository = createRepository(fake)
+
+    await expect(repository.findCompletedBetween(row.accountId, from, to)).resolves.toMatchObject([
+      { id: row.id, state: 'completed' },
+    ])
+    expect(fake.findManyQueries).toEqual([
+      {
+        where: {
+          accountId: row.accountId,
+          state: 'completed',
+          createdAt: { gte: from, lte: to },
+        },
+        include: { audio: true },
+      },
+    ])
+  })
+
+  it('returns no sessions when the completed time window is empty', async () => {
+    const repository = createRepository(createFakeClient())
+
+    await expect(
+      repository.findCompletedBetween(
+        row.accountId,
+        new Date('2026-08-19T00:00:00.000Z'),
+        new Date('2026-08-20T00:00:00.000Z'),
+      ),
+    ).resolves.toEqual([])
+  })
+
+  it('translates a completed time window lookup failure into a database error', async () => {
+    const fake = createFakeClient({
+      findManyError: new DatabaseError('Database unavailable', { context: {} }),
+    })
+    const repository = createRepository(fake)
+
+    await expect(
+      repository.findCompletedBetween(
+        row.accountId,
+        new Date('2026-08-19T00:00:00.000Z'),
+        new Date('2026-08-20T00:00:00.000Z'),
+      ),
+    ).rejects.toBeInstanceOf(DatabaseError)
+  })
+
   it('persists a session and its accepted audio in one upsert', async () => {
     const fake = createFakeClient()
     const repository = createRepository(fake)

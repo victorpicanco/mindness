@@ -25,6 +25,7 @@ describe('createAnalysesContainer', () => {
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+        isReadableByAccount: () => Promise.resolve(false),
         listStuckProcessing: () => Promise.resolve([]),
       },
       themesFacade: {
@@ -37,9 +38,13 @@ describe('createAnalysesContainer', () => {
           }),
       },
       adapters: {
-        accounts: { findPlan: () => Promise.resolve('free') },
+        accounts: {
+          findPlan: () => Promise.resolve('free'),
+          resolveAccountId: () => Promise.resolve(null),
+        },
         sessions: {
           findProcessingContext: () => Promise.resolve(null),
+          isReadableByAccount: () => Promise.resolve(false),
           listStuckProcessing: () => Promise.resolve([]),
         },
         audioReader: { read: () => Promise.resolve(Buffer.from('audio')) },
@@ -110,10 +115,12 @@ function baseDeps() {
           createdAt: new Date('2026-01-01T00:00:00.000Z'),
           timeZone: 'America/Sao_Paulo',
         }),
+      authenticate: () => Promise.resolve({ accountId: null }),
     },
     sessionsFacade: {
       findProcessingContext: () => Promise.resolve(null),
       downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+      isReadableByAccount: () => Promise.resolve(false),
       listStuckProcessing: () => Promise.resolve([]),
     },
     themesFacade: {

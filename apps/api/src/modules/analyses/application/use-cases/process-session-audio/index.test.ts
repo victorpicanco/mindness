@@ -73,6 +73,10 @@ class InMemorySessionsPort {
   listStuckProcessing(): Promise<readonly string[]> {
     return Promise.resolve([])
   }
+
+  isReadableByAccount(): Promise<boolean> {
+    return Promise.resolve(false)
+  }
 }
 
 class InMemoryAudioReader {
@@ -191,6 +195,10 @@ class InMemoryAccountsPort {
 
   findPlan(): Promise<AccountPlan | null> {
     return Promise.resolve(this.plan)
+  }
+
+  resolveAccountId(): Promise<string | null> {
+    return Promise.resolve(null)
   }
 }
 
@@ -396,7 +404,10 @@ describe('ProcessSessionAudioUseCase', () => {
     const { dependencies, events, logger, transcription } = createDependencies()
     const useCase = new ProcessSessionAudioUseCase({
       ...dependencies,
-      accounts: { findPlan: () => Promise.resolve(null) },
+      accounts: {
+        findPlan: () => Promise.resolve(null),
+        resolveAccountId: () => Promise.resolve(null),
+      },
     })
 
     await expect(useCase.execute({ sessionId: 'session-1' })).resolves.toBeUndefined()

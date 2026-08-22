@@ -44,6 +44,7 @@ function createHarness(input: {
   const enqueued: { readonly sessionId: string }[] = []
   const sessions: SessionsPort = {
     findProcessingContext: () => Promise.resolve(null),
+    isReadableByAccount: () => Promise.resolve(false),
     listStuckProcessing: (before, limit) => {
       listStuckProcessingQueries.push({ before, limit })
       return Promise.resolve(input.stuckSessionIds)

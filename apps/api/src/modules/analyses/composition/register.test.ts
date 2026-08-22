@@ -29,10 +29,12 @@ describe('registerAnalysesModule', () => {
             createdAt: new Date(),
             timeZone: 'America/Sao_Paulo',
           }),
+        authenticate: () => Promise.resolve({ accountId: null }),
       },
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+        isReadableByAccount: () => Promise.resolve(false),
         listStuckProcessing: () => Promise.resolve([]),
       },
       themesFacade: {

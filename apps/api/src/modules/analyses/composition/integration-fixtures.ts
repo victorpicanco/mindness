@@ -17,25 +17,34 @@ const ANALYSES_TABLES = ['analyses', 'transcriptions', 'analysis_cost_entries']
 
 export interface FakeAccountsPort extends AccountsPort {
   setPlan(accountId: string, plan: AccountPlan): void
+  registerIdentity(accessToken: string, accountId: string): void
   reset(): void
 }
 
 export function createFakeAccountsPort(): FakeAccountsPort {
   const plans = new Map<string, AccountPlan>()
+  const identities = new Map<string, string>()
   return {
     findPlan: (accountId) => Promise.resolve(plans.get(accountId) ?? null),
+    resolveAccountId: (accessToken) => Promise.resolve(identities.get(accessToken) ?? null),
     setPlan: (accountId, plan) => plans.set(accountId, plan),
-    reset: () => plans.clear(),
+    registerIdentity: (accessToken, accountId) => identities.set(accessToken, accountId),
+    reset: () => {
+      plans.clear()
+      identities.clear()
+    },
   }
 }
 
 export interface FakeSessionsPort extends SessionsPort {
   setContext(context: SessionProcessingContext): void
+  setReadable(sessionId: string, accountId: string): void
   reset(): void
 }
 
 export function createFakeSessionsPort(): FakeSessionsPort {
   const contexts = new Map<string, SessionProcessingContext>()
+  const readableBySessionAndAccount = new Set<string>()
   return {
     findProcessingContext: (sessionId) => Promise.resolve(contexts.get(sessionId) ?? null),
     listStuckProcessing: (before, limit) =>
@@ -45,8 +54,15 @@ export function createFakeSessionsPort(): FakeSessionsPort {
           .slice(0, limit)
           .map((context) => context.sessionId),
       ),
+    isReadableByAccount: (sessionId, accountId) =>
+      Promise.resolve(readableBySessionAndAccount.has(`${sessionId}:${accountId}`)),
     setContext: (context) => contexts.set(context.sessionId, context),
-    reset: () => contexts.clear(),
+    setReadable: (sessionId, accountId) =>
+      readableBySessionAndAccount.add(`${sessionId}:${accountId}`),
+    reset: () => {
+      contexts.clear()
+      readableBySessionAndAccount.clear()
+    },
   }
 }
 

@@ -3,7 +3,7 @@ import type { SessionsPort } from '@/modules/analyses/domain/ports/sessions-port
 
 export type SessionsProcessingContextReader = Pick<
   SessionsPublicApi,
-  'findProcessingContext' | 'listStuckProcessing'
+  'findProcessingContext' | 'listStuckProcessing' | 'isReadableByAccount'
 >
 export class SessionsPortAdapter implements SessionsPort {
   constructor(private readonly sessions: SessionsProcessingContextReader) {}
@@ -23,5 +23,9 @@ export class SessionsPortAdapter implements SessionsPort {
 
   listStuckProcessing(before: Date, limit: number): Promise<readonly string[]> {
     return this.sessions.listStuckProcessing(before, limit)
+  }
+
+  isReadableByAccount(sessionId: string, accountId: string): Promise<boolean> {
+    return this.sessions.isReadableByAccount(sessionId, accountId)
   }
 }

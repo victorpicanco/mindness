@@ -4,12 +4,17 @@ import type {
   AccountsPort,
 } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 
-export type AccountsPlanReader = Pick<AccountsFacade, 'getAccountSnapshot'>
+export type AccountsPlanReader = Pick<AccountsFacade, 'getAccountSnapshot' | 'authenticate'>
 export class AccountsPortAdapter implements AccountsPort {
   constructor(private readonly accounts: AccountsPlanReader) {}
 
   async findPlan(accountId: string): Promise<AccountPlan | null> {
     const snapshot = await this.accounts.getAccountSnapshot(accountId)
     return snapshot === null ? null : snapshot.plan
+  }
+
+  async resolveAccountId(accessToken: string): Promise<string | null> {
+    const identity = await this.accounts.authenticate(accessToken)
+    return identity.accountId
   }
 }

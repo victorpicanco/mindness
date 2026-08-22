@@ -67,6 +67,7 @@ describe('registerAnalysisPipelineModules', () => {
               createdAt: new Date(),
               timeZone: 'America/Sao_Paulo',
             }),
+          authenticate: () => Promise.resolve({ accountId: null }),
         },
         themesFacade: {
           findThemeById: () =>

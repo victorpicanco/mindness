@@ -10,6 +10,27 @@ import type { IntegrationEvent } from '@/shared/messaging/integration-event/inde
 import { OnAnalysisTimedOutFailSession, type AnalysisTimedOutEvent } from './index.js'
 
 describe('OnAnalysisTimedOutFailSession', () => {
+  it('releases the quota before persisting the failure so a crash between them can be retried', async () => {
+    const session = createProcessingSession()
+    const calls: string[] = []
+    const repository = createRepository(session)
+    const quota = createQuota()
+    const handler = new OnAnalysisTimedOutFailSession(
+      { ...repository, save: () => Promise.resolve(void calls.push('save')) },
+      { ...quota, releaseReservation: () => Promise.resolve(void calls.push('release')) },
+    )
+    const event: IntegrationEvent<'analysis_timeout', AnalysisTimedOutEvent['payload']> = {
+      eventId: 'event-id',
+      eventName: 'analysis_timeout',
+      occurredAt: new Date(),
+      version: 1,
+      payload: { sessionId: 'session-id' },
+    }
+
+    await handler.handle(event)
+
+    expect(calls).toEqual(['release', 'save'])
+  })
   it('fails a processing session and releases quota once', async () => {
     const session = createProcessingSession()
     const repository = createRepository(session)

@@ -25,6 +25,21 @@ describe('OnAnalysisFailedFailSession', () => {
     expect(quota.released).toEqual(['session-id'])
   })
 
+  it('releases the quota before persisting the failure so a crash between them can be retried', async () => {
+    const session = createProcessingSession()
+    const calls: string[] = []
+    const repository = createRepository(session)
+    const quota = createQuota()
+    const handler = new OnAnalysisFailedFailSession(
+      { ...repository, save: () => Promise.resolve(void calls.push('save')) },
+      { ...quota, releaseReservation: () => Promise.resolve(void calls.push('release')) },
+    )
+
+    await handler.handle(createEvent())
+
+    expect(calls).toEqual(['release', 'save'])
+  })
+
   it('ignores a missing session', async () => {
     const repository = createRepository(null)
     const quota = createQuota()

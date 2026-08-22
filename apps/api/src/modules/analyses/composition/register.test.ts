@@ -23,7 +23,12 @@ describe('registerAnalysesModule', () => {
       },
       accountsFacade: {
         getAccountSnapshot: () =>
-          Promise.resolve({ accountId: 'account', plan: 'free' as const, createdAt: new Date() }),
+          Promise.resolve({
+            accountId: 'account',
+            plan: 'free' as const,
+            createdAt: new Date(),
+            timeZone: 'America/Sao_Paulo',
+          }),
       },
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),

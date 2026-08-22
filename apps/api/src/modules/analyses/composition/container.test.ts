@@ -108,6 +108,7 @@ function baseDeps() {
           accountId: 'account',
           plan: 'free' as const,
           createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          timeZone: 'America/Sao_Paulo',
         }),
     },
     sessionsFacade: {

@@ -51,6 +51,7 @@ describe('GetAccountSnapshotUseCase', () => {
       accountId: 'account-1',
       plan: 'free',
       createdAt: CREATED_AT,
+      timeZone: 'America/Sao_Paulo',
     })
   })
 

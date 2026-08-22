@@ -9,7 +9,12 @@ describe('AccountsPortAdapter', () => {
   it('translates the account snapshot into the quota vocabulary', async () => {
     const accountsFacade: AccountsSnapshotReader = {
       getAccountSnapshot: (accountId) =>
-        Promise.resolve({ accountId, plan: 'free', createdAt: CREATED_AT }),
+        Promise.resolve({
+          accountId,
+          plan: 'free',
+          createdAt: CREATED_AT,
+          timeZone: 'America/Sao_Paulo',
+        }),
     }
     const adapter = new AccountsPortAdapter(accountsFacade)
 

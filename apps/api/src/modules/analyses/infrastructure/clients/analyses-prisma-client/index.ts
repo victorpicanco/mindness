@@ -73,9 +73,22 @@ export interface AnalysesPrismaTransactionRunner {
   ): Promise<T>
 }
 
+type AnalysesPrismaDelegates = Pick<
+  PrismaClient,
+  'transcription' | 'analysis' | 'analysisCostEntry'
+>
+
 export function createAnalysesPrismaClient(
   prisma: PrismaClient,
 ): AnalysesPrismaClient & AnalysesPrismaTransactionRunner {
+  return {
+    ...createNarrowClient(prisma),
+    $transaction: (operation, options) =>
+      prisma.$transaction((transaction) => operation(createNarrowClient(transaction)), options),
+  }
+}
+
+function createNarrowClient(prisma: AnalysesPrismaDelegates): AnalysesPrismaClient {
   return {
     transcription: {
       findUnique: (args) => prisma.transcription.findUnique(args),
@@ -107,8 +120,6 @@ export function createAnalysesPrismaClient(
       create: (args) => prisma.analysisCostEntry.create(args),
       aggregate: (args) => prisma.analysisCostEntry.aggregate(args),
     },
-    $transaction: async <T>(operation: (client: AnalysesPrismaClient) => Promise<T>) =>
-      operation(createAnalysesPrismaClient(prisma)),
   }
 }
 

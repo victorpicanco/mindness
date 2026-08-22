@@ -120,4 +120,26 @@ describe('analysis pipeline integration', () => {
     await expect(harness.prisma.transcription.count()).resolves.toBe(1)
     expect(harness.eventBus.published).toHaveLength(1)
   })
+
+  it('rolls back the transcription and the analysis when the cost entry cannot be written', async () => {
+    await harness.prisma.analysisCostEntry.create({
+      data: {
+        id: '00000000-0000-0000-0000-0000000000ff',
+        sessionId: SESSION_ID,
+        accountId: ACCOUNT_ID,
+        transcriptionMicrosUsd: 1,
+        evaluationMicrosUsd: 1,
+        totalMicrosUsd: 2,
+        incurredAt: ANALYSES_TEST_NOW,
+      },
+    })
+
+    await expect(
+      harness.container.useCases.processSessionAudio.execute({ sessionId: SESSION_ID }),
+    ).rejects.toMatchObject({ code: 'shared.DATABASE_ERROR' })
+
+    await expect(harness.prisma.transcription.count()).resolves.toBe(0)
+    await expect(harness.prisma.analysis.count()).resolves.toBe(0)
+    await expect(harness.prisma.analysisCostEntry.count()).resolves.toBe(1)
+  })
 })

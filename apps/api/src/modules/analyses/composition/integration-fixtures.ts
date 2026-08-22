@@ -92,3 +92,8 @@ export {
   InMemoryProcessingQueueAdapter,
   InMemoryTranscriptionAdapter,
 }
+
+export {
+  assertResponseMatchesSchema,
+  type InjectedResponse,
+} from '@/shared/http/openapi-response-assertion/index.js'

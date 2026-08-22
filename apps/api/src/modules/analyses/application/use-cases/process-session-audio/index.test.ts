@@ -18,9 +18,17 @@ import type { ProcessSessionAudioDependencies } from './types.js'
 
 class InMemoryAnalysesRepository {
   readonly saved: Analysis[] = []
+  private readonly viewedSessionIds = new Set<string>()
 
   findBySessionId(sessionId: string): Promise<Analysis | null> {
     return Promise.resolve(this.saved.find((analysis) => analysis.sessionId === sessionId) ?? null)
+  }
+
+  markFirstView(sessionId: string, at: Date): Promise<boolean> {
+    void at
+    if (this.viewedSessionIds.has(sessionId)) return Promise.resolve(false)
+    this.viewedSessionIds.add(sessionId)
+    return Promise.resolve(true)
   }
 
   save(analysis: Analysis): Promise<void> {

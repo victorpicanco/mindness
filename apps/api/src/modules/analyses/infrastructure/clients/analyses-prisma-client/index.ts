@@ -24,6 +24,7 @@ export interface AnalysisRow {
   readonly processingMs: number
   readonly costMicrosUsd: number
   readonly createdAt: Date
+  readonly viewedAt?: Date | null
 }
 
 export interface AnalysisCostEntryRow {
@@ -56,6 +57,10 @@ export interface AnalysesPrismaClient {
       readonly create: AnalysisRow
       readonly update: AnalysisRow
     }): Promise<AnalysisRow>
+    updateMany(args: {
+      readonly where: { readonly sessionId: string; readonly viewedAt: null }
+      readonly data: { readonly viewedAt: Date }
+    }): Promise<{ readonly count: number }>
   }
   readonly analysisCostEntry: {
     create(args: { readonly data: AnalysisCostEntryRow }): Promise<AnalysisCostEntryRow>
@@ -115,6 +120,7 @@ function createNarrowClient(prisma: AnalysesPrismaDelegates): AnalysesPrismaClie
             rhythmMetrics: toInputJson(args.update.rhythmMetrics),
           },
         }),
+      updateMany: (args) => prisma.analysis.updateMany(args),
     },
     analysisCostEntry: {
       create: (args) => prisma.analysisCostEntry.create(args),

@@ -137,6 +137,7 @@ function createPrismaStub(): AnalysesPrismaClient & AnalysesPrismaTransactionRun
     analysis: {
       findUnique: () => Promise.resolve(null),
       upsert: () => Promise.resolve(createAnalysisRow()),
+      updateMany: () => Promise.resolve({ count: 0 }),
     },
     analysisCostEntry: {
       create: () => Promise.resolve(createCostEntryRow()),

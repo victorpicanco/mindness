@@ -96,13 +96,20 @@ function createHarness(session: Session | null) {
     sessions,
     audioStorage,
     audioValidation,
-    eventPublisher: events,
+    eventPublisher: {
+      publish: (event) => {
+        calls.push('publish')
+        return events.publish(event)
+      },
+    },
     idGenerator: { generate: () => 'event-1' },
     clock: { now: () => now },
     unitOfWork: {
-      run: (operation) => {
+      run: async (operation) => {
         transactionRuns += 1
-        return operation()
+        const result = await operation()
+        calls.push('commit')
+        return result
       },
     },
   })
@@ -190,7 +197,7 @@ describe('ConfirmAudioUploadUseCase', () => {
     })
     expect(harness.saved).toEqual([session])
     expect(harness.transactionRuns()).toBe(1)
-    expect(harness.calls).toEqual(['size', 'download', 'validate', 'save'])
+    expect(harness.calls).toEqual(['size', 'download', 'validate', 'save', 'commit', 'publish'])
     expect(harness.events.published).toContainEqual(
       expect.objectContaining({
         eventName: 'recording_submitted',

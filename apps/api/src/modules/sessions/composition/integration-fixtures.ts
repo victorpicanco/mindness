@@ -1,5 +1,6 @@
 import type {
   EligibleTheme,
+  EligibleThemeCategory,
   ThemesPort,
 } from '@/modules/sessions/domain/ports/themes-port/index.js'
 import type {
@@ -34,7 +35,9 @@ export interface FakeAccountsPort extends AccountsPort {
 
 export interface FakeThemesPort extends ThemesPort {
   registerEligibleTheme(input: {
+    readonly categoryId?: string
     readonly categorySlug: string
+    readonly categoryName?: string
     readonly difficulty: Difficulty
     readonly themeId: string
   }): void
@@ -67,21 +70,26 @@ function themeKey(categorySlug: string, difficulty: Difficulty): string {
 export function createFakeThemesPort(): FakeThemesPort {
   const themes = new Map<string, EligibleTheme>()
   const themesById = new Map<string, EligibleTheme>()
+  const categories = new Map<string, EligibleThemeCategory>()
 
   return {
     drawEligibleTheme: ({ categorySlug, difficulty }) =>
       Promise.resolve(themes.get(themeKey(categorySlug, difficulty)) ?? null),
     findThemeById: (themeId) =>
       Promise.resolve(themesById.get(themeId) ?? { themeId, title: 'Theme' }),
-    listCategories: () => Promise.resolve([]),
-    registerEligibleTheme: ({ categorySlug, difficulty, themeId }) => {
+    listCategories: () => Promise.resolve([...categories.values()]),
+    registerEligibleTheme: ({ categoryId, categorySlug, categoryName, difficulty, themeId }) => {
       const theme = { themeId, title: 'Theme' }
       themes.set(themeKey(categorySlug, difficulty), theme)
       themesById.set(themeId, theme)
+      if (categoryId !== undefined && categoryName !== undefined) {
+        categories.set(categoryId, { categoryId, slug: categorySlug, name: categoryName })
+      }
     },
     reset: () => {
       themes.clear()
       themesById.clear()
+      categories.clear()
     },
   }
 }

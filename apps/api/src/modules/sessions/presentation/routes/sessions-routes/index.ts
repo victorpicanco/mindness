@@ -18,11 +18,13 @@ import {
   type SessionIdParams as DeleteSessionParams,
 } from '@/modules/sessions/presentation/controllers/delete-session-controller/schemas.js'
 import { ActiveSessionResponseSchema } from '@/modules/sessions/presentation/controllers/get-active-session-controller/schemas.js'
+import { SessionQuotaResponseSchema } from '@/modules/sessions/presentation/controllers/get-quota-balance-controller/schemas.js'
 import {
   SessionHistoryQuerySchema,
   SessionHistoryResponseSchema,
   type SessionHistoryQuery,
 } from '@/modules/sessions/presentation/controllers/list-session-history-controller/schemas.js'
+import { SessionThemeCategoriesResponseSchema } from '@/modules/sessions/presentation/controllers/list-theme-categories-controller/schemas.js'
 import {
   ReportMicrophonePermissionDeniedResponseSchema,
   SessionIdParamsSchema as ReportMicrophonePermissionDeniedParamsSchema,
@@ -98,6 +100,18 @@ export async function registerSessionsRoutes(
       SESSIONS_ROUTE_PATHS.activeSession,
       { schema: { response: { 200: ActiveSessionResponseSchema, ...ERROR_RESPONSES } } },
       (request, reply) => controllers.getActiveSession.handle(request, reply),
+    )
+
+    authenticated.get(
+      SESSIONS_ROUTE_PATHS.quota,
+      { schema: { response: { 200: SessionQuotaResponseSchema, ...ERROR_RESPONSES } } },
+      (request, reply) => controllers.getQuotaBalance.handle(request, reply),
+    )
+
+    authenticated.get(
+      SESSIONS_ROUTE_PATHS.themeCategories,
+      { schema: { response: { 200: SessionThemeCategoriesResponseSchema, ...ERROR_RESPONSES } } },
+      (request, reply) => controllers.listThemeCategories.handle(request, reply),
     )
 
     authenticated.post<{ Params: AbandonSessionIdParams }>(

@@ -2,7 +2,9 @@ import type { AbandonSessionController } from '@/modules/sessions/presentation/c
 import type { ConfirmAudioUploadController } from '@/modules/sessions/presentation/controllers/confirm-audio-upload-controller/index.js'
 import type { DeleteSessionController } from '@/modules/sessions/presentation/controllers/delete-session-controller/index.js'
 import type { GetActiveSessionController } from '@/modules/sessions/presentation/controllers/get-active-session-controller/index.js'
+import type { GetQuotaBalanceController } from '@/modules/sessions/presentation/controllers/get-quota-balance-controller/index.js'
 import type { ListSessionHistoryController } from '@/modules/sessions/presentation/controllers/list-session-history-controller/index.js'
+import type { ListThemeCategoriesController } from '@/modules/sessions/presentation/controllers/list-theme-categories-controller/index.js'
 import type { ReportMicrophonePermissionDeniedController } from '@/modules/sessions/presentation/controllers/report-microphone-permission-denied-controller/index.js'
 import type { RequestAudioPlaybackUrlController } from '@/modules/sessions/presentation/controllers/request-audio-playback-url-controller/index.js'
 import type { RequestAudioUploadUrlController } from '@/modules/sessions/presentation/controllers/request-audio-upload-url-controller/index.js'
@@ -11,6 +13,8 @@ import type { StartSessionController } from '@/modules/sessions/presentation/con
 export interface SessionsControllers {
   readonly startSession: StartSessionController
   readonly getActiveSession: GetActiveSessionController
+  readonly getQuotaBalance: GetQuotaBalanceController
+  readonly listThemeCategories: ListThemeCategoriesController
   readonly abandonSession: AbandonSessionController
   readonly reportMicrophonePermissionDenied: ReportMicrophonePermissionDeniedController
   readonly requestAudioUploadUrl: RequestAudioUploadUrlController
@@ -24,6 +28,8 @@ export const SESSIONS_ROUTE_PATHS = {
   session: '/sessions',
   sessionById: '/sessions/:sessionId',
   activeSession: '/sessions/active',
+  quota: '/sessions/quota',
+  themeCategories: '/sessions/theme-categories',
   abandon: '/sessions/:sessionId/abandon',
   microphonePermissionDenied: '/sessions/:sessionId/microphone-permission-denied',
   audioUploadUrl: '/sessions/:sessionId/audio/upload-url',

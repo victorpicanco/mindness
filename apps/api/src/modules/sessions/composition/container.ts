@@ -5,8 +5,10 @@ import { DownloadSessionAudioUseCase } from '@/modules/sessions/application/use-
 import { ExpireSessionUseCase } from '@/modules/sessions/application/use-cases/expire-session/index.js'
 import { FindSessionProcessingContextUseCase } from '@/modules/sessions/application/use-cases/find-session-processing-context/index.js'
 import { GetActiveSessionUseCase } from '@/modules/sessions/application/use-cases/get-active-session/index.js'
+import { GetSessionQuotaBalanceUseCase } from '@/modules/sessions/application/use-cases/get-quota-balance/index.js'
 import { ListStuckProcessingSessionsUseCase } from '@/modules/sessions/application/use-cases/list-stuck-processing-sessions/index.js'
 import { ListSessionHistoryUseCase } from '@/modules/sessions/application/use-cases/list-session-history/index.js'
+import { ListSessionThemeCategoriesUseCase } from '@/modules/sessions/application/use-cases/list-theme-categories/index.js'
 import { RequestAudioPlaybackUrlUseCase } from '@/modules/sessions/application/use-cases/request-audio-playback-url/index.js'
 import { RequestAudioUploadUrlUseCase } from '@/modules/sessions/application/use-cases/request-audio-upload-url/index.js'
 import { ResolveAccountIdentityUseCase } from '@/modules/sessions/application/use-cases/resolve-account-identity/index.js'
@@ -50,7 +52,9 @@ import { AbandonSessionController } from '@/modules/sessions/presentation/contro
 import { ConfirmAudioUploadController } from '@/modules/sessions/presentation/controllers/confirm-audio-upload-controller/index.js'
 import { DeleteSessionController } from '@/modules/sessions/presentation/controllers/delete-session-controller/index.js'
 import { GetActiveSessionController } from '@/modules/sessions/presentation/controllers/get-active-session-controller/index.js'
+import { GetQuotaBalanceController } from '@/modules/sessions/presentation/controllers/get-quota-balance-controller/index.js'
 import { ListSessionHistoryController } from '@/modules/sessions/presentation/controllers/list-session-history-controller/index.js'
+import { ListThemeCategoriesController } from '@/modules/sessions/presentation/controllers/list-theme-categories-controller/index.js'
 import { ReportMicrophonePermissionDeniedController } from '@/modules/sessions/presentation/controllers/report-microphone-permission-denied-controller/index.js'
 import { RequestAudioUploadUrlController } from '@/modules/sessions/presentation/controllers/request-audio-upload-url-controller/index.js'
 import { RequestAudioPlaybackUrlController } from '@/modules/sessions/presentation/controllers/request-audio-playback-url-controller/index.js'
@@ -139,8 +143,10 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     expireSession: new ExpireSessionUseCase(expirationDependencies),
     findProcessingContext: new FindSessionProcessingContextUseCase({ sessions }),
     getActiveSession: new GetActiveSessionUseCase(expirationDependencies),
+    getQuotaBalance: new GetSessionQuotaBalanceUseCase({ quota }),
     listStuckProcessingSessions: new ListStuckProcessingSessionsUseCase({ sessions }),
     listSessionHistory: new ListSessionHistoryUseCase({ sessions, accounts }),
+    listThemeCategories: new ListSessionThemeCategoriesUseCase({ themes }),
     requestAudioPlaybackUrl: new RequestAudioPlaybackUrlUseCase({
       sessions,
       audioStorage,
@@ -162,6 +168,8 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
   const controllers: SessionsControllers = {
     startSession: new StartSessionController(useCases.startSession),
     getActiveSession: new GetActiveSessionController(useCases.getActiveSession),
+    getQuotaBalance: new GetQuotaBalanceController(useCases.getQuotaBalance),
+    listThemeCategories: new ListThemeCategoriesController(useCases.listThemeCategories),
     abandonSession: new AbandonSessionController(useCases.expireSession),
     reportMicrophonePermissionDenied: new ReportMicrophonePermissionDeniedController(
       useCases.expireSession,

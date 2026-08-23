@@ -297,6 +297,7 @@ function createSessionsPrismaStub(): SessionsPrismaClient & SessionsPrismaTransa
       findFirst: () => Promise.resolve(null),
       findMany: () => Promise.resolve([]),
       upsert: () => Promise.resolve(createSessionRow()),
+      updateMany: () => Promise.resolve({ count: 1 }),
     },
     $transaction: <T>(
       operation: (client: ReturnType<typeof createSessionsPrismaStub>) => Promise<T>,

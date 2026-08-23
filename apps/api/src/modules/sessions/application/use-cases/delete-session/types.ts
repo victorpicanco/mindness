@@ -10,7 +10,7 @@ export interface DeleteSessionInput {
 }
 
 export interface DeleteSessionDependencies {
-  readonly sessions: Pick<SessionsRepository, 'findById' | 'save'>
+  readonly sessions: Pick<SessionsRepository, 'findById' | 'markDeleted'>
   readonly accounts: Pick<AccountsPort, 'findProfile'>
   readonly clock: Clock
   readonly idGenerator: IdGenerator

@@ -129,6 +129,31 @@ export class PrismaSessionsRepository implements SessionsRepository {
     }
   }
 
+  // The deletion is a compare-and-set instead of a plain save so that two concurrent requests
+  // produce one `session_deleted`; the loser sees `false` and reports the session as gone.
+  async markDeleted(session: Session): Promise<boolean> {
+    const deletedAt = session.deletedAt
+    if (deletedAt === null) {
+      throw new DatabaseError('Refused to persist a deletion without a deletion instant', {
+        context: { sessionId: session.id, state: session.state },
+      })
+    }
+
+    try {
+      const { count } = await this.client().session.updateMany({
+        where: { id: session.id, state: { not: 'deleted' } },
+        data: { state: 'deleted', deletedAt },
+      })
+
+      return count === 1
+    } catch (error) {
+      throw new DatabaseError('Failed to mark the session as deleted', {
+        cause: error,
+        context: { sessionId: session.id },
+      })
+    }
+  }
+
   async save(session: Session): Promise<void> {
     try {
       await this.client().session.upsert({

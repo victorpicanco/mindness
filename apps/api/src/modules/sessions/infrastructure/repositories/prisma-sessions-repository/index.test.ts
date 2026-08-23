@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
 import type {
+  SessionDeleteArgs,
   SessionFindActiveArgs,
   SessionFindManyArgs,
   SessionRow,
@@ -36,19 +37,28 @@ interface FakeClient {
   readonly activeQueries: SessionFindActiveArgs[]
   readonly findManyQueries: SessionFindManyArgs[]
   readonly upserts: SessionUpsertArgs[]
+  readonly deletions: SessionDeleteArgs[]
 }
 
 function createFakeClient(
-  options: { active?: SessionRow | null; findMany?: SessionRow[]; findManyError?: Error } = {},
+  options: {
+    active?: SessionRow | null
+    findMany?: SessionRow[]
+    findManyError?: Error
+    deletedCount?: number
+    updateManyError?: Error
+  } = {},
 ): FakeClient {
   const activeQueries: SessionFindActiveArgs[] = []
   const findManyQueries: SessionFindManyArgs[] = []
   const upserts: SessionUpsertArgs[] = []
+  const deletions: SessionDeleteArgs[] = []
 
   return {
     activeQueries,
     findManyQueries,
     upserts,
+    deletions,
     client: {
       session: {
         findUnique: () => Promise.resolve(null),
@@ -65,6 +75,11 @@ function createFakeClient(
           upserts.push(args)
           return Promise.resolve(row)
         },
+        updateMany: (args) => {
+          deletions.push(args)
+          if (options.updateManyError !== undefined) return Promise.reject(options.updateManyError)
+          return Promise.resolve({ count: options.deletedCount ?? 1 })
+        },
       },
     },
   }
@@ -79,6 +94,42 @@ function createRepository(fake: FakeClient): PrismaSessionsRepository {
 }
 
 describe('PrismaSessionsRepository', () => {
+  it('marks a session deleted only while it is still visible, and reports whether it won', async () => {
+    const deletedAt = new Date('2026-08-22T12:00:00.000Z')
+    const session = new SessionMapper(new SessionAudioMapper()).toDomain({
+      ...row,
+      state: 'completed',
+      totalScore: 80,
+      completedAt: new Date('2026-08-19T12:10:00.000Z'),
+    })
+    session.delete(deletedAt)
+
+    const winner = createFakeClient({ deletedCount: 1 })
+    await expect(createRepository(winner).markDeleted(session)).resolves.toBe(true)
+    expect(winner.deletions).toEqual([
+      {
+        where: { id: row.id, state: { not: 'deleted' } },
+        data: { state: 'deleted', deletedAt },
+      },
+    ])
+
+    const loser = createFakeClient({ deletedCount: 0 })
+    await expect(createRepository(loser).markDeleted(session)).resolves.toBe(false)
+  })
+
+  it('translates a failure to mark the deletion into a database error', async () => {
+    const session = new SessionMapper(new SessionAudioMapper()).toDomain({
+      ...row,
+      state: 'completed',
+      totalScore: 80,
+      completedAt: new Date('2026-08-19T12:10:00.000Z'),
+    })
+    session.delete(new Date('2026-08-22T12:00:00.000Z'))
+    const fake = createFakeClient({ updateManyError: new DatabaseError('boom') })
+
+    await expect(createRepository(fake).markDeleted(session)).rejects.toBeInstanceOf(DatabaseError)
+  })
+
   it('finds only an in-progress session for the account and returns null when absent', async () => {
     const fake = createFakeClient()
     const repository = createRepository(fake)

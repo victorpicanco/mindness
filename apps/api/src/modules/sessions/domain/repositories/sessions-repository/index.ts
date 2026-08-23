@@ -11,5 +11,6 @@ export interface SessionsRepository {
   findCompletedBetween(accountId: string, from: Date, to: Date): Promise<Session[]>
   findExpiredInProgress(before: Date, limit: number): Promise<Session[]>
   findStuckProcessing(before: Date, limit: number): Promise<Session[]>
+  markDeleted(session: Session): Promise<boolean>
   save(session: Session): Promise<void>
 }

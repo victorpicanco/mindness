@@ -37,6 +37,7 @@ function createHarness(activeSession: Session | null) {
     findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    markDeleted: () => Promise.resolve(true),
     save: (session) => {
       saved.push(session)
       return Promise.resolve()

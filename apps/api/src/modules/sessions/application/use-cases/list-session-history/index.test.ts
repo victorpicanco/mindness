@@ -57,6 +57,7 @@ function createHarness(params: {
     },
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }
   const accounts: AccountsPort = {

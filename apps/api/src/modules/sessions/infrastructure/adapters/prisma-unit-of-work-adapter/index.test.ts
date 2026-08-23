@@ -42,6 +42,7 @@ function createRunner(failures: Error[] = []): FakeRunner {
           recordedAt: null,
           audio: null,
         }),
+      updateMany: () => Promise.resolve({ count: 1 }),
     },
   }
 

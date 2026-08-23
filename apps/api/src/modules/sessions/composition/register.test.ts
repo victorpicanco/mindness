@@ -75,6 +75,7 @@ function createDependencies(
         findFirst: () => Promise.resolve(null),
         findMany: () => Promise.resolve([]),
         upsert: () => Promise.resolve(createSessionRow()),
+        updateMany: () => Promise.resolve({ count: 1 }),
       },
       $transaction: async (operation) => operation(createDependencies(subscriptions).prisma),
     },

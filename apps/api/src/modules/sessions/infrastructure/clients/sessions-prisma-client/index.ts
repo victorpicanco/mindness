@@ -131,6 +131,11 @@ export interface SessionUpdateData extends SessionScalars {
   }
 }
 
+export interface SessionDeleteArgs {
+  readonly where: { readonly id: string; readonly state: { readonly not: 'deleted' } }
+  readonly data: { readonly state: 'deleted'; readonly deletedAt: Date }
+}
+
 export interface SessionUpsertArgs {
   readonly where: { readonly id: string }
   readonly create: SessionCreateData
@@ -143,6 +148,7 @@ export interface SessionsPrismaClient {
     findFirst(args: SessionFindActiveArgs): Promise<SessionRow | null>
     findMany(args: SessionFindManyArgs): Promise<SessionRow[]>
     upsert(args: SessionUpsertArgs): Promise<SessionRow>
+    updateMany(args: SessionDeleteArgs): Promise<{ count: number }>
   }
 }
 

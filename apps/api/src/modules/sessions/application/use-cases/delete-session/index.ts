@@ -18,7 +18,9 @@ export class DeleteSessionUseCase {
 
     const at = this.dependencies.clock.now()
     session.delete(at)
-    await this.dependencies.sessions.save(session)
+    const deleted = await this.dependencies.sessions.markDeleted(session)
+    if (!deleted) throw new SessionNotFoundError(input.sessionId)
+
     await this.dependencies.eventPublisher.publish(
       SessionDeleted.create({
         eventId: this.dependencies.idGenerator.generate(),

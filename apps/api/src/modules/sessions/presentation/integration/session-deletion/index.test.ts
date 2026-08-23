@@ -102,12 +102,12 @@ describe('session deletion integration', () => {
     })
     expect(playback.statusCode).toBe(404)
 
-    const analysis = await harness.app.inject({
-      method: 'GET',
-      url: `/sessions/${sessionId}/analysis`,
-      headers: { authorization: 'Bearer account-a' },
-    })
-    expect(analysis.statusCode).toBe(404)
+    // `analyses` serves the analysis from its own app, so this suite cannot call that route.
+    // What it can prove is the port `analyses` reads through: a deleted session stops being
+    // readable, which is what turns the analysis into a 404 on the other side.
+    await expect(
+      harness.container.useCases.checkReadability.execute({ sessionId, accountId: ACCOUNT_A }),
+    ).resolves.toEqual({ readable: false })
 
     expect(harness.quota.releaseCalls).toEqual([])
 
@@ -120,6 +120,22 @@ describe('session deletion integration', () => {
     const secondDelete = await deleteSession(sessionId, 'account-a')
     expect(secondDelete.statusCode).toBe(404)
     expect(harness.eventBus.published).toHaveLength(1)
+  })
+
+  it('publishes a single event when two concurrent requests delete the same session', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000094'
+    await seedSession({ sessionId, accountId: ACCOUNT_A, state: 'completed' })
+
+    const [first, second] = await Promise.all([
+      deleteSession(sessionId, 'account-a'),
+      deleteSession(sessionId, 'account-a'),
+    ])
+
+    expect([first.statusCode, second.statusCode].toSorted((a, b) => a - b)).toEqual([200, 404])
+    expect(harness.eventBus.published).toHaveLength(1)
+    await expect(
+      harness.prisma.session.findUnique({ where: { id: sessionId } }),
+    ).resolves.toMatchObject({ state: 'deleted' })
   })
 
   it('rejects deleting a session that is not in a terminal state', async () => {

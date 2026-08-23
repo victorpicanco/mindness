@@ -49,6 +49,7 @@ function createHarness(initialSessions: Session[]) {
           .slice(0, limit),
       )
     },
+    markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }
   const quota: QuotaPort = {

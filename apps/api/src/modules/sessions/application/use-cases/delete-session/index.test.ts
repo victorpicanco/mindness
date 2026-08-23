@@ -39,9 +39,9 @@ function createSession(
   })
 }
 
-function createHarness(session: Session | null, profileExists = true) {
+function createHarness(session: Session | null, profileExists = true, wonTheRace = true) {
   const calls: string[] = []
-  const saved: Session[] = []
+  const deleted: Session[] = []
   const published: Parameters<EventPublisher['publish']>[0][] = []
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(session),
@@ -50,11 +50,12 @@ function createHarness(session: Session | null, profileExists = true) {
     findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
-    save: (value) => {
-      calls.push('save')
-      saved.push(value)
-      return Promise.resolve()
+    markDeleted: (value) => {
+      calls.push('markDeleted')
+      deleted.push(value)
+      return Promise.resolve(wonTheRace)
     },
+    save: () => Promise.resolve(),
   }
   const accounts: AccountsPort = {
     resolveAccountId: () => Promise.resolve(null),
@@ -76,11 +77,11 @@ function createHarness(session: Session | null, profileExists = true) {
     eventPublisher,
   })
 
-  return { calls, published, saved, useCase }
+  return { calls, published, deleted, useCase }
 }
 
 describe('DeleteSessionUseCase', () => {
-  it('deletes an owned completed session, saves it, and publishes the deletion after saving', async () => {
+  it('deletes an owned completed session, persists it, and publishes the deletion after persisting', async () => {
     const session = createSession('completed')
     const harness = createHarness(session)
 
@@ -88,8 +89,8 @@ describe('DeleteSessionUseCase', () => {
 
     expect(session.state).toBe('deleted')
     expect(session.deletedAt).toEqual(NOW)
-    expect(harness.saved).toEqual([session])
-    expect(harness.calls).toEqual(['save', 'publish'])
+    expect(harness.deleted).toEqual([session])
+    expect(harness.calls).toEqual(['markDeleted', 'publish'])
     expect(harness.published).toHaveLength(1)
     expect(harness.published[0]).toMatchObject({
       eventName: 'session_deleted',
@@ -116,6 +117,16 @@ describe('DeleteSessionUseCase', () => {
     await expect(
       harness.useCase.execute({ accountId: 'account-1', sessionId: 'session-1' }),
     ).rejects.toEqual(new SessionNotDeletableError('processing'))
+  })
+
+  it('publishes nothing when a concurrent request deleted the session first', async () => {
+    const harness = createHarness(createSession('completed'), true, false)
+
+    await expect(
+      harness.useCase.execute({ accountId: 'account-1', sessionId: 'session-1' }),
+    ).rejects.toEqual(new SessionNotFoundError('session-1'))
+    expect(harness.calls).toEqual(['markDeleted'])
+    expect(harness.published).toEqual([])
   })
 
   it('rejects when the session account no longer has a profile', async () => {

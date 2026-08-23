@@ -86,6 +86,7 @@ function createRepository(session: Session): SessionsRepository {
     findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }
 }

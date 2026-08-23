@@ -44,6 +44,10 @@ export interface PasswordAuthenticator {
   signInWithPassword(params: SignInWithPasswordParams): Promise<AuthSession>
 }
 
+export interface RefreshTokenAuthenticator {
+  refreshSession(refreshToken: string): Promise<AuthSession>
+}
+
 export interface GoogleAuthenticator {
   createGoogleAuthorization(redirectTo: string): Promise<GoogleAuthorization>
   exchangeGoogleCode(code: string, pkceState: string): Promise<AuthSession>
@@ -55,4 +59,5 @@ export interface AuthIdentityProvider
     SessionRevoker,
     IdentityRegistrar,
     PasswordAuthenticator,
+    RefreshTokenAuthenticator,
     GoogleAuthenticator {}

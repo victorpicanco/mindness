@@ -56,6 +56,45 @@ export class PrismaSessionsRepository implements SessionsRepository {
     }
   }
 
+  async listByAccount(input: {
+    readonly accountId: string
+    readonly limit: number
+    readonly cursor: string | null
+  }): Promise<Session[]> {
+    try {
+      const rows = await this.client().session.findMany({
+        where: { accountId: input.accountId, state: { not: 'deleted' } },
+        include: { audio: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: input.limit,
+        ...(input.cursor === null ? {} : { cursor: { id: input.cursor }, skip: 1 }),
+      })
+
+      return rows.map((row) => this.mapper.toDomain(row))
+    } catch (error) {
+      throw new DatabaseError('Failed to list sessions for the account', {
+        cause: error,
+        context: { accountId: input.accountId, limit: input.limit },
+      })
+    }
+  }
+
+  async findCompletedBetween(accountId: string, from: Date, to: Date): Promise<Session[]> {
+    try {
+      const rows = await this.client().session.findMany({
+        where: { accountId, state: 'completed', createdAt: { gte: from, lte: to } },
+        include: { audio: true },
+      })
+
+      return rows.map((row) => this.mapper.toDomain(row))
+    } catch (error) {
+      throw new DatabaseError('Failed to find completed sessions in the time window', {
+        cause: error,
+        context: { accountId, from: from.toISOString(), to: to.toISOString() },
+      })
+    }
+  }
+
   async findExpiredInProgress(before: Date, limit: number): Promise<Session[]> {
     try {
       const rows = await this.client().session.findMany({
@@ -86,6 +125,31 @@ export class PrismaSessionsRepository implements SessionsRepository {
       throw new DatabaseError('Failed to find sessions stuck in processing', {
         cause: error,
         context: { before: before.toISOString(), limit },
+      })
+    }
+  }
+
+  // The deletion is a compare-and-set instead of a plain save so that two concurrent requests
+  // produce one `session_deleted`; the loser sees `false` and reports the session as gone.
+  async markDeleted(session: Session): Promise<boolean> {
+    const deletedAt = session.deletedAt
+    if (deletedAt === null) {
+      throw new DatabaseError('Refused to persist a deletion without a deletion instant', {
+        context: { sessionId: session.id, state: session.state },
+      })
+    }
+
+    try {
+      const { count } = await this.client().session.updateMany({
+        where: { id: session.id, state: { not: 'deleted' } },
+        data: { state: 'deleted', deletedAt },
+      })
+
+      return count === 1
+    } catch (error) {
+      throw new DatabaseError('Failed to mark the session as deleted', {
+        cause: error,
+        context: { sessionId: session.id },
       })
     }
   }

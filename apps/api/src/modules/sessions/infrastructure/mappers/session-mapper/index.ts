@@ -31,6 +31,7 @@ export class SessionMapper {
       totalScore: row.totalScore ?? null,
       completedAt: row.completedAt ?? null,
       failedAt: row.failedAt ?? null,
+      deletedAt: row.deletedAt ?? null,
       audio:
         row.audio === undefined || row.audio === null ? null : this.audioMapper.toDomain(row.audio),
     })
@@ -83,6 +84,7 @@ export class SessionMapper {
       totalScore: session.totalScore,
       completedAt: session.completedAt,
       failedAt: session.failedAt,
+      deletedAt: session.deletedAt,
     }
   }
 }

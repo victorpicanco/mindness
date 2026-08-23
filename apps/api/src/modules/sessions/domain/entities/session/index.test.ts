@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import { SessionAudio } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
+import { SessionNotDeletableError } from '@/modules/sessions/domain/errors/session-not-deletable-error/index.js'
 
-import { Session } from './index.js'
+import { Session, type SessionState } from './index.js'
 
 const CREATED_AT = new Date('2026-08-18T12:00:00.000Z')
 const WITHIN_WINDOW = new Date('2026-08-18T12:14:59.999Z')
@@ -152,6 +153,53 @@ describe('Session', () => {
     expect(session.hasElapsedAt(AFTER_DEADLINE)).toBe(true)
   })
 
+  it.each(['completed', 'failed', 'expired'] as const)(
+    'deletes a %s session and records the deletion instant',
+    (state) => {
+      const session = reconstituteWithState(state)
+
+      session.delete(COMPLETED_AT)
+
+      expect(session.state).toBe('deleted')
+      expect(session.deletedAt).toEqual(COMPLETED_AT)
+    },
+  )
+
+  it.each(['in_progress', 'processing', 'deleted'] as const)(
+    'rejects deletion from the %s state with its current state in context',
+    (state) => {
+      const session = reconstituteWithState(state)
+
+      expect(() => session.delete(COMPLETED_AT)).toThrow(SessionNotDeletableError)
+      expect(() => session.delete(COMPLETED_AT)).toThrow(
+        expect.objectContaining({ context: { state } }),
+      )
+    },
+  )
+
+  it('preserves the deletion instant when reconstituted', () => {
+    const session = Session.reconstitute({
+      sessionId: 'session-id',
+      accountId: 'account-id',
+      themeId: 'theme-id',
+      configuration: createConfiguration(),
+      quotaReservationId: 'reservation-id',
+      state: 'deleted',
+      createdAt: CREATED_AT,
+      expiresAt: DEADLINE,
+      expiredReason: null,
+      expiredAt: null,
+      recordedAt: null,
+      deletedAt: COMPLETED_AT,
+    })
+
+    expect(session.deletedAt).toEqual(COMPLETED_AT)
+  })
+
+  it('has no deletion instant before deletion', () => {
+    expect(createSession().deletedAt).toBeNull()
+  })
+
   it.each(STALE_STATES)('is neither live nor elapsed from the %s state', (state) => {
     const session = reconstituteWithState(state)
 
@@ -179,7 +227,7 @@ function createSession(): Session {
   })
 }
 
-function reconstituteWithState(state: (typeof STALE_STATES)[number]): Session {
+function reconstituteWithState(state: SessionState): Session {
   return Session.reconstitute({
     sessionId: 'session-id',
     accountId: 'account-id',

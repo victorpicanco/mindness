@@ -37,6 +37,21 @@ export class PrismaAnalysesRepository implements AnalysesRepository {
     }
   }
 
+  async markFirstView(sessionId: string, at: Date): Promise<boolean> {
+    try {
+      const { count } = await this.client().analysis.updateMany({
+        where: { sessionId, viewedAt: null },
+        data: { viewedAt: at },
+      })
+      return count === 1
+    } catch (cause) {
+      throw new DatabaseError('Failed to mark the first analysis view', {
+        cause,
+        context: { sessionId },
+      })
+    }
+  }
+
   private client(): AnalysesPrismaClient {
     return this.context.current() ?? this.prisma
   }

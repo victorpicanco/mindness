@@ -12,7 +12,17 @@ import {
   SessionIdParamsSchema as ConfirmAudioUploadParamsSchema,
   type SessionIdParams as ConfirmAudioUploadParams,
 } from '@/modules/sessions/presentation/controllers/confirm-audio-upload-controller/schemas.js'
+import {
+  DeleteSessionResponseSchema,
+  SessionIdParamsSchema as DeleteSessionParamsSchema,
+  type SessionIdParams as DeleteSessionParams,
+} from '@/modules/sessions/presentation/controllers/delete-session-controller/schemas.js'
 import { ActiveSessionResponseSchema } from '@/modules/sessions/presentation/controllers/get-active-session-controller/schemas.js'
+import {
+  SessionHistoryQuerySchema,
+  SessionHistoryResponseSchema,
+  type SessionHistoryQuery,
+} from '@/modules/sessions/presentation/controllers/list-session-history-controller/schemas.js'
 import {
   ReportMicrophonePermissionDeniedResponseSchema,
   SessionIdParamsSchema as ReportMicrophonePermissionDeniedParamsSchema,
@@ -24,6 +34,11 @@ import {
   type SessionIdParams as RequestAudioUploadUrlParams,
 } from '@/modules/sessions/presentation/controllers/request-audio-upload-url-controller/schemas.js'
 import {
+  RequestAudioPlaybackUrlResponseSchema,
+  SessionIdParamsSchema as RequestAudioPlaybackUrlParamsSchema,
+  type SessionIdParams as RequestAudioPlaybackUrlParams,
+} from '@/modules/sessions/presentation/controllers/request-audio-playback-url-controller/schemas.js'
+import {
   StartSessionBodySchema,
   StartSessionResponseSchema,
   type StartSessionBody,
@@ -34,6 +49,7 @@ import { ErrorResponseSchema } from '@/shared/http/envelope/index.js'
 import { SESSIONS_ROUTE_PATHS, type SessionsControllers } from './types.js'
 
 const ERROR_RESPONSES = {
+  400: ErrorResponseSchema,
   401: ErrorResponseSchema,
   404: ErrorResponseSchema,
   409: ErrorResponseSchema,
@@ -65,6 +81,17 @@ export async function registerSessionsRoutes(
         },
       },
       (request, reply) => controllers.startSession.handle(request, reply),
+    )
+
+    authenticated.get<{ Querystring: SessionHistoryQuery }>(
+      SESSIONS_ROUTE_PATHS.session,
+      {
+        schema: {
+          querystring: SessionHistoryQuerySchema,
+          response: { 200: SessionHistoryResponseSchema, ...ERROR_RESPONSES },
+        },
+      },
+      (request, reply) => controllers.listSessionHistory.handle(request, reply),
     )
 
     authenticated.get(
@@ -115,6 +142,28 @@ export async function registerSessionsRoutes(
         },
       },
       (request, reply) => controllers.confirmAudioUpload.handle(request, reply),
+    )
+
+    authenticated.delete<{ Params: DeleteSessionParams }>(
+      SESSIONS_ROUTE_PATHS.sessionById,
+      {
+        schema: {
+          params: DeleteSessionParamsSchema,
+          response: { 200: DeleteSessionResponseSchema, ...ERROR_RESPONSES },
+        },
+      },
+      (request, reply) => controllers.deleteSession.handle(request, reply),
+    )
+
+    authenticated.post<{ Params: RequestAudioPlaybackUrlParams }>(
+      SESSIONS_ROUTE_PATHS.audioPlaybackUrl,
+      {
+        schema: {
+          params: RequestAudioPlaybackUrlParamsSchema,
+          response: { 200: RequestAudioPlaybackUrlResponseSchema, ...ERROR_RESPONSES },
+        },
+      },
+      (request, reply) => controllers.requestAudioPlaybackUrl.handle(request, reply),
     )
 
     done()

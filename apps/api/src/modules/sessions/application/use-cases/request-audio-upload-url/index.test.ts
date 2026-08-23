@@ -34,8 +34,11 @@ function createHarness(session: Session | null, now: Date = INSIDE_WINDOW) {
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
+    listByAccount: () => Promise.resolve([]),
+    findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }
   const audioStorage: AudioStoragePort = {
@@ -43,6 +46,7 @@ function createHarness(session: Session | null, now: Date = INSIDE_WINDOW) {
       paths.push(path)
       return Promise.resolve({ uploadUrl: 'https://storage.test/upload', token: 'upload-token' })
     },
+    createDownloadUrl: () => Promise.resolve('https://storage.test/download'),
     getObjectSize: () => Promise.resolve(null),
     downloadObject: () => Promise.resolve(Buffer.alloc(0)),
     removeObject: () => Promise.resolve(),

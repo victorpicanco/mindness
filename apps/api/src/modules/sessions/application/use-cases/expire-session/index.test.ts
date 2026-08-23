@@ -35,8 +35,11 @@ function createHarness(session: Session | null) {
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
+    listByAccount: () => Promise.resolve([]),
+    findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    markDeleted: () => Promise.resolve(true),
     save: (value) => {
       saved.push(value)
       return Promise.resolve()

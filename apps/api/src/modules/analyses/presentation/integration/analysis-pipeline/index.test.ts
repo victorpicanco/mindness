@@ -14,8 +14,8 @@ const SESSION_ID = '00000000-0000-0000-0000-000000000001'
 const ACCOUNT_ID = '00000000-0000-0000-0000-000000000002'
 const THEME_ID = '00000000-0000-0000-0000-000000000003'
 
-beforeAll(() => {
-  harness = createAnalysesIntegrationContainer({ databaseUrl: inject('databaseUrl') })
+beforeAll(async () => {
+  harness = await createAnalysesIntegrationContainer({ databaseUrl: inject('databaseUrl') })
 })
 
 afterAll(async () => {

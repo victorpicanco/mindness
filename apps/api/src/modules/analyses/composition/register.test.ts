@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
 import { registerAnalysesModule } from './register.js'
+import { buildApp } from '@/shared/http/build-app/index.js'
+import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import type {
   AnalysesPrismaClient,
   AnalysesPrismaTransactionRunner,
 } from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
 
 describe('registerAnalysesModule', () => {
-  it('subscribes to recording_submitted', () => {
+  it('subscribes to recording_submitted and registers the session analysis route', async () => {
     const subscriptions: string[] = []
-    registerAnalysesModule(undefined, {
+    const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })
+
+    await registerAnalysesModule(app, {
       prisma: createPrismaStub(),
       clock: { now: () => new Date() },
       idGenerator: { generate: () => 'id' },
@@ -23,11 +27,18 @@ describe('registerAnalysesModule', () => {
       },
       accountsFacade: {
         getAccountSnapshot: () =>
-          Promise.resolve({ accountId: 'account', plan: 'free' as const, createdAt: new Date() }),
+          Promise.resolve({
+            accountId: 'account',
+            plan: 'free' as const,
+            createdAt: new Date(),
+            timeZone: 'America/Sao_Paulo',
+          }),
+        authenticate: () => Promise.resolve({ accountId: null }),
       },
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+        isReadableByAccount: () => Promise.resolve(false),
         listStuckProcessing: () => Promise.resolve([]),
       },
       themesFacade: {
@@ -47,6 +58,8 @@ describe('registerAnalysesModule', () => {
     })
 
     expect(subscriptions).toContain('recording_submitted')
+    expect(app.hasRoute({ method: 'GET', url: '/sessions/:sessionId/analysis' })).toBe(true)
+    await app.close()
   })
 })
 
@@ -59,6 +72,7 @@ function createPrismaStub(): AnalysesPrismaClient & AnalysesPrismaTransactionRun
     analysis: {
       findUnique: () => Promise.resolve(null),
       upsert: () => Promise.resolve(createAnalysisRow()),
+      updateMany: () => Promise.resolve({ count: 0 }),
     },
     analysisCostEntry: {
       create: () => Promise.resolve(createCostEntryRow()),

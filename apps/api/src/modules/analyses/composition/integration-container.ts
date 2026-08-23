@@ -1,11 +1,15 @@
 import type { PrismaClient } from '@/generated/prisma/client.js'
+import type { DestinationStream } from 'pino'
 import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
+import { buildApp } from '@/shared/http/build-app/index.js'
 import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
+import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
 
-import { createAnalysesContainer, type AnalysesContainer } from './container.js'
+import { registerAnalysesModule } from './register.js'
+import type { AnalysesContainer } from './container.js'
 import { createAnalysesPrismaClient } from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
 import {
   createFakeAccountsPort,
@@ -27,6 +31,7 @@ export interface AnalysesIntegrationDeps {
 }
 
 export interface AnalysesIntegrationContainer {
+  readonly app: ReturnType<typeof buildApp>
   readonly prisma: PrismaClient
   readonly container: AnalysesContainer
   readonly repositories: AnalysesContainer['repositories']
@@ -40,6 +45,7 @@ export interface AnalysesIntegrationContainer {
   readonly evaluation: InMemoryEvaluationAdapter
   readonly processingQueue: InMemoryProcessingQueueAdapter
   readonly logger: IntegrationAnalysisLogger
+  readonly logs: readonly string[]
   reset(): void
   close(): Promise<void>
 }
@@ -55,9 +61,16 @@ class IntegrationAnalysisLogger implements AnalysisLogger {
   }
 }
 
-export function createAnalysesIntegrationContainer(
+export async function createAnalysesIntegrationContainer(
   deps: AnalysesIntegrationDeps,
-): AnalysesIntegrationContainer {
+): Promise<AnalysesIntegrationContainer> {
+  const logs: string[] = []
+  const destination: DestinationStream = {
+    write: (chunk) => {
+      logs.push(...chunk.split('\n').filter(Boolean))
+    },
+  }
+  const app = buildApp({ logger: createLogger({ level: 'debug', pretty: false }, destination) })
   const prisma = createPrismaClient({ databaseUrl: deps.databaseUrl, logQueries: false })
   const analysesPrisma = createAnalysesPrismaClient(prisma)
   const eventBus = new FakeEventBus()
@@ -84,7 +97,7 @@ export function createAnalysesIntegrationContainer(
   })
   const processingQueue = new InMemoryProcessingQueueAdapter()
   const logger = new IntegrationAnalysisLogger()
-  const container = createAnalysesContainer({
+  const container = await registerAnalysesModule(app, {
     prisma: analysesPrisma,
     clock,
     costRates: {
@@ -106,8 +119,10 @@ export function createAnalysesIntegrationContainer(
       processingQueue,
     },
   })
+  await app.ready()
 
   return {
+    app,
     prisma,
     container,
     repositories: container.repositories,
@@ -121,7 +136,9 @@ export function createAnalysesIntegrationContainer(
     evaluation,
     processingQueue,
     logger,
+    logs,
     reset: () => {
+      logs.length = 0
       eventBus.published.length = 0
       clock.set(ANALYSES_TEST_NOW)
       accounts.reset()
@@ -131,6 +148,9 @@ export function createAnalysesIntegrationContainer(
       evaluation.reset()
       logger.messages.length = 0
     },
-    close: () => prisma.$disconnect(),
+    close: async () => {
+      await app.close()
+      await prisma.$disconnect()
+    },
   }
 }

@@ -17,6 +17,7 @@ interface SupabaseStorageFileApi {
     path: string,
     options: { readonly upsert: boolean },
   ): PromiseLike<StorageResult>
+  createSignedUrl(path: string, expiresIn: number): PromiseLike<StorageResult>
   list(path: string, options: { readonly search: string }): PromiseLike<StorageResult>
   download(path: string): PromiseLike<StorageResult>
   remove(paths: string[]): PromiseLike<StorageResult>
@@ -67,6 +68,19 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
     }
 
     return { uploadUrl, token }
+  }
+
+  async createDownloadUrl(path: string, expiresInSeconds: number): Promise<string> {
+    const result = await this.call('create_signed_url', () =>
+      this.bucket().createSignedUrl(path, expiresInSeconds),
+    )
+    const signedUrl = isRecord(result.data) ? readString(result.data, 'signedUrl') : null
+
+    if (signedUrl === null) {
+      throw new AudioStorageProviderError('create_signed_url', { missingFields: ['signedUrl'] })
+    }
+
+    return signedUrl
   }
 
   async getObjectSize(path: string): Promise<number | null> {

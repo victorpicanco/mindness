@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
+import { DatabaseError } from '@/shared/errors/database-error/index.js'
 import type {
+  SessionDeleteArgs,
   SessionFindActiveArgs,
-  SessionFindStaleArgs,
+  SessionFindManyArgs,
   SessionRow,
   SessionsPrismaClient,
   SessionUpsertArgs,
@@ -33,21 +35,30 @@ const row: SessionRow = {
 interface FakeClient {
   readonly client: SessionsPrismaClient
   readonly activeQueries: SessionFindActiveArgs[]
-  readonly findManyQueries: SessionFindStaleArgs[]
+  readonly findManyQueries: SessionFindManyArgs[]
   readonly upserts: SessionUpsertArgs[]
+  readonly deletions: SessionDeleteArgs[]
 }
 
 function createFakeClient(
-  options: { active?: SessionRow | null; findMany?: SessionRow[] } = {},
+  options: {
+    active?: SessionRow | null
+    findMany?: SessionRow[]
+    findManyError?: Error
+    deletedCount?: number
+    updateManyError?: Error
+  } = {},
 ): FakeClient {
   const activeQueries: SessionFindActiveArgs[] = []
-  const findManyQueries: SessionFindStaleArgs[] = []
+  const findManyQueries: SessionFindManyArgs[] = []
   const upserts: SessionUpsertArgs[] = []
+  const deletions: SessionDeleteArgs[] = []
 
   return {
     activeQueries,
     findManyQueries,
     upserts,
+    deletions,
     client: {
       session: {
         findUnique: () => Promise.resolve(null),
@@ -57,11 +68,17 @@ function createFakeClient(
         },
         findMany: (args) => {
           findManyQueries.push(args)
+          if (options.findManyError !== undefined) return Promise.reject(options.findManyError)
           return Promise.resolve(options.findMany ?? [])
         },
         upsert: (args) => {
           upserts.push(args)
           return Promise.resolve(row)
+        },
+        updateMany: (args) => {
+          deletions.push(args)
+          if (options.updateManyError !== undefined) return Promise.reject(options.updateManyError)
+          return Promise.resolve({ count: options.deletedCount ?? 1 })
         },
       },
     },
@@ -77,6 +94,42 @@ function createRepository(fake: FakeClient): PrismaSessionsRepository {
 }
 
 describe('PrismaSessionsRepository', () => {
+  it('marks a session deleted only while it is still visible, and reports whether it won', async () => {
+    const deletedAt = new Date('2026-08-22T12:00:00.000Z')
+    const session = new SessionMapper(new SessionAudioMapper()).toDomain({
+      ...row,
+      state: 'completed',
+      totalScore: 80,
+      completedAt: new Date('2026-08-19T12:10:00.000Z'),
+    })
+    session.delete(deletedAt)
+
+    const winner = createFakeClient({ deletedCount: 1 })
+    await expect(createRepository(winner).markDeleted(session)).resolves.toBe(true)
+    expect(winner.deletions).toEqual([
+      {
+        where: { id: row.id, state: { not: 'deleted' } },
+        data: { state: 'deleted', deletedAt },
+      },
+    ])
+
+    const loser = createFakeClient({ deletedCount: 0 })
+    await expect(createRepository(loser).markDeleted(session)).resolves.toBe(false)
+  })
+
+  it('translates a failure to mark the deletion into a database error', async () => {
+    const session = new SessionMapper(new SessionAudioMapper()).toDomain({
+      ...row,
+      state: 'completed',
+      totalScore: 80,
+      completedAt: new Date('2026-08-19T12:10:00.000Z'),
+    })
+    session.delete(new Date('2026-08-22T12:00:00.000Z'))
+    const fake = createFakeClient({ updateManyError: new DatabaseError('boom') })
+
+    await expect(createRepository(fake).markDeleted(session)).rejects.toBeInstanceOf(DatabaseError)
+  })
+
   it('finds only an in-progress session for the account and returns null when absent', async () => {
     const fake = createFakeClient()
     const repository = createRepository(fake)
@@ -115,6 +168,94 @@ describe('PrismaSessionsRepository', () => {
         take: 20,
       },
     ])
+  })
+
+  it('lists non-deleted sessions by account with the requested cursor page', async () => {
+    const fake = createFakeClient({ findMany: [row] })
+    const repository = createRepository(fake)
+
+    await expect(
+      repository.listByAccount({ accountId: row.accountId, limit: 21, cursor: null }),
+    ).resolves.toMatchObject([{ id: row.id }])
+    expect(fake.findManyQueries).toEqual([
+      {
+        where: { accountId: row.accountId, state: { not: 'deleted' } },
+        include: { audio: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 21,
+      },
+    ])
+
+    await expect(
+      repository.listByAccount({ accountId: row.accountId, limit: 21, cursor: row.id }),
+    ).resolves.toMatchObject([{ id: row.id }])
+    expect(fake.findManyQueries[1]).toEqual({
+      where: { accountId: row.accountId, state: { not: 'deleted' } },
+      include: { audio: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 21,
+      cursor: { id: row.id },
+      skip: 1,
+    })
+  })
+
+  it('translates a paginated history lookup failure into a database error', async () => {
+    const fake = createFakeClient({
+      findManyError: new DatabaseError('Database unavailable', { context: {} }),
+    })
+    const repository = createRepository(fake)
+
+    await expect(
+      repository.listByAccount({ accountId: row.accountId, limit: 21, cursor: null }),
+    ).rejects.toBeInstanceOf(DatabaseError)
+  })
+
+  it('finds completed sessions inside a time window without applying pagination', async () => {
+    const from = new Date('2026-08-19T00:00:00.000Z')
+    const to = new Date('2026-08-20T00:00:00.000Z')
+    const fake = createFakeClient({ findMany: [{ ...row, state: 'completed' }] })
+    const repository = createRepository(fake)
+
+    await expect(repository.findCompletedBetween(row.accountId, from, to)).resolves.toMatchObject([
+      { id: row.id, state: 'completed' },
+    ])
+    expect(fake.findManyQueries).toEqual([
+      {
+        where: {
+          accountId: row.accountId,
+          state: 'completed',
+          createdAt: { gte: from, lte: to },
+        },
+        include: { audio: true },
+      },
+    ])
+  })
+
+  it('returns no sessions when the completed time window is empty', async () => {
+    const repository = createRepository(createFakeClient())
+
+    await expect(
+      repository.findCompletedBetween(
+        row.accountId,
+        new Date('2026-08-19T00:00:00.000Z'),
+        new Date('2026-08-20T00:00:00.000Z'),
+      ),
+    ).resolves.toEqual([])
+  })
+
+  it('translates a completed time window lookup failure into a database error', async () => {
+    const fake = createFakeClient({
+      findManyError: new DatabaseError('Database unavailable', { context: {} }),
+    })
+    const repository = createRepository(fake)
+
+    await expect(
+      repository.findCompletedBetween(
+        row.accountId,
+        new Date('2026-08-19T00:00:00.000Z'),
+        new Date('2026-08-20T00:00:00.000Z'),
+      ),
+    ).rejects.toBeInstanceOf(DatabaseError)
   })
 
   it('persists a session and its accepted audio in one upsert', async () => {

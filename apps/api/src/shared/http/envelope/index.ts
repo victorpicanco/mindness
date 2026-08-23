@@ -49,6 +49,11 @@ export const ErrorResponseSchema = Type.Object(
   { additionalProperties: false },
 )
 
-export function successSchema<TData extends TSchema>(data: TData) {
-  return Type.Object({ data }, { additionalProperties: false })
+export function successSchema<TData extends TSchema, TMeta extends TSchema>(
+  data: TData,
+  meta?: TMeta,
+) {
+  return meta === undefined
+    ? Type.Object({ data }, { additionalProperties: false })
+    : Type.Object({ data, meta }, { additionalProperties: false })
 }

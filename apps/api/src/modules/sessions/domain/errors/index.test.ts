@@ -7,7 +7,9 @@ import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/ses
 import { SessionAuthenticationRejectedError } from '@/modules/sessions/domain/errors/session-authentication-rejected-error/index.js'
 import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
+import { SessionNotDeletableError } from '@/modules/sessions/domain/errors/session-not-deletable-error/index.js'
 import { ThemeUnavailableError } from '@/modules/sessions/domain/errors/theme-unavailable-error/index.js'
+import { AudioUnavailableError } from '@/modules/sessions/domain/errors/audio-unavailable-error/index.js'
 import { BaseError } from '@/shared/errors/base-error/index.js'
 
 describe('session domain errors', () => {
@@ -55,6 +57,18 @@ describe('session domain errors', () => {
       { storagePath: 'account-1/session-1/audio' },
     ],
     [new SessionAuthenticationRejectedError(), 'sessions.AUTHENTICATION_REJECTED', 401, {}],
+    [
+      new SessionNotDeletableError('processing'),
+      'sessions.SESSION_NOT_DELETABLE',
+      409,
+      { state: 'processing' },
+    ],
+    [
+      new AudioUnavailableError('session-1'),
+      'sessions.AUDIO_UNAVAILABLE',
+      404,
+      { sessionId: 'session-1' },
+    ],
   ])('has the expected code, HTTP status, and context', (error, code, httpStatus, context) => {
     expect(error).toBeInstanceOf(BaseError)
     expect(error.code).toBe(code)

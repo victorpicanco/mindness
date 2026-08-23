@@ -35,6 +35,8 @@ function createHarness(initialSessions: Session[]) {
     findById: (sessionId) =>
       Promise.resolve(sessions.find((session) => session.id === sessionId) ?? null),
     findActiveByAccountId: () => Promise.resolve(null),
+    listByAccount: () => Promise.resolve([]),
+    findCompletedBetween: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     findExpiredInProgress: (before, limit) => {
       limits.push(limit)
@@ -47,6 +49,7 @@ function createHarness(initialSessions: Session[]) {
           .slice(0, limit),
       )
     },
+    markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }
   const quota: QuotaPort = {

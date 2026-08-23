@@ -75,6 +75,7 @@ function createDependencies(
         findFirst: () => Promise.resolve(null),
         findMany: () => Promise.resolve([]),
         upsert: () => Promise.resolve(createSessionRow()),
+        updateMany: () => Promise.resolve({ count: 1 }),
       },
       $transaction: async (operation) => operation(createDependencies(subscriptions).prisma),
     },
@@ -88,7 +89,10 @@ function createDependencies(
       },
     },
     adapters: {
-      accounts: { resolveAccountId: () => Promise.resolve(null) },
+      accounts: {
+        resolveAccountId: () => Promise.resolve(null),
+        findProfile: () => Promise.resolve(null),
+      },
       themes: { drawEligibleTheme: () => Promise.resolve(null) },
       quota: {
         reserveForSession: () =>
@@ -97,6 +101,7 @@ function createDependencies(
       },
       audioStorage: {
         createUploadUrl: () => Promise.resolve({ uploadUrl: 'memory://upload', token: 'token' }),
+        createDownloadUrl: () => Promise.resolve('memory://download'),
         getObjectSize: () => Promise.resolve(null),
         downloadObject: () => Promise.resolve(Buffer.from('audio')),
         removeObject: () => Promise.resolve(),

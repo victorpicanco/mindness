@@ -63,8 +63,11 @@ function createHarness(session: Session | null) {
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
+    listByAccount: () => Promise.resolve([]),
+    findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    markDeleted: () => Promise.resolve(true),
     save: (value) => {
       calls.push('save')
       saved.push(value)
@@ -73,6 +76,7 @@ function createHarness(session: Session | null) {
   }
   const audioStorage: AudioStoragePort = {
     createUploadUrl: () => Promise.resolve({ uploadUrl: '', token: '' }),
+    createDownloadUrl: () => Promise.resolve(''),
     getObjectSize: () => {
       calls.push('size')
       return Promise.resolve(objectSize)

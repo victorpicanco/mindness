@@ -65,8 +65,11 @@ function createDependencies(input?: {
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(input?.activeSession ?? null),
     findActiveByAccountId: () => Promise.resolve(input?.activeSession ?? null),
+    listByAccount: () => Promise.resolve([]),
+    findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    markDeleted: () => Promise.resolve(true),
     save: (session) => {
       operations.push('save')
       if (input?.saveError !== undefined) return Promise.reject(input.saveError)

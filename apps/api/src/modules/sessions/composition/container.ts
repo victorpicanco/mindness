@@ -1,9 +1,13 @@
+import { CheckSessionReadabilityUseCase } from '@/modules/sessions/application/use-cases/check-session-readability/index.js'
 import { ConfirmAudioUploadUseCase } from '@/modules/sessions/application/use-cases/confirm-audio-upload/index.js'
+import { DeleteSessionUseCase } from '@/modules/sessions/application/use-cases/delete-session/index.js'
 import { DownloadSessionAudioUseCase } from '@/modules/sessions/application/use-cases/download-session-audio/index.js'
 import { ExpireSessionUseCase } from '@/modules/sessions/application/use-cases/expire-session/index.js'
 import { FindSessionProcessingContextUseCase } from '@/modules/sessions/application/use-cases/find-session-processing-context/index.js'
 import { GetActiveSessionUseCase } from '@/modules/sessions/application/use-cases/get-active-session/index.js'
 import { ListStuckProcessingSessionsUseCase } from '@/modules/sessions/application/use-cases/list-stuck-processing-sessions/index.js'
+import { ListSessionHistoryUseCase } from '@/modules/sessions/application/use-cases/list-session-history/index.js'
+import { RequestAudioPlaybackUrlUseCase } from '@/modules/sessions/application/use-cases/request-audio-playback-url/index.js'
 import { RequestAudioUploadUrlUseCase } from '@/modules/sessions/application/use-cases/request-audio-upload-url/index.js'
 import { ResolveAccountIdentityUseCase } from '@/modules/sessions/application/use-cases/resolve-account-identity/index.js'
 import { StartSessionUseCase } from '@/modules/sessions/application/use-cases/start-session/index.js'
@@ -44,9 +48,12 @@ import {
 import { PrismaSessionsRepository } from '@/modules/sessions/infrastructure/repositories/prisma-sessions-repository/index.js'
 import { AbandonSessionController } from '@/modules/sessions/presentation/controllers/abandon-session-controller/index.js'
 import { ConfirmAudioUploadController } from '@/modules/sessions/presentation/controllers/confirm-audio-upload-controller/index.js'
+import { DeleteSessionController } from '@/modules/sessions/presentation/controllers/delete-session-controller/index.js'
 import { GetActiveSessionController } from '@/modules/sessions/presentation/controllers/get-active-session-controller/index.js'
+import { ListSessionHistoryController } from '@/modules/sessions/presentation/controllers/list-session-history-controller/index.js'
 import { ReportMicrophonePermissionDeniedController } from '@/modules/sessions/presentation/controllers/report-microphone-permission-denied-controller/index.js'
 import { RequestAudioUploadUrlController } from '@/modules/sessions/presentation/controllers/request-audio-upload-url-controller/index.js'
+import { RequestAudioPlaybackUrlController } from '@/modules/sessions/presentation/controllers/request-audio-playback-url-controller/index.js'
 import { StartSessionController } from '@/modules/sessions/presentation/controllers/start-session-controller/index.js'
 import type { SessionsControllers } from '@/modules/sessions/presentation/routes/sessions-routes/types.js'
 import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
@@ -113,6 +120,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     unitOfWork,
   }
   const useCases = {
+    checkReadability: new CheckSessionReadabilityUseCase({ sessions }),
     confirmAudioUpload: new ConfirmAudioUploadUseCase({
       sessions,
       audioStorage,
@@ -123,10 +131,23 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
       unitOfWork,
     }),
     downloadAudio: new DownloadSessionAudioUseCase({ sessions, audioStorage }),
+    deleteSession: new DeleteSessionUseCase({
+      sessions,
+      accounts,
+      clock: deps.clock,
+      idGenerator: deps.idGenerator,
+      eventPublisher: deps.eventPublisher,
+    }),
     expireSession: new ExpireSessionUseCase(expirationDependencies),
     findProcessingContext: new FindSessionProcessingContextUseCase({ sessions }),
     getActiveSession: new GetActiveSessionUseCase(expirationDependencies),
     listStuckProcessingSessions: new ListStuckProcessingSessionsUseCase({ sessions }),
+    listSessionHistory: new ListSessionHistoryUseCase({ sessions, accounts }),
+    requestAudioPlaybackUrl: new RequestAudioPlaybackUrlUseCase({
+      sessions,
+      audioStorage,
+      clock: deps.clock,
+    }),
     requestAudioUploadUrl: new RequestAudioUploadUrlUseCase({
       sessions,
       audioStorage,
@@ -149,6 +170,11 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     ),
     requestAudioUploadUrl: new RequestAudioUploadUrlController(useCases.requestAudioUploadUrl),
     confirmAudioUpload: new ConfirmAudioUploadController(useCases.confirmAudioUpload),
+    deleteSession: new DeleteSessionController(useCases.deleteSession),
+    listSessionHistory: new ListSessionHistoryController(useCases.listSessionHistory),
+    requestAudioPlaybackUrl: new RequestAudioPlaybackUrlController(
+      useCases.requestAudioPlaybackUrl,
+    ),
   }
   return { controllers, useCases, repositories: { sessions }, ports: { quota } }
 }

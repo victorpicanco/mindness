@@ -34,6 +34,7 @@ class FakePrismaClient implements AnalysesPrismaClient {
   readonly analysis: AnalysesPrismaClient['analysis'] = {
     findUnique: () => Promise.resolve(null),
     upsert: (args) => Promise.resolve(args.create),
+    updateMany: () => Promise.resolve({ count: 0 }),
   }
 
   readonly analysisCostEntry: AnalysesPrismaClient['analysisCostEntry'] = {

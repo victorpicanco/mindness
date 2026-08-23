@@ -10,7 +10,12 @@ export class GetAccountSnapshotUseCase {
 
     if (account === null) return null
 
-    return { accountId: account.id, plan: account.plan, createdAt: account.createdAt }
+    return {
+      accountId: account.id,
+      plan: account.plan,
+      createdAt: account.createdAt,
+      timeZone: account.timeZone.value,
+    }
   }
 }
 

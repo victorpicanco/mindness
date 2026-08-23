@@ -11,7 +11,10 @@ import type {
 import { readFile } from 'node:fs/promises'
 
 import type { PrismaClient } from '@/generated/prisma/client.js'
-import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
+import type {
+  AccountPlan,
+  AccountsPort,
+} from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { SupabaseAudioStorageClient } from '@/modules/sessions/infrastructure/adapters/supabase-audio-storage-adapter/index.js'
 
 import { FakeQuotaExhaustedError, FakeStorageObjectNotFoundError } from './errors.js'
@@ -22,6 +25,10 @@ const SESSIONS_TABLES = ['session_audios', 'sessions']
 
 export interface FakeAccountsPort extends AccountsPort {
   registerIdentity(accessToken: string, accountId: string | null): void
+  registerProfile(
+    accountId: string,
+    profile: { readonly plan: AccountPlan; readonly timeZone: string },
+  ): void
   reset(): void
 }
 
@@ -45,7 +52,12 @@ export interface FakeQuotaPort extends QuotaPort {
 export interface InMemorySupabaseStorageClient extends SupabaseAudioStorageClient {
   putObject(path: string, buffer: Buffer): void
   hasObject(path: string): boolean
+  isSignedUrlValidAt(url: string, at: Date): boolean
   reset(): void
+}
+
+interface Clock {
+  now(): Date
 }
 
 function themeKey(categorySlug: string, difficulty: Difficulty): string {
@@ -69,14 +81,23 @@ export function createFakeThemesPort(): FakeThemesPort {
 
 export function createFakeAccountsPort(): FakeAccountsPort {
   const accountsByToken = new Map<string, string | null>()
+  const profilesByAccountId = new Map<
+    string,
+    { readonly plan: AccountPlan; readonly timeZone: string }
+  >()
 
   return {
     resolveAccountId: (accessToken) => Promise.resolve(accountsByToken.get(accessToken) ?? null),
+    findProfile: (accountId) => Promise.resolve(profilesByAccountId.get(accountId) ?? null),
     registerIdentity: (accessToken, accountId) => {
       accountsByToken.set(accessToken, accountId)
     },
+    registerProfile: (accountId, profile) => {
+      profilesByAccountId.set(accountId, profile)
+    },
     reset: () => {
       accountsByToken.clear()
+      profilesByAccountId.clear()
     },
   }
 }
@@ -131,8 +152,9 @@ export function createFakeQuotaPort(): FakeQuotaPort {
   }
 }
 
-export function createInMemorySupabaseStorageClient(): InMemorySupabaseStorageClient {
+export function createInMemorySupabaseStorageClient(clock?: Clock): InMemorySupabaseStorageClient {
   const objects = new Map<string, Buffer>()
+  const storageClock = clock ?? { now: () => new Date() }
 
   function objectPath(directory: string, fileName: string): string {
     return directory.length === 0 ? fileName : `${directory}/${fileName}`
@@ -144,6 +166,20 @@ export function createInMemorySupabaseStorageClient(): InMemorySupabaseStorageCl
         data: { signedUrl: `memory://session-audio/${path}`, token: `token-${path}` },
         error: null,
       }),
+    createSignedUrl: (path: string, expiresIn: number) => {
+      const exists = objects.has(path)
+      const expiresAt = storageClock.now().getTime() + expiresIn * 1_000
+
+      return Promise.resolve({
+        data: exists
+          ? `memory://session-audio/${path}?token=token-${path}&expiresAt=${expiresAt}`
+          : null,
+        error: exists ? null : new FakeStorageObjectNotFoundError(),
+      }).then((result) => ({
+        data: result.data === null ? null : { signedUrl: result.data },
+        error: result.error,
+      }))
+    },
     // Supabase filters `search` as a prefix over the names inside the directory.
     list: (directory: string, options: { readonly search: string }) => {
       const prefix = objectPath(directory, options.search)
@@ -175,6 +211,17 @@ export function createInMemorySupabaseStorageClient(): InMemorySupabaseStorageCl
       objects.set(path, Buffer.from(buffer))
     },
     hasObject: (path) => objects.has(path),
+    isSignedUrlValidAt: (url, at) => {
+      try {
+        const expiresAt = new URL(url).searchParams.get('expiresAt')
+        if (expiresAt === null) return false
+
+        const expiresAtMs = Number(expiresAt)
+        return Number.isFinite(expiresAtMs) && at.getTime() <= expiresAtMs
+      } catch {
+        return false
+      }
+    },
     reset: () => {
       objects.clear()
     },

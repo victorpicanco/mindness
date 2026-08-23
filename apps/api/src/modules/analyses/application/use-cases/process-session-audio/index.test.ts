@@ -18,9 +18,17 @@ import type { ProcessSessionAudioDependencies } from './types.js'
 
 class InMemoryAnalysesRepository {
   readonly saved: Analysis[] = []
+  private readonly viewedSessionIds = new Set<string>()
 
   findBySessionId(sessionId: string): Promise<Analysis | null> {
     return Promise.resolve(this.saved.find((analysis) => analysis.sessionId === sessionId) ?? null)
+  }
+
+  markFirstView(sessionId: string, at: Date): Promise<boolean> {
+    void at
+    if (this.viewedSessionIds.has(sessionId)) return Promise.resolve(false)
+    this.viewedSessionIds.add(sessionId)
+    return Promise.resolve(true)
   }
 
   save(analysis: Analysis): Promise<void> {
@@ -64,6 +72,10 @@ class InMemorySessionsPort {
 
   listStuckProcessing(): Promise<readonly string[]> {
     return Promise.resolve([])
+  }
+
+  isReadableByAccount(): Promise<boolean> {
+    return Promise.resolve(false)
   }
 }
 
@@ -183,6 +195,10 @@ class InMemoryAccountsPort {
 
   findPlan(): Promise<AccountPlan | null> {
     return Promise.resolve(this.plan)
+  }
+
+  resolveAccountId(): Promise<string | null> {
+    return Promise.resolve(null)
   }
 }
 
@@ -388,7 +404,10 @@ describe('ProcessSessionAudioUseCase', () => {
     const { dependencies, events, logger, transcription } = createDependencies()
     const useCase = new ProcessSessionAudioUseCase({
       ...dependencies,
-      accounts: { findPlan: () => Promise.resolve(null) },
+      accounts: {
+        findPlan: () => Promise.resolve(null),
+        resolveAccountId: () => Promise.resolve(null),
+      },
     })
 
     await expect(useCase.execute({ sessionId: 'session-1' })).resolves.toBeUndefined()

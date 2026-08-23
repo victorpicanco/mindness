@@ -27,7 +27,10 @@ describe('registerAnalysisPipelineModules', () => {
         eventPublisher: { publish: () => Promise.resolve() },
         eventSubscriber,
         adapters: {
-          accounts: { resolveAccountId: () => Promise.resolve(null) },
+          accounts: {
+            resolveAccountId: () => Promise.resolve(null),
+            findProfile: () => Promise.resolve(null),
+          },
           themes: { drawEligibleTheme: () => Promise.resolve(null) },
           quota: {
             reserveForSession: () =>
@@ -37,6 +40,7 @@ describe('registerAnalysisPipelineModules', () => {
           audioStorage: {
             createUploadUrl: () =>
               Promise.resolve({ uploadUrl: 'memory://upload', token: 'token' }),
+            createDownloadUrl: () => Promise.resolve('memory://download'),
             getObjectSize: () => Promise.resolve(null),
             downloadObject: () => Promise.resolve(Buffer.from('audio')),
             removeObject: () => Promise.resolve(),
@@ -57,7 +61,13 @@ describe('registerAnalysisPipelineModules', () => {
         },
         accountsFacade: {
           getAccountSnapshot: () =>
-            Promise.resolve({ accountId: 'account', plan: 'free' as const, createdAt: new Date() }),
+            Promise.resolve({
+              accountId: 'account',
+              plan: 'free' as const,
+              createdAt: new Date(),
+              timeZone: 'America/Sao_Paulo',
+            }),
+          authenticate: () => Promise.resolve({ accountId: null }),
         },
         themesFacade: {
           findThemeById: () =>
@@ -84,6 +94,10 @@ describe('registerAnalysisPipelineModules', () => {
         'recording_submitted',
       ].toSorted(),
     )
+    await app.ready()
+    expect(app.hasRoute({ method: 'GET', url: '/sessions/:sessionId/analysis' })).toBe(true)
+    expect(app.hasRoute({ method: 'GET', url: '/sessions' })).toBe(true)
+    await app.close()
 
     await app.close()
   })
@@ -96,6 +110,7 @@ function createSessionsPrismaStub(): SessionsPrismaClient & SessionsPrismaTransa
       findFirst: () => Promise.resolve(null),
       findMany: () => Promise.resolve([]),
       upsert: () => Promise.resolve(createSessionRow()),
+      updateMany: () => Promise.resolve({ count: 1 }),
     },
     $transaction: <T>(
       operation: (client: ReturnType<typeof createSessionsPrismaStub>) => Promise<T>,
@@ -133,6 +148,7 @@ function createAnalysesPrismaStub(): AnalysesPrismaClient & AnalysesPrismaTransa
     analysis: {
       findUnique: () => Promise.resolve(null),
       upsert: () => Promise.resolve(createAnalysisRow()),
+      updateMany: () => Promise.resolve({ count: 0 }),
     },
     analysisCostEntry: {
       create: () => Promise.resolve(createCostEntryRow()),

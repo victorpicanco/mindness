@@ -27,6 +27,10 @@ class InMemoryAccountsPort {
   findPlan(): Promise<'free' | null> {
     return Promise.resolve(this.plan)
   }
+
+  resolveAccountId(): Promise<string | null> {
+    return Promise.resolve(null)
+  }
 }
 
 class SequentialIdGenerator {

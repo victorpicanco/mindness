@@ -8,6 +8,7 @@ export interface AccountSnapshot {
   readonly accountId: string
   readonly plan: AccountPlan
   readonly createdAt: Date
+  readonly timeZone: string
 }
 
 export type GetAccountSnapshotOutput = AccountSnapshot | null

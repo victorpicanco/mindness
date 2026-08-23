@@ -95,6 +95,7 @@ describe('account lifecycle', () => {
       accountId: account?.id,
       plan: 'free',
       createdAt: account?.createdAt,
+      timeZone: account?.timeZone.value,
     })
     await expect(
       harness.container.facade.getAccountSnapshot('00000000-0000-4000-8000-000000000000'),

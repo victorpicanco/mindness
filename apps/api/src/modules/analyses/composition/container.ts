@@ -1,7 +1,9 @@
 import { OnRecordingSubmittedEnqueueAnalysis } from '@/modules/analyses/application/event-handlers/on-recording-submitted-enqueue-analysis/index.js'
 import { EnqueueSessionAnalysisUseCase } from '@/modules/analyses/application/use-cases/enqueue-session-analysis/index.js'
+import { GetSessionAnalysisUseCase } from '@/modules/analyses/application/use-cases/get-session-analysis/index.js'
 import { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
 import { ReconcileOrphanAnalysesUseCase } from '@/modules/analyses/application/use-cases/reconcile-orphan-analyses/index.js'
+import { ResolveAccountIdentityUseCase } from '@/modules/analyses/application/use-cases/resolve-account-identity/index.js'
 import type { ProcessingCostRates } from '@/modules/analyses/application/use-cases/process-session-audio/types.js'
 import type { AccountsPort } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
@@ -59,6 +61,8 @@ import { TranscriptionMapper } from '@/modules/analyses/infrastructure/mappers/t
 import { PrismaAnalysisCostEntriesRepository } from '@/modules/analyses/infrastructure/repositories/prisma-analysis-cost-entries-repository/index.js'
 import { PrismaAnalysesRepository } from '@/modules/analyses/infrastructure/repositories/prisma-analyses-repository/index.js'
 import { PrismaTranscriptionsRepository } from '@/modules/analyses/infrastructure/repositories/prisma-transcriptions-repository/index.js'
+import { GetSessionAnalysisController } from '@/modules/analyses/presentation/controllers/get-session-analysis-controller/index.js'
+import type { AnalysesControllers } from '@/modules/analyses/presentation/routes/analyses-routes/types.js'
 import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
 
 export interface AnalysesAdapterOverrides {
@@ -179,13 +183,33 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
     transcriptions,
     unitOfWork,
   })
+  const resolveAccountIdentity = new ResolveAccountIdentityUseCase({ accounts })
+  const getSessionAnalysis = new GetSessionAnalysisUseCase({
+    analyses,
+    transcriptions,
+    sessions,
+    accounts,
+    clock,
+    idGenerator,
+    eventPublisher,
+  })
+  const controllers: AnalysesControllers = {
+    getSessionAnalysis: new GetSessionAnalysisController(getSessionAnalysis),
+  }
 
   return {
     eventHandlers: {
       onRecordingSubmitted: new OnRecordingSubmittedEnqueueAnalysis(enqueueSessionAnalysis, logger),
     },
+    controllers,
     repositories: { analyses, costs, transcriptions },
-    useCases: { enqueueSessionAnalysis, processSessionAudio, reconcileOrphanAnalyses },
+    useCases: {
+      enqueueSessionAnalysis,
+      getSessionAnalysis,
+      processSessionAudio,
+      reconcileOrphanAnalyses,
+      resolveAccountIdentity,
+    },
   }
 }
 

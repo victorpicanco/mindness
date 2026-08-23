@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
 import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
+import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
@@ -29,6 +30,7 @@ function createHarness(activeSession: Session | null) {
   const saved: Session[] = []
   const releasedSessionIds: string[] = []
   const events = new FakeEventBus()
+  const lookedUpThemeIds: string[] = []
   let transactionRuns = 0
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(activeSession),
@@ -52,9 +54,18 @@ function createHarness(activeSession: Session | null) {
       return Promise.resolve()
     },
   }
+  const themes: ThemesPort = {
+    drawEligibleTheme: () => Promise.resolve(null),
+    findThemeById: (themeId) => {
+      lookedUpThemeIds.push(themeId)
+      return Promise.resolve({ themeId, title: 'Communicating with clarity' })
+    },
+    listCategories: () => Promise.resolve([]),
+  }
   const useCase = new GetActiveSessionUseCase({
     sessions,
     quota,
+    themes,
     clock: { now: () => NOW },
     eventPublisher: events,
     idGenerator: { generate: () => 'event-1' },
@@ -66,7 +77,14 @@ function createHarness(activeSession: Session | null) {
     },
   })
 
-  return { events, releasedSessionIds, saved, transactionRuns: () => transactionRuns, useCase }
+  return {
+    events,
+    lookedUpThemeIds,
+    releasedSessionIds,
+    saved,
+    transactionRuns: () => transactionRuns,
+    useCase,
+  }
 }
 
 describe('GetActiveSessionUseCase', () => {
@@ -76,6 +94,7 @@ describe('GetActiveSessionUseCase', () => {
     await expect(harness.useCase.execute({ accountId: 'account-1' })).resolves.toEqual({
       sessionId: 'session-1',
       themeId: 'theme-1',
+      themeTitle: 'Communicating with clarity',
       configuration: {
         difficulty: 'balanced',
         categorySlug: 'communication',
@@ -84,6 +103,7 @@ describe('GetActiveSessionUseCase', () => {
       createdAt: '2026-08-18T23:50:00.000Z',
       expiresAt: '2026-08-19T00:05:00.000Z',
     })
+    expect(harness.lookedUpThemeIds).toEqual(['theme-1'])
   })
 
   it('expires a stale active session and returns null', async () => {

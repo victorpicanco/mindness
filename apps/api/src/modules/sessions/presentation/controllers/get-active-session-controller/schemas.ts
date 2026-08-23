@@ -8,6 +8,7 @@ export const ActiveSessionResponseSchema = successSchema(
       {
         sessionId: Type.String({ format: 'uuid' }),
         themeId: Type.String({ format: 'uuid' }),
+        themeTitle: Type.String(),
         configuration: Type.Object(
           {
             difficulty: Type.Union([

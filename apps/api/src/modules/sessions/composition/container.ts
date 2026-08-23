@@ -142,7 +142,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     }),
     expireSession: new ExpireSessionUseCase(expirationDependencies),
     findProcessingContext: new FindSessionProcessingContextUseCase({ sessions }),
-    getActiveSession: new GetActiveSessionUseCase(expirationDependencies),
+    getActiveSession: new GetActiveSessionUseCase({ ...expirationDependencies, themes }),
     getQuotaBalance: new GetSessionQuotaBalanceUseCase({ quota }),
     listStuckProcessingSessions: new ListStuckProcessingSessionsUseCase({ sessions }),
     listSessionHistory: new ListSessionHistoryUseCase({ sessions, accounts }),

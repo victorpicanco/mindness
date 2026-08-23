@@ -74,6 +74,27 @@ describe('session lifecycle integration', () => {
     })
   })
 
+  it('returns the drawn theme title when the active session is reloaded', async () => {
+    await harness.app.inject({
+      method: 'POST',
+      url: '/sessions',
+      headers: { authorization: 'Bearer access-token' },
+      payload: { difficulty: 'balanced', categorySlug: 'focus', searchWindowMinutes: 4 },
+    })
+
+    const response = await harness.app.inject({
+      method: 'GET',
+      url: '/sessions/active',
+      headers: { authorization: 'Bearer access-token' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    assertResponseMatchesSchema(harness.app, 'GET', '/sessions/active', response, 200)
+    expect(response.json()).toMatchObject({
+      data: { themeId: THEME_ID, themeTitle: 'Theme' },
+    })
+  })
+
   it('rejects a second active session without a second reservation or event', async () => {
     const first = await harness.app.inject({
       method: 'POST',

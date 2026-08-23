@@ -21,9 +21,12 @@ export class GetActiveSessionUseCase {
       return null
     }
 
+    const theme = await this.dependencies.themes.findThemeById(session.themeId)
+
     return {
       sessionId: session.id,
       themeId: session.themeId,
+      themeTitle: theme.title,
       configuration: {
         difficulty: session.configuration.difficulty,
         categorySlug: session.configuration.categorySlug,

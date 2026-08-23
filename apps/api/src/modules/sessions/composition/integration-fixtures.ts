@@ -66,16 +66,22 @@ function themeKey(categorySlug: string, difficulty: Difficulty): string {
 
 export function createFakeThemesPort(): FakeThemesPort {
   const themes = new Map<string, EligibleTheme>()
+  const themesById = new Map<string, EligibleTheme>()
 
   return {
     drawEligibleTheme: ({ categorySlug, difficulty }) =>
       Promise.resolve(themes.get(themeKey(categorySlug, difficulty)) ?? null),
+    findThemeById: (themeId) =>
+      Promise.resolve(themesById.get(themeId) ?? { themeId, title: 'Theme' }),
     listCategories: () => Promise.resolve([]),
     registerEligibleTheme: ({ categorySlug, difficulty, themeId }) => {
-      themes.set(themeKey(categorySlug, difficulty), { themeId })
+      const theme = { themeId, title: 'Theme' }
+      themes.set(themeKey(categorySlug, difficulty), theme)
+      themesById.set(themeId, theme)
     },
     reset: () => {
       themes.clear()
+      themesById.clear()
     },
   }
 }

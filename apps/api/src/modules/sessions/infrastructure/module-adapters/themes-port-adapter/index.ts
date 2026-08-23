@@ -6,14 +6,24 @@ import type {
   ThemesPort,
 } from '@/modules/sessions/domain/ports/themes-port/index.js'
 
-export type ThemesEligibilityReader = Pick<ThemesPublicApi, 'drawEligibleTheme' | 'listCategories'>
+export type ThemesEligibilityReader = Pick<
+  ThemesPublicApi,
+  'drawEligibleTheme' | 'findThemeById' | 'listCategories'
+>
 
 export class ThemesPortAdapter implements ThemesPort {
   constructor(private readonly themesFacade: ThemesEligibilityReader) {}
 
   async drawEligibleTheme(input: DrawEligibleThemeInput): Promise<EligibleTheme | null> {
     const theme = await this.themesFacade.drawEligibleTheme(input)
-    return theme === null ? null : { themeId: theme.themeId }
+    return theme === null ? null : { themeId: theme.themeId, title: theme.title }
+  }
+
+  async findThemeById(
+    themeId: string,
+  ): Promise<{ readonly themeId: string; readonly title: string }> {
+    const theme = await this.themesFacade.findThemeById(themeId)
+    return { themeId: theme.themeId, title: theme.title }
   }
 
   async listCategories(): Promise<EligibleThemeCategory[]> {

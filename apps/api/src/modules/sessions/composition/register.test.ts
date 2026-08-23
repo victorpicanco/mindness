@@ -95,6 +95,7 @@ function createDependencies(
       },
       themes: {
         drawEligibleTheme: () => Promise.resolve(null),
+        findThemeById: () => Promise.resolve({ themeId: 'theme-1', title: 'Theme' }),
         listCategories: () => Promise.resolve([]),
       },
       quota: {

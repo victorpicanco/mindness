@@ -7,6 +7,7 @@ export interface DrawEligibleThemeInput {
 
 export interface EligibleTheme {
   readonly themeId: string
+  readonly title: string
 }
 
 export interface EligibleThemeCategory {
@@ -17,5 +18,6 @@ export interface EligibleThemeCategory {
 
 export interface ThemesPort {
   drawEligibleTheme(input: DrawEligibleThemeInput): Promise<EligibleTheme | null>
+  findThemeById(themeId: string): Promise<{ readonly themeId: string; readonly title: string }>
   listCategories(): Promise<EligibleThemeCategory[]>
 }

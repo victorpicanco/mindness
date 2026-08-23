@@ -50,7 +50,7 @@ function createSession(sessionId: string, createdAt: Date = NOW): Session {
 
 function createDependencies(input?: {
   readonly activeSession?: Session | null
-  readonly eligibleTheme?: { readonly themeId: string } | null
+  readonly eligibleTheme?: { readonly themeId: string; readonly title?: string } | null
   readonly quotaError?: Error
   readonly saveError?: Error
 }) {
@@ -80,8 +80,14 @@ function createDependencies(input?: {
   const themes: ThemesPort = {
     drawEligibleTheme: ({ categorySlug }) => {
       themeCalls.push(categorySlug)
-      return Promise.resolve(input?.eligibleTheme ?? null)
+      const eligibleTheme = input?.eligibleTheme
+      return Promise.resolve(
+        eligibleTheme === undefined || eligibleTheme === null
+          ? null
+          : { themeId: eligibleTheme.themeId, title: eligibleTheme.title ?? 'Theme' },
+      )
     },
+    findThemeById: (themeId) => Promise.resolve({ themeId, title: 'Theme' }),
     listCategories: () => Promise.resolve([]),
   }
   const quota: QuotaPort = {

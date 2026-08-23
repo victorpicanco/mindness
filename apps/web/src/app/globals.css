@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Neutral placeholders are temporary until the palette is chosen with the user. */
+  --color-surface: oklch(0.98 0 0);
+  --color-text: oklch(0.15 0 0);
+  --color-border: oklch(0.82 0 0);
+  --color-accent: oklch(0.45 0 0);
+  --color-error: oklch(0.4 0 0);
+  --color-success: oklch(0.35 0 0);
+  --color-warning: oklch(0.55 0 0);
+  --spacing-page: 1rem;
+  --radius-control: 0.5rem;
+  --font-sans: Arial, sans-serif;
+}

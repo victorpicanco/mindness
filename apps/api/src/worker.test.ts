@@ -285,6 +285,10 @@ describe('registerAnalysisPipelineModules', () => {
         'recording_submitted',
       ].toSorted(),
     )
+    await app.ready()
+    expect(app.hasRoute({ method: 'GET', url: '/sessions/:sessionId/analysis' })).toBe(true)
+    expect(app.hasRoute({ method: 'GET', url: '/sessions' })).toBe(true)
+    await app.close()
 
     await app.close()
   })

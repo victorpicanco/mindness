@@ -46,6 +46,7 @@ function createHarness(session: Session | null) {
     },
   }
   const quota: QuotaPort = {
+    readBalance: () => Promise.resolve({ enforced: false }),
     reserveForSession: () =>
       Promise.resolve({ reservationId: 'reservation-2', enforced: true, remaining: 3 }),
     releaseReservation: ({ sessionId }) => {

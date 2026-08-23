@@ -228,6 +228,7 @@ describe('registerAnalysisPipelineModules', () => {
             listCategories: () => Promise.resolve([]),
           },
           quota: {
+            readBalance: () => Promise.resolve({ enforced: false }),
             reserveForSession: () =>
               Promise.resolve({ reservationId: 'id', enforced: true, remaining: 0 }),
             releaseReservation: () => Promise.resolve(),

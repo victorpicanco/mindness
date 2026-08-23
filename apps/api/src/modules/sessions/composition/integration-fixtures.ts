@@ -137,6 +137,17 @@ export function createFakeQuotaPort(): FakeQuotaPort {
   return {
     reserveCalls,
     releaseCalls,
+    readBalance: () =>
+      Promise.resolve(
+        enforced
+          ? {
+              enforced: true,
+              allowance: 4,
+              remaining,
+              renewsAt: new Date('2026-09-01T00:00:00.000Z'),
+            }
+          : { enforced: false },
+      ),
     reserveForSession,
     releaseReservation: (input) => {
       releaseCalls.push(input)

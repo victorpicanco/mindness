@@ -1,5 +1,6 @@
 import type { QuotaPublicApi } from '@/modules/quota/index.js'
 import type {
+  QuotaBalance,
   QuotaPort,
   QuotaReservation,
   ReleaseQuotaReservationInput,
@@ -8,11 +9,15 @@ import type {
 
 export type QuotaReservationManager = Pick<
   QuotaPublicApi,
-  'releaseReservation' | 'reserveForSession'
+  'readQuota' | 'releaseReservation' | 'reserveForSession'
 >
 
 export class QuotaPortAdapter implements QuotaPort {
   constructor(private readonly quotaFacade: QuotaReservationManager) {}
+
+  async readBalance(accountId: string): Promise<QuotaBalance> {
+    return this.quotaFacade.readQuota({ accountId })
+  }
 
   async reserveForSession(input: ReserveQuotaForSessionInput): Promise<QuotaReservation> {
     const reservation = await this.quotaFacade.reserveForSession(input)

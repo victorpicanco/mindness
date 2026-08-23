@@ -91,6 +91,7 @@ function createDependencies(input?: {
     listCategories: () => Promise.resolve([]),
   }
   const quota: QuotaPort = {
+    readBalance: () => Promise.resolve({ enforced: false }),
     reserveForSession: ({ sessionId }) => {
       operations.push('reserve')
       quotaCalls.push(sessionId)

@@ -95,6 +95,7 @@ function createQuota(): QuotaPort & { released: string[] } {
   const released: string[] = []
   return {
     released,
+    readBalance: () => Promise.resolve({ enforced: false }),
     reserveForSession: ({ sessionId }) =>
       Promise.resolve({ reservationId: sessionId, enforced: true, remaining: 0 }),
     releaseReservation: ({ sessionId }) => {

@@ -1,6 +1,9 @@
 import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
+import next from '@next/eslint-plugin-next'
+import reactHooks from 'eslint-plugin-react-hooks'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
 
 const API_MODULES = ['accounts', 'themes', 'quota', 'sessions', 'analyses']
 
@@ -206,6 +209,24 @@ export default tseslint.config(
     rules: restrictedImports([
       { group: ['@/modules/*'], message: 'LAW-010.3: shared/ never imports from modules/.' },
     ]),
+  },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    settings: {
+      next: {
+        rootDir: 'apps/web/',
+      },
+    },
+    plugins: {
+      '@next/next': next,
+      'jsx-a11y': jsxA11y,
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      ...next.configs['core-web-vitals'].rules,
+      ...reactHooks.configs.flat.recommended.rules,
+      ...jsxA11y.flatConfigs.recommended.rules,
+    },
   },
   prettier,
 )

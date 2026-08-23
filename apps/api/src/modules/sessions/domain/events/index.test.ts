@@ -104,4 +104,16 @@ describe('session domain events', () => {
       expect(JSON.parse(JSON.stringify(event.payload))).toEqual(event.payload)
     },
   )
+
+  it('freezes the session_deleted payload, like the analysis events of the same block', () => {
+    const event = SessionDeleted.create({
+      eventId: 'event-6',
+      occurredAt,
+      sessionId: 'session-1',
+      accountId: 'account-1',
+      plan: 'free',
+    })
+
+    expect(Object.isFrozen(event.payload)).toBe(true)
+  })
 })

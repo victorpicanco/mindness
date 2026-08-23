@@ -33,10 +33,12 @@ export class SessionDeleted implements IntegrationEvent<
   }
 
   static create(params: CreateSessionDeletedParams): SessionDeleted {
-    return new SessionDeleted(params.eventId, params.occurredAt.getTime(), {
+    const payload = Object.freeze({
       sessionId: params.sessionId,
       accountId: params.accountId,
       plan: params.plan,
     })
+
+    return new SessionDeleted(params.eventId, params.occurredAt.getTime(), payload)
   }
 }

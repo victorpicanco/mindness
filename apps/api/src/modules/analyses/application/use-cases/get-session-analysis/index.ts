@@ -37,12 +37,12 @@ export class GetSessionAnalysisUseCase {
       mastery: analysis.masteryScore.value,
       total: analysis.totalScore,
     }
-    const guidance = GuidanceSelector.select([
-      { pillar: 'clarity', score: scores.clarity, guidance: analysis.clarityGuidance },
-      { pillar: 'rhythm', score: scores.rhythm, guidance: analysis.rhythmGuidance },
-      { pillar: 'fluency', score: scores.fluency, guidance: analysis.fluencyGuidance },
-      { pillar: 'mastery', score: scores.mastery, guidance: analysis.masteryGuidance },
-    ])
+    const guidance = GuidanceSelector.select({
+      clarity: { score: scores.clarity, guidance: analysis.clarityGuidance },
+      rhythm: { score: scores.rhythm, guidance: analysis.rhythmGuidance },
+      fluency: { score: scores.fluency, guidance: analysis.fluencyGuidance },
+      mastery: { score: scores.mastery, guidance: analysis.masteryGuidance },
+    })
 
     const viewedAt = this.dependencies.clock.now()
     const firstView = await this.dependencies.analyses.markFirstView(input.sessionId, viewedAt)

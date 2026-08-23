@@ -5,3 +5,8 @@ export interface PillarGuidance {
   readonly score: number
   readonly guidance: string
 }
+
+export type PillarGuidanceSet = Record<
+  PillarName,
+  { readonly score: number; readonly guidance: string }
+>

@@ -5,3 +5,5 @@ coverage
 apps/api/src/generated
 pnpm-lock.yaml
 docs/architecture/laws
+apps/web/next-env.d.ts
+apps/web/test-results

@@ -12,6 +12,7 @@ const EnvSchema = Type.Object({
   LOG_LEVEL: Type.String(),
   DATABASE_URL: Type.String(),
   PUBLIC_API_URL: Type.String(),
+  PUBLIC_WEB_URL: Type.String(),
   SUPABASE_URL: Type.String(),
   SUPABASE_SECRET_KEY: Type.String(),
   EMAIL_CONFIRMATION_REDIRECT_URL: Type.String(),
@@ -32,6 +33,7 @@ const STRING_ENV_KEYS = [
   'LOG_LEVEL',
   'DATABASE_URL',
   'PUBLIC_API_URL',
+  'PUBLIC_WEB_URL',
   'SUPABASE_URL',
   'SUPABASE_SECRET_KEY',
   'EMAIL_CONFIRMATION_REDIRECT_URL',
@@ -58,6 +60,7 @@ export interface Config {
   readonly logLevel: string
   readonly databaseUrl: string
   readonly publicApiUrl: string
+  readonly publicWebUrl: string
   readonly supabaseUrl: string
   readonly supabaseSecretKey: string
   readonly emailConfirmationRedirectUrl: string
@@ -118,6 +121,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
     logLevel: candidate.LOG_LEVEL,
     databaseUrl: candidate.DATABASE_URL,
     publicApiUrl: candidate.PUBLIC_API_URL,
+    publicWebUrl: candidate.PUBLIC_WEB_URL,
     supabaseUrl: candidate.SUPABASE_URL,
     supabaseSecretKey: candidate.SUPABASE_SECRET_KEY,
     emailConfirmationRedirectUrl: candidate.EMAIL_CONFIRMATION_REDIRECT_URL,

@@ -11,6 +11,7 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   LOG_LEVEL: 'info',
   DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
   PUBLIC_API_URL: 'https://api.mindness.test',
+  PUBLIC_WEB_URL: 'https://app.mindness.test',
   SUPABASE_URL: 'https://project.supabase.co',
   SUPABASE_SECRET_KEY: 'secret-key',
   EMAIL_CONFIRMATION_REDIRECT_URL: 'https://app.mindness.test/auth/confirmed',
@@ -37,6 +38,7 @@ describe('loadConfig', () => {
       logLevel: 'info',
       databaseUrl: 'postgresql://user:pass@localhost:5432/db',
       publicApiUrl: 'https://api.mindness.test',
+      publicWebUrl: 'https://app.mindness.test',
       supabaseUrl: 'https://project.supabase.co',
       supabaseSecretKey: 'secret-key',
       emailConfirmationRedirectUrl: 'https://app.mindness.test/auth/confirmed',
@@ -110,5 +112,12 @@ describe('loadConfig', () => {
       field: 'REDIS_URL',
       message: 'Missing required environment variable: REDIS_URL',
     })
+  })
+
+  it('lists PUBLIC_WEB_URL when it is missing', () => {
+    const envWithoutPublicWebUrl = { ...VALID_ENV }
+    delete envWithoutPublicWebUrl.PUBLIC_WEB_URL
+
+    expect(() => loadConfig(envWithoutPublicWebUrl)).toThrow(ValidationFailedError)
   })
 })

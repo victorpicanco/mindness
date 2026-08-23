@@ -93,7 +93,10 @@ function createDependencies(
         resolveAccountId: () => Promise.resolve(null),
         findProfile: () => Promise.resolve(null),
       },
-      themes: { drawEligibleTheme: () => Promise.resolve(null) },
+      themes: {
+        drawEligibleTheme: () => Promise.resolve(null),
+        listCategories: () => Promise.resolve([]),
+      },
       quota: {
         reserveForSession: () =>
           Promise.resolve({ reservationId: 'id', enforced: true, remaining: 0 }),

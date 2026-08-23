@@ -82,6 +82,7 @@ function createDependencies(input?: {
       themeCalls.push(categorySlug)
       return Promise.resolve(input?.eligibleTheme ?? null)
     },
+    listCategories: () => Promise.resolve([]),
   }
   const quota: QuotaPort = {
     reserveForSession: ({ sessionId }) => {

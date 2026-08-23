@@ -70,6 +70,7 @@ export function createFakeThemesPort(): FakeThemesPort {
   return {
     drawEligibleTheme: ({ categorySlug, difficulty }) =>
       Promise.resolve(themes.get(themeKey(categorySlug, difficulty)) ?? null),
+    listCategories: () => Promise.resolve([]),
     registerEligibleTheme: ({ categorySlug, difficulty, themeId }) => {
       themes.set(themeKey(categorySlug, difficulty), { themeId })
     },

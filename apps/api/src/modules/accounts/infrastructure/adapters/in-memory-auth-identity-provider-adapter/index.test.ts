@@ -50,6 +50,22 @@ describe('InMemoryAuthIdentityProviderAdapter', () => {
     await expect(adapter.validateAccessToken(second.accessToken)).resolves.toEqual(second.identity)
   })
 
+  it('rotates a known refresh token and rejects it after use', async () => {
+    const adapter = createAdapter()
+    await adapter.signUpWithPassword(credentials)
+    adapter.confirmEmail(credentials.email)
+    const previous = await adapter.signInWithPassword(credentials)
+
+    const refreshed = await adapter.refreshSession(previous.refreshToken)
+
+    expect(refreshed.accessToken).not.toBe(previous.accessToken)
+    expect(refreshed.refreshToken).not.toBe(previous.refreshToken)
+    await expect(adapter.refreshSession(previous.refreshToken)).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'refresh_token_invalid' },
+    })
+  })
+
   it('completes Google OAuth only with a verified provider email', async () => {
     const adapter = createAdapter()
     adapter.registerGoogleCode('google-code', {

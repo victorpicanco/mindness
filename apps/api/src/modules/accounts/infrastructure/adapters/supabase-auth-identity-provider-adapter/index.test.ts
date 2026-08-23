@@ -28,6 +28,7 @@ class FakeSupabaseAuthApi implements SupabaseAuthApi {
     error: null,
   }
   googleResult: SupabaseAuthResult = this.signInResult
+  refreshResult: SupabaseAuthResult = this.signInResult
   claimsResult: SupabaseAuthResult = { data: { claims }, error: null }
   readonly calls: string[] = []
 
@@ -53,6 +54,11 @@ class FakeSupabaseAuthApi implements SupabaseAuthApi {
   exchangeGoogleCode(): Promise<SupabaseAuthResult> {
     this.calls.push('google-callback')
     return Promise.resolve(this.googleResult)
+  }
+
+  refreshSession(): Promise<SupabaseAuthResult> {
+    this.calls.push('refresh-session')
+    return Promise.resolve(this.refreshResult)
   }
 
   getClaims(): Promise<SupabaseAuthResult> {
@@ -103,6 +109,23 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
       },
     })
     expect(api.calls).toEqual(['sign-in', 'get-claims'])
+  })
+
+  it('refreshes a session and translates an invalid refresh token', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.refreshSession('refresh-token')).resolves.toMatchObject({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    })
+    expect(api.calls).toEqual(['refresh-session', 'get-claims'])
+
+    api.refreshResult = { data: null, error: { code: 'refresh_token_not_found' } }
+    await expect(adapter.refreshSession('invalid-refresh-token')).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'refresh_token_invalid' },
+    })
   })
 
   it('round-trips the opaque PKCE state through Google OAuth', async () => {

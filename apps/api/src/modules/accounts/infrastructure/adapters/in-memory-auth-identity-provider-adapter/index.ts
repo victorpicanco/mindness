@@ -30,6 +30,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
   private readonly googleCodes = new Map<string, InMemoryGoogleIdentity>()
   private readonly validPkceStates = new Set<string>()
   private readonly sessionsByToken = new Map<string, AuthSession>()
+  private readonly sessionsByRefreshToken = new Map<string, AuthSession>()
   private readonly currentTokenByUser = new Map<string, string>()
   private failure: BaseError | null = null
 
@@ -82,6 +83,21 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     return this.createSession(identity.authUserId, identity.email, 'google')
   }
 
+  async refreshSession(refreshToken: string): Promise<AuthSession> {
+    await this.ensureNoSimulatedFailure()
+    const session = this.sessionsByRefreshToken.get(refreshToken)
+    if (session === undefined) {
+      throw new AuthenticationRejectedError('refresh_token_invalid')
+    }
+
+    this.sessionsByRefreshToken.delete(refreshToken)
+    return this.createSession(
+      session.identity.authUserId,
+      session.identity.email,
+      session.identity.authenticationMethod,
+    )
+  }
+
   async validateAccessToken(accessToken: string): Promise<VerifiedAuthIdentity> {
     await this.ensureNoSimulatedFailure()
     const session = this.sessionsByToken.get(accessToken)
@@ -95,7 +111,10 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     await this.ensureNoSimulatedFailure()
     const session = this.sessionsByToken.get(accessToken)
     this.sessionsByToken.delete(accessToken)
-    if (session !== undefined) this.currentTokenByUser.delete(session.identity.authUserId)
+    if (session !== undefined) {
+      this.sessionsByRefreshToken.delete(session.refreshToken)
+      this.currentTokenByUser.delete(session.identity.authUserId)
+    }
   }
 
   confirmEmail(email: string): void {
@@ -116,6 +135,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     this.googleCodes.clear()
     this.validPkceStates.clear()
     this.sessionsByToken.clear()
+    this.sessionsByRefreshToken.clear()
     this.currentTokenByUser.clear()
     this.failure = null
   }
@@ -126,7 +146,13 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     authenticationMethod: AuthenticationMethod,
   ): AuthSession {
     const previousToken = this.currentTokenByUser.get(authUserId)
-    if (previousToken !== undefined) this.sessionsByToken.delete(previousToken)
+    if (previousToken !== undefined) {
+      const previousSession = this.sessionsByToken.get(previousToken)
+      this.sessionsByToken.delete(previousToken)
+      if (previousSession !== undefined) {
+        this.sessionsByRefreshToken.delete(previousSession.refreshToken)
+      }
+    }
 
     const sessionId = this.idGenerator.generate()
     const accessToken = `access-${sessionId}`
@@ -138,6 +164,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       identity: { authUserId, email, issuedAt, sessionId, authenticationMethod },
     }
     this.sessionsByToken.set(accessToken, session)
+    this.sessionsByRefreshToken.set(session.refreshToken, session)
     this.currentTokenByUser.set(authUserId, accessToken)
     return session
   }

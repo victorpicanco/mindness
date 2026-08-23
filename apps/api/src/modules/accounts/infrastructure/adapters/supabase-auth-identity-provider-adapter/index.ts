@@ -139,6 +139,13 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
     return this.sessionFrom(result.data, 'google_failed')
   }
 
+  async refreshSession(refreshToken: string): Promise<AuthSession> {
+    const result = await this.call(() => this.api.refreshSession(refreshToken))
+    if (result.error !== null) rejectionFrom(result.error, 'refresh_token_invalid')
+
+    return this.sessionFrom(result.data, 'refresh_token_invalid')
+  }
+
   async validateAccessToken(accessToken: string): Promise<VerifiedAuthIdentity> {
     const identity = await this.readIdentityFor(accessToken)
     if (identity === null) throw new AuthenticationRejectedError('invalid_token')

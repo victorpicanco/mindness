@@ -24,6 +24,7 @@ export interface SupabaseAuthApi {
   }): Promise<SupabaseAuthResult>
   createGoogleAuthorization(redirectTo: string): Promise<SupabaseGoogleAuthorizationResult>
   exchangeGoogleCode(code: string, pkceState: string): Promise<SupabaseAuthResult>
+  refreshSession(refreshToken: string): Promise<SupabaseAuthResult>
   getClaims(accessToken: string): Promise<SupabaseAuthResult>
   signOut(accessToken: string): Promise<{ readonly error: unknown }>
 }
@@ -122,6 +123,10 @@ export class SupabaseAuthApiClient implements SupabaseAuthApi {
     }
 
     return this.client(storage).auth.exchangeCodeForSession(code)
+  }
+
+  refreshSession(refreshToken: string): Promise<SupabaseAuthResult> {
+    return this.client().auth.refreshSession({ refresh_token: refreshToken })
   }
 
   getClaims(accessToken: string): Promise<SupabaseAuthResult> {

@@ -118,6 +118,7 @@ describe('audio playback credential integration', () => {
     expect(response.headers['cache-control']).toBe('no-store')
     expect(response.headers['x-content-type-options']).toBe('nosniff')
 
+    expect(harness.logs.length).toBeGreaterThan(0)
     for (const line of harness.logs) {
       expect(line).not.toContain(body.data.signedUrl)
     }

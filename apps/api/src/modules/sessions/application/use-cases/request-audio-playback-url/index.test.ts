@@ -17,7 +17,7 @@ const STORAGE_PATH = 'account-1/session-1/audio'
 function createSession(params: {
   readonly accountId?: string
   readonly audio?: boolean
-  readonly state?: 'completed' | 'deleted'
+  readonly state?: 'completed' | 'deleted' | 'processing' | 'failed'
 }): Session {
   const state = params.state ?? 'completed'
   return Session.reconstitute({
@@ -97,6 +97,19 @@ describe('RequestAudioPlaybackUrlUseCase', () => {
       { path: STORAGE_PATH, expiresInSeconds: AUDIO_PLAYBACK_URL_TTL_SECONDS },
     ])
   })
+
+  // Playback is about the recording, not about the analysis: a session whose analysis is still
+  // running or has failed still owns audio the person may replay. Only `deleted` hides it.
+  it.each([['processing' as const], ['failed' as const]])(
+    'still issues a credential for an owned %s session with stored audio',
+    async (state) => {
+      const harness = createHarness(createSession({ audio: true, state }))
+
+      await expect(
+        harness.useCase.execute({ accountId: 'account-1', sessionId: 'session-1' }),
+      ).resolves.toMatchObject({ signedUrl: 'https://storage.test/signed-url' })
+    },
+  )
 
   it.each([
     ['another account', createSession({ accountId: 'account-2', audio: true })],

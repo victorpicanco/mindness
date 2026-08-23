@@ -65,9 +65,17 @@ async function googleSession(email: string): Promise<string> {
     url: '/auth/google/callback?code=google-code',
     headers: { cookie },
   })
-  expect(callback.statusCode).toBe(200)
-  assertResponseMatchesSchema(harness.app, 'GET', '/auth/google/callback', callback, 200)
-  return callback.json<{ data: { accessToken: string } }>().data.accessToken
+  expect(callback.statusCode).toBe(302)
+  expect(callback.headers.location).toMatch(
+    /^https:\/\/app\.test\/auth\/callback\?access_token=access-.+&refresh_token=refresh-.+$/,
+  )
+  expect(callback.cookies).toContainEqual(
+    expect.objectContaining({ name: 'accounts_google_pkce', value: '' }),
+  )
+
+  const location = callback.headers.location
+  if (typeof location !== 'string') return ''
+  return new URL(location).searchParams.get('access_token') ?? ''
 }
 
 function provision(accessToken: string) {

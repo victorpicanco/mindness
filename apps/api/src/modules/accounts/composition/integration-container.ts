@@ -52,6 +52,7 @@ export async function buildAccountsTestApp(
     config: {
       consentVersion: TEST_CONSENT_VERSION,
       publicApiUrl: 'https://api.test',
+      publicWebUrl: 'https://app.test',
       secureCookies: false,
       supabaseUrl: 'https://project.supabase.test',
       supabaseSecretKey: 'test-secret-key',

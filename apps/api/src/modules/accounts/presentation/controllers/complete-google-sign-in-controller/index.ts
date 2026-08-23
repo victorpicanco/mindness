@@ -1,7 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import type { CompleteGoogleSignInUseCase } from '@/modules/accounts/application/use-cases/complete-google-sign-in/index.js'
-import { ok } from '@/shared/http/envelope/index.js'
 
 import { GOOGLE_PKCE_COOKIE } from '../start-google-sign-in-controller/schemas.js'
 
@@ -11,6 +10,7 @@ export class CompleteGoogleSignInController {
   constructor(
     private readonly useCase: CompleteGoogleSignInUseCase,
     private readonly callbackPath: string,
+    private readonly webCallbackUrl: string,
   ) {}
 
   async handle(
@@ -25,6 +25,10 @@ export class CompleteGoogleSignInController {
       pkceState: pkceState ?? null,
     })
 
-    await reply.code(200).send(ok(output))
+    const redirectUrl = new URL(this.webCallbackUrl)
+    redirectUrl.searchParams.set('access_token', output.accessToken)
+    redirectUrl.searchParams.set('refresh_token', output.refreshToken)
+
+    await reply.redirect(redirectUrl.toString())
   }
 }

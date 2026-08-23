@@ -48,6 +48,7 @@ import { createAccountsFacade, type AccountsFacade } from './facade.js'
 export interface AccountsConfig {
   readonly consentVersion: string
   readonly publicApiUrl: string
+  readonly publicWebUrl: string
   readonly secureCookies: boolean
   readonly supabaseUrl: string
   readonly supabaseSecretKey: string
@@ -137,6 +138,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     completeGoogleSignIn: new CompleteGoogleSignInController(
       useCases.completeGoogleSignIn,
       ACCOUNTS_ROUTE_PATHS.googleCallback,
+      `${deps.config.publicWebUrl}/auth/callback`,
     ),
     createAccount: new CreateAccountController(useCases.createAccount),
     deleteAccount: new DeleteAccountController(useCases.deleteAccount),

@@ -202,6 +202,7 @@ export async function startWorker(): Promise<void> {
     config: {
       consentVersion: config.accountsConsentVersion,
       publicApiUrl: config.publicApiUrl,
+      publicWebUrl: config.publicWebUrl,
       secureCookies: config.nodeEnv === 'production',
       supabaseUrl: config.supabaseUrl,
       supabaseSecretKey: config.supabaseSecretKey,

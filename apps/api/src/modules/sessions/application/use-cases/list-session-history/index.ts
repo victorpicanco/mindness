@@ -61,17 +61,26 @@ export class ListSessionHistoryUseCase {
       profile.timeZone,
     )
 
-    const historyItems: readonly SessionHistoryItem[] = items.map((session) => ({
-      sessionId: session.id,
-      startedAt: session.createdAt.toISOString(),
-      localDate: LocalCalendar.localDayOf(session.createdAt, profile.timeZone),
-      localTime: LocalCalendar.localTimeOf(session.createdAt, profile.timeZone),
-      categorySlug: session.configuration.categorySlug,
-      difficulty: session.configuration.difficulty,
-      totalScore: session.totalScore,
-      state: session.state,
-      bestOfDay: bestIds.has(session.id),
-    }))
+    // The repository already filters `deleted`, but the response contract forbids that state
+    // outright, so the DTO drops it here instead of trusting the query.
+    const historyItems: readonly SessionHistoryItem[] = items.flatMap((session) => {
+      const state = session.state
+      if (state === 'deleted') return []
+
+      return [
+        {
+          sessionId: session.id,
+          startedAt: session.createdAt.toISOString(),
+          localDate: LocalCalendar.localDayOf(session.createdAt, profile.timeZone),
+          localTime: LocalCalendar.localTimeOf(session.createdAt, profile.timeZone),
+          categorySlug: session.configuration.categorySlug,
+          difficulty: session.configuration.difficulty,
+          totalScore: session.totalScore,
+          state,
+          bestOfDay: bestIds.has(session.id),
+        },
+      ]
+    })
 
     return {
       items: historyItems,

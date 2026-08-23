@@ -76,6 +76,25 @@ function createHarness(params: {
 }
 
 describe('ListSessionHistoryUseCase', () => {
+  it('never emits a deleted session, whatever the repository returns', async () => {
+    const visible = createSession({
+      id: 'visible',
+      state: 'completed',
+      createdAt: new Date('2026-08-22T12:00:00.000Z'),
+      totalScore: 80,
+    })
+    const deleted = createSession({
+      id: 'deleted',
+      state: 'deleted',
+      createdAt: new Date('2026-08-22T11:00:00.000Z'),
+    })
+    const harness = createHarness({ page: [visible, deleted] })
+
+    const output = await harness.useCase.execute({ accountId: 'account-1', cursor: null })
+
+    expect(output.items.map((item) => item.sessionId)).toEqual(['visible'])
+  })
+
   it('returns serialized history items and marks only the best completed session of a local day', async () => {
     const lower = createSession({
       id: 'session-1',

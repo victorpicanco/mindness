@@ -8,6 +8,8 @@ export interface ListSessionHistoryInput {
   readonly cursor: string | null
 }
 
+export type VisibleSessionState = Exclude<SessionState, 'deleted'>
+
 export interface SessionHistoryItem {
   readonly sessionId: string
   readonly startedAt: string
@@ -16,7 +18,7 @@ export interface SessionHistoryItem {
   readonly categorySlug: string
   readonly difficulty: SessionConfiguration['difficulty']
   readonly totalScore: number | null
-  readonly state: SessionState
+  readonly state: VisibleSessionState
   readonly bestOfDay: boolean
 }
 

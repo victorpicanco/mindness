@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "transcriptions" ALTER COLUMN "duration_seconds" TYPE DOUBLE PRECISION;
+
+ALTER TABLE "transcriptions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "analyses" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "analysis_cost_entries" ENABLE ROW LEVEL SECURITY;

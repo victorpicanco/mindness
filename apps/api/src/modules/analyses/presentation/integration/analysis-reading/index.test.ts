@@ -248,9 +248,18 @@ describe('analysis reading integration', () => {
     const secondViewedAt = await harness.prisma.analysis.findUnique({ where: { sessionId } })
     expect(secondViewedAt?.viewedAt).toEqual(firstViewedAt?.viewedAt)
 
+    expect(harness.logs.length).toBeGreaterThan(0)
     for (const line of harness.logs) {
       expect(line).not.toContain(firstBody.data.transcript)
     }
+  })
+
+  it('rejects a malformed session id with a documented 400', async () => {
+    const response = await getAnalysis('not-a-uuid', 'account-a')
+
+    expect(response.statusCode).toBe(400)
+    assertResponseMatchesSchema(harness.app, 'GET', '/sessions/{sessionId}/analysis', response, 400)
+    expect(response.json()).toMatchObject({ error: { code: 'shared.VALIDATION_FAILED' } })
   })
 
   it('treats a readable session without a persisted analysis as not found', async () => {

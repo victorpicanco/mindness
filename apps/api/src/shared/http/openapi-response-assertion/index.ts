@@ -19,7 +19,6 @@ function readPath(value: unknown, path: readonly (string | number)[]): unknown {
   return current
 }
 
-// ajv-formats ships CommonJS, so the callable plugin sits behind `.default` under NodeNext.
 function buildValidator(): Ajv {
   return addFormats.default(new Ajv({ strict: false, allErrors: true }))
 }
@@ -30,8 +29,6 @@ export interface InjectedResponse {
 
 const validators = new WeakMap<FastifyInstance, Ajv>()
 
-// LAW-011.13: the OpenAPI document the frontend consumes is the contract, so every response is
-// re-validated against the schema the route declared for the status code it answered with.
 export function assertResponseMatchesSchema(
   app: FastifyInstance,
   method: string,

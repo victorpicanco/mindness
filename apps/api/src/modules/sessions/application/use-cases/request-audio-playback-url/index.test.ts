@@ -98,8 +98,6 @@ describe('RequestAudioPlaybackUrlUseCase', () => {
     ])
   })
 
-  // Playback is about the recording, not about the analysis: a session whose analysis is still
-  // running or has failed still owns audio the person may replay. Only `deleted` hides it.
   it.each([['processing' as const], ['failed' as const]])(
     'still issues a credential for an owned %s session with stored audio',
     async (state) => {

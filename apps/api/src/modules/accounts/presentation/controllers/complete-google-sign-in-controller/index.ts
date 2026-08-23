@@ -18,9 +18,6 @@ export class CompleteGoogleSignInController {
     reply: FastifyReply,
   ): Promise<void> {
     const pkceState = request.cookies[GOOGLE_PKCE_COOKIE]
-    // FastifyReply is thenable and only settles once the response is sent, so awaiting a cookie
-    // mutation deadlocks the handler before send(). The pkce state is single use: it is cleared
-    // here, ahead of the exchange, so a rejected callback also drops it.
     void reply.clearCookie(GOOGLE_PKCE_COOKIE, { path: this.callbackPath })
     const output = await this.useCase.execute({
       code: 'code' in request.query ? request.query.code : null,

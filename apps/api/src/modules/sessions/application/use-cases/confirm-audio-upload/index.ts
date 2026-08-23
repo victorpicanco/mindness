@@ -28,14 +28,11 @@ export class ConfirmAudioUploadUseCase {
     }).value
     const now = this.dependencies.clock.now()
 
-    // D-09: an upload that lands after the deadline is an orphan, not a submission — the
-    // object goes before the caller learns the session is over.
     if (!session.isLiveAt(now)) {
       await this.removeBestEffort(path)
       throw new SessionNotInProgressError(session.hasElapsedAt(now) ? 'expired' : session.state)
     }
 
-    // Checked before downloading so a hostile object of arbitrary size is never pulled in.
     const sizeBytes = await this.dependencies.audioStorage.getObjectSize(path)
     if (sizeBytes === null || sizeBytes === 0) throw new AudioUploadFailedError(path)
     if (sizeBytes > MAX_AUDIO_SIZE_BYTES) {
@@ -46,7 +43,6 @@ export class ConfirmAudioUploadUseCase {
     const validation = await this.dependencies.audioValidation.validate({
       buffer: await this.dependencies.audioStorage.downloadObject(path),
     })
-    // The decoder only reports what it observed (D-08); the duration limit is decided here.
     const withinDomainLimits =
       validation.ok &&
       validation.durationSeconds > 0 &&
@@ -69,9 +65,6 @@ export class ConfirmAudioUploadUseCase {
       await this.dependencies.sessions.save(session)
     })
 
-    // The subscriber of this event enqueues the analysis job, which is network I/O against
-    // Redis: inside the transaction it would hold a Serializable transaction open for the
-    // whole round trip, and would fire for a transaction that still might roll back.
     await this.dependencies.eventPublisher.publish(
       RecordingSubmitted.create({
         eventId: this.dependencies.idGenerator.generate(),
@@ -83,8 +76,6 @@ export class ConfirmAudioUploadUseCase {
     )
   }
 
-  // A-12: removing the orphan is best effort by design — the caller must still see why the
-  // confirmation failed, never an infrastructure error from the cleanup.
   private async removeBestEffort(path: string): Promise<void> {
     try {
       await this.dependencies.audioStorage.removeObject(path)

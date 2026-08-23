@@ -223,8 +223,6 @@ describe('ConfirmAudioUploadUseCase', () => {
     expect(harness.calls).toEqual(['remove'])
   })
 
-  // DA-11 / D-09: the row still reads in_progress until a sweep closes it, but the deadline
-  // has passed — the recording is an orphan, never a submission.
   it('removes the object and refuses a session whose window elapsed but was never swept', async () => {
     const session = createSession()
     const harness = createHarness(session)

@@ -22,8 +22,6 @@ export class EnqueueSessionAnalysisUseCase {
     if (monthlyCostMicros >= MONTHLY_COST_CAP_MICROS) {
       const plan = await this.dependencies.accounts.findPlan(input.accountId)
       if (plan === null) {
-        // D-10: the cap is a hard cut. An account we cannot resolve costs us the failure
-        // event, never the cut itself.
         this.dependencies.logger.warn(
           { sessionId: input.sessionId, accountId: input.accountId },
           'analysis_account_missing',

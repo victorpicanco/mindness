@@ -83,8 +83,6 @@ export interface SessionFindStuckProcessingArgs {
   readonly take: number
 }
 
-// A single, non-generic `findMany` overload keeps the real PrismaClient's generic `findMany`
-// structurally assignable; a top-level union of the two args interfaces breaks that inference.
 export interface SessionFindManyArgs {
   readonly where:
     | SessionFindExpiredArgs['where']

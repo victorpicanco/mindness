@@ -164,8 +164,6 @@ describe('session lifecycle integration', () => {
     expect(harness.eventBus.published).toHaveLength(0)
   })
 
-  // The active-session check reads outside the writing transaction, so only the partial unique
-  // index keeps a concurrent pair of starts from opening two sessions for one account.
   it('lets only one of two concurrent starts open a session for the account', async () => {
     const start = () =>
       harness.app.inject({

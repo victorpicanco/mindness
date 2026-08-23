@@ -18,8 +18,6 @@ import { AudioValidationProviderError } from './errors.js'
 const DECODE_TIMEOUT_SECONDS = 30
 const SPAWN_FAILURE_CODES = ['ENOENT', 'EACCES', 'EPERM', 'EMFILE', 'ENFILE', 'ENOMEM']
 
-// ffprobe reports the container family, not a MIME type, and a single probe covers several
-// extensions (`mov,mp4,m4a,3gp,3g2,mj2` is what Safari's MediaRecorder produces).
 const CONTENT_TYPE_BY_FORMAT: ReadonlyArray<readonly [string, string]> = [
   ['webm', 'audio/webm'],
   ['matroska', 'audio/webm'],
@@ -41,8 +39,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-// ffprobe is an external process: everything it reports arrives as unknown and is validated
-// here. `format.duration` is a documented `'N/A'` for some containers.
 function readDurationSeconds(format: Record<string, unknown>): number | null {
   const raw = format.duration
   const parsed = typeof raw === 'string' ? Number.parseFloat(raw) : raw
@@ -71,8 +67,6 @@ function hasAudioStream(streams: unknown): boolean {
   )
 }
 
-// A binary that cannot be launched is an outage, not a bad recording — the caller must not
-// tell the person their audio is invalid because ffmpeg is missing.
 function isSpawnFailure(error: unknown): boolean {
   if (!isRecord(error)) return false
   const code = error.code
@@ -87,8 +81,6 @@ export class FfmpegAudioValidationAdapter implements AudioValidationPort {
   }
 
   async validate(input: ValidateAudioInput): Promise<ValidAudio | InvalidAudio> {
-    // Probing a real file rather than a pipe: ffprobe cannot seek a stream, and reports the
-    // duration as 'N/A' for every container that keeps it outside the header (ogg, mp3, ...).
     const directory = await this.createWorkspace()
     const file = join(directory, randomUUID())
 
@@ -117,7 +109,6 @@ export class FfmpegAudioValidationAdapter implements AudioValidationPort {
     return new Promise((resolve, reject) => {
       ffmpeg(file).ffprobe((error: Error | null, metadata: unknown) => {
         if (error !== null) {
-          // A file ffprobe cannot read is a rejected recording; a binary it cannot start is not.
           if (isSpawnFailure(error)) {
             reject(new AudioValidationProviderError('ffprobe', error))
             return
@@ -147,15 +138,11 @@ export class FfmpegAudioValidationAdapter implements AudioValidationPort {
     })
   }
 
-  // A valid header can still wrap corrupt frames, so the whole stream is decoded and thrown
-  // away (D-07). The timeout keeps an adversarial file from pinning the process.
   private decodesFully(file: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       const stderr: string[] = []
 
       ffmpeg(file, { timeout: DECODE_TIMEOUT_SECONDS })
-        // `-xerror` promotes a corrupt packet to a fatal error: without it a WAV whose header
-        // is intact but whose samples are cut short decodes quietly and passes.
         .inputOptions('-xerror')
         .outputOptions('-v error')
         .format('null')

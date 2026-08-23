@@ -9,8 +9,6 @@ describe('AudioObjectPath', () => {
     expect(path.value).toBe('account-1/session-1/audio')
   })
 
-  // D-06: the prefix is what isolates one account's objects from another's, so it is always
-  // derived, never taken from the caller.
   it('always prefixes with the account, so a session id cannot reach another prefix', () => {
     const path = AudioObjectPath.forSession({
       accountId: 'account-a',

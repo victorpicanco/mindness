@@ -11,8 +11,6 @@ export interface ExpireSessionParams {
   readonly session: Session
   readonly reason: SessionExpiredReason
   readonly at: Date
-  // Two ids are always supplied because a microphone denial emits a second event; the
-  // domain never reaches for an id generator itself.
   readonly eventIds: readonly [string, string]
 }
 

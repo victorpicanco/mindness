@@ -14,7 +14,6 @@ const UNIQUE_VIOLATION_CODE = 'P2002'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// The pg driver adapter reports the violated constraint here instead of in `meta.target`.
 const CONSTRAINT_FIELDS_PATH = ['driverAdapterError', 'cause', 'constraint', 'fields']
 
 const DOMAIN_FIELD_BY_COLUMN = new Map<string, string>([

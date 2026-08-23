@@ -60,8 +60,6 @@ export interface AccountsPrismaTransactionRunner {
 
 type AssignableTo<TSource extends TTarget, TTarget> = TSource
 
-// Nothing wires the generated client to this narrowed surface yet, so this alias is what
-// makes a divergent schema fail at typecheck instead of at composition time.
 export type PrismaClientCoversAccounts = AssignableTo<
   PrismaClient,
   AccountsPrismaClient & AccountsPrismaTransactionRunner

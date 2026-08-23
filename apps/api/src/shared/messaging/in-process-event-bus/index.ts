@@ -30,8 +30,6 @@ export class InProcessEventBus implements EventBus {
       )
     }
 
-    // LAW-009: a handler that failed did not take effect, so the publisher has to learn about
-    // it — swallowing here is what leaves a session stuck with no automatic recovery.
     throw new EventHandlerFailedError({
       context: {
         eventName: event.eventName,

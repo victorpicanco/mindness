@@ -23,8 +23,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-// @prisma/adapter-pg surfaces a serialization failure as its own DriverAdapterError and never
-// maps it to P2034, so recognising only the Prisma code would silently disable every retry.
 function isDriverAdapterWriteConflict(error: unknown): boolean {
   if (!(error instanceof Error) || error.name !== DRIVER_ADAPTER_ERROR_NAME) return false
   if (error.message === DRIVER_ADAPTER_WRITE_CONFLICT) return true
@@ -32,8 +30,6 @@ function isDriverAdapterWriteConflict(error: unknown): boolean {
   return isRecord(error.cause) && error.cause.kind === DRIVER_ADAPTER_WRITE_CONFLICT
 }
 
-// The repository translates its failures, so a write conflict reaches the transaction
-// wrapped as the cause of a DatabaseError rather than as the Prisma error itself.
 function isWriteConflict(error: unknown): boolean {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     return error.code === WRITE_CONFLICT_CODE
@@ -46,8 +42,6 @@ function isWriteConflict(error: unknown): boolean {
   return false
 }
 
-// Jitter matters here: retrying two conflicting transactions after the same fixed delay
-// reproduces the conflict that caused the retry.
 function backOff(attempt: number): Promise<void> {
   const ceiling = BASE_RETRY_DELAY_MS * 2 ** attempt
 

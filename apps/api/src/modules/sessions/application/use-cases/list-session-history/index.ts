@@ -61,8 +61,6 @@ export class ListSessionHistoryUseCase {
       profile.timeZone,
     )
 
-    // The repository already filters `deleted`, but the response contract forbids that state
-    // outright, so the DTO drops it here instead of trusting the query.
     const historyItems: readonly SessionHistoryItem[] = items.flatMap((session) => {
       const state = session.state
       if (state === 'deleted') return []

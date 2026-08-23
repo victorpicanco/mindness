@@ -34,8 +34,6 @@ export interface SupabaseAuthConfig {
   readonly emailRedirectUrl: string
 }
 
-// Supabase keeps the PKCE verifier in the client storage, so a stateless server has to own
-// that storage per request and hand its contents to the caller as the opaque `pkceState`.
 class SupabaseRequestStorage {
   readonly isServer = true
 

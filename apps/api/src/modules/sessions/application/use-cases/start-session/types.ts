@@ -6,7 +6,6 @@ import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/ind
 import type { UnitOfWork } from '@/modules/sessions/domain/ports/unit-of-work/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 
-// LAW-003.9: the Input carries primitives; SessionConfiguration is what narrows them.
 export interface StartSessionInput {
   readonly accountId: string
   readonly difficulty: string

@@ -12,7 +12,6 @@ import { RhythmCalculator } from '@/modules/analyses/domain/services/rhythm-calc
 import { DeepgramTranscriptionAdapter } from '@/modules/analyses/infrastructure/adapters/deepgram-transcription-adapter/index.js'
 import { GeminiEvaluationAdapter } from '@/modules/analyses/infrastructure/adapters/gemini-evaluation-adapter/index.js'
 
-// D-10 do Bloco 5: os dois tetos por fornecedor e o teto por sessão, em micro-dólares.
 const TRANSCRIPTION_COST_CEILING_MICROS = 20_000
 const EVALUATION_COST_CEILING_MICROS = 40_000
 const SESSION_COST_CEILING_MICROS = 60_000

@@ -32,9 +32,6 @@ import { InProcessEventBus } from '@/shared/messaging/in-process-event-bus/index
 import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
 import { SystemClock } from '@/shared/time/system-clock/index.js'
 
-// Must match the queue name the worker side (worker.ts, T-039) uses for its BullMQ Worker.
-// BullMQ has no runtime cross-check for this, so a mismatch here means jobs are enqueued
-// but silently never picked up by the worker.
 const SESSION_ANALYSIS_QUEUE_NAME = 'session-analysis'
 
 export interface AnalysisPipelineModulesDeps {
@@ -42,8 +39,6 @@ export interface AnalysisPipelineModulesDeps {
   readonly analyses: Omit<AnalysesModuleDeps, 'sessionsFacade'>
 }
 
-// D-12: this process publishes `recording_submitted` and must also consume the three analysis
-// lifecycle events, published by the worker process — so both modules are registered here too.
 export async function registerAnalysisPipelineModules(
   app: FastifyInstance,
   deps: AnalysisPipelineModulesDeps,

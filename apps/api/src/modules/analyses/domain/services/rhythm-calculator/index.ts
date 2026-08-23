@@ -2,9 +2,7 @@ import { RhythmMetrics } from '@/modules/analyses/domain/value-objects/rhythm-me
 
 import type { RhythmCalculationResult, TranscriptionWords } from './types.js'
 
-// D-08 defines pauses longer than 0.35 seconds as relevant rhythm pauses.
 const PAUSE_THRESHOLD_SECONDS = 0.35
-// D-08 defines long pauses as gaps longer than two seconds.
 const LONG_PAUSE_THRESHOLD_SECONDS = 2
 const IDEAL_MINIMUM_WORDS_PER_MINUTE = 130
 const IDEAL_MAXIMUM_WORDS_PER_MINUTE = 160

@@ -36,23 +36,14 @@ import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import { InProcessEventBus } from '@/shared/messaging/in-process-event-bus/index.js'
 import { SystemClock } from '@/shared/time/system-clock/index.js'
 
-// D-04 requires expired in-progress sessions to be swept at least once per minute.
 export const SWEEP_INTERVAL_MS = 60_000
 
-// T-040 / D-04: a session stuck in `processing` for more than 60s without an `Analysis` lost
-// its job between the sessions commit and the BullMQ `add`; the sweep reenqueues it with the
-// same `jobId`, which BullMQ ignores if a job already exists.
 export const ORPHAN_ANALYSIS_STALE_AFTER_MS = 60_000
 export const ORPHAN_ANALYSIS_RECONCILIATION_INTERVAL_MS = 60_000
 export const ORPHAN_ANALYSIS_RECONCILIATION_LIMIT = 100
 
-// Must match the queue name the producer side (main.ts, T-041) uses for its BullMQ Queue.
-// BullMQ has no runtime cross-check for this, so a mismatch here means jobs are enqueued
-// but silently never picked up by this worker.
 const SESSION_ANALYSIS_QUEUE_NAME = 'session-analysis'
 
-// analyses keeps AnalysisDeadlineExceededError internal to the module (LAW-001.3), so the
-// deadline is matched by its BaseError code instead of an instanceof check on the class.
 const ANALYSIS_DEADLINE_EXCEEDED_CODE = 'analyses.ANALYSIS_DEADLINE_EXCEEDED'
 
 export interface AnalysisPipelineModulesDeps {
@@ -60,8 +51,6 @@ export interface AnalysisPipelineModulesDeps {
   readonly analyses: Omit<AnalysesModuleDeps, 'sessionsFacade'>
 }
 
-// D-12: this process publishes the three analysis lifecycle events and must also consume
-// `recording_submitted`, published by the HTTP process — so both modules are registered here too.
 export async function registerAnalysisPipelineModules(
   app: FastifyInstance,
   deps: AnalysisPipelineModulesDeps,
@@ -144,7 +133,6 @@ export function registerExpiredSessionSweep(deps: WorkerSweepDeps): StopSweep {
     deps.schedule ??
     ((callback, interval) => {
       const timer = setInterval(callback, interval)
-      // The sweep must never be the reason the process stays alive on shutdown.
       timer.unref()
 
       return () => {
@@ -183,7 +171,6 @@ export function registerOrphanAnalysisReconciliationSweep(
     deps.schedule ??
     ((callback, interval) => {
       const timer = setInterval(callback, interval)
-      // The sweep must never be the reason the process stays alive on shutdown.
       timer.unref()
 
       return () => {

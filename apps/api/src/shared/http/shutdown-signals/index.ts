@@ -14,7 +14,6 @@ export interface ShutdownSignalsDeps {
 
 export function registerShutdownSignals(deps: ShutdownSignalsDeps): void {
   const once = deps.once ?? ((signal, handler) => void process.once(signal, handler))
-  // Prisma and ioredis keep handles open, so the loop does not drain on its own after close.
   const exit = deps.exit ?? ((code) => process.exit(code))
   let closing = false
 

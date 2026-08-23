@@ -116,8 +116,6 @@ describe('audio upload integration', () => {
     expect(harness.eventBus.published).toHaveLength(1)
   })
 
-  // Regression: the row still reads in_progress until a sweep runs, but the fifteen-minute
-  // deadline has passed — neither the credential nor the confirmation may be granted (DA-11).
   it('refuses the credential and the confirmation once the window elapsed', async () => {
     const sessionId = await start()
     harness.storage.putObject(audioPath(sessionId), await readFixture('valid.webm'))
@@ -144,7 +142,6 @@ describe('audio upload integration', () => {
     )
     expect(response.json()).toMatchObject({ error: { code: 'sessions.SESSION_NOT_IN_PROGRESS' } })
 
-    // The orphan object is gone and the session never reached processing.
     expect(harness.storage.hasObject(audioPath(sessionId))).toBe(false)
     await expect(
       harness.prisma.session.findUnique({ where: { id: sessionId }, include: { audio: true } }),

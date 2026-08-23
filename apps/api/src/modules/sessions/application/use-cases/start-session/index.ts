@@ -12,8 +12,6 @@ export class StartSessionUseCase {
   constructor(private readonly dependencies: StartSessionDependencies) {}
 
   async execute(input: StartSessionInput): Promise<StartSessionOutput> {
-    // Built before any side effect so an invalid configuration cannot leave a quota
-    // reservation behind (the compensation below only covers persistence failures).
     const configuration = SessionConfiguration.create({
       difficulty: input.difficulty,
       categorySlug: input.categorySlug,
@@ -86,8 +84,6 @@ export class StartSessionUseCase {
     }
   }
 
-  // T-015: the stale session closes in its own transaction; starting the replacement is a
-  // separate business operation and must not share the expiration's atomicity.
   private async expireStaleSession(session: Session, at: Date): Promise<void> {
     await this.dependencies.unitOfWork.run(async () => {
       const outcome = SessionExpiration.expire({

@@ -180,7 +180,6 @@ export function createInMemorySupabaseStorageClient(clock?: Clock): InMemorySupa
         error: result.error,
       }))
     },
-    // Supabase filters `search` as a prefix over the names inside the directory.
     list: (directory: string, options: { readonly search: string }) => {
       const prefix = objectPath(directory, options.search)
       const matches = [...objects.entries()]
@@ -228,8 +227,6 @@ export function createInMemorySupabaseStorageClient(clock?: Clock): InMemorySupa
   }
 }
 
-// The decodable-audio fixtures live beside the adapter that is tested against them; reading
-// them through here keeps the integration suites from reaching across three folder levels.
 export function readAudioFixture(name: string): Promise<Buffer> {
   return readFile(
     new URL(

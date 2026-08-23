@@ -34,8 +34,6 @@ export class GetActiveSessionUseCase {
     }
   }
 
-  // D-04: reading the active session is one of the three points that close a stale one, so
-  // the caller never sees a session the deadline already ended.
   private async expireStaleSession(session: Session, at: Date): Promise<void> {
     await this.dependencies.unitOfWork.run(async () => {
       const outcome = SessionExpiration.expire({

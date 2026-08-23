@@ -13,8 +13,6 @@ import { ErrorResponseSchema } from '@/shared/http/envelope/index.js'
 import { ANALYSES_ROUTE_PATHS, type AnalysesControllers } from './types.js'
 
 const ERROR_RESPONSES = {
-  // The `uuid` format on the params schema is enforced at runtime, so a malformed session id
-  // answers 400 — the contract has to declare it, not only 401/404/500.
   400: ErrorResponseSchema,
   401: ErrorResponseSchema,
   404: ErrorResponseSchema,

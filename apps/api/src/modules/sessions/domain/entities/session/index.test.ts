@@ -129,8 +129,6 @@ describe('Session', () => {
     )
   })
 
-  // DA-11: the fifteen-minute deadline is an invariant of the aggregate, not of whichever
-  // caller happens to notice the session is stale first.
   it.each([
     { moment: 'exactly at the deadline', at: DEADLINE },
     { moment: 'after the deadline', at: AFTER_DEADLINE },

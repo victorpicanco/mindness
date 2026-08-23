@@ -17,8 +17,6 @@ export class RequestAudioUploadUrlUseCase {
       throw new SessionNotFoundError(input.sessionId)
     }
 
-    // D-05: the credential is only handed out for a session that is in progress *and* still
-    // inside its fifteen-minute window.
     const now = this.dependencies.clock.now()
     if (!session.isLiveAt(now)) {
       throw new SessionNotInProgressError(session.hasElapsedAt(now) ? 'expired' : session.state)

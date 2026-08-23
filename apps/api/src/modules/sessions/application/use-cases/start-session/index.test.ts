@@ -240,8 +240,6 @@ describe('StartSessionUseCase', () => {
     expect(harness.operations).toEqual(['reserve', 'save', 'release'])
   })
 
-  // D-12: the value object is defence in depth for callers that skip the HTTP schema; it must
-  // reject before the saga takes a reservation it would then have to compensate.
   it.each([
     { field: 'difficulty', input: { ...VALID_INPUT, difficulty: 'impossible' } },
     { field: 'categorySlug', input: { ...VALID_INPUT, categorySlug: '  ' } },

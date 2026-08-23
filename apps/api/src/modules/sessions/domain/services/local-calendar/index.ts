@@ -2,8 +2,6 @@ import { OperationFailedError } from '@/shared/errors/operation-failed-error/ind
 
 import type { LocalDateParts } from './types.js'
 
-// Building an Intl.DateTimeFormat is the expensive part of formatting, and a page of history
-// formats every session twice; the account's time zone is the only thing that varies.
 const dayFormatters = new Map<string, Intl.DateTimeFormat>()
 const timeFormatters = new Map<string, Intl.DateTimeFormat>()
 
@@ -57,7 +55,6 @@ function timeFormatter(timeZone: string): Intl.DateTimeFormat {
   return formatter
 }
 
-// A missing part would silently produce a wrong date, which then decides the best of the day.
 function readPart(
   parts: readonly Intl.DateTimeFormatPart[],
   type: Intl.DateTimeFormatPartTypes,

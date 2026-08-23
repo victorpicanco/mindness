@@ -15,9 +15,6 @@ export type QuotaPublicApiExposesOnlySagaOperations = Assert<
 
 const RENEWS_AT = new Date('2026-09-15T00:00:00.000Z')
 
-// The doubles answer with more fields than the contract declares, because structural typing
-// accepts a wider use case output: without an explicit translation the extra field would cross
-// the module boundary while the public type denies it exists.
 const enforcedBalance = {
   enforced: true as const,
   allowance: 4,

@@ -1,8 +1,6 @@
 import { ValidationFailedError } from '@/shared/errors/validation-failed-error/index.js'
 
-// DA-04 and RF-003 cap recordings at sixty seconds.
 export const MAX_AUDIO_DURATION_SECONDS = 60
-// RF-003 limits uploaded audio to 25 MiB.
 export const MAX_AUDIO_SIZE_BYTES = 25 * 1024 * 1024
 
 export interface CreateSessionAudioParams {

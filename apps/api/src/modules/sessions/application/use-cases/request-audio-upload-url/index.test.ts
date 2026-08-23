@@ -116,8 +116,6 @@ describe('RequestAudioUploadUrlUseCase', () => {
     expect(harness.paths).toHaveLength(0)
   })
 
-  // D-05: the credential must not outlive the session's own fifteen-minute window, even
-  // before a sweep has written the expired state.
   it('refuses a credential once the window elapsed but the row still reads in_progress', async () => {
     const harness = createHarness(createSession(), PAST_DEADLINE)
 

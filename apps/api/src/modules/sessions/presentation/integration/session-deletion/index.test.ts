@@ -102,9 +102,6 @@ describe('session deletion integration', () => {
     })
     expect(playback.statusCode).toBe(404)
 
-    // `analyses` serves the analysis from its own app, so this suite cannot call that route.
-    // What it can prove is the port `analyses` reads through: a deleted session stops being
-    // readable, which is what turns the analysis into a 404 on the other side.
     await expect(
       harness.container.useCases.checkReadability.execute({ sessionId, accountId: ACCOUNT_A }),
     ).resolves.toEqual({ readable: false })

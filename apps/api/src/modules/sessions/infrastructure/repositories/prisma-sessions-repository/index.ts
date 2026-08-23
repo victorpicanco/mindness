@@ -129,8 +129,6 @@ export class PrismaSessionsRepository implements SessionsRepository {
     }
   }
 
-  // The deletion is a compare-and-set instead of a plain save so that two concurrent requests
-  // produce one `session_deleted`; the loser sees `false` and reports the session as gone.
   async markDeleted(session: Session): Promise<boolean> {
     const deletedAt = session.deletedAt
     if (deletedAt === null) {
@@ -162,8 +160,6 @@ export class PrismaSessionsRepository implements SessionsRepository {
         update: this.mapper.toUpdateData(session),
       })
     } catch (error) {
-      // LAW-004.6: the partial unique index that keeps one in-progress session per account
-      // has a domain meaning, so the technology error is translated rather than propagated.
       if (isInProgressUniquenessViolation(error)) {
         throw new SessionAlreadyRunningError(session.id)
       }

@@ -60,8 +60,6 @@ export class ReopenFreeQuotaCycleUseCase {
     return cycle
   }
 
-  // A-20: a session in flight at the reentry counts against the window it lands in, so its
-  // reservation is repointed to the reopened cycle instead of being counted across cycles.
   private async attachHeldReservations(
     accountId: string,
     cycleId: string,

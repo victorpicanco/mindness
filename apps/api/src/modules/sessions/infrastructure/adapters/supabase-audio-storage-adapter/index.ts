@@ -55,9 +55,6 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
     const uploadUrl = isRecord(result.data) ? readString(result.data, 'signedUrl') : null
     const token = isRecord(result.data) ? readString(result.data, 'token') : null
 
-    // The payload carries the signed URL and the upload token, so a malformed response is
-    // reported by naming the missing fields — never by attaching the payload as `cause`,
-    // which the error handler writes to the log.
     if (uploadUrl === null || token === null) {
       throw new AudioStorageProviderError('create_signed_upload_url', {
         missingFields: [

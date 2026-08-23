@@ -139,8 +139,6 @@ export class Session {
   }
 
   acceptAudio(audio: SessionAudio, at: Date): void {
-    // DA-11: a session past its deadline is expired even before a sweep persists the
-    // transition, so the aggregate — not the caller — refuses the recording.
     if (!this.isLiveAt(at)) {
       throw new SessionNotInProgressError(this.hasElapsedAt(at) ? 'expired' : this._state)
     }

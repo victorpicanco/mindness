@@ -73,8 +73,6 @@ export interface SessionsModuleDeps {
   readonly idGenerator: IdGenerator
   readonly eventPublisher: EventPublisher
   readonly eventSubscriber: EventSubscriber
-  // Each neighbour arrives either as the facade the bootstrap owns or, in tests, as the port
-  // itself through `adapters` — never as both, and never as a throwaway stub.
   readonly accountsFacade?: AccountsIdentityReader
   readonly themesFacade?: ThemesEligibilityReader
   readonly quotaFacade?: QuotaReservationManager

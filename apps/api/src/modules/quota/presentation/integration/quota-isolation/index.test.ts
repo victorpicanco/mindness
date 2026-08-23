@@ -62,9 +62,6 @@ describe('quota isolation integration', () => {
     await app.close()
   })
 
-  // Probing one guessed URL only proves that URL is unrouted. LAW-011.13 asks every response
-  // to match its route's schema; this module answers by having no route to declare one for, so
-  // that absence is what gets asserted.
   it('registers no HTTP route when it is mounted on the application', async () => {
     const app = buildApp({ logger: pino({ level: 'silent' }) })
     const registeredRoutes: string[] = []
@@ -110,8 +107,6 @@ describe('quota isolation integration', () => {
     await app.close()
   })
 
-  // Exceção declarada a LAW-011.12: o objeto sob teste é o catálogo do PostgreSQL, que
-  // não tem repositório possível.
   it('keeps row level security enabled without any policy on the exposed tables', async () => {
     const tableList = RLS_TABLES.map((table) => `'${table}'`).join(', ')
 
@@ -135,8 +130,6 @@ describe('quota isolation integration', () => {
     expect(policyRows[0]?.count).toBe(0)
   })
 
-  // Exceção declarada a LAW-011.12: o objeto sob teste é a identidade do papel conectado,
-  // que não tem repositório possível.
   it('denies a non-owner role read and write access to persisted quota data', async () => {
     const account = createQuotaAccountFixture()
     harness.accounts.registerAccount(account)

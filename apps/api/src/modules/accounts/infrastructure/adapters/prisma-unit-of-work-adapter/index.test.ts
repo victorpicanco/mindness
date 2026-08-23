@@ -52,8 +52,6 @@ function writeConflict(): Prisma.PrismaClientKnownRequestError {
   })
 }
 
-// @prisma/adapter-pg reports a serialization failure as its own DriverAdapterError instead of
-// mapping it to P2034, so the adapter has to recognise that shape too.
 class FakeDriverAdapterError extends Error {
   override readonly name = 'DriverAdapterError'
 

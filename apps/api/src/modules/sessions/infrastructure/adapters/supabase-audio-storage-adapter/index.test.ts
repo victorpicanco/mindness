@@ -224,8 +224,6 @@ describe('SupabaseAudioStorageAdapter', () => {
     },
   )
 
-  // The DoD forbids the signed URL and the upload token from ever reaching a log, and the
-  // shared error handler writes `cause` for every InfrastructureError.
   it('never carries the signed url or the upload token in the error it raises', async () => {
     const storage = createStorageClient()
     storage.setCreateUploadUrlResult({

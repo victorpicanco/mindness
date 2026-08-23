@@ -8,8 +8,11 @@ type SessionCookieOptions = {
   secure: boolean
 }
 
-type SessionCookieStore = {
+type SessionCookieReader = {
   get(name: string): { value: string } | undefined
+}
+
+type SessionCookieStore = SessionCookieReader & {
   set(name: string, value: string, options: SessionCookieOptions): void
   delete(name: string): void
 }
@@ -33,7 +36,7 @@ function createSessionCookieOptions(): SessionCookieOptions {
   }
 }
 
-export function readSessionCookies(store: SessionCookieStore): SessionCookies {
+export function readSessionCookies(store: SessionCookieReader): SessionCookies {
   return {
     accessToken: store.get(ACCESS_TOKEN_COOKIE_NAME)?.value,
     refreshToken: store.get(REFRESH_TOKEN_COOKIE_NAME)?.value,

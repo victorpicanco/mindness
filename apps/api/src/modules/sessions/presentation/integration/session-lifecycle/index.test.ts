@@ -49,10 +49,11 @@ describe('session lifecycle integration', () => {
       data: {
         readonly sessionId: string
         readonly themeId: string
+        readonly themeTitle: string
         readonly remaining: number | null
       }
     }>()
-    expect(body.data).toMatchObject({ themeId: THEME_ID, remaining: 3 })
+    expect(body.data).toMatchObject({ themeId: THEME_ID, themeTitle: 'Theme', remaining: 3 })
 
     await expect(
       harness.prisma.session.findUnique({ where: { id: body.data.sessionId } }),

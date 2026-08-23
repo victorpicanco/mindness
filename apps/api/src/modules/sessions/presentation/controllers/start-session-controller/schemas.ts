@@ -18,6 +18,7 @@ export const StartSessionResponseSchema = successSchema(
     {
       sessionId: Type.String({ format: 'uuid' }),
       themeId: Type.String({ format: 'uuid' }),
+      themeTitle: Type.String(),
       expiresAt: Type.String({ format: 'date-time' }),
       remaining: Type.Union([Type.Number(), Type.Null()]),
     },

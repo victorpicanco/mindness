@@ -16,6 +16,7 @@ export interface StartSessionInput {
 export interface StartSessionOutput {
   readonly sessionId: string
   readonly themeId: string
+  readonly themeTitle: string
   readonly expiresAt: string
   readonly remaining: number | null
 }

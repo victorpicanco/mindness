@@ -229,6 +229,7 @@ describe('StartSessionUseCase', () => {
     expect(result).toEqual({
       sessionId: 'generated-1',
       themeId: 'theme-2',
+      themeTitle: 'Theme',
       expiresAt: '2026-08-19T00:15:00.000Z',
       remaining: 3,
     })

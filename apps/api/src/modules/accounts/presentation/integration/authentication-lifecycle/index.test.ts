@@ -29,6 +29,23 @@ async function confirmedPasswordSession(email: string): Promise<string> {
   return response.json<{ data: { accessToken: string } }>().data.accessToken
 }
 
+async function confirmedPasswordTokens(
+  email: string,
+): Promise<{ readonly accessToken: string; readonly refreshToken: string }> {
+  await harness.app.inject({
+    method: 'POST',
+    url: '/auth/sign-up',
+    payload: { email, password, captchaToken },
+  })
+  harness.authIdentityProvider.confirmEmail(email)
+  const response = await harness.app.inject({
+    method: 'POST',
+    url: '/auth/sign-in',
+    payload: { email, password, captchaToken },
+  })
+  return response.json<{ data: { accessToken: string; refreshToken: string } }>().data
+}
+
 async function googleCookieHeader(): Promise<string> {
   const start = await harness.app.inject({ method: 'GET', url: '/auth/google' })
   const pkceCookie = start.cookies.find((cookie) => cookie.name === 'accounts_google_pkce')
@@ -76,6 +93,37 @@ beforeEach(async () => {
 })
 
 describe('authentication lifecycle', () => {
+  it('refreshes a valid session and rejects a reused refresh token', async () => {
+    const tokens = await confirmedPasswordTokens('refresh@example.com')
+
+    const refreshed = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/refresh',
+      payload: { refreshToken: tokens.refreshToken },
+    })
+
+    expect(refreshed.statusCode).toBe(200)
+    assertResponseMatchesSchema(harness.app, 'POST', '/auth/refresh', refreshed, 200)
+    const refreshedTokens = refreshed.json<{
+      data: { accessToken: string; refreshToken: string; expiresAt: string }
+    }>().data
+    expect(refreshedTokens.accessToken).toBeTypeOf('string')
+    expect(refreshedTokens.refreshToken).toBeTypeOf('string')
+    expect(refreshedTokens.expiresAt).toBeTypeOf('string')
+
+    const rejected = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/refresh',
+      payload: { refreshToken: tokens.refreshToken },
+    })
+
+    expect(rejected.statusCode).toBe(401)
+    assertResponseMatchesSchema(harness.app, 'POST', '/auth/refresh', rejected, 401)
+    expect(rejected.json<{ error: { code: string } }>().error.code).toBe(
+      'accounts.AUTHENTICATION_REJECTED',
+    )
+  })
+
   it('provisions a verified Google identity with its authentication method', async () => {
     const email = 'google-account@example.com'
     const response = await provision(await googleSession(email))

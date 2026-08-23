@@ -21,6 +21,10 @@ import {
   type SignInBody,
 } from '@/modules/accounts/presentation/controllers/sign-in-controller/schemas.js'
 import {
+  RefreshSessionBodySchema,
+  type RefreshSessionBody,
+} from '@/modules/accounts/presentation/controllers/refresh-session-controller/schemas.js'
+import {
   SignUpBodySchema,
   SignUpResponseSchema,
   type SignUpBody,
@@ -81,6 +85,17 @@ export async function registerAccountsRoutes(
       },
     },
     (request, reply) => controllers.signIn.handle(request, reply),
+  )
+
+  publicRoutes.post<{ Body: RefreshSessionBody }>(
+    ACCOUNTS_ROUTE_PATHS.refresh,
+    {
+      schema: {
+        body: RefreshSessionBodySchema,
+        response: { 200: SessionResponseSchema, ...ERROR_RESPONSES },
+      },
+    },
+    (request, reply) => controllers.refreshSession.handle(request, reply),
   )
 
   publicRoutes.get(

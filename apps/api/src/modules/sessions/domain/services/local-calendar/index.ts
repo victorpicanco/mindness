@@ -1,49 +1,74 @@
+import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
+
 import type { LocalDateParts } from './types.js'
+
+// Building an Intl.DateTimeFormat is the expensive part of formatting, and a page of history
+// formats every session twice; the account's time zone is the only thing that varies.
+const dayFormatters = new Map<string, Intl.DateTimeFormat>()
+const timeFormatters = new Map<string, Intl.DateTimeFormat>()
 
 export class LocalCalendar {
   static localDayOf(at: Date, timeZone: string): string {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(at)
-    const date = readDateParts(parts)
+    const parts = dayFormatter(timeZone).formatToParts(at)
+
+    const date: LocalDateParts = {
+      year: readPart(parts, 'year', timeZone),
+      month: readPart(parts, 'month', timeZone),
+      day: readPart(parts, 'day', timeZone),
+    }
 
     return `${date.year}-${date.month}-${date.day}`
   }
 
   static localTimeOf(at: Date, timeZone: string): string {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-    }).formatToParts(at)
-    let hour = ''
-    let minute = ''
+    const parts = timeFormatter(timeZone).formatToParts(at)
 
-    for (const part of parts) {
-      if (part.type === 'hour') hour = part.value
-      if (part.type === 'minute') minute = part.value
-    }
-
-    return `${hour}:${minute}`
+    return `${readPart(parts, 'hour', timeZone)}:${readPart(parts, 'minute', timeZone)}`
   }
 }
 
-function readDateParts(parts: Intl.DateTimeFormatPart[]): LocalDateParts {
-  let year = ''
-  let month = ''
-  let day = ''
+function dayFormatter(timeZone: string): Intl.DateTimeFormat {
+  const cached = dayFormatters.get(timeZone)
+  if (cached !== undefined) return cached
 
-  for (const part of parts) {
-    if (part.type === 'year') year = part.value
-    if (part.type === 'month') month = part.value
-    if (part.type === 'day') day = part.value
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  dayFormatters.set(timeZone, formatter)
+
+  return formatter
+}
+
+function timeFormatter(timeZone: string): Intl.DateTimeFormat {
+  const cached = timeFormatters.get(timeZone)
+  if (cached !== undefined) return cached
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+  timeFormatters.set(timeZone, formatter)
+
+  return formatter
+}
+
+// A missing part would silently produce a wrong date, which then decides the best of the day.
+function readPart(
+  parts: readonly Intl.DateTimeFormatPart[],
+  type: Intl.DateTimeFormatPartTypes,
+  timeZone: string,
+): string {
+  const value = parts.find((part) => part.type === type)?.value
+  if (value === undefined) {
+    throw new OperationFailedError('local-calendar', { context: { part: type, timeZone } })
   }
 
-  return { year, month, day }
+  return value
 }
 
 export type { LocalDateParts } from './types.js'

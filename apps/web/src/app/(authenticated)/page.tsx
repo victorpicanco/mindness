@@ -8,7 +8,7 @@ export default async function HomePage() {
   const commonT = await getTranslations('common.metadata')
 
   return (
-    <div className="min-h-dvh bg-surface px-6 py-10">
+    <div className="min-h-full bg-surface px-6 py-10">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-6">
         <h1 className="text-2xl font-semibold">{commonT('title')}</h1>
         <form action={signOutAction}>

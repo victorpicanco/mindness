@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -46,8 +46,8 @@ describe('AuthenticatedShell', () => {
     fireEvent.click(screen.getByLabelText('Recolher barra lateral'))
 
     const sidebar = screen.getByRole('complementary')
-    const logo = screen.getByLabelText('Página inicial do Mindness')
-    const sidebarBackground = screen.getByLabelText('Expandir barra lateral')
+    const logo = within(sidebar).getByLabelText('Página inicial do Mindness')
+    const sidebarBackground = within(sidebar).getByLabelText('Expandir barra lateral')
 
     expect(logo).toBeVisible()
     expect(logo).not.toHaveClass('group-hover:opacity-0')
@@ -59,5 +59,57 @@ describe('AuthenticatedShell', () => {
 
     expect(screen.getByLabelText('Recolher barra lateral')).toHaveAttribute('aria-expanded', 'true')
     expect(document.cookie).toContain('mindness-sidebar-expanded=true')
+  })
+
+  it('renders the header above the page content, visible only on mobile', () => {
+    renderShell(<p>Content</p>)
+
+    const header = screen.getByRole('banner')
+    const main = screen.getByRole('main')
+
+    expect(header).toHaveClass('md:hidden')
+    expect(header.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(header).getByLabelText('Abrir navegação')).toBeInTheDocument()
+  })
+
+  it('opens the mobile sidebar from its toggle and closes it from the backdrop', () => {
+    renderShell(<p>Content</p>)
+
+    const mobileToggle = within(screen.getByRole('banner')).getByLabelText('Abrir navegação')
+    const mobileSidebar = screen.getByRole('dialog', {
+      hidden: true,
+      name: 'Navegação do aplicativo',
+    })
+    const backdrop = screen
+      .getAllByLabelText('Fechar navegação')
+      .find((element) => element.classList.contains('fixed'))
+
+    expect(mobileToggle).toHaveAttribute('aria-controls', 'mobile-authenticated-sidebar')
+    expect(mobileToggle).toHaveAttribute('aria-expanded', 'false')
+    expect(mobileSidebar).toHaveClass(
+      '-translate-x-full',
+      'transition-transform',
+      'duration-200',
+      'ease-out',
+      'motion-reduce:transition-none',
+    )
+    expect(backdrop).toBeDefined()
+
+    if (backdrop === undefined) return
+
+    expect(backdrop).toHaveClass('pointer-events-none', 'opacity-0', 'transition-opacity')
+
+    fireEvent.click(mobileToggle)
+
+    expect(mobileToggle).toHaveAttribute('aria-expanded', 'true')
+    expect(mobileSidebar).toHaveAttribute('aria-modal', 'true')
+    expect(mobileSidebar).toHaveClass('translate-x-0')
+    expect(backdrop).toHaveClass('pointer-events-auto', 'opacity-100')
+
+    fireEvent.click(backdrop)
+
+    expect(mobileToggle).toHaveAttribute('aria-expanded', 'false')
+    expect(mobileSidebar).toHaveClass('-translate-x-full')
+    expect(backdrop).toHaveClass('pointer-events-none', 'opacity-0')
   })
 })

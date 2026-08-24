@@ -17,6 +17,8 @@
   "authenticatedShell": {
     "collapseSidebar": "Recolher barra lateral",
     "expandSidebar": "Expandir barra lateral",
+    "openNavigation": "Abrir navegação",
+    "closeNavigation": "Fechar navegação",
     "logoAlt": "Mindness",
     "homeLabel": "Página inicial do Mindness",
     "navigationLabel": "Navegação do aplicativo"

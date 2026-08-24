@@ -3,7 +3,7 @@ import { createStore } from 'zustand/vanilla'
 import { InvalidPracticeSessionTransitionError, type PracticeSessionAction } from './errors'
 
 export type PracticeSessionStatus =
-  'idle' | 'researching' | 'countdown-warning' | 'recording' | 'uploading' | 'done'
+  'idle' | 'researching' | 'countdown-warning' | 'recording' | 'uploading' | 'done' | 'expired'
 
 export interface PracticeSessionState {
   readonly status: PracticeSessionStatus
@@ -23,7 +23,10 @@ const ALL_STATUSES: readonly PracticeSessionStatus[] = [
   'recording',
   'uploading',
   'done',
+  'expired',
 ]
+
+const AUDIO_RETENTION_WINDOW_MS = 15 * 60 * 1_000
 
 function assertTransition(
   fromStatus: PracticeSessionStatus,
@@ -36,6 +39,15 @@ function assertTransition(
 }
 
 export function createPracticeSessionStore() {
+  let retentionTimer: ReturnType<typeof setTimeout> | null = null
+
+  function clearRetentionTimer() {
+    if (retentionTimer !== null) {
+      clearTimeout(retentionTimer)
+      retentionTimer = null
+    }
+  }
+
   return createStore<PracticeSessionState>()((set) => ({
     status: 'idle',
     audioBlob: null,
@@ -53,22 +65,38 @@ export function createPracticeSessionStore() {
       })
     },
     captureAudio: (audioBlob) => {
+      const retentionDeadline = Date.now() + AUDIO_RETENTION_WINDOW_MS
+
       set((state) => {
         assertTransition(state.status, 'captureAudio', ['recording'])
-        return { audioBlob, status: 'uploading' }
+        return { audioBlob, retentionDeadline, status: 'uploading' }
       })
+
+      clearRetentionTimer()
+      retentionTimer = setTimeout(() => {
+        retentionTimer = null
+        set((state) => {
+          if (state.status !== 'uploading' || state.audioBlob !== audioBlob) {
+            return state
+          }
+
+          return { audioBlob: null, retentionDeadline: null, status: 'expired' }
+        })
+      }, AUDIO_RETENTION_WINDOW_MS)
     },
     discardAudio: () => {
       set((state) => {
         assertTransition(state.status, 'discardAudio', ['uploading'])
         return { audioBlob: null, retentionDeadline: null, status: 'recording' }
       })
+      clearRetentionTimer()
     },
     reset: () => {
       set((state) => {
         assertTransition(state.status, 'reset', ALL_STATUSES)
         return { audioBlob: null, retentionDeadline: null, status: 'idle' }
       })
+      clearRetentionTimer()
     },
   }))
 }

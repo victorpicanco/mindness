@@ -9,7 +9,19 @@
     "categoryPlaceholder": "Escolha a categoria",
     "searchWindowLabel": "Tempo de pesquisa",
     "searchWindowPlaceholder": "Escolha o tempo",
-    "activeSession": "Sua sessão em andamento"
+    "activeSession": "Sua sessão em andamento",
+    "difficulties": {
+      "easy": "Fácil",
+      "balanced": "Equilibrado",
+      "hard": "Difícil"
+    },
+    "searchWindowOption": "{minutes} minutos",
+    "signOutToRetry": "Sair e entrar de novo",
+    "errors": {
+      "quotaExhausted": "Você usou suas {allowance} análises deste ciclo. Elas renovam em {date}. Assine o Plus para praticar sem limite.",
+      "themeUnavailable": "Não há tema disponível nessa combinação. Escolha outra opção.",
+      "practiceNotAllowed": "Autorize a gravação e análise de voz para iniciar."
+    }
   },
   "showcase": "Mostruário temporário de componentes",
   "description": "Uma visão compacta dos componentes atuais da interface em temas claros e escuros.",

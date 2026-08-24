@@ -1,7 +1,11 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen } from '@testing-library/react'
+import { NextIntlClientProvider } from 'next-intl'
+import type { ReactElement } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { z } from 'zod'
 
+import { messages } from '@/i18n/messages'
 import type { apiFetch } from '@/lib/api/server-client'
 
 import { createHomePage } from './page'
@@ -34,6 +38,16 @@ function createApiFetch(activeSession: unknown): typeof apiFetch {
   }
 }
 
+function renderPage(page: ReactElement) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        {page}
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
+  )
+}
+
 describe('HomePage', () => {
   afterEach(cleanup)
 
@@ -41,7 +55,7 @@ describe('HomePage', () => {
     // Vitest cannot execute next-intl's async server translation API in jsdom.
     const Page = createHomePage(createApiFetch(null), () => Promise.resolve(practiceTranslations))
 
-    render(await Page())
+    renderPage(await Page({ quota: null }))
 
     expect(screen.queryByText(/análises restantes/u)).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Qual será o assunto de hoje?' })).toHaveClass(
@@ -63,7 +77,7 @@ describe('HomePage', () => {
       () => Promise.resolve(practiceTranslations),
     )
 
-    render(await Page())
+    renderPage(await Page({ quota: null }))
 
     expect(screen.getByText('Comunicação clara')).toBeInTheDocument()
   })

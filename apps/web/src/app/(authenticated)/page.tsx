@@ -5,11 +5,11 @@ import { z } from 'zod'
 import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
 import { SessionQuota } from '@/components/layouts/session-quota'
 import type { SessionQuotaProps } from '@/components/layouts/session-quota'
-import { Button } from '@/components/ui/button'
-import { Select } from '@/components/ui/select'
 import { apiFetch } from '@/lib/api/server-client'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
+
+import { PracticeConfigForm, type PracticeQuota } from './practice-config-form'
 
 const SIDEBAR_PREFERENCE_COOKIE_NAME = 'mindness-sidebar-expanded'
 
@@ -47,16 +47,7 @@ const activeSessionSchema = z
   .nullable()
 
 type ApiFetch = typeof apiFetch
-type PracticeTranslationKey =
-  | 'activeSession'
-  | 'categoryLabel'
-  | 'categoryPlaceholder'
-  | 'difficultyLabel'
-  | 'difficultyPlaceholder'
-  | 'searchWindowLabel'
-  | 'searchWindowPlaceholder'
-  | 'startSession'
-  | 'title'
+type PracticeTranslationKey = 'activeSession' | 'title'
 type PracticeTranslations = (key: PracticeTranslationKey) => string
 
 async function getPracticeTranslations(): Promise<PracticeTranslations> {
@@ -90,11 +81,15 @@ function initialPracticeSession(
   }
 }
 
+interface HomePageContentProps {
+  readonly quota: PracticeQuota | null
+}
+
 export function createHomePage(
   fetchFromApi: ApiFetch,
   loadPracticeTranslations: () => Promise<PracticeTranslations> = getPracticeTranslations,
 ) {
-  return async function HomePage() {
+  return async function HomePage({ quota }: HomePageContentProps) {
     const [t, categories, activeSession] = await Promise.all([
       loadPracticeTranslations(),
       fetchFromApi('/sessions/theme-categories', { cache: 'no-store', schema: categoriesSchema }),
@@ -112,25 +107,7 @@ export function createHomePage(
                   <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
                     {t('title')}
                   </h1>
-                  <div className="mt-8 flex w-full max-w-4xl flex-col gap-4 sm:flex-row sm:items-center">
-                    <Select aria-label={t('difficultyLabel')} disabled>
-                      <option>{t('difficultyPlaceholder')}</option>
-                    </Select>
-                    <Select aria-label={t('categoryLabel')} disabled>
-                      <option>{t('categoryPlaceholder')}</option>
-                      {categories.map((category) => (
-                        <option key={category.categoryId} value={category.slug}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </Select>
-                    <Select aria-label={t('searchWindowLabel')} disabled>
-                      <option>{t('searchWindowPlaceholder')}</option>
-                    </Select>
-                    <Button className="w-full shrink-0 sm:w-auto" disabled type="button">
-                      {t('startSession')}
-                    </Button>
-                  </div>
+                  <PracticeConfigForm categories={categories} quota={quota} />
                 </>
               ) : (
                 <section aria-labelledby="active-session-title" className="text-center">
@@ -176,7 +153,7 @@ export default async function HomePage() {
             ),
           })}
     >
-      <HomePageContent />
+      <HomePageContent quota={summary} />
     </AuthenticatedShell>
   )
 }

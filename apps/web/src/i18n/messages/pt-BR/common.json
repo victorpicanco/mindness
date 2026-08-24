@@ -13,5 +13,12 @@
   "metadata": {
     "title": "Mindness",
     "description": "Pratique uma comunicação mais consciente."
+  },
+  "authenticatedShell": {
+    "collapseSidebar": "Recolher barra lateral",
+    "expandSidebar": "Expandir barra lateral",
+    "logoAlt": "Mindness",
+    "homeLabel": "Página inicial do Mindness",
+    "navigationLabel": "Navegação do aplicativo"
   }
 }

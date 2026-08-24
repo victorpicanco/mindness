@@ -131,5 +131,11 @@ describe('BFF proxy route', () => {
 
     expect(response.status).toBe(401)
     expect(cookieStore.deletedNames).toEqual(['mindness_access_token', 'mindness_refresh_token'])
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'web.AUTHENTICATION_EXPIRED',
+        issues: null,
+      },
+    })
   })
 })

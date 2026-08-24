@@ -1,22 +1,14 @@
 import { z } from 'zod'
 
-import { ApiClientError, apiFetch } from '@/lib/api/server-client'
+import { apiErrorDetails } from '@/lib/api/api-error'
+import { apiFetch } from '@/lib/api/server-client'
 import type { writeSessionCookies } from '@/lib/auth/session'
 
 import { type SignUpActionState } from './types'
 
 const credentialsSchema = z.object({
-  email: z.string().email({ message: 'Informe um e-mail válido.' }).max(254),
-  password: z
-    .string()
-    .min(12, {
-      message:
-        'Use uma senha de 12 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
-    })
-    .max(64, {
-      message:
-        'Use uma senha de 12 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
-    }),
+  email: z.email().max(254),
+  password: z.string().min(12).max(64),
 })
 
 const signUpResponseSchema = z.object({ message: z.string() })
@@ -34,25 +26,19 @@ function fieldValue(formData: FormData, field: string): string {
   return typeof value === 'string' ? value : ''
 }
 
-function validationMessage(formData: FormData): string | undefined {
+function validationMessageKey(
+  formData: FormData,
+): 'errors.invalidEmail' | 'errors.invalidPassword' | undefined {
   const validation = credentialsSchema.safeParse({
     email: fieldValue(formData, 'email'),
     password: fieldValue(formData, 'password'),
   })
 
-  return validation.success ? undefined : validation.error.issues[0]?.message
-}
+  if (validation.success) return undefined
 
-function errorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    if (error.code === 'accounts.ACCOUNT_CREATION_REJECTED') {
-      return 'Verifique seu e-mail para continuar, caso exista uma conta elegível para este endereço.'
-    }
-
-    return error.message
-  }
-
-  return 'Não foi possível criar sua conta. Tente novamente.'
+  return validation.error.issues[0]?.path[0] === 'email'
+    ? 'errors.invalidEmail'
+    : 'errors.invalidPassword'
 }
 
 export function createSignUpAction({ cookieStore, fetcher }: SignUpActionDependencies) {
@@ -60,14 +46,14 @@ export function createSignUpAction({ cookieStore, fetcher }: SignUpActionDepende
     _previousState: SignUpActionState,
     formData: FormData,
   ): Promise<SignUpActionState> {
-    const invalidMessage = validationMessage(formData)
+    const invalidMessageKey = validationMessageKey(formData)
 
-    if (invalidMessage !== undefined) {
-      return { status: 'error', message: invalidMessage }
+    if (invalidMessageKey !== undefined) {
+      return { status: 'validation-error', messageKey: invalidMessageKey }
     }
 
     try {
-      const response = await apiFetch('/auth/sign-up', {
+      await apiFetch('/auth/sign-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -80,9 +66,9 @@ export function createSignUpAction({ cookieStore, fetcher }: SignUpActionDepende
         schema: signUpResponseSchema,
       })
 
-      return { status: 'success', message: response.message }
+      return { status: 'success', messageKey: 'signUp.success' }
     } catch (error: unknown) {
-      return { status: 'error', message: errorMessage(error) }
+      return { status: 'api-error', error: apiErrorDetails(error) }
     }
   }
 }

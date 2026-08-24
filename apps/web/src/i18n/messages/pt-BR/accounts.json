@@ -1,0 +1,9 @@
+{
+  "errors": {
+    "invalidTimeZone": "Escolha um fuso horário válido."
+  },
+  "messages": {
+    "timeZoneUpdated": "Fuso horário atualizado.",
+    "consentRecorded": "Consentimento registrado."
+  }
+}

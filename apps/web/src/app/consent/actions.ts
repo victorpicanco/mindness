@@ -3,7 +3,9 @@
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 
-import { ApiClientError, apiFetch } from '@/lib/api/server-client'
+import type { ApiErrorDetails } from '@/lib/api/api-error'
+import { apiErrorDetails } from '@/lib/api/api-error'
+import { apiFetch } from '@/lib/api/server-client'
 import type { writeSessionCookies } from '@/lib/auth/session'
 
 const acceptConsentResponseSchema = z.object({
@@ -21,18 +23,10 @@ type AcceptConsentActionDependencies = {
 
 export type ConsentActionState =
   | { readonly status: 'idle'; readonly message: null }
-  | { readonly status: 'success'; readonly message: string }
-  | { readonly status: 'error'; readonly message: string }
+  | { readonly status: 'success'; readonly messageKey: 'messages.consentRecorded' }
+  | { readonly status: 'api-error'; readonly error: ApiErrorDetails }
 
 export const initialConsentActionState: ConsentActionState = { status: 'idle', message: null }
-
-function errorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    return error.message
-  }
-
-  return 'Não foi possível registrar seu consentimento. Tente novamente.'
-}
 
 export function createAcceptConsentAction({
   cookieStore,
@@ -53,9 +47,9 @@ export function createAcceptConsentAction({
         schema: acceptConsentResponseSchema,
       })
 
-      return { status: 'success', message: 'Consentimento registrado.' }
+      return { status: 'success', messageKey: 'messages.consentRecorded' }
     } catch (error: unknown) {
-      return { status: 'error', message: errorMessage(error) }
+      return { status: 'api-error', error: apiErrorDetails(error) }
     }
   }
 }

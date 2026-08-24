@@ -1,5 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { NextIntlClientProvider } from 'next-intl'
+import type { ReactElement } from 'react'
+import { Toaster } from 'sonner'
 import { afterEach, describe, expect, it } from 'vitest'
+
+import { messages } from '@/i18n/messages'
 
 import { SignUpForm } from './sign-up-form'
 import { initialSignUpActionState, type SignUpActionState } from './types'
@@ -10,8 +15,17 @@ function validSignUpAction(): SignUpAction {
   return () =>
     Promise.resolve({
       status: 'success',
-      message: 'Verifique seu e-mail para continuar.',
+      messageKey: 'signUp.success',
     })
+}
+
+function renderSignUpForm(element: ReactElement) {
+  return render(
+    <NextIntlClientProvider locale="pt-BR" messages={messages}>
+      <Toaster />
+      {element}
+    </NextIntlClientProvider>,
+  )
 }
 
 describe('SignUpForm', () => {
@@ -25,7 +39,7 @@ describe('SignUpForm', () => {
       return validSignUpAction()(state, formData)
     }
 
-    render(<SignUpForm action={signUpAction} />)
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
 
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
     fireEvent.change(screen.getByLabelText('Senha'), {
@@ -49,7 +63,7 @@ describe('SignUpForm', () => {
       return Promise.resolve(initialSignUpActionState)
     }
 
-    render(<SignUpForm action={signUpAction} />)
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
 
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'invalid' } })
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'short' } })
@@ -58,5 +72,47 @@ describe('SignUpForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Informe um e-mail válido.')
     expect(screen.getByLabelText('E-mail')).toHaveAttribute('aria-invalid', 'true')
     expect(submissions).toBe(0)
+  })
+
+  it('shows a translated toast when the backend rejects account creation', async () => {
+    const signUpAction: SignUpAction = () =>
+      Promise.resolve({
+        status: 'api-error',
+        error: {
+          code: 'accounts.ACCOUNT_CREATION_REJECTED',
+          issues: null,
+          requestId: 'request-id',
+        },
+      })
+
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
+
+    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'a-valid-password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+
+    expect(
+      await screen.findByText(
+        'Verifique seu e-mail para continuar, caso exista uma conta elegível para este endereço.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('falls back to a generic toast when the backend error code is unmapped', async () => {
+    const signUpAction: SignUpAction = () =>
+      Promise.resolve({
+        status: 'api-error',
+        error: { code: 'accounts.SOME_NEW_ERROR', issues: null, requestId: null },
+      })
+
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
+
+    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'a-valid-password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+
+    expect(
+      await screen.findByText('Não foi possível concluir a ação. Tente novamente.'),
+    ).toBeInTheDocument()
   })
 })

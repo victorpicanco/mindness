@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { type FormEvent, useState } from 'react'
 
 import { signUpAction } from './actions'
@@ -7,6 +8,7 @@ import { initialSignUpActionState, type SignUpActionState } from './types'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
 
 export type SignUpFormAction = (
   state: SignUpActionState,
@@ -22,25 +24,26 @@ type ValidationErrors = {
   readonly password?: string
 }
 
-const PASSWORD_MESSAGE =
-  'Use uma senha de 12 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.'
+type AuthTranslator = (key: 'errors.invalidEmail' | 'errors.invalidPassword') => string
 
-function validate(formData: FormData): ValidationErrors {
+function validate(formData: FormData, t: AuthTranslator): ValidationErrors {
   const email = formData.get('email')
   const password = formData.get('password')
 
   if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) {
-    return { email: 'Informe um e-mail válido.' }
+    return { email: t('errors.invalidEmail') }
   }
 
   if (typeof password !== 'string' || password.length < 12 || password.length > 64) {
-    return { password: PASSWORD_MESSAGE }
+    return { password: t('errors.invalidPassword') }
   }
 
   return {}
 }
 
 export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
+  const t = useTranslations('auth')
+  const translate = useTranslations()
   const [state, setState] = useState<SignUpActionState>(initialSignUpActionState)
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -48,7 +51,7 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    const validationErrors = validate(formData)
+    const validationErrors = validate(formData, t)
 
     setErrors(validationErrors)
 
@@ -57,12 +60,17 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
     }
 
     setIsSubmitting(true)
-    setState(await action(state, formData))
+    const result = await action(state, formData)
+    setState(result)
     setIsSubmitting(false)
+
+    if (result.status === 'api-error') {
+      showApiErrorToast(result.error, translate)
+    }
   }
 
   if (state.status === 'success') {
-    return <p role="status">{state.message}</p>
+    return <p role="status">{t(state.messageKey)}</p>
   }
 
   return (
@@ -74,15 +82,21 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
     >
       <input name="captchaToken" type="hidden" value="" />
       <div className="grid gap-4">
-        <Field {...(errors.email === undefined ? {} : { error: errors.email })} label="E-mail">
+        <Field
+          {...(errors.email === undefined ? {} : { error: errors.email })}
+          label={t('signUp.emailLabel')}
+        >
           <Input autoComplete="email" name="email" type="email" />
         </Field>
-        <Field {...(errors.password === undefined ? {} : { error: errors.password })} label="Senha">
+        <Field
+          {...(errors.password === undefined ? {} : { error: errors.password })}
+          label={t('signUp.passwordLabel')}
+        >
           <Input autoComplete="new-password" name="password" type="password" />
         </Field>
-        {state.status === 'error' ? <p role="alert">{state.message}</p> : null}
+        {state.status === 'validation-error' ? <p role="alert">{t(state.messageKey)}</p> : null}
         <Button isLoading={isSubmitting} type="submit">
-          Criar conta
+          {t('signUp.submit')}
         </Button>
       </div>
     </form>

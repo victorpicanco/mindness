@@ -5,6 +5,8 @@ import { z } from 'zod'
 
 import { readSessionCookies } from '@/lib/auth/session'
 
+import type { ApiErrorDetails, ApiFieldIssue } from './api-error'
+
 const errorEnvelopeSchema = z.object({
   error: z.object({
     code: z.string(),
@@ -36,18 +38,15 @@ type ApiFetchOptions<TSchema extends z.ZodType> = Omit<RequestInit, 'headers'> &
   readonly schema: TSchema
 }
 
-type ApiClientErrorOptions = {
-  readonly code: string
+type ApiClientErrorOptions = ApiErrorDetails & {
   readonly message: string
-  readonly issues?: z.infer<typeof errorEnvelopeSchema>['error']['issues']
-  readonly requestId?: string
   readonly cause?: unknown
 }
 
 export class ApiClientError extends Error {
   readonly code: string
-  readonly issues: z.infer<typeof errorEnvelopeSchema>['error']['issues'] | undefined
-  readonly requestId: string | undefined
+  readonly issues: readonly ApiFieldIssue[] | null
+  readonly requestId: string | null
 
   constructor({ code, message, issues, requestId, cause }: ApiClientErrorOptions) {
     super(message, cause === undefined ? undefined : { cause })
@@ -65,6 +64,8 @@ function apiUrl(path: string): string {
     throw new ApiClientError({
       code: 'web.API_BASE_URL_MISSING',
       message: 'The API base URL is not configured.',
+      issues: null,
+      requestId: null,
     })
   }
 
@@ -101,19 +102,45 @@ export async function apiFetch<TSchema extends z.ZodType>(
     throw new ApiClientError({
       code: 'web.API_REQUEST_FAILED',
       message: 'Unable to reach the API.',
+      issues: null,
+      requestId: null,
       cause,
     })
   }
 
-  const body: unknown = await response.json()
+  let body: unknown
 
-  if (!response.ok) {
-    const { error } = errorEnvelopeSchema.parse(body)
-
-    throw new ApiClientError(error)
+  try {
+    body = await response.json()
+  } catch (cause: unknown) {
+    throw new ApiClientError({
+      code: 'web.API_RESPONSE_INVALID',
+      message: 'The API returned an invalid response.',
+      issues: null,
+      requestId: null,
+      cause,
+    })
   }
 
-  const { data } = successEnvelopeSchema.parse(body)
+  try {
+    if (!response.ok) {
+      const { error } = errorEnvelopeSchema.parse(body)
 
-  return schema.parse(data)
+      throw new ApiClientError({ ...error, requestId: error.requestId })
+    }
+
+    const { data } = successEnvelopeSchema.parse(body)
+
+    return schema.parse(data)
+  } catch (cause: unknown) {
+    if (cause instanceof ApiClientError) throw cause
+
+    throw new ApiClientError({
+      code: 'web.API_RESPONSE_INVALID',
+      message: 'The API returned an invalid response.',
+      issues: null,
+      requestId: null,
+      cause,
+    })
+  }
 }

@@ -103,4 +103,18 @@ describe('apiFetch', () => {
 
     await expect(request).rejects.toThrow()
   })
+
+  it('translates an invalid API response into a client error', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+
+    const request = apiFetch('/sessions/quota', {
+      schema: z.object({ remaining: z.number() }),
+      cookieStore: new InMemoryCookieStore(undefined),
+      fetcher: () => Promise.resolve(new Response('not json')),
+    })
+
+    await expect(request).rejects.toMatchObject({
+      code: 'web.API_RESPONSE_INVALID',
+    } satisfies Pick<ApiClientError, 'code'>)
+  })
 })

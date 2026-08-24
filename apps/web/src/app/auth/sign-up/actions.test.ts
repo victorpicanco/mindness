@@ -46,8 +46,8 @@ describe('signUpAction', () => {
     )
 
     expect(result).toEqual({
-      status: 'error',
-      message: 'Informe um e-mail válido.',
+      status: 'validation-error',
+      messageKey: 'errors.invalidEmail',
     })
     expect(requests).toEqual([])
   })
@@ -78,8 +78,7 @@ describe('signUpAction', () => {
 
     expect(result).toEqual({
       status: 'success',
-      message:
-        'Verifique seu e-mail para continuar, caso exista uma conta elegível para este endereço.',
+      messageKey: 'signUp.success',
     })
   })
 
@@ -113,9 +112,12 @@ describe('signUpAction', () => {
     )
 
     expect(result).toEqual({
-      status: 'error',
-      message:
-        'Verifique seu e-mail para continuar, caso exista uma conta elegível para este endereço.',
+      status: 'api-error',
+      error: {
+        code: 'accounts.ACCOUNT_CREATION_REJECTED',
+        issues: null,
+        requestId: 'request-id',
+      },
     })
   })
 })

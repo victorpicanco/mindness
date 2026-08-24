@@ -67,8 +67,7 @@ describe('signInAction', () => {
 
     expect(result).toEqual({
       status: 'error',
-      message:
-        'Use uma senha de 12 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
+      messageKey: 'errors.invalidPassword',
     })
     expect(requests).toEqual([])
   })
@@ -143,6 +142,13 @@ describe('signInAction', () => {
       }),
     )
 
-    expect(result).toEqual({ status: 'error', message: 'E-mail ou senha incorretos.' })
+    expect(result).toEqual({
+      status: 'api-error',
+      error: {
+        code: 'accounts.AUTHENTICATION_REJECTED',
+        issues: null,
+        requestId: 'request-id',
+      },
+    })
   })
 })

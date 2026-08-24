@@ -39,9 +39,41 @@ describe('acceptConsentAction', () => {
 
     const result = await action(initialConsentActionState, new FormData())
 
-    expect(result).toEqual({ status: 'success', message: 'Consentimento registrado.' })
+    expect(result).toEqual({ status: 'success', messageKey: 'messages.consentRecorded' })
     expect(requests).toHaveLength(1)
     expect(requests[0]?.url).toBe('https://api.mindness.test/accounts/me/consent')
     expect(requests[0]?.method).toBe('POST')
+  })
+
+  it('returns the API error details without exposing the API message', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const action = createAcceptConsentAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: () =>
+        Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.CONSENT_REJECTED',
+                message: 'The consent could not be saved.',
+                issues: null,
+                requestId: 'request-id',
+              },
+            },
+            { status: 422 },
+          ),
+        ),
+    })
+
+    const result = await action(initialConsentActionState, new FormData())
+
+    expect(result).toEqual({
+      status: 'api-error',
+      error: {
+        code: 'accounts.CONSENT_REJECTED',
+        issues: null,
+        requestId: 'request-id',
+      },
+    })
   })
 })

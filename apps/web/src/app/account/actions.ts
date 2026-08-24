@@ -4,7 +4,9 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
-import { ApiClientError, apiFetch } from '@/lib/api/server-client'
+import type { ApiErrorDetails } from '@/lib/api/api-error'
+import { apiErrorDetails } from '@/lib/api/api-error'
+import { apiFetch } from '@/lib/api/server-client'
 import { clearSessionCookies, type writeSessionCookies } from '@/lib/auth/session'
 
 const updateTimeZoneResponseSchema = z.object({ timeZone: z.string() })
@@ -20,12 +22,13 @@ type AccountActionsDependencies = {
 
 export type UpdateTimeZoneActionState =
   | { readonly status: 'idle'; readonly message: null }
-  | { readonly status: 'success'; readonly message: string }
-  | { readonly status: 'error'; readonly message: string }
+  | { readonly status: 'success'; readonly messageKey: 'messages.timeZoneUpdated' }
+  | { readonly status: 'error'; readonly messageKey: 'errors.invalidTimeZone' }
+  | { readonly status: 'api-error'; readonly error: ApiErrorDetails }
 
 export type DeleteAccountActionState =
   | { readonly status: 'idle'; readonly message: null }
-  | { readonly status: 'error'; readonly message: string }
+  | { readonly status: 'api-error'; readonly error: ApiErrorDetails }
 
 export const initialUpdateTimeZoneActionState: UpdateTimeZoneActionState = {
   status: 'idle',
@@ -52,10 +55,6 @@ function isIanaTimeZone(value: string): boolean {
   }
 }
 
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof ApiClientError ? error.message : fallback
-}
-
 export function createAccountActions({
   cookieStore,
   fetcher,
@@ -69,7 +68,7 @@ export function createAccountActions({
       const timeZone = fieldValue(formData, 'timeZone')
 
       if (!isIanaTimeZone(timeZone)) {
-        return { status: 'error', message: 'Escolha um fuso horário válido.' }
+        return { status: 'error', messageKey: 'errors.invalidTimeZone' }
       }
 
       try {
@@ -82,15 +81,9 @@ export function createAccountActions({
           schema: updateTimeZoneResponseSchema,
         })
 
-        return { status: 'success', message: 'Fuso horário atualizado.' }
+        return { status: 'success', messageKey: 'messages.timeZoneUpdated' }
       } catch (error: unknown) {
-        return {
-          status: 'error',
-          message: errorMessage(
-            error,
-            'Não foi possível atualizar o fuso horário. Tente novamente.',
-          ),
-        }
+        return { status: 'api-error', error: apiErrorDetails(error) }
       }
     },
 
@@ -109,10 +102,7 @@ export function createAccountActions({
           schema: deleteAccountResponseSchema,
         })
       } catch (error: unknown) {
-        return {
-          status: 'error',
-          message: errorMessage(error, 'Não foi possível excluir sua conta. Tente novamente.'),
-        }
+        return { status: 'api-error', error: apiErrorDetails(error) }
       }
 
       clearSessionCookies(cookieStore)

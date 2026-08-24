@@ -1,0 +1,16 @@
+{
+  "errors": {
+    "network": "Não foi possível conectar ao servidor. Verifique sua conexão.",
+    "unknown": "Não foi possível concluir a ação. Tente novamente."
+  },
+  "toasts": {
+    "label": "Notificações do sistema"
+  },
+  "loading": {
+    "label": "Carregando"
+  },
+  "metadata": {
+    "title": "Mindness",
+    "description": "Pratique uma comunicação mais consciente."
+  }
+}

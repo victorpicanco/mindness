@@ -4,21 +4,14 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
-import { ApiClientError, apiFetch } from '@/lib/api/server-client'
+import type { ApiErrorDetails } from '@/lib/api/api-error'
+import { apiErrorDetails } from '@/lib/api/api-error'
+import { apiFetch } from '@/lib/api/server-client'
 import { writeSessionCookies } from '@/lib/auth/session'
 
 const credentialsSchema = z.object({
-  email: z.string().email({ message: 'Informe um e-mail válido.' }).max(254),
-  password: z
-    .string()
-    .min(12, {
-      message:
-        'Use uma senha de 12 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
-    })
-    .max(64, {
-      message:
-        'Use uma senha de 12 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
-    }),
+  email: z.email().max(254),
+  password: z.string().min(12).max(64),
 })
 
 const signInResponseSchema = z.object({
@@ -37,7 +30,11 @@ type SignInActionDependencies = {
 
 export type SignInActionState =
   | { readonly status: 'idle'; readonly message: null }
-  | { readonly status: 'error'; readonly message: string }
+  | {
+      readonly status: 'error'
+      readonly messageKey: 'errors.invalidEmail' | 'errors.invalidPassword'
+    }
+  | { readonly status: 'api-error'; readonly error: ApiErrorDetails }
 
 export const initialSignInActionState: SignInActionState = { status: 'idle', message: null }
 
@@ -47,25 +44,19 @@ function fieldValue(formData: FormData, field: string): string {
   return typeof value === 'string' ? value : ''
 }
 
-function validationMessage(formData: FormData): string | undefined {
+function validationMessageKey(
+  formData: FormData,
+): 'errors.invalidEmail' | 'errors.invalidPassword' | undefined {
   const validation = credentialsSchema.safeParse({
     email: fieldValue(formData, 'email'),
     password: fieldValue(formData, 'password'),
   })
 
-  return validation.success ? undefined : validation.error.issues[0]?.message
-}
+  if (validation.success) return undefined
 
-function errorMessage(error: unknown): string {
-  if (error instanceof ApiClientError && error.code === 'accounts.AUTHENTICATION_REJECTED') {
-    return 'E-mail ou senha incorretos.'
-  }
-
-  if (error instanceof ApiClientError) {
-    return error.message
-  }
-
-  return 'Não foi possível entrar. Tente novamente.'
+  return validation.error.issues[0]?.path[0] === 'email'
+    ? 'errors.invalidEmail'
+    : 'errors.invalidPassword'
 }
 
 export function createSignInAction({
@@ -77,10 +68,10 @@ export function createSignInAction({
     _previousState: SignInActionState,
     formData: FormData,
   ): Promise<SignInActionState> {
-    const invalidMessage = validationMessage(formData)
+    const invalidMessageKey = validationMessageKey(formData)
 
-    if (invalidMessage !== undefined) {
-      return { status: 'error', message: invalidMessage }
+    if (invalidMessageKey !== undefined) {
+      return { status: 'error', messageKey: invalidMessageKey }
     }
 
     let session: z.infer<typeof signInResponseSchema>
@@ -99,7 +90,7 @@ export function createSignInAction({
         schema: signInResponseSchema,
       })
     } catch (error: unknown) {
-      return { status: 'error', message: errorMessage(error) }
+      return { status: 'api-error', error: apiErrorDetails(error) }
     }
 
     writeSessionCookies(cookieStore, session)

@@ -1,14 +1,21 @@
 import type { Metadata } from 'next'
+import { NextIntlClientProvider } from 'next-intl'
+import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { ToastProvider } from '@/components/providers/toast-provider'
 
 import './globals.css'
 import { Providers } from './providers'
 
-export const metadata: Metadata = {
-  title: 'Mindness',
-  description: 'Practice mindful communication.',
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('common.metadata')
+
+  return {
+    title: t('title'),
+    description: t('description'),
+  }
 }
 
 const themeInitializationScript = `(() => {
@@ -28,14 +35,17 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} />
       </head>
       <body>
-        <Providers>
-          <ThemeProvider>{children}</ThemeProvider>
-        </Providers>
+        <NextIntlClientProvider>
+          <Providers>
+            <ThemeProvider>{children}</ThemeProvider>
+          </Providers>
+          <ToastProvider />
+        </NextIntlClientProvider>
       </body>
     </html>
   )

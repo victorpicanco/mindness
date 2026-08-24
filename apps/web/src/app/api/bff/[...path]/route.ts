@@ -22,6 +22,20 @@ type BffRouteHandlerDependencies = {
   readonly fetcher: Fetcher
 }
 
+function errorResponse(status: number, code: string): Response {
+  return Response.json(
+    {
+      error: {
+        code,
+        issues: null,
+        message: 'The request could not be completed.',
+        requestId: crypto.randomUUID(),
+      },
+    },
+    { status },
+  )
+}
+
 function createApiUrl(apiBaseUrl: string, path: string[], requestUrl: string): string {
   const targetUrl = new URL(`/${path.join('/')}`, apiBaseUrl)
   const sourceUrl = new URL(requestUrl)
@@ -106,7 +120,7 @@ export function createBffRouteHandler({
     if (refreshedAccessToken === undefined) {
       clearSessionCookies(cookieStore)
 
-      return new Response(null, { status: 401 })
+      return errorResponse(401, 'web.AUTHENTICATION_EXPIRED')
     }
 
     return forwardRequest(refreshedAccessToken)
@@ -116,7 +130,7 @@ export function createBffRouteHandler({
 async function handle(request: Request, context: BffRouteContext): Promise<Response> {
   const apiBaseUrl = process.env.API_BASE_URL
 
-  if (apiBaseUrl === undefined) return new Response(null, { status: 500 })
+  if (apiBaseUrl === undefined) return errorResponse(500, 'web.API_BASE_URL_MISSING')
 
   const cookieStore = await cookies()
 

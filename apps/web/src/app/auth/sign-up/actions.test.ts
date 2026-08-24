@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createSignUpAction, initialSignUpActionState } from './actions'
+import { createSignUpAction } from './sign-up-action-factory'
+import { initialSignUpActionState } from './types'
 
 class InMemoryCookieStore {
   get(): undefined {

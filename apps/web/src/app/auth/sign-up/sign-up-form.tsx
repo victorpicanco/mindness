@@ -2,7 +2,8 @@
 
 import { type FormEvent, useState } from 'react'
 
-import { initialSignUpActionState, type SignUpActionState, signUpAction } from './actions'
+import { signUpAction } from './actions'
+import { initialSignUpActionState, type SignUpActionState } from './types'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'

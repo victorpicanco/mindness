@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { initialSignUpActionState, type SignUpActionState } from './actions'
 import { SignUpForm } from './sign-up-form'
+import { initialSignUpActionState, type SignUpActionState } from './types'
 
 type SignUpAction = (state: SignUpActionState, formData: FormData) => Promise<SignUpActionState>
 

@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { PathnameContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -6,16 +7,18 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { AuthenticatedShell } from './index'
 import { messages } from '@/i18n/messages'
 
-function renderShell(children: ReactNode, isInitiallyExpanded = true) {
+function renderShell(children: ReactNode, isInitiallyExpanded = true, pathname = '/') {
   return render(
-    <NextIntlClientProvider locale="pt-BR" messages={messages}>
-      <AuthenticatedShell
-        initialIsExpanded={isInitiallyExpanded}
-        preferenceCookieName="mindness-sidebar-expanded"
-      >
-        {children}
-      </AuthenticatedShell>
-    </NextIntlClientProvider>,
+    <PathnameContext.Provider value={pathname}>
+      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <AuthenticatedShell
+          initialIsExpanded={isInitiallyExpanded}
+          preferenceCookieName="mindness-sidebar-expanded"
+        >
+          {children}
+        </AuthenticatedShell>
+      </NextIntlClientProvider>
+    </PathnameContext.Provider>,
   )
 }
 
@@ -28,6 +31,28 @@ describe('AuthenticatedShell', () => {
     expect(screen.getByRole('main')).toHaveTextContent('Dashboard')
     expect(screen.getByLabelText('Recolher barra lateral')).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('complementary')).toHaveClass('w-64')
+  })
+
+  it('renders the configured navigation items in the sidebar', () => {
+    renderShell(<p>Content</p>)
+
+    const sidebar = screen.getByRole('complementary')
+    const newSessionLink = within(sidebar).getByRole('link', { name: 'Nova sessão' })
+    const progressLink = within(sidebar).getByRole('link', { name: 'Seu progresso' })
+
+    expect(newSessionLink).toHaveAttribute('href', '/')
+    expect(newSessionLink.querySelector('.hgi-pencil-edit-02')).toBeInTheDocument()
+    expect(progressLink).toHaveAttribute('href', '/history')
+    expect(progressLink.querySelector('.hgi-chart-increase')).toBeInTheDocument()
+  })
+
+  it('highlights the navigation item matching the current route', () => {
+    renderShell(<p>Content</p>, true, '/history')
+
+    const sidebar = screen.getByRole('complementary')
+
+    expect(within(sidebar).getByRole('link', { name: 'Seu progresso' })).toHaveClass('bg-input')
+    expect(within(sidebar).getByRole('link', { name: 'Nova sessão' })).not.toHaveClass('bg-input')
   })
 
   it('renders the persisted collapsed preference on the initial render', () => {
@@ -51,6 +76,16 @@ describe('AuthenticatedShell', () => {
 
     expect(logo).toBeVisible()
     expect(logo).not.toHaveClass('group-hover:opacity-0')
+    expect(
+      within(sidebar)
+        .getByRole('link', { name: 'Nova sessão' })
+        .querySelector('[data-sidebar-icon]'),
+    ).toHaveClass('grid', 'size-9', 'place-items-center')
+    expect(
+      within(sidebar)
+        .getByRole('link', { name: 'Seu progresso' })
+        .querySelector('[data-sidebar-icon]'),
+    ).toHaveClass('grid', 'size-9', 'place-items-center')
     expect(sidebarBackground).toHaveClass('absolute', 'inset-0', 'cursor-col-resize')
     expect(sidebar).toHaveClass('w-16', 'cursor-col-resize')
     expect(document.cookie).toContain('mindness-sidebar-expanded=false')

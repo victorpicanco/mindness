@@ -21,6 +21,9 @@
     "closeNavigation": "Fechar navegação",
     "logoAlt": "Mindness",
     "homeLabel": "Página inicial do Mindness",
-    "navigationLabel": "Navegação do aplicativo"
+    "navigationLabel": "Navegação do aplicativo",
+    "primaryNavigationLabel": "Navegação principal",
+    "newSession": "Nova sessão",
+    "progress": "Seu progresso"
   }
 }

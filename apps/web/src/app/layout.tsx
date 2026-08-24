@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
+import { Buenard } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
@@ -9,6 +10,13 @@ import { ToastProvider } from '@/components/providers/toast-provider'
 
 import './globals.css'
 import { Providers } from './providers'
+
+const buenard = Buenard({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-buenard',
+  weight: ['400', '700'],
+})
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('common.metadata')
@@ -38,7 +46,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const nonce = (await headers()).get('x-nonce') ?? undefined
 
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html className={buenard.variable} lang="pt-BR" suppressHydrationWarning>
       <head>
         <link href="https://use.hugeicons.com/font/icons.css" rel="stylesheet" />
         <script

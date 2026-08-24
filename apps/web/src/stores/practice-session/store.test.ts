@@ -11,9 +11,14 @@ describe('practice session store', () => {
   it('moves through the valid practice session transitions', () => {
     const store = createPracticeSessionStore()
     const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const session = {
+      expiresAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    }
 
-    store.getState().startResearching()
-    expect(store.getState().status).toBe('researching')
+    store.getState().startResearching(session)
+    expect(store.getState()).toMatchObject({ status: 'researching', session })
 
     store.getState().beginRecording()
     expect(store.getState().status).toBe('recording')
@@ -48,13 +53,48 @@ describe('practice session store', () => {
     )
   })
 
+  it('starts hydrated with an active session', () => {
+    const session = {
+      expiresAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    }
+
+    const store = createPracticeSessionStore({ status: 'researching', session })
+
+    expect(store.getState()).toMatchObject({ status: 'researching', session })
+  })
+
+  it('moves from uploading to processing only', () => {
+    const store = createPracticeSessionStore()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const session = {
+      expiresAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    }
+
+    expect(() => store.getState().beginProcessing()).toThrow(InvalidPracticeSessionTransitionError)
+
+    store.getState().startResearching(session)
+    store.getState().beginRecording()
+    store.getState().captureAudio(audioBlob)
+    store.getState().beginProcessing()
+
+    expect(store.getState().status).toBe('processing')
+  })
+
   it('discards unsent audio when the local retention window expires', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'))
     const store = createPracticeSessionStore()
     const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
 
-    store.getState().startResearching()
+    store.getState().startResearching({
+      expiresAt: '2026-08-23T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    })
     store.getState().beginRecording()
     store.getState().captureAudio(audioBlob)
 

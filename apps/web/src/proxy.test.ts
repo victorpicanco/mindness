@@ -49,19 +49,10 @@ describe('proxy', () => {
       expect(redirectTarget(response)).toBe('/auth/sign-in?redirect=%2F')
     })
 
-    it('redirects an unauthenticated request to a protected route to sign-in', () => {
+    it('does not redirect an unauthenticated request to the removed practice route', () => {
       const response = proxy(request('/practice'))
 
-      expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe('/auth/sign-in?redirect=%2Fpractice')
-    })
-
-    it('keeps the intended path and query so sign-in can return to it', () => {
-      const response = proxy(request('/practice/session?id=1'))
-
-      expect(new URL(response.headers.get('location') ?? '').searchParams.get('redirect')).toBe(
-        '/practice/session?id=1',
-      )
+      expect(response.headers.get('x-middleware-next')).toBe('1')
     })
 
     it('allows an authenticated request to a protected route to continue', () => {

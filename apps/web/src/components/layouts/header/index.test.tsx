@@ -11,7 +11,7 @@ describe('Header', () => {
 
     const header = screen.getByRole('banner')
 
-    expect(header).toHaveClass('md:hidden')
+    expect(header).not.toHaveClass('md:hidden')
     expect(header).toContainElement(screen.getByRole('button', { name: 'Menu' }))
   })
 
@@ -19,5 +19,11 @@ describe('Header', () => {
     render(<Header />)
 
     expect(screen.getByRole('banner')).toBeEmptyDOMElement()
+  })
+
+  it('renders a right-aligned status item', () => {
+    render(<Header rightItem={<output>Cota de sessões</output>} />)
+
+    expect(screen.getByRole('banner')).toContainElement(screen.getByText('Cota de sessões'))
   })
 })

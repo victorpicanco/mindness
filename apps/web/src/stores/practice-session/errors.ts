@@ -1,7 +1,12 @@
 import type { PracticeSessionStatus } from './store'
 
 export type PracticeSessionAction =
-  'beginRecording' | 'captureAudio' | 'discardAudio' | 'reset' | 'startResearching'
+  | 'beginProcessing'
+  | 'beginRecording'
+  | 'captureAudio'
+  | 'discardAudio'
+  | 'reset'
+  | 'startResearching'
 
 export class InvalidPracticeSessionTransitionError extends Error {
   readonly code = 'web.INVALID_PRACTICE_SESSION_TRANSITION'

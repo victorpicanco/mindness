@@ -7,13 +7,19 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { AuthenticatedShell } from './index'
 import { messages } from '@/i18n/messages'
 
-function renderShell(children: ReactNode, isInitiallyExpanded = true, pathname = '/') {
+function renderShell(
+  children: ReactNode,
+  isInitiallyExpanded = true,
+  pathname = '/',
+  quota = { allowance: 4, remaining: 4, renewsAt: '2026-08-24T12:05:00.000Z' },
+) {
   return render(
     <PathnameContext.Provider value={pathname}>
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
         <AuthenticatedShell
           initialIsExpanded={isInitiallyExpanded}
           preferenceCookieName="mindness-sidebar-expanded"
+          quota={quota}
         >
           {children}
         </AuthenticatedShell>
@@ -120,9 +126,17 @@ describe('AuthenticatedShell', () => {
     const header = screen.getByRole('banner')
     const main = screen.getByRole('main')
 
-    expect(header).toHaveClass('md:hidden')
+    expect(header).not.toHaveClass('md:hidden')
     expect(header.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(header).getByLabelText('Abrir navegação')).toBeInTheDocument()
+  })
+
+  it('places the remaining session quota in the header', () => {
+    renderShell(<p>Content</p>)
+
+    expect(
+      within(screen.getByRole('banner')).getByText('4/4 sessões restantes'),
+    ).toBeInTheDocument()
   })
 
   it('opens the mobile sidebar from its toggle and closes it from the backdrop', () => {

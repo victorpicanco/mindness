@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { signOutAction } from '@/app/auth/sign-out/actions'
 import { BrandLink } from '@/components/layouts/brand-link'
 import { Header } from '@/components/layouts/header'
+import { SessionQuota } from '@/components/layouts/session-quota'
 import { IconButton } from '@/components/ui/icon-button'
 import { Icon } from '@/components/ui/icon'
 import {
@@ -22,6 +23,13 @@ interface AuthenticatedShellProps {
   readonly children: ReactNode
   readonly initialIsExpanded: boolean
   readonly preferenceCookieName: string
+  readonly quota: SessionQuotaSummary | null
+}
+
+export interface SessionQuotaSummary {
+  readonly allowance: number
+  readonly remaining: number
+  readonly renewsAt: string
 }
 
 const ONE_YEAR_IN_SECONDS = 31_536_000
@@ -56,6 +64,7 @@ export function AuthenticatedShell({
   children,
   initialIsExpanded,
   preferenceCookieName,
+  quota,
 }: AuthenticatedShellProps) {
   const t = useTranslations('common.authenticatedShell')
   const activeHref = usePathname()
@@ -164,6 +173,17 @@ export function AuthenticatedShell({
                 ref={mobileToggleRef}
               />
             }
+            {...(quota === null
+              ? {}
+              : {
+                  rightItem: (
+                    <SessionQuota
+                      allowance={quota.allowance}
+                      remaining={quota.remaining}
+                      renewsAt={quota.renewsAt}
+                    />
+                  ),
+                })}
           />
 
           <main className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</main>

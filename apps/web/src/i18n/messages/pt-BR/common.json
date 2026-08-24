@@ -10,6 +10,11 @@
   "loading": {
     "label": "Carregando"
   },
+  "sessionQuota": {
+    "label": "Cota de sessões",
+    "remaining": "{remaining}/{allowance} sessões restantes",
+    "renewsAt": "Renova em {time}"
+  },
   "metadata": {
     "title": "Mindness",
     "description": "Pratique uma comunicação mais consciente."

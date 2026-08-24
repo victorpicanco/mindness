@@ -6,6 +6,7 @@ import { useStore } from 'zustand'
 import { PracticeSessionProviderMissingError } from './errors'
 import {
   createPracticeSessionStore,
+  type PracticeSessionInitialState,
   type PracticeSessionState,
   type PracticeSessionStoreApi,
 } from './store'
@@ -14,13 +15,14 @@ const PracticeSessionContext = createContext<PracticeSessionStoreApi | null>(nul
 
 interface PracticeSessionProviderProps {
   readonly children: ReactNode
+  readonly initialState?: PracticeSessionInitialState
 }
 
-export function PracticeSessionProvider({ children }: PracticeSessionProviderProps) {
+export function PracticeSessionProvider({ children, initialState }: PracticeSessionProviderProps) {
   const storeRef = useRef<PracticeSessionStoreApi | null>(null)
 
   if (storeRef.current === null) {
-    storeRef.current = createPracticeSessionStore()
+    storeRef.current = createPracticeSessionStore(initialState)
   }
 
   // eslint-disable-next-line react-hooks/refs -- The store is initialized once and remains stable for this provider mount.

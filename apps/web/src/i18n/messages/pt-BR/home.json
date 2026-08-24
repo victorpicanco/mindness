@@ -1,5 +1,16 @@
 {
   "title": "Mindness",
+  "practice": {
+    "title": "Qual será o assunto de hoje?",
+    "startSession": "Iniciar sessão",
+    "difficultyLabel": "Dificuldade",
+    "difficultyPlaceholder": "Escolha a dificuldade",
+    "categoryLabel": "Categoria",
+    "categoryPlaceholder": "Escolha a categoria",
+    "searchWindowLabel": "Tempo de pesquisa",
+    "searchWindowPlaceholder": "Escolha o tempo",
+    "activeSession": "Sua sessão em andamento"
+  },
   "showcase": "Mostruário temporário de componentes",
   "description": "Uma visão compacta dos componentes atuais da interface em temas claros e escuros.",
   "buttonsHeading": "Botões",

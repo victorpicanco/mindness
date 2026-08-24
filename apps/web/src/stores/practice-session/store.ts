@@ -3,16 +3,36 @@ import { createStore } from 'zustand/vanilla'
 import { InvalidPracticeSessionTransitionError, type PracticeSessionAction } from './errors'
 
 export type PracticeSessionStatus =
-  'idle' | 'researching' | 'countdown-warning' | 'recording' | 'uploading' | 'done' | 'expired'
+  | 'idle'
+  | 'researching'
+  | 'countdown-warning'
+  | 'recording'
+  | 'uploading'
+  | 'processing'
+  | 'done'
+  | 'expired'
+
+export interface PracticeSession {
+  readonly expiresAt: string
+  readonly sessionId: string
+  readonly themeTitle: string
+}
+
+export interface PracticeSessionInitialState {
+  readonly session: PracticeSession
+  readonly status: 'researching'
+}
 
 export interface PracticeSessionState {
   readonly status: PracticeSessionStatus
+  readonly session: PracticeSession | null
   readonly audioBlob: Blob | null
   readonly retentionDeadline: number | null
-  readonly startResearching: () => void
+  readonly startResearching: (session: PracticeSession) => void
   readonly beginRecording: () => void
   readonly captureAudio: (audioBlob: Blob) => void
   readonly discardAudio: () => void
+  readonly beginProcessing: () => void
   readonly reset: () => void
 }
 
@@ -22,6 +42,7 @@ const ALL_STATUSES: readonly PracticeSessionStatus[] = [
   'countdown-warning',
   'recording',
   'uploading',
+  'processing',
   'done',
   'expired',
 ]
@@ -38,7 +59,7 @@ function assertTransition(
   }
 }
 
-export function createPracticeSessionStore() {
+export function createPracticeSessionStore(initialState?: PracticeSessionInitialState) {
   let retentionTimer: ReturnType<typeof setTimeout> | null = null
 
   function clearRetentionTimer() {
@@ -49,13 +70,14 @@ export function createPracticeSessionStore() {
   }
 
   return createStore<PracticeSessionState>()((set) => ({
-    status: 'idle',
+    status: initialState?.status ?? 'idle',
+    session: initialState?.session ?? null,
     audioBlob: null,
     retentionDeadline: null,
-    startResearching: () => {
+    startResearching: (session) => {
       set((state) => {
         assertTransition(state.status, 'startResearching', ['idle'])
-        return { status: 'researching' }
+        return { session, status: 'researching' }
       })
     },
     beginRecording: () => {
@@ -91,10 +113,17 @@ export function createPracticeSessionStore() {
       })
       clearRetentionTimer()
     },
+    beginProcessing: () => {
+      set((state) => {
+        assertTransition(state.status, 'beginProcessing', ['uploading'])
+        return { status: 'processing' }
+      })
+      clearRetentionTimer()
+    },
     reset: () => {
       set((state) => {
         assertTransition(state.status, 'reset', ALL_STATUSES)
-        return { audioBlob: null, retentionDeadline: null, status: 'idle' }
+        return { audioBlob: null, retentionDeadline: null, session: null, status: 'idle' }
       })
       clearRetentionTimer()
     },

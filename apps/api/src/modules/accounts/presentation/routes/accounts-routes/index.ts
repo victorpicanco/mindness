@@ -53,6 +53,10 @@ import {
   type UpdatePasswordBody,
 } from '@/modules/accounts/presentation/controllers/update-password-controller/schemas.js'
 import { registerAccountsErrorHandler } from '@/modules/accounts/presentation/error-handler/index.js'
+import {
+  registerAuthRateLimit,
+  type AuthRateLimitOptions,
+} from '@/modules/accounts/presentation/middleware/auth-rate-limit/index.js'
 import { registerAuthenticatedIdentity } from '@/modules/accounts/presentation/middleware/authenticated-identity/index.js'
 import { ErrorResponseSchema } from '@/shared/http/envelope/index.js'
 
@@ -61,15 +65,20 @@ import { ACCOUNTS_ROUTE_PATHS, type AccountsControllers } from './types.js'
 const ERROR_RESPONSES = {
   400: ErrorResponseSchema,
   401: ErrorResponseSchema,
+  403: ErrorResponseSchema,
   404: ErrorResponseSchema,
   409: ErrorResponseSchema,
   422: ErrorResponseSchema,
+  429: ErrorResponseSchema,
   500: ErrorResponseSchema,
 }
+
+const THROTTLED = { rateLimit: {} }
 
 export interface AccountsRoutesDeps {
   readonly controllers: AccountsControllers
   readonly authenticate: AuthenticateUseCase
+  readonly authRateLimit: AuthRateLimitOptions
 }
 
 export async function registerAccountsRoutes(
@@ -79,6 +88,7 @@ export async function registerAccountsRoutes(
   const { controllers } = deps
 
   await app.register(fastifyCookie)
+  await registerAuthRateLimit(app, deps.authRateLimit)
   registerAccountsErrorHandler(app)
 
   const publicRoutes = app.withTypeProvider<TypeBoxTypeProvider>()
@@ -86,6 +96,7 @@ export async function registerAccountsRoutes(
   publicRoutes.post<{ Body: SignUpBody }>(
     ACCOUNTS_ROUTE_PATHS.signUp,
     {
+      config: THROTTLED,
       schema: {
         body: SignUpBodySchema,
         response: { 202: SignUpResponseSchema, ...ERROR_RESPONSES },
@@ -97,6 +108,7 @@ export async function registerAccountsRoutes(
   publicRoutes.post<{ Body: SignInBody }>(
     ACCOUNTS_ROUTE_PATHS.signIn,
     {
+      config: THROTTLED,
       schema: {
         body: SignInBodySchema,
         response: { 200: SessionResponseSchema, ...ERROR_RESPONSES },
@@ -108,6 +120,7 @@ export async function registerAccountsRoutes(
   publicRoutes.post<{ Body: RefreshSessionBody }>(
     ACCOUNTS_ROUTE_PATHS.refresh,
     {
+      config: THROTTLED,
       schema: {
         body: RefreshSessionBodySchema,
         response: { 200: SessionResponseSchema, ...ERROR_RESPONSES },
@@ -119,6 +132,7 @@ export async function registerAccountsRoutes(
   publicRoutes.post<{ Body: ConfirmEmailBody }>(
     ACCOUNTS_ROUTE_PATHS.confirmEmail,
     {
+      config: THROTTLED,
       schema: {
         body: ConfirmEmailBodySchema,
         response: { 200: SessionResponseSchema, ...ERROR_RESPONSES },
@@ -130,6 +144,7 @@ export async function registerAccountsRoutes(
   publicRoutes.post<{ Body: ResendSignUpConfirmationBody }>(
     ACCOUNTS_ROUTE_PATHS.resendSignUpConfirmation,
     {
+      config: THROTTLED,
       schema: {
         body: ResendSignUpConfirmationBodySchema,
         response: { 202: NeutralAuthResponseSchema, ...ERROR_RESPONSES },
@@ -141,6 +156,7 @@ export async function registerAccountsRoutes(
   publicRoutes.post<{ Body: RequestPasswordRecoveryBody }>(
     ACCOUNTS_ROUTE_PATHS.requestPasswordRecovery,
     {
+      config: THROTTLED,
       schema: {
         body: RequestPasswordRecoveryBodySchema,
         response: { 202: NeutralAuthResponseSchema, ...ERROR_RESPONSES },
@@ -151,7 +167,7 @@ export async function registerAccountsRoutes(
 
   publicRoutes.get(
     ACCOUNTS_ROUTE_PATHS.googleStart,
-    { schema: { response: ERROR_RESPONSES } },
+    { config: THROTTLED, schema: { response: ERROR_RESPONSES } },
     (request, reply) => controllers.startGoogleSignIn.handle(request, reply),
   )
 

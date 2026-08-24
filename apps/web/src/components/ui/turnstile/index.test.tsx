@@ -114,6 +114,73 @@ describe('Turnstile', () => {
     })
   })
 
+  it('tells the caller when a token becomes available and when it is gone', async () => {
+    const { api, rendered } = createTurnstileApi()
+    window.turnstile = api
+    const tokens: string[] = []
+
+    render(
+      <Turnstile
+        onTokenChange={(token) => {
+          tokens.push(token)
+        }}
+        siteKey="site-key"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(rendered).toHaveLength(1)
+    })
+    rendered[0]?.options.callback('verified-token')
+    rendered[0]?.options['expired-callback']()
+
+    await waitFor(() => {
+      expect(tokens).toEqual(['verified-token', ''])
+    })
+  })
+
+  it('clears the token when the interactive challenge times out', async () => {
+    const { api, rendered } = createTurnstileApi()
+    window.turnstile = api
+
+    const { container } = render(<Turnstile siteKey="site-key" />)
+
+    await waitFor(() => {
+      expect(rendered).toHaveLength(1)
+    })
+    rendered[0]?.options.callback('verified-token')
+    await waitFor(() => {
+      expect(tokenFieldValue(container)).toBe('verified-token')
+    })
+
+    rendered[0]?.options['timeout-callback']()
+
+    await waitFor(() => {
+      expect(tokenFieldValue(container)).toBe('')
+    })
+  })
+
+  it('clears the token when the caller resets the widget', async () => {
+    const { api, rendered } = createTurnstileApi()
+    window.turnstile = api
+
+    const { container, rerender } = render(<Turnstile resetSignal={0} siteKey="site-key" />)
+
+    await waitFor(() => {
+      expect(rendered).toHaveLength(1)
+    })
+    rendered[0]?.options.callback('verified-token')
+    await waitFor(() => {
+      expect(tokenFieldValue(container)).toBe('verified-token')
+    })
+
+    rerender(<Turnstile resetSignal={1} siteKey="site-key" />)
+
+    await waitFor(() => {
+      expect(tokenFieldValue(container)).toBe('')
+    })
+  })
+
   it('reports a widget failure to the caller', async () => {
     const { api, rendered } = createTurnstileApi()
     window.turnstile = api

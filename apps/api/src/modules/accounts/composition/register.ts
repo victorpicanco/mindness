@@ -18,6 +18,7 @@ export async function registerAccountsModule(
     await registerAccountsRoutes(scope, {
       controllers: container.controllers,
       authenticate: container.useCases.authenticate,
+      authRateLimit: deps.config.authRateLimit,
     })
   })
 

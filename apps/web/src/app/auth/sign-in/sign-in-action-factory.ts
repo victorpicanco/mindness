@@ -1,18 +1,14 @@
 import { z } from 'zod'
 
-import type { AuthActionMessageKey } from '../form-validation'
 import { apiErrorDetails } from '@/lib/api/api-error'
 import { apiFetch } from '@/lib/api/server-client'
 import { provisionAccount } from '@/lib/auth/provision-account'
+import { REDIRECT_FIELD_NAME, safeRedirectPath } from '@/lib/auth/redirect-target'
 import { writeSessionCookies } from '@/lib/auth/session'
 
-import type { SignInActionState } from './types'
-
-const credentialsSchema = z.object({
-  captchaToken: z.string().min(1),
-  email: z.email().max(254),
-  password: z.string().min(8).max(64),
-})
+import type { AuthActionState } from '../auth-action-state'
+import { credentialsMessageKey, signInPasswordSchema } from '../auth-credentials'
+import { formFieldValue } from '../form-validation'
 
 const signInResponseSchema = z.object({
   accessToken: z.string(),
@@ -28,40 +24,24 @@ type SignInActionDependencies = {
   readonly redirect: (path: string) => never
 }
 
-function fieldValue(formData: FormData, field: string): string {
-  const value = formData.get(field)
-
-  return typeof value === 'string' ? value : ''
-}
-
-function validationMessageKey(formData: FormData): AuthActionMessageKey | undefined {
-  const validation = credentialsSchema.safeParse({
-    captchaToken: fieldValue(formData, 'captchaToken'),
-    email: fieldValue(formData, 'email'),
-    password: fieldValue(formData, 'password'),
-  })
-
-  if (validation.success) return undefined
-
-  const field = validation.error.issues[0]?.path[0]
-
-  if (field === 'captchaToken') return 'errors.captchaRequired'
-  return field === 'email' ? 'errors.invalidEmail' : 'errors.invalidPassword'
-}
-
 export function createSignInAction({
   cookieStore,
   fetcher,
   redirect: navigate,
 }: SignInActionDependencies) {
   return async function signInAction(
-    _previousState: SignInActionState,
+    _previousState: AuthActionState,
     formData: FormData,
-  ): Promise<SignInActionState> {
-    const invalidMessageKey = validationMessageKey(formData)
+  ): Promise<AuthActionState> {
+    const credentials = {
+      captchaToken: formFieldValue(formData, 'captchaToken'),
+      email: formFieldValue(formData, 'email'),
+      password: formFieldValue(formData, 'password'),
+    }
+    const invalidMessageKey = credentialsMessageKey(credentials, signInPasswordSchema)
 
     if (invalidMessageKey !== undefined) {
-      return { status: 'error', messageKey: invalidMessageKey }
+      return { status: 'validation-error', messageKey: invalidMessageKey }
     }
 
     let session: z.infer<typeof signInResponseSchema>
@@ -70,11 +50,7 @@ export function createSignInAction({
       session = await apiFetch('/auth/sign-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: fieldValue(formData, 'email'),
-          password: fieldValue(formData, 'password'),
-          captchaToken: fieldValue(formData, 'captchaToken'),
-        }),
+        body: JSON.stringify(credentials),
         cookieStore,
         fetcher,
         schema: signInResponseSchema,
@@ -89,6 +65,6 @@ export function createSignInAction({
 
     if (provisionError !== null) return { status: 'api-error', error: provisionError }
 
-    return navigate('/practice')
+    return navigate(safeRedirectPath(formFieldValue(formData, REDIRECT_FIELD_NAME)))
   }
 }

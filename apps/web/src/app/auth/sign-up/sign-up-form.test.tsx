@@ -7,10 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TurnstileApi, TurnstileRenderOptions } from '@/components/ui/turnstile/types'
 import { messages } from '@/i18n/messages'
 
-import { SignUpForm } from './sign-up-form'
-import { initialSignUpActionState, type SignUpActionState } from './types'
+import { initialAuthActionState, type AuthActionState } from '../auth-action-state'
 
-type SignUpAction = (state: SignUpActionState, formData: FormData) => Promise<SignUpActionState>
+import { SignUpForm } from './sign-up-form'
+
+type SignUpAction = (state: AuthActionState, formData: FormData) => Promise<AuthActionState>
 
 const widgets: TurnstileRenderOptions[] = []
 const resetWidgets: string[] = []
@@ -43,11 +44,7 @@ async function verifyCaptcha(token = 'captcha-token'): Promise<void> {
 }
 
 function validSignUpAction(): SignUpAction {
-  return () =>
-    Promise.resolve({
-      status: 'success',
-      messageKey: 'signUp.success',
-    })
+  return () => Promise.resolve<AuthActionState>({ status: 'success' })
 }
 
 function renderSignUpForm(element: ReactElement) {
@@ -128,7 +125,7 @@ describe('SignUpForm', () => {
     const signUpAction: SignUpAction = () => {
       submissions += 1
 
-      return Promise.resolve(initialSignUpActionState)
+      return Promise.resolve(initialAuthActionState)
     }
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
@@ -146,7 +143,7 @@ describe('SignUpForm', () => {
     const signUpAction: SignUpAction = () => {
       submissions += 1
 
-      return Promise.resolve(initialSignUpActionState)
+      return Promise.resolve(initialAuthActionState)
     }
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
@@ -164,22 +161,26 @@ describe('SignUpForm', () => {
     expect(submissions).toBe(0)
   })
 
-  it('asks for the security verification before calling the action', () => {
-    let submissions = 0
-    const signUpAction: SignUpAction = () => {
-      submissions += 1
+  it('waits for the security verification instead of rejecting the submission', async () => {
+    const calls: FormData[] = []
+    const signUpAction: SignUpAction = (_state, formData) => {
+      calls.push(formData)
 
-      return Promise.resolve(initialSignUpActionState)
+      return Promise.resolve(initialAuthActionState)
     }
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
     fillCredentials()
     submit()
 
-    expect(
-      screen.getByText('Conclua a verificação de segurança para continuar.'),
-    ).toBeInTheDocument()
-    expect(submissions).toBe(0)
+    expect(calls).toEqual([])
+
+    await verifyCaptcha('late-token')
+
+    await waitFor(() => {
+      expect(calls).toHaveLength(1)
+    })
+    expect(calls[0]?.get('captchaToken')).toBe('late-token')
   })
 
   it('reports when the security verification becomes unavailable', async () => {

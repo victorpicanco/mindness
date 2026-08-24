@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { NextIntlClientProvider } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
@@ -33,12 +34,14 @@ interface RootLayoutProps {
   readonly children: ReactNode
 }
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link href="https://use.hugeicons.com/font/icons.css" rel="stylesheet" />
-        <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} nonce={nonce} />
       </head>
       <body>
         <NextIntlClientProvider>

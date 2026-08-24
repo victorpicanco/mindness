@@ -57,6 +57,9 @@ export async function buildAccountsTestApp(
       supabaseUrl: 'https://project.supabase.test',
       supabaseSecretKey: 'test-secret-key',
       emailConfirmationRedirectUrl: 'https://app.test/auth/confirmed',
+      // High enough that no integration flow trips it; the limit itself is
+      // covered by the auth-rate-limit unit test.
+      authRateLimit: { max: 10_000, timeWindowMs: 60_000 },
     },
     adapters: { authIdentityProvider, subscriptionCancellation },
   })

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createSignInAction } from './sign-in-action-factory'
-import { initialSignInActionState } from './types'
+import { initialAuthActionState } from '../auth-action-state'
 
 class RedirectSignal extends Error {
   constructor(readonly path: string) {
@@ -58,7 +58,7 @@ describe('signInAction', () => {
     })
 
     const result = await signInAction(
-      initialSignInActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'short',
@@ -67,7 +67,7 @@ describe('signInAction', () => {
     )
 
     expect(result).toEqual({
-      status: 'error',
+      status: 'validation-error',
       messageKey: 'errors.invalidPassword',
     })
     expect(requests).toEqual([])
@@ -89,7 +89,7 @@ describe('signInAction', () => {
     })
 
     const result = await signInAction(
-      initialSignInActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'valid-password',
@@ -97,7 +97,7 @@ describe('signInAction', () => {
       }),
     )
 
-    expect(result).toEqual({ status: 'error', messageKey: 'errors.captchaRequired' })
+    expect(result).toEqual({ status: 'validation-error', messageKey: 'errors.captchaRequired' })
     expect(requests).toEqual([])
   })
 
@@ -129,7 +129,7 @@ describe('signInAction', () => {
     })
 
     const result = signInAction(
-      initialSignInActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'valid-password',
@@ -198,7 +198,7 @@ describe('signInAction', () => {
     })
 
     const result = await signInAction(
-      initialSignInActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'valid-password',
@@ -237,7 +237,7 @@ describe('signInAction', () => {
     })
 
     const result = await signInAction(
-      initialSignInActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'valid-password',
@@ -253,5 +253,65 @@ describe('signInAction', () => {
         requestId: 'request-id',
       },
     })
+  })
+})
+
+describe('signInAction redirect target', () => {
+  function createSuccessfulSignInAction(): {
+    signInAction: ReturnType<typeof createSignInAction>
+  } {
+    return {
+      signInAction: createSignInAction({
+        cookieStore: new InMemoryCookieStore(),
+        fetcher: (input, init) => {
+          const request = new Request(input, init)
+
+          return Promise.resolve(
+            request.url.endsWith('/accounts/me')
+              ? Response.json({ data: { accountId: 'account-id' } })
+              : Response.json({
+                  data: {
+                    accessToken: 'access-token',
+                    refreshToken: 'refresh-token',
+                    expiresAt: '2026-08-23T12:00:00.000Z',
+                  },
+                }),
+          )
+        },
+        redirect: (path): never => {
+          throw new RedirectSignal(path)
+        },
+      }),
+    }
+  }
+
+  const credentials = {
+    email: 'person@example.com',
+    password: 'valid-password',
+    captchaToken: 'captcha-token',
+  }
+
+  it('returns the visitor to the page that bounced them', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const { signInAction } = createSuccessfulSignInAction()
+
+    const result = signInAction(
+      initialAuthActionState,
+      createFormData({ ...credentials, redirectTo: '/practice/session?id=1' }),
+    )
+
+    await expect(result).rejects.toMatchObject({ path: '/practice/session?id=1' })
+  })
+
+  it('ignores a redirect target that would leave the app', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const { signInAction } = createSuccessfulSignInAction()
+
+    const result = signInAction(
+      initialAuthActionState,
+      createFormData({ ...credentials, redirectTo: 'https://evil.test/practice' }),
+    )
+
+    await expect(result).rejects.toMatchObject({ path: '/practice' })
   })
 })

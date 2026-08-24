@@ -45,11 +45,11 @@ describe('showApiErrorToast', () => {
   it('does not show a toast for an inline error', async () => {
     const { toast } = await import('sonner')
     const t = fakeTranslator({
-      'auth.errors.authenticationRejected': 'E-mail ou senha incorretos.',
+      'auth.errors.captchaFailed': 'Não foi possível concluir a verificação de segurança.',
     })
 
     showApiErrorToast(
-      { code: 'accounts.AUTHENTICATION_REJECTED', issues: null, requestId: 'request-id' },
+      { code: 'accounts.CAPTCHA_REJECTED', issues: null, requestId: 'request-id' },
       t,
     )
 

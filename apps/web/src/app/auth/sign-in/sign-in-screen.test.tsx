@@ -31,7 +31,18 @@ describe('SignInScreen', () => {
   it('uses the authentication layout and provides a link to sign up', () => {
     renderSignInScreen(<SignInScreen />)
 
-    expect(screen.getByRole('main')).toHaveClass('lg:grid', 'lg:grid-cols-2')
+    expect(screen.getByRole('main')).toHaveClass(
+      'lg:grid',
+      'lg:grid-cols-2',
+      'lg:h-screen',
+      'lg:overflow-hidden',
+    )
+    expect(screen.getByRole('main').querySelector('section')).toHaveClass(
+      'lg:min-h-0',
+      'lg:overflow-y-auto',
+      'lg:[scrollbar-width:none]',
+      'lg:[&::-webkit-scrollbar]:hidden',
+    )
     expect(screen.getByRole('link', { name: 'Crie agora.' })).toHaveAttribute(
       'href',
       '/auth/sign-up',
@@ -39,11 +50,15 @@ describe('SignInScreen', () => {
     expect(screen.getByLabelText('Imagem do Mindness')).toBeInTheDocument()
   })
 
-  it('announces the failure the callback reported', () => {
-    renderSignInScreen(<SignInScreen errorMessageKey="auth.errors.googleSignInFailed" />)
+  it('shows an inline failure the callback reported', () => {
+    renderSignInScreen(
+      <SignInScreen
+        initialError={{ messageKey: 'auth.errors.betaCapacityReached', presentation: 'inline' }}
+      />,
+    )
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Não foi possível entrar com o Google. Tente novamente.',
+      'O beta atingiu o limite de contas. Avisaremos quando abrirem novas vagas.',
     )
   })
 })

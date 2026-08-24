@@ -2,15 +2,20 @@ export type ApiErrorPresentation = 'inline' | 'silent' | 'toast'
 
 export type ApiErrorMessageKey =
   | 'auth.errors.accountAlreadyExists'
+  | 'auth.errors.accountBlocked'
   | 'auth.errors.accountNotFound'
   | 'auth.errors.authenticationRejected'
   | 'auth.errors.betaCapacityReached'
   | 'auth.errors.captchaFailed'
   | 'auth.errors.captchaRequired'
+  | 'auth.errors.emailNotConfirmed'
+  | 'auth.errors.googleSignInFailed'
   | 'auth.errors.invalidEmail'
   | 'auth.errors.invalidPassword'
+  | 'auth.errors.rateLimited'
   | 'auth.errors.reauthenticationRequired'
   | 'auth.errors.sessionExpired'
+  | 'auth.errors.signUpNotAllowed'
   | 'common.errors.network'
   | 'common.errors.unknown'
   | 'common.errors.validationFailed'
@@ -34,13 +39,29 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
     messageKey: 'auth.errors.accountNotFound',
     presentation: 'toast',
   },
+  'accounts.ACCOUNT_BLOCKED': {
+    messageKey: 'auth.errors.accountBlocked',
+    presentation: 'toast',
+  },
   'accounts.AUTHENTICATION_REJECTED': {
     messageKey: 'auth.errors.authenticationRejected',
-    presentation: 'inline',
+    presentation: 'toast',
   },
   'accounts.BETA_CAPACITY_REACHED': {
     messageKey: 'auth.errors.betaCapacityReached',
-    presentation: 'inline',
+    presentation: 'toast',
+  },
+  'accounts.EMAIL_NOT_CONFIRMED': {
+    messageKey: 'auth.errors.emailNotConfirmed',
+    presentation: 'toast',
+  },
+  'accounts.RATE_LIMITED': {
+    messageKey: 'auth.errors.rateLimited',
+    presentation: 'toast',
+  },
+  'accounts.SIGN_UP_NOT_ALLOWED': {
+    messageKey: 'auth.errors.signUpNotAllowed',
+    presentation: 'toast',
   },
   'accounts.CAPTCHA_REJECTED': {
     messageKey: 'auth.errors.captchaFailed',
@@ -65,6 +86,10 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
     presentation: 'toast',
   },
   'web.API_RESPONSE_INVALID': UNKNOWN_API_ERROR,
+  'web.GOOGLE_SIGN_IN_FAILED': {
+    messageKey: 'auth.errors.googleSignInFailed',
+    presentation: 'toast',
+  },
   'web.AUTHENTICATION_EXPIRED': {
     messageKey: 'auth.errors.sessionExpired',
     presentation: 'toast',

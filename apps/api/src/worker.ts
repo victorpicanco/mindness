@@ -207,6 +207,10 @@ export async function startWorker(): Promise<void> {
       supabaseUrl: config.supabaseUrl,
       supabaseSecretKey: config.supabaseSecretKey,
       emailConfirmationRedirectUrl: config.emailConfirmationRedirectUrl,
+      authRateLimit: {
+        max: config.authRateLimitMax,
+        timeWindowMs: config.authRateLimitWindowMs,
+      },
     },
   })
   const themesContainer = createThemesContainer({

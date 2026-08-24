@@ -78,7 +78,7 @@ describe('account onboarding', () => {
 
     expect(response.statusCode).toBe(401)
     expect(response.json()).toMatchObject({
-      error: { code: 'accounts.AUTHENTICATION_REJECTED', issues: null },
+      error: { code: 'accounts.EMAIL_NOT_CONFIRMED', issues: null },
     })
     assertResponseMatchesSchema(harness.app, 'POST', '/auth/sign-in', response, 401)
     expect(harness.eventBus.published.map((event) => event.eventName)).toEqual(['login_rejected'])

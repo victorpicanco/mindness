@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import { Account } from '@/modules/accounts/domain/entities/account/index.js'
 import { AuthenticationRejectedError } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
+import { EmailNotConfirmedError } from '@/modules/accounts/domain/errors/email-not-confirmed-error/index.js'
+import { RateLimitedError } from '@/modules/accounts/domain/errors/rate-limited-error/index.js'
 import type {
   AuthSession,
   SignInWithPasswordParams,
@@ -61,7 +63,7 @@ class InMemoryAccountsRepository implements AccountsRepository {
 
 class StubIdentitySignIn {
   readonly attempts: SignInWithPasswordParams[] = []
-  rejection: AuthenticationRejectedError | null = null
+  rejection: AuthenticationRejectedError | EmailNotConfirmedError | null = null
 
   signInWithPassword(params: SignInWithPasswordParams): Promise<AuthSession> {
     this.attempts.push(params)
@@ -181,5 +183,42 @@ describe('SignInUseCase', () => {
         payload: { accountId: null, plan: null, reason: 'invalid_credentials' },
       }),
     )
+  })
+
+  it('publishes login_rejected when the email was never confirmed and rethrows', async () => {
+    const harness = createHarness(accountFor())
+    harness.authIdentityProvider.rejection = new EmailNotConfirmedError()
+
+    await expect(harness.useCase.execute(credentials)).rejects.toMatchObject({
+      code: 'accounts.EMAIL_NOT_CONFIRMED',
+    })
+
+    expect(harness.eventPublisher.published).toContainEqual(
+      expect.objectContaining({
+        eventName: 'login_rejected',
+        payload: { accountId: 'account-1', plan: 'free', reason: 'email_unconfirmed' },
+      }),
+    )
+  })
+
+  it('does not publish login_rejected when the provider throttles the attempt', async () => {
+    const harness = createHarness(accountFor())
+    harness.authIdentityProvider.rejection = null
+    const throttled = new SignInUseCase({
+      accounts: harness.accounts,
+      authIdentityProvider: {
+        signInWithPassword: () => Promise.reject(new RateLimitedError('authentication')),
+      },
+      clock: { now: () => NOW },
+      eventPublisher: harness.eventPublisher,
+      idGenerator: { generate: () => 'generated-1' },
+      unitOfWork: { run: (operation) => operation() },
+    })
+
+    await expect(throttled.execute(credentials)).rejects.toMatchObject({
+      code: 'accounts.RATE_LIMITED',
+    })
+
+    expect(harness.eventPublisher.published).toHaveLength(0)
   })
 })

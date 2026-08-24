@@ -25,6 +25,8 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   GEMINI_INPUT_COST_PER_MTOK_MICROS: '300000',
   GEMINI_OUTPUT_COST_PER_MTOK_MICROS: '2500000',
   ANALYSIS_QUEUE_CONCURRENCY: '5',
+  AUTH_RATE_LIMIT_MAX: '20',
+  AUTH_RATE_LIMIT_WINDOW_MS: '60000',
 }
 
 describe('loadConfig', () => {
@@ -52,6 +54,8 @@ describe('loadConfig', () => {
       geminiInputCostPerMtokMicros: 300000,
       geminiOutputCostPerMtokMicros: 2500000,
       analysisQueueConcurrency: 5,
+      authRateLimitMax: 20,
+      authRateLimitWindowMs: 60000,
     })
   })
 

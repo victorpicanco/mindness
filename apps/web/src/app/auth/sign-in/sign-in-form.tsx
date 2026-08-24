@@ -1,40 +1,30 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { type FormEvent, useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 
 import { signInAction } from './actions'
-import { initialSignInActionState, type SignInActionState } from './types'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
-import { Turnstile, TURNSTILE_TOKEN_FIELD_NAME } from '@/components/ui/turnstile'
-import { describeApiError } from '@/lib/errors/api-error-presentation'
-import { describeApiFieldIssues } from '@/lib/errors/api-field-issues'
-import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
+import { REDIRECT_FIELD_NAME } from '@/lib/auth/redirect-target'
+import type { ApiErrorDescription } from '@/lib/errors/api-error-presentation'
 
-import {
-  EMAIL_PATTERN,
-  fieldOfActionMessageKey,
-  formFieldValue,
-  type AuthFormMessageKey,
-} from '../form-validation'
+import { AuthCaptchaField } from '../auth-captcha-field'
+import { AuthFormAlert } from '../auth-form-alert'
+import { isValidEmail } from '../auth-credentials'
+import { formFieldValue } from '../form-validation'
+import { useAuthForm, type AuthFieldErrors, type AuthFormAction } from '../use-auth-form'
 
-export type SignInFormAction = (
-  state: SignInActionState,
-  formData: FormData,
-) => Promise<SignInActionState>
+const EMAIL_NOT_CONFIRMED_CODE = 'accounts.EMAIL_NOT_CONFIRMED'
 
 type SignInFormProps = {
-  readonly action?: SignInFormAction
-  readonly initialErrorMessageKey?: AuthFormMessageKey
-}
-
-type FieldErrors = {
-  readonly captchaToken?: AuthFormMessageKey
-  readonly email?: AuthFormMessageKey
-  readonly password?: AuthFormMessageKey
+  readonly action?: AuthFormAction
+  readonly initialError?: ApiErrorDescription
+  readonly redirectTo?: string
 }
 
 function googleAuthorizationUrl(): string {
@@ -43,10 +33,10 @@ function googleAuthorizationUrl(): string {
   return apiBaseUrl === undefined ? '/auth/google' : `${apiBaseUrl}/auth/google`
 }
 
-function validate(formData: FormData): FieldErrors {
-  const errors: { -readonly [Key in keyof FieldErrors]: FieldErrors[Key] } = {}
+function validate(formData: FormData): AuthFieldErrors {
+  const errors: { -readonly [Key in keyof AuthFieldErrors]: AuthFieldErrors[Key] } = {}
 
-  if (!EMAIL_PATTERN.test(formFieldValue(formData, 'email'))) {
+  if (!isValidEmail(formFieldValue(formData, 'email'))) {
     errors.email = 'auth.errors.invalidEmail'
   }
 
@@ -54,73 +44,41 @@ function validate(formData: FormData): FieldErrors {
     errors.password = 'auth.errors.passwordRequired'
   }
 
-  if (formFieldValue(formData, TURNSTILE_TOKEN_FIELD_NAME) === '') {
-    errors.captchaToken = 'auth.errors.captchaRequired'
-  }
-
   return errors
 }
 
-function hasFieldError(errors: FieldErrors): boolean {
-  return Object.values(errors).some((messageKey) => messageKey !== undefined)
-}
-
-export function SignInForm({ action = signInAction, initialErrorMessageKey }: SignInFormProps) {
+export function SignInForm({ action = signInAction, initialError, redirectTo }: SignInFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
-  const [state, setState] = useState<SignInActionState>(initialSignInActionState)
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [captchaResetSignal, setCaptchaResetSignal] = useState(0)
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined, validate })
+  const announcedInitialError = useRef(false)
 
-  const alertMessageKey = ((): AuthFormMessageKey | undefined => {
+  useEffect(() => {
+    if (announcedInitialError.current) return
+    if (initialError === undefined || initialError.presentation !== 'toast') return
+
+    announcedInitialError.current = true
+    toast.error(translate(initialError.messageKey))
+  }, [initialError, translate])
+
+  const alertMessageKey = ((): typeof form.inlineMessageKey => {
     if (siteKey === undefined) return 'auth.errors.captchaUnavailable'
+    if (form.inlineMessageKey !== undefined) return form.inlineMessageKey
 
-    if (state.status === 'api-error') {
-      const description = describeApiError(state.error.code)
-
-      return description.presentation === 'inline' ? description.messageKey : undefined
-    }
-
-    return state.status === 'idle' ? initialErrorMessageKey : undefined
+    return form.state.status === 'idle' && initialError?.presentation === 'inline'
+      ? initialError.messageKey
+      : undefined
   })()
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    const validationErrors = validate(formData)
-
-    setFieldErrors(validationErrors)
-
-    if (hasFieldError(validationErrors)) return
-
-    setIsSubmitting(true)
-    const result = await action(state, formData)
-
-    setState(result)
-    setIsSubmitting(false)
-    setCaptchaResetSignal((signal) => signal + 1)
-
-    if (result.status === 'error') {
-      setFieldErrors({ [fieldOfActionMessageKey(result.messageKey)]: `auth.${result.messageKey}` })
-      return
-    }
-
-    if (result.status !== 'api-error') return
-
-    setFieldErrors(describeApiFieldIssues(result.error.issues))
-    showApiErrorToast(result.error, translate)
-  }
+  const needsEmailConfirmation =
+    form.state.status === 'api-error' && form.state.error.code === EMAIL_NOT_CONFIRMED_CODE
 
   return (
-    <form
-      className="grid gap-8"
-      noValidate
-      onSubmit={(event) => {
-        void handleSubmit(event)
-      }}
-    >
+    <form className="grid gap-8" noValidate onSubmit={form.onSubmit}>
+      {redirectTo === undefined ? null : (
+        <input name={REDIRECT_FIELD_NAME} type="hidden" value={redirectTo} />
+      )}
       <div className="grid gap-4">
         <a
           className="inline-flex min-h-14 items-center justify-center rounded-full border border-border px-6 py-4 text-base font-medium text-text transition-colors hover:border-text-muted hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
@@ -136,7 +94,9 @@ export function SignInForm({ action = signInAction, initialErrorMessageKey }: Si
       </div>
       <div className="grid gap-4">
         <Field
-          {...(fieldErrors.email === undefined ? {} : { error: translate(fieldErrors.email) })}
+          {...(form.fieldErrors.email === undefined
+            ? {}
+            : { error: translate(form.fieldErrors.email) })}
           label={t('signIn.emailLabel')}
         >
           <Input
@@ -146,56 +106,56 @@ export function SignInForm({ action = signInAction, initialErrorMessageKey }: Si
             type="email"
           />
         </Field>
-        <Field
-          {...(fieldErrors.password === undefined
-            ? {}
-            : { error: translate(fieldErrors.password) })}
-          label={t('signIn.passwordLabel')}
-        >
-          <PasswordInput
-            autoComplete="current-password"
-            hidePasswordLabel={t('password.hide')}
-            name="password"
-            placeholder={t('signIn.passwordPlaceholder')}
-            showPasswordLabel={t('password.show')}
-          />
-        </Field>
+        <div className="grid gap-1">
+          <Field
+            {...(form.fieldErrors.password === undefined
+              ? {}
+              : { error: translate(form.fieldErrors.password) })}
+            label={t('signIn.passwordLabel')}
+          >
+            <PasswordInput
+              autoComplete="current-password"
+              hidePasswordLabel={t('password.hide')}
+              name="password"
+              placeholder={t('signIn.passwordPlaceholder')}
+              showPasswordLabel={t('password.show')}
+            />
+          </Field>
+          <Link
+            className="justify-self-end text-sm font-medium text-text underline-offset-2 hover:underline"
+            href="/auth/password-recovery"
+          >
+            {t('signIn.forgotPassword')}
+          </Link>
+        </div>
       </div>
       {siteKey === undefined ? null : (
-        <div className="grid gap-1.5">
-          <Turnstile
-            onError={() => {
-              setFieldErrors((current) => ({
-                ...current,
-                captchaToken: 'auth.errors.captchaUnavailable',
-              }))
-            }}
-            onVerify={() => {
-              setFieldErrors((current) => ({
-                ...(current.email === undefined ? {} : { email: current.email }),
-                ...(current.password === undefined ? {} : { password: current.password }),
-              }))
-            }}
-            resetSignal={captchaResetSignal}
-            siteKey={siteKey}
-          />
-          {fieldErrors.captchaToken === undefined ? null : (
-            <p className="text-sm text-error" role="alert">
-              {translate(fieldErrors.captchaToken)}
-            </p>
-          )}
-        </div>
+        <AuthCaptchaField
+          {...(form.fieldErrors.captchaToken === undefined
+            ? {}
+            : { errorMessageKey: form.fieldErrors.captchaToken })}
+          onError={form.onCaptchaError}
+          onTokenChange={form.onCaptchaTokenChange}
+          resetSignal={form.captchaResetSignal}
+          siteKey={siteKey}
+        />
       )}
       <div className="grid gap-4">
-        {alertMessageKey === undefined ? null : (
-          <p className="text-sm text-error" role="alert">
-            {translate(alertMessageKey)}
-          </p>
-        )}
+        <AuthFormAlert
+          {...(alertMessageKey === undefined ? {} : { messageKey: alertMessageKey })}
+        />
+        {needsEmailConfirmation ? (
+          <Link
+            className="text-center text-sm font-medium text-text underline-offset-2 hover:underline"
+            href="/auth/resend-confirmation"
+          >
+            {t('signIn.resendConfirmation')}
+          </Link>
+        ) : null}
         <Button
           className="w-full"
           disabled={siteKey === undefined}
-          isLoading={isSubmitting}
+          isLoading={form.isSubmitting}
           size="lg"
           type="submit"
         >

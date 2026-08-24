@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { TurnstileApi } from './types'
 
@@ -11,7 +11,7 @@ export const TURNSTILE_TOKEN_FIELD_NAME = 'captchaToken'
 
 type TurnstileProps = {
   readonly onError?: (code: string) => void
-  readonly onVerify?: () => void
+  readonly onTokenChange?: (token: string) => void
   readonly resetSignal?: number
   readonly siteKey: string
 }
@@ -35,11 +35,11 @@ function subscribeToScript(onLoad: () => void, onError: () => void): () => void 
   }
 }
 
-export function Turnstile({ onError, onVerify, resetSignal, siteKey }: TurnstileProps) {
+export function Turnstile({ onError, onTokenChange, resetSignal, siteKey }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
   const onErrorRef = useRef<((code: string) => void) | undefined>(onError)
-  const onVerifyRef = useRef<(() => void) | undefined>(onVerify)
+  const onTokenChangeRef = useRef<((token: string) => void) | undefined>(onTokenChange)
   const lastResetSignalRef = useRef(resetSignal)
   const [token, setToken] = useState('')
 
@@ -48,8 +48,13 @@ export function Turnstile({ onError, onVerify, resetSignal, siteKey }: Turnstile
   }, [onError])
 
   useEffect(() => {
-    onVerifyRef.current = onVerify
-  }, [onVerify])
+    onTokenChangeRef.current = onTokenChange
+  }, [onTokenChange])
+
+  const publishToken = useCallback((value: string) => {
+    setToken(value)
+    onTokenChangeRef.current?.(value)
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
@@ -63,15 +68,17 @@ export function Turnstile({ onError, onVerify, resetSignal, siteKey }: Turnstile
         sitekey: siteKey,
         appearance: 'interaction-only',
         callback: (value) => {
-          setToken(value)
-          onVerifyRef.current?.()
+          publishToken(value)
         },
         'error-callback': (code) => {
-          setToken('')
+          publishToken('')
           onErrorRef.current?.(code)
         },
         'expired-callback': () => {
-          setToken('')
+          publishToken('')
+        },
+        'timeout-callback': () => {
+          publishToken('')
         },
       })
     }
@@ -100,20 +107,21 @@ export function Turnstile({ onError, onVerify, resetSignal, siteKey }: Turnstile
       if (widgetId !== null && api !== undefined) api.remove(widgetId)
       widgetIdRef.current = null
     }
-  }, [siteKey])
+  }, [publishToken, siteKey])
 
   useEffect(() => {
     if (resetSignal === lastResetSignalRef.current) return
 
     lastResetSignalRef.current = resetSignal
+    publishToken('')
+
     const widgetId = widgetIdRef.current
     const api = window.turnstile
 
     if (widgetId === null || api === undefined) return
 
     api.reset(widgetId)
-    setToken('')
-  }, [resetSignal])
+  }, [publishToken, resetSignal])
 
   return (
     <div className="grid gap-1.5">

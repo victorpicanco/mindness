@@ -1,5 +1,7 @@
+import { REDIRECT_PARAM_NAME, safeRedirectPath } from '@/lib/auth/redirect-target'
+
 import { SignInScreen } from './sign-in-screen'
-import { signInErrorMessageKey } from './sign-in-error'
+import { describeSignInRedirectError } from './sign-in-error'
 
 type SignInPageProps = {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -7,11 +9,15 @@ type SignInPageProps = {
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = await searchParams
-  const errorMessageKey = signInErrorMessageKey(params.error)
+  const initialError = describeSignInRedirectError(params.error)
+  const requestedRedirect = params[REDIRECT_PARAM_NAME]
+  const redirectTo =
+    typeof requestedRedirect === 'string' ? safeRedirectPath(requestedRedirect) : undefined
 
   return (
     <SignInScreen
-      {...(errorMessageKey === undefined ? {} : { errorMessageKey })}
+      {...(initialError === undefined ? {} : { initialError })}
+      {...(redirectTo === undefined ? {} : { redirectTo })}
       passwordUpdated={params.status === 'password-updated'}
     />
   )

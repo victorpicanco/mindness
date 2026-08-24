@@ -24,9 +24,9 @@ export function AuthPageShell({
 }) {
   const commonT = useTranslations('common')
   return (
-    <main className="min-h-screen bg-surface text-text lg:grid lg:grid-cols-2">
+    <main className="min-h-screen bg-surface text-text lg:grid lg:h-screen lg:min-h-0 lg:grid-cols-2 lg:overflow-hidden">
       <section
-        className={`${buenard.variable} flex min-h-screen items-center justify-center px-6 py-16 sm:px-10`}
+        className={`${buenard.variable} flex min-h-screen items-center justify-center px-6 py-16 sm:px-10 lg:min-h-0 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden`}
       >
         <div className="grid w-full max-w-sm gap-8">
           <Link className="flex items-center gap-2" href="/">

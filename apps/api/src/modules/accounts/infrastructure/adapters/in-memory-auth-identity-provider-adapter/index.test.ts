@@ -26,7 +26,7 @@ describe('InMemoryAuthIdentityProviderAdapter', () => {
     await adapter.signUpWithPassword(credentials)
 
     await expect(adapter.signInWithPassword(credentials)).rejects.toMatchObject({
-      code: 'accounts.AUTHENTICATION_REJECTED',
+      code: 'accounts.EMAIL_NOT_CONFIRMED',
       context: { reason: 'email_unconfirmed' },
     })
 

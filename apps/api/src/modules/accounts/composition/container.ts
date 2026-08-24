@@ -50,6 +50,7 @@ import { SignUpController } from '@/modules/accounts/presentation/controllers/si
 import { StartGoogleSignInController } from '@/modules/accounts/presentation/controllers/start-google-sign-in-controller/index.js'
 import { UpdateTimeZoneController } from '@/modules/accounts/presentation/controllers/update-time-zone-controller/index.js'
 import { UpdatePasswordController } from '@/modules/accounts/presentation/controllers/update-password-controller/index.js'
+import type { AuthRateLimitOptions } from '@/modules/accounts/presentation/middleware/auth-rate-limit/index.js'
 import { ACCOUNTS_ROUTE_PATHS } from '@/modules/accounts/presentation/routes/accounts-routes/types.js'
 import type { AccountsControllers } from '@/modules/accounts/presentation/routes/accounts-routes/types.js'
 
@@ -63,6 +64,7 @@ export interface AccountsConfig {
   readonly supabaseUrl: string
   readonly supabaseSecretKey: string
   readonly emailConfirmationRedirectUrl: string
+  readonly authRateLimit: AuthRateLimitOptions
 }
 
 export interface AccountsAdapterOverrides {

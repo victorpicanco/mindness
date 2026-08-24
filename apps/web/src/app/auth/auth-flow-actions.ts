@@ -1,27 +1,22 @@
 import { z } from 'zod'
 
+import { apiErrorDetails } from '@/lib/api/api-error'
 import { apiFetch } from '@/lib/api/server-client'
 import { clearSessionCookies, readSessionCookies } from '@/lib/auth/session'
 
+import type { AuthActionState } from './auth-action-state'
+import { captchaTokenSchema, emailSchema } from './auth-credentials'
+import { formFieldValue } from './form-validation'
+import { passwordSchema } from './password-policy'
+
 const messageSchema = z.object({ message: z.string() })
-const emailRequestSchema = z.object({
-  email: z.email().max(254),
-  captchaToken: z.string().min(1),
-})
-const passwordSchema = z.string().min(8).max(64)
 
 type CookieStore = Parameters<typeof clearSessionCookies>[0]
 type EmailRequestPath = '/auth/email/resend' | '/auth/password/recovery'
-export type EmailRequestState = { readonly status: 'idle' | 'success' | 'error' }
 
 type CommonDependencies = {
   readonly cookieStore: CookieStore
   readonly fetcher: typeof fetch
-}
-
-function fieldValue(formData: FormData, name: string): string {
-  const value = formData.get(name)
-  return typeof value === 'string' ? value : ''
 }
 
 export function createEmailRequestAction({
@@ -30,26 +25,33 @@ export function createEmailRequestAction({
   fetcher,
 }: CommonDependencies & { readonly path: EmailRequestPath }) {
   return async function emailRequestAction(
+    _previousState: AuthActionState,
     formData: FormData,
-  ): Promise<{ readonly status: 'success' | 'error' }> {
-    const input = emailRequestSchema.safeParse({
-      email: fieldValue(formData, 'email'),
-      captchaToken: fieldValue(formData, 'captchaToken'),
-    })
-    if (!input.success) return { status: 'error' }
+  ): Promise<AuthActionState> {
+    const captchaToken = formFieldValue(formData, 'captchaToken')
+    const email = formFieldValue(formData, 'email')
+
+    if (!captchaTokenSchema.safeParse(captchaToken).success) {
+      return { status: 'validation-error', messageKey: 'errors.captchaRequired' }
+    }
+
+    if (!emailSchema.safeParse(email).success) {
+      return { status: 'validation-error', messageKey: 'errors.invalidEmail' }
+    }
 
     try {
       await apiFetch(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input.data),
+        body: JSON.stringify({ email, captchaToken }),
         cookieStore,
         fetcher,
         schema: messageSchema,
       })
+
       return { status: 'success' }
-    } catch {
-      return { status: 'error' }
+    } catch (error: unknown) {
+      return { status: 'api-error', error: apiErrorDetails(error) }
     }
   }
 }
@@ -59,9 +61,15 @@ export function createUpdatePasswordAction({
   fetcher,
   redirect,
 }: CommonDependencies & { readonly redirect: (path: string) => never }) {
-  return async function updatePasswordAction(formData: FormData) {
-    const password = passwordSchema.safeParse(fieldValue(formData, 'password'))
-    if (!password.success) return { status: 'error' as const }
+  return async function updatePasswordAction(
+    _previousState: AuthActionState,
+    formData: FormData,
+  ): Promise<AuthActionState> {
+    const password = passwordSchema.safeParse(formFieldValue(formData, 'password'))
+
+    if (!password.success) {
+      return { status: 'validation-error', messageKey: 'errors.invalidPassword' }
+    }
 
     try {
       await apiFetch('/auth/password', {
@@ -72,11 +80,12 @@ export function createUpdatePasswordAction({
         fetcher,
         schema: messageSchema,
       })
-    } catch {
-      return { status: 'error' as const }
+    } catch (error: unknown) {
+      return { status: 'api-error', error: apiErrorDetails(error) }
     }
 
     clearSessionCookies(cookieStore)
+
     return redirect('/auth/sign-in?status=password-updated')
   }
 }

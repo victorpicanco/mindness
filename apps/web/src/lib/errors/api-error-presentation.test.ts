@@ -3,10 +3,45 @@ import { describe, expect, it } from 'vitest'
 import { describeApiError } from './api-error-presentation'
 
 describe('describeApiError', () => {
-  it('returns the registered presentation for a known API error code', () => {
+  it('raises rejected credentials as a toast, not as a field error', () => {
     expect(describeApiError('accounts.AUTHENTICATION_REJECTED')).toEqual({
       messageKey: 'auth.errors.authenticationRejected',
-      presentation: 'inline',
+      presentation: 'toast',
+    })
+  })
+
+  it('tells an unconfirmed email apart from wrong credentials', () => {
+    expect(describeApiError('accounts.EMAIL_NOT_CONFIRMED')).toEqual({
+      messageKey: 'auth.errors.emailNotConfirmed',
+      presentation: 'toast',
+    })
+  })
+
+  it('describes a throttled request', () => {
+    expect(describeApiError('accounts.RATE_LIMITED')).toEqual({
+      messageKey: 'auth.errors.rateLimited',
+      presentation: 'toast',
+    })
+  })
+
+  it('describes a blocked account', () => {
+    expect(describeApiError('accounts.ACCOUNT_BLOCKED')).toEqual({
+      messageKey: 'auth.errors.accountBlocked',
+      presentation: 'toast',
+    })
+  })
+
+  it('describes a sign-up the provider refuses to start', () => {
+    expect(describeApiError('accounts.SIGN_UP_NOT_ALLOWED')).toEqual({
+      messageKey: 'auth.errors.signUpNotAllowed',
+      presentation: 'toast',
+    })
+  })
+
+  it('describes a Google round trip that never returned the tokens', () => {
+    expect(describeApiError('web.GOOGLE_SIGN_IN_FAILED')).toEqual({
+      messageKey: 'auth.errors.googleSignInFailed',
+      presentation: 'toast',
     })
   })
 
@@ -31,9 +66,16 @@ describe('describeApiError', () => {
     })
   })
 
-  it('describes the beta capacity limit inline', () => {
+  it('raises the beta capacity limit as a toast', () => {
     expect(describeApiError('accounts.BETA_CAPACITY_REACHED')).toEqual({
       messageKey: 'auth.errors.betaCapacityReached',
+      presentation: 'toast',
+    })
+  })
+
+  it('keeps a duplicated email next to the field that has to change', () => {
+    expect(describeApiError('accounts.ACCOUNT_ALREADY_EXISTS')).toEqual({
+      messageKey: 'auth.errors.accountAlreadyExists',
       presentation: 'inline',
     })
   })

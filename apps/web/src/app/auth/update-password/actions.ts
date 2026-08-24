@@ -3,13 +3,15 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
+import type { AuthActionState } from '../auth-action-state'
 import { createUpdatePasswordAction } from '../auth-flow-actions'
 
 export async function updatePasswordAction(
-  _state: { readonly status: 'idle' | 'error' },
+  previousState: AuthActionState,
   formData: FormData,
-): Promise<{ readonly status: 'idle' | 'error' }> {
+): Promise<AuthActionState> {
   return createUpdatePasswordAction({ cookieStore: await cookies(), fetcher: fetch, redirect })(
+    previousState,
     formData,
   )
 }

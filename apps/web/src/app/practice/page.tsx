@@ -1,11 +1,17 @@
-import { useTranslations } from 'next-intl'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 
 import { signOutAction } from '@/app/auth/sign-out/actions'
 import { Button } from '@/components/ui/button'
+import { createRequireSession } from '@/lib/auth/require-session'
 
-export default function PracticePage() {
-  const t = useTranslations('auth.signOut')
-  const commonT = useTranslations('common.metadata')
+export default async function PracticePage() {
+  createRequireSession({ cookieStore: await cookies(), redirect })()
+
+  const t = await getTranslations('auth.signOut')
+  const commonT = await getTranslations('common.metadata')
+
   return (
     <main className="min-h-screen bg-surface px-6 py-10 text-text">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-6">

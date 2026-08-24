@@ -1,4 +1,5 @@
 import { AuthenticationRejectedError } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
+import { EmailNotConfirmedError } from '@/modules/accounts/domain/errors/email-not-confirmed-error/index.js'
 import type {
   AuthIdentityProvider,
   AuthSession,
@@ -63,7 +64,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       throw new AuthenticationRejectedError('invalid_credentials')
     }
     if (!user.confirmed) {
-      throw new AuthenticationRejectedError('email_unconfirmed')
+      throw new EmailNotConfirmedError()
     }
 
     return this.createSession(user.authUserId, user.email, 'password')

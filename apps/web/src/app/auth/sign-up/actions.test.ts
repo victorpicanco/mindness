@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createSignUpAction } from './sign-up-action-factory'
-import { initialSignUpActionState } from './types'
+import { initialAuthActionState } from '../auth-action-state'
 
 class InMemoryCookieStore {
   get(): undefined {
@@ -41,7 +41,7 @@ describe('signUpAction', () => {
     })
 
     const result = await signUpAction(
-      initialSignUpActionState,
+      initialAuthActionState,
       createFormData({ email: 'invalid', password: 'short', captchaToken: 'captcha-token' }),
     )
 
@@ -65,7 +65,7 @@ describe('signUpAction', () => {
     })
 
     const result = await signUpAction(
-      initialSignUpActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'Valid_password1!',
@@ -93,7 +93,7 @@ describe('signUpAction', () => {
     })
 
     const result = await signUpAction(
-      initialSignUpActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'valid-password',
@@ -124,7 +124,7 @@ describe('signUpAction', () => {
     })
 
     const result = await signUpAction(
-      initialSignUpActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'Valid_password1!',
@@ -132,10 +132,7 @@ describe('signUpAction', () => {
       }),
     )
 
-    expect(result).toEqual({
-      status: 'success',
-      messageKey: 'signUp.success',
-    })
+    expect(result).toEqual({ status: 'success' })
   })
 
   it('turns backend account creation rejections into an actionable state', async () => {
@@ -159,7 +156,7 @@ describe('signUpAction', () => {
     })
 
     const result = await signUpAction(
-      initialSignUpActionState,
+      initialAuthActionState,
       createFormData({
         email: 'person@example.com',
         password: 'Valid_password1!',

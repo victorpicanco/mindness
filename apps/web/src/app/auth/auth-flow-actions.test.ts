@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { initialAuthActionState } from './auth-action-state'
 import {
   createEmailRequestAction,
   createSignOutAction,
@@ -50,8 +51,10 @@ describe('auth flow actions', () => {
     formData.set('email', 'person@example.com')
     formData.set('captchaToken', 'captcha-token')
 
-    await expect(recovery(formData)).resolves.toEqual({ status: 'success' })
-    await expect(resend(formData)).resolves.toEqual({ status: 'success' })
+    await expect(recovery(initialAuthActionState, formData)).resolves.toEqual({
+      status: 'success',
+    })
+    await expect(resend(initialAuthActionState, formData)).resolves.toEqual({ status: 'success' })
     expect(paths).toEqual([
       'https://api.test/auth/password/recovery',
       'https://api.test/auth/email/resend',
@@ -73,7 +76,7 @@ describe('auth flow actions', () => {
     const formData = new FormData()
     formData.set('password', 'New_password1!')
 
-    await expect(action(formData)).rejects.toThrow('redirected')
+    await expect(action(initialAuthActionState, formData)).rejects.toThrow('redirected')
     expect(readSessionCookies(store)).toEqual({ accessToken: undefined, refreshToken: undefined })
     expect(navigate).toHaveBeenCalledWith('/auth/sign-in?status=password-updated')
   })
@@ -94,5 +97,77 @@ describe('auth flow actions', () => {
     await expect(action()).rejects.toThrow('redirected')
     expect(readSessionCookies(store)).toEqual({ accessToken: undefined, refreshToken: undefined })
     expect(navigate).toHaveBeenCalledWith('/auth/sign-in')
+  })
+
+  it('reports the API failure of an email request instead of swallowing it', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const action = createEmailRequestAction({
+      path: '/auth/password/recovery',
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: () =>
+        Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.RATE_LIMITED',
+                message: 'Too many attempts',
+                issues: null,
+                requestId: 'request-id',
+              },
+            },
+            { status: 429 },
+          ),
+        ),
+    })
+    const formData = new FormData()
+    formData.set('email', 'person@example.com')
+    formData.set('captchaToken', 'captcha-token')
+
+    await expect(action(initialAuthActionState, formData)).resolves.toEqual({
+      status: 'api-error',
+      error: { code: 'accounts.RATE_LIMITED', issues: null, requestId: 'request-id' },
+    })
+  })
+
+  it('rejects a password that does not meet the policy before calling the API', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const requests: string[] = []
+    const action = createUpdatePasswordAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: (input) => {
+        requests.push(new Request(input).url)
+
+        return Promise.resolve(success('Password updated'))
+      },
+      redirect: (): never => {
+        throw new DOMException('redirected')
+      },
+    })
+    const formData = new FormData()
+    formData.set('password', 'alllowercase1')
+
+    await expect(action(initialAuthActionState, formData)).resolves.toEqual({
+      status: 'validation-error',
+      messageKey: 'errors.invalidPassword',
+    })
+    expect(requests).toEqual([])
+  })
+
+  it('reports the API failure of a password update instead of blaming the password', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const action = createUpdatePasswordAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: () => Promise.reject(new TypeError('network down')),
+      redirect: (): never => {
+        throw new DOMException('redirected')
+      },
+    })
+    const formData = new FormData()
+    formData.set('password', 'New_password1!')
+
+    await expect(action(initialAuthActionState, formData)).resolves.toEqual({
+      status: 'api-error',
+      error: { code: 'web.API_REQUEST_FAILED', issues: null, requestId: null },
+    })
   })
 })

@@ -269,3 +269,124 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
     expect(api.calls).toEqual(['update-password'])
   })
 })
+
+describe('SupabaseAuthIdentityProviderAdapter provider error translation', () => {
+  it('translates a throttled provider response into a rate limit error', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signInResult = { data: null, error: { code: 'over_request_rate_limit' } }
+
+    await expect(adapter.signInWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.RATE_LIMITED',
+      httpStatus: 429,
+    })
+  })
+
+  it('translates a throttled email quota into a rate limit error', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.recoveryResult = { data: null, error: { code: 'over_email_send_rate_limit' } }
+
+    await expect(
+      adapter.requestPasswordRecovery({ email: credentials.email, captchaToken: 'captcha-token' }),
+    ).rejects.toMatchObject({ code: 'accounts.RATE_LIMITED', httpStatus: 429 })
+  })
+
+  it('distinguishes an unconfirmed email from rejected credentials', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signInResult = { data: null, error: { code: 'email_not_confirmed' } }
+
+    await expect(adapter.signInWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.EMAIL_NOT_CONFIRMED',
+      httpStatus: 401,
+      reason: 'email_unconfirmed',
+    })
+  })
+
+  it('translates a banned user into a blocked account error', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signInResult = { data: null, error: { code: 'user_banned' } }
+
+    await expect(adapter.signInWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.ACCOUNT_BLOCKED',
+      httpStatus: 403,
+    })
+  })
+
+  it('translates an email the provider refuses into an invalid account value', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signUpResult = { data: null, error: { code: 'email_address_invalid' } }
+
+    await expect(adapter.signUpWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.INVALID_ACCOUNT_VALUE',
+      context: { field: 'email' },
+    })
+  })
+
+  it('translates an already registered email into an account conflict', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signUpResult = { data: null, error: { code: 'email_exists' } }
+
+    await expect(adapter.signUpWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.ACCOUNT_ALREADY_EXISTS',
+      httpStatus: 409,
+    })
+  })
+
+  it('translates a disabled sign-up into a sign-up not allowed error', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signUpResult = { data: null, error: { code: 'signup_disabled' } }
+
+    await expect(adapter.signUpWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.SIGN_UP_NOT_ALLOWED',
+      httpStatus: 403,
+    })
+  })
+
+  it('translates an unauthorized recipient address into a sign-up not allowed error', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.resendResult = { data: null, error: { code: 'email_address_not_authorized' } }
+
+    await expect(
+      adapter.resendSignUpConfirmation({ email: credentials.email, captchaToken: 'token' }),
+    ).rejects.toMatchObject({ code: 'accounts.SIGN_UP_NOT_ALLOWED', httpStatus: 403 })
+  })
+
+  it('translates a repeated password into an invalid account value', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.updatePasswordResult = { data: null, error: { code: 'same_password' } }
+
+    await expect(adapter.updatePassword('auth-user-1', 'Strong_password1!')).rejects.toMatchObject({
+      code: 'accounts.INVALID_ACCOUNT_VALUE',
+      context: { field: 'password' },
+    })
+  })
+
+  it('keeps rejecting unknown provider failures as authentication rejections', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signInResult = { data: null, error: { code: 'unexpected_failure' } }
+
+    await expect(adapter.signInWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'invalid_credentials' },
+    })
+  })
+})

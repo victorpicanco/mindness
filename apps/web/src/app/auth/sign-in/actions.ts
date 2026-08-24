@@ -3,13 +3,14 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
+import type { AuthActionState } from '../auth-action-state'
+
 import { createSignInAction } from './sign-in-action-factory'
-import type { SignInActionState } from './types'
 
 export async function signInAction(
-  previousState: SignInActionState,
+  previousState: AuthActionState,
   formData: FormData,
-): Promise<SignInActionState> {
+): Promise<AuthActionState> {
   const cookieStore = await cookies()
 
   return createSignInAction({ cookieStore, fetcher: fetch, redirect })(previousState, formData)

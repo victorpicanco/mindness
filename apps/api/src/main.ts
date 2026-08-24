@@ -84,6 +84,10 @@ export async function startServer(): Promise<void> {
       supabaseUrl: config.supabaseUrl,
       supabaseSecretKey: config.supabaseSecretKey,
       emailConfirmationRedirectUrl: config.emailConfirmationRedirectUrl,
+      authRateLimit: {
+        max: config.authRateLimitMax,
+        timeWindowMs: config.authRateLimitWindowMs,
+      },
     },
   })
 

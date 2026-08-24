@@ -1,8 +1,13 @@
+import { AccountAlreadyExistsError } from '@/modules/accounts/domain/errors/account-already-exists-error/index.js'
+import { AccountBlockedError } from '@/modules/accounts/domain/errors/account-blocked-error/index.js'
 import { AuthenticationRejectedError } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
+import { EmailNotConfirmedError } from '@/modules/accounts/domain/errors/email-not-confirmed-error/index.js'
 import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
 import type { AuthenticationRejectionReason } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
 import { AuthProviderError } from '@/modules/accounts/domain/errors/auth-provider-error/index.js'
 import { CaptchaRejectedError } from '@/modules/accounts/domain/errors/captcha-rejected-error/index.js'
+import { RateLimitedError } from '@/modules/accounts/domain/errors/rate-limited-error/index.js'
+import { SignUpNotAllowedError } from '@/modules/accounts/domain/errors/sign-up-not-allowed-error/index.js'
 import type {
   AuthIdentityProvider,
   AuthSession,
@@ -21,11 +26,89 @@ interface SupabaseSessionTokens {
   readonly expiresAt: Date
 }
 
-const CAPTCHA_FAILED_PROVIDER_CODE = 'captcha_failed'
-
 const REJECTION_REASON_BY_PROVIDER_CODE = new Map<string, AuthenticationRejectionReason>([
-  ['email_not_confirmed', 'email_unconfirmed'],
   ['invalid_credentials', 'invalid_credentials'],
+])
+
+const ERROR_BY_PROVIDER_CODE = new Map<string, (cause: unknown) => never>([
+  [
+    'captcha_failed',
+    (cause) => {
+      throw new CaptchaRejectedError({ cause })
+    },
+  ],
+  [
+    'over_request_rate_limit',
+    (cause) => {
+      throw new RateLimitedError('authentication', { cause })
+    },
+  ],
+  [
+    'over_email_send_rate_limit',
+    (cause) => {
+      throw new RateLimitedError('email_delivery', { cause })
+    },
+  ],
+  [
+    'over_sms_send_rate_limit',
+    (cause) => {
+      throw new RateLimitedError('email_delivery', { cause })
+    },
+  ],
+  [
+    'email_not_confirmed',
+    (cause) => {
+      throw new EmailNotConfirmedError({ cause })
+    },
+  ],
+  [
+    'user_banned',
+    (cause) => {
+      throw new AccountBlockedError({ cause })
+    },
+  ],
+  [
+    'signup_disabled',
+    (cause) => {
+      throw new SignUpNotAllowedError({ cause })
+    },
+  ],
+  [
+    'email_address_not_authorized',
+    (cause) => {
+      throw new SignUpNotAllowedError({ cause })
+    },
+  ],
+  [
+    'email_exists',
+    (cause) => {
+      throw new AccountAlreadyExistsError(['email'], { cause })
+    },
+  ],
+  [
+    'user_already_exists',
+    (cause) => {
+      throw new AccountAlreadyExistsError(['email'], { cause })
+    },
+  ],
+  [
+    'email_address_invalid',
+    (cause) => {
+      throw new InvalidAccountValueError('email', { cause })
+    },
+  ],
+  [
+    'weak_password',
+    (cause) => {
+      throw new InvalidAccountValueError('password', { cause })
+    },
+  ],
+  [
+    'same_password',
+    (cause) => {
+      throw new InvalidAccountValueError('password', { cause })
+    },
+  ],
 ])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -68,11 +151,17 @@ function readAuthenticationMethod(claims: Record<string, unknown>): Authenticati
   return null
 }
 
-function rejectionFrom(error: unknown, fallback: AuthenticationRejectionReason): never {
+function translateProviderError(error: unknown): void {
   const code = providerErrorCode(error)
+  if (code === null) return
 
-  if (code === CAPTCHA_FAILED_PROVIDER_CODE) throw new CaptchaRejectedError({ cause: error })
+  ERROR_BY_PROVIDER_CODE.get(code)?.(error)
+}
 
+function rejectionFrom(error: unknown, fallback: AuthenticationRejectionReason): never {
+  translateProviderError(error)
+
+  const code = providerErrorCode(error)
   const reason =
     code === null ? fallback : (REJECTION_REASON_BY_PROVIDER_CODE.get(code) ?? fallback)
 
@@ -120,12 +209,7 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
 
   async signUpWithPassword(params: SignUpWithPasswordParams): Promise<void> {
     const result = await this.call(() => this.api.signUp(params))
-    if (result.error !== null) {
-      if (providerErrorCode(result.error) === 'weak_password') {
-        throw new InvalidAccountValueError('password', { cause: result.error })
-      }
-      rejectionFrom(result.error, 'invalid_credentials')
-    }
+    if (result.error !== null) rejectionFrom(result.error, 'invalid_credentials')
   }
 
   async signInWithPassword(params: SignInWithPasswordParams): Promise<AuthSession> {
@@ -164,6 +248,7 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
   async verifyEmailOtp(tokenHash: string, type: EmailOtpVerificationType): Promise<AuthSession> {
     const result = await this.call(() => this.api.verifyOtp(tokenHash, type))
     if (result.error !== null) {
+      translateProviderError(result.error)
       throw new AuthenticationRejectedError(
         type === 'recovery' ? 'recovery_link_invalid' : 'email_link_invalid',
         { cause: result.error },
@@ -195,9 +280,7 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
   async updatePassword(authUserId: string, password: string): Promise<void> {
     const result = await this.call(() => this.api.updatePassword(authUserId, password))
     if (result.error !== null) {
-      if (providerErrorCode(result.error) === 'weak_password') {
-        throw new InvalidAccountValueError('password', { cause: result.error })
-      }
+      translateProviderError(result.error)
       throw new AuthProviderError({ cause: result.error })
     }
   }

@@ -1,4 +1,6 @@
 import { AuthenticationRejectedError } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
+import type { AuthenticationRejectionReason } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
+import { EmailNotConfirmedError } from '@/modules/accounts/domain/errors/email-not-confirmed-error/index.js'
 import { LoginRejected } from '@/modules/accounts/domain/events/login-rejected/index.js'
 import type { AuthSession } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 import type { PasswordAuthenticator } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
@@ -10,6 +12,13 @@ import type { AccountsRepository } from '@/modules/accounts/domain/repositories/
 import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 
 import type { SignInInput, SignInOutput } from './types.js'
+
+function rejectionReasonOf(error: unknown): AuthenticationRejectionReason | null {
+  if (error instanceof AuthenticationRejectedError) return error.reason
+  if (error instanceof EmailNotConfirmedError) return error.reason
+
+  return null
+}
 
 export interface SignInDependencies {
   readonly accounts: AccountsRepository
@@ -50,16 +59,17 @@ export class SignInUseCase {
         captchaToken: input.captchaToken,
       })
     } catch (error) {
-      if (!(error instanceof AuthenticationRejectedError)) throw error
+      const reason = rejectionReasonOf(error)
+      if (reason === null) throw error
 
-      await this.publishRejection(email, error)
+      await this.publishRejection(email, reason)
       throw error
     }
   }
 
   private async publishRejection(
     email: EmailAddress,
-    error: AuthenticationRejectedError,
+    reason: AuthenticationRejectionReason,
   ): Promise<void> {
     const account = await this.dependencies.accounts.findByEmail(email.value)
 
@@ -69,7 +79,7 @@ export class SignInUseCase {
         occurredAt: this.dependencies.clock.now(),
         accountId: account?.id ?? null,
         plan: account?.plan ?? null,
-        reason: error.reason,
+        reason,
       }),
     )
   }

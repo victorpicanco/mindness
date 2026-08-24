@@ -3,6 +3,7 @@ export type TurnstileRenderOptions = {
   readonly callback: (token: string) => void
   readonly 'error-callback': (code: string) => void
   readonly 'expired-callback': () => void
+  readonly 'timeout-callback': () => void
   readonly sitekey: string
 }
 

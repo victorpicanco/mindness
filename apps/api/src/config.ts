@@ -26,6 +26,8 @@ const EnvSchema = Type.Object({
   GEMINI_INPUT_COST_PER_MTOK_MICROS: Type.Integer({ minimum: 1 }),
   GEMINI_OUTPUT_COST_PER_MTOK_MICROS: Type.Integer({ minimum: 1 }),
   ANALYSIS_QUEUE_CONCURRENCY: Type.Integer({ minimum: 1 }),
+  AUTH_RATE_LIMIT_MAX: Type.Integer({ minimum: 1 }),
+  AUTH_RATE_LIMIT_WINDOW_MS: Type.Integer({ minimum: 1000 }),
 })
 
 const STRING_ENV_KEYS = [
@@ -51,6 +53,8 @@ const NUMERIC_ENV_KEYS = [
   'GEMINI_INPUT_COST_PER_MTOK_MICROS',
   'GEMINI_OUTPUT_COST_PER_MTOK_MICROS',
   'ANALYSIS_QUEUE_CONCURRENCY',
+  'AUTH_RATE_LIMIT_MAX',
+  'AUTH_RATE_LIMIT_WINDOW_MS',
 ] as const
 
 export interface Config {
@@ -74,6 +78,8 @@ export interface Config {
   readonly geminiInputCostPerMtokMicros: number
   readonly geminiOutputCostPerMtokMicros: number
   readonly analysisQueueConcurrency: number
+  readonly authRateLimitMax: number
+  readonly authRateLimitWindowMs: number
 }
 
 function buildCandidate(env: NodeJS.ProcessEnv): Record<string, unknown> {
@@ -135,5 +141,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
     geminiInputCostPerMtokMicros: candidate.GEMINI_INPUT_COST_PER_MTOK_MICROS,
     geminiOutputCostPerMtokMicros: candidate.GEMINI_OUTPUT_COST_PER_MTOK_MICROS,
     analysisQueueConcurrency: candidate.ANALYSIS_QUEUE_CONCURRENCY,
+    authRateLimitMax: candidate.AUTH_RATE_LIMIT_MAX,
+    authRateLimitWindowMs: candidate.AUTH_RATE_LIMIT_WINDOW_MS,
   })
 }

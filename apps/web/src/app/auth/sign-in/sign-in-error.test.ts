@@ -1,27 +1,34 @@
 import { describe, expect, it } from 'vitest'
 
-import { signInErrorMessageKey } from './sign-in-error'
+import { describeSignInRedirectError } from './sign-in-error'
 
-describe('signInErrorMessageKey', () => {
+describe('describeSignInRedirectError', () => {
   it('has no message when the visitor did not come back from a failure', () => {
-    expect(signInErrorMessageKey(undefined)).toBeUndefined()
+    expect(describeSignInRedirectError(undefined)).toBeUndefined()
   })
 
-  it('describes a Google round trip that never returned the tokens', () => {
-    expect(signInErrorMessageKey('google_callback_failed')).toBe('auth.errors.googleSignInFailed')
+  it('raises a Google round trip that never returned the tokens as a toast', () => {
+    expect(describeSignInRedirectError('google_callback_failed')).toEqual({
+      messageKey: 'auth.errors.googleSignInFailed',
+      presentation: 'toast',
+    })
   })
 
   it('describes an API error code carried by the callback', () => {
-    expect(signInErrorMessageKey('accounts.BETA_CAPACITY_REACHED')).toBe(
-      'auth.errors.betaCapacityReached',
-    )
+    expect(describeSignInRedirectError('accounts.BETA_CAPACITY_REACHED')).toEqual({
+      messageKey: 'auth.errors.betaCapacityReached',
+      presentation: 'toast',
+    })
   })
 
   it('falls back to the generic message for an unknown code', () => {
-    expect(signInErrorMessageKey('something_else')).toBe('common.errors.unknown')
+    expect(describeSignInRedirectError('something_else')).toEqual({
+      messageKey: 'common.errors.unknown',
+      presentation: 'toast',
+    })
   })
 
   it('ignores a repeated query parameter', () => {
-    expect(signInErrorMessageKey(['google_callback_failed', 'other'])).toBeUndefined()
+    expect(describeSignInRedirectError(['google_callback_failed', 'other'])).toBeUndefined()
   })
 })

@@ -1,65 +1,73 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useActionState, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Turnstile } from '@/components/ui/turnstile'
 
-import type { EmailRequestState } from './auth-flow-actions'
+import { AuthCaptchaField } from './auth-captcha-field'
+import { AuthFormAlert } from './auth-form-alert'
+import { isValidEmail } from './auth-credentials'
+import { formFieldValue } from './form-validation'
+import { useAuthForm, type AuthFieldErrors, type AuthFormAction } from './use-auth-form'
 
-export type EmailRequestServerAction = (
-  state: EmailRequestState,
-  formData: FormData,
-) => Promise<EmailRequestState>
-
-const initialState: EmailRequestState = { status: 'idle' }
+function validate(formData: FormData): AuthFieldErrors {
+  return isValidEmail(formFieldValue(formData, 'email'))
+    ? {}
+    : { email: 'auth.errors.invalidEmail' }
+}
 
 export function EmailRequestForm({
   action,
   submitLabel,
   successMessage,
 }: {
-  readonly action: EmailRequestServerAction
+  readonly action: AuthFormAction
   readonly submitLabel: string
   readonly successMessage: string
 }) {
   const t = useTranslations('auth')
-  const [state, formAction, pending] = useActionState(action, initialState)
-  const [resetSignal, setResetSignal] = useState(0)
+  const translate = useTranslations()
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined, validate })
+
+  const alertMessageKey =
+    siteKey === undefined ? 'auth.errors.captchaUnavailable' : form.inlineMessageKey
 
   return (
-    <form
-      action={(formData) => {
-        formAction(formData)
-        setResetSignal((current) => current + 1)
-      }}
-      className="grid gap-6"
-    >
-      <Field label={t('signIn.emailLabel')}>
-        <Input autoComplete="email" name="email" required type="email" />
+    <form className="grid gap-6" noValidate onSubmit={form.onSubmit}>
+      <Field
+        {...(form.fieldErrors.email === undefined
+          ? {}
+          : { error: translate(form.fieldErrors.email) })}
+        label={t('signIn.emailLabel')}
+      >
+        <Input autoComplete="email" name="email" type="email" />
       </Field>
-      {siteKey === undefined ? (
-        <p className="text-sm text-error" role="alert">
-          {t('errors.captchaUnavailable')}
-        </p>
-      ) : (
-        <Turnstile resetSignal={resetSignal} siteKey={siteKey} />
+      {siteKey === undefined ? null : (
+        <AuthCaptchaField
+          {...(form.fieldErrors.captchaToken === undefined
+            ? {}
+            : { errorMessageKey: form.fieldErrors.captchaToken })}
+          onError={form.onCaptchaError}
+          onTokenChange={form.onCaptchaTokenChange}
+          resetSignal={form.captchaResetSignal}
+          siteKey={siteKey}
+        />
       )}
-      {state.status === 'success' ? (
+      {form.state.status === 'success' ? (
         <p className="text-sm text-text-muted" role="status">
           {successMessage}
         </p>
       ) : null}
-      {state.status === 'error' ? (
-        <p className="text-sm text-error" role="alert">
-          {t('errors.requestFailed')}
-        </p>
-      ) : null}
-      <Button disabled={siteKey === undefined} isLoading={pending} size="lg" type="submit">
+      <AuthFormAlert {...(alertMessageKey === undefined ? {} : { messageKey: alertMessageKey })} />
+      <Button
+        disabled={siteKey === undefined}
+        isLoading={form.isSubmitting}
+        size="lg"
+        type="submit"
+      >
         {submitLabel}
       </Button>
     </form>

@@ -45,7 +45,7 @@ function setSecurityHeaders(response: NextResponse, contentSecurityPolicy: strin
   return response
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const nonce = btoa(crypto.randomUUID())
   const contentSecurityPolicy = createContentSecurityPolicy(nonce)
   const { accessToken } = readSessionCookies(request.cookies)

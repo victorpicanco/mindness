@@ -134,6 +134,7 @@ export function SignUpForm({ action = signUpAction, onSuccess }: SignUpFormProps
         <AuthFormAlert
           {...(alertMessageKey === undefined ? {} : { messageKey: alertMessageKey })}
         />
+        <p className="text-sm text-text-muted">{t('consent.notice')}</p>
         <Button
           disabled={siteKey === undefined}
           isLoading={form.isSubmitting}

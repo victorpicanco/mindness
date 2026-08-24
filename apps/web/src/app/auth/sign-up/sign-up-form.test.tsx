@@ -82,6 +82,31 @@ afterEach(() => {
 })
 
 describe('SignUpForm', () => {
+  it('shows the consent notice without making account creation conditional on interaction', async () => {
+    const submittedFormData: FormData[] = []
+    const signUpAction: SignUpAction = (_state, formData) => {
+      submittedFormData.push(formData)
+
+      return Promise.resolve(initialAuthActionState)
+    }
+
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
+
+    expect(
+      screen.getByText(
+        'Ao criar sua conta, você aceita os termos de uso e a política de privacidade. Sua voz será gravada e analisada para gerar sua devolutiva. O áudio é retido por 30 dias.',
+      ),
+    ).toBeInTheDocument()
+
+    await verifyCaptcha()
+    fillCredentials()
+    submit()
+
+    await waitFor(() => {
+      expect(submittedFormData).toHaveLength(1)
+    })
+  })
+
   it('shows the Supabase password requirements and marks satisfied requirements', () => {
     renderSignUpForm(<SignUpForm action={validSignUpAction()} />)
 

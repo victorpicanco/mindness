@@ -3,7 +3,6 @@
     "invalidTimeZone": "Escolha um fuso horário válido."
   },
   "messages": {
-    "timeZoneUpdated": "Fuso horário atualizado.",
-    "consentRecorded": "Consentimento registrado."
+    "timeZoneUpdated": "Fuso horário atualizado."
   }
 }

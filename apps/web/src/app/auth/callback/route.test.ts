@@ -21,7 +21,19 @@ class InMemoryCookieStore {
 }
 
 function provisionedFetcher(): typeof fetch {
-  return () => Promise.resolve(Response.json({ data: { accountId: 'account-id' } }))
+  return () =>
+    Promise.resolve(
+      Response.json({
+        data: {
+          accountId: 'account-id',
+          consent: {
+            purpose: 'voice_recording_and_analysis',
+            version: '2026-08-15',
+            acceptedAt: '2026-08-24T12:00:00.000Z',
+          },
+        },
+      }),
+    )
 }
 
 const callbackUrl =
@@ -74,7 +86,15 @@ describe('Google callback route', () => {
                 },
                 { status: 404 },
               )
-            : Response.json({ data: { message: 'Account created.' } }),
+            : request.url.endsWith('/accounts/me/consent')
+              ? Response.json({
+                  data: {
+                    purpose: 'voice_recording_and_analysis',
+                    version: '2026-08-15',
+                    acceptedAt: '2026-08-24T12:00:00.000Z',
+                  },
+                })
+              : Response.json({ data: { message: 'Account created.' } }),
         )
       },
     })
@@ -84,6 +104,7 @@ describe('Google callback route', () => {
     expect(requests.map((request) => request.url)).toEqual([
       'https://api.mindness.test/accounts/me',
       'https://api.mindness.test/accounts',
+      'https://api.mindness.test/accounts/me/consent',
     ])
   })
 

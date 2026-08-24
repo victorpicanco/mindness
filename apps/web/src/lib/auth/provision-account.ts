@@ -3,10 +3,20 @@ import { z } from 'zod'
 import { apiErrorDetails, type ApiErrorDetails } from '@/lib/api/api-error'
 import { apiFetch } from '@/lib/api/server-client'
 
+import { acceptConsent } from './accept-consent'
 import { clearSessionCookies } from './session'
 
 const provisionAccountResponseSchema = z.object({ message: z.string() })
-const accountProfileResponseSchema = z.object({ accountId: z.string() })
+const accountProfileResponseSchema = z.object({
+  accountId: z.string(),
+  consent: z
+    .object({
+      purpose: z.literal('voice_recording_and_analysis'),
+      version: z.string(),
+      acceptedAt: z.string().datetime(),
+    })
+    .nullable(),
+})
 
 type CookieStore = Parameters<typeof clearSessionCookies>[0]
 
@@ -20,12 +30,16 @@ export async function provisionAccount({
   fetcher,
 }: ProvisionAccountDependencies): Promise<ApiErrorDetails | null> {
   try {
-    await apiFetch('/accounts/me', {
+    const profile = await apiFetch('/accounts/me', {
       method: 'GET',
       cookieStore,
       fetcher,
       schema: accountProfileResponseSchema,
     })
+
+    if (profile.consent === null) {
+      await acceptConsent({ cookieStore, fetcher })
+    }
 
     return null
   } catch (error: unknown) {
@@ -46,6 +60,8 @@ export async function provisionAccount({
       fetcher,
       schema: provisionAccountResponseSchema,
     })
+
+    await acceptConsent({ cookieStore, fetcher })
 
     return null
   } catch (error: unknown) {

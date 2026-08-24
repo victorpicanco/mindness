@@ -113,7 +113,16 @@ describe('signInAction', () => {
 
         return Promise.resolve(
           request.url.endsWith('/accounts/me')
-            ? Response.json({ data: { accountId: 'account-id' } })
+            ? Response.json({
+                data: {
+                  accountId: 'account-id',
+                  consent: {
+                    purpose: 'voice_recording_and_analysis',
+                    version: '2026-08-15',
+                    acceptedAt: '2026-08-24T12:00:00.000Z',
+                  },
+                },
+              })
             : Response.json({
                 data: {
                   accessToken: 'access-token',
@@ -268,7 +277,16 @@ describe('signInAction redirect target', () => {
 
           return Promise.resolve(
             request.url.endsWith('/accounts/me')
-              ? Response.json({ data: { accountId: 'account-id' } })
+              ? Response.json({
+                  data: {
+                    accountId: 'account-id',
+                    consent: {
+                      purpose: 'voice_recording_and_analysis',
+                      version: '2026-08-15',
+                      acceptedAt: '2026-08-24T12:00:00.000Z',
+                    },
+                  },
+                })
               : Response.json({
                   data: {
                     accessToken: 'access-token',

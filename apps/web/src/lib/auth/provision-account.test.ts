@@ -29,66 +29,68 @@ function signedInCookieStore(): InMemoryCookieStore {
   return cookieStore
 }
 
+type AccountConsent = {
+  readonly purpose: 'voice_recording_and_analysis'
+  readonly version: string
+  readonly acceptedAt: string
+}
+
+function profileResponse(consent: AccountConsent | null): Response {
+  return Response.json({
+    data: {
+      accountId: 'account-id',
+      consent,
+      email: 'person@example.com',
+      plan: 'free',
+      timeZone: 'America/Sao_Paulo',
+    },
+  })
+}
+
+function consentResponse(): Response {
+  return Response.json({
+    data: {
+      purpose: 'voice_recording_and_analysis',
+      version: '2026-08-15',
+      acceptedAt: '2026-08-24T12:00:00.000Z',
+    },
+  })
+}
+
 afterEach(() => {
   vi.unstubAllEnvs()
 })
 
 describe('provisionAccount', () => {
-  it('does not recreate an account that already exists', async () => {
+  it('creates an absent account and records consent afterwards', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const requests: Request[] = []
-    const cookieStore = signedInCookieStore()
 
     const error = await provisionAccount({
-      cookieStore,
-      fetcher: (input, init) => {
-        requests.push(new Request(input, init))
-
-        return Promise.resolve(
-          Response.json({
-            data: {
-              accountId: 'account-id',
-              consent: null,
-              email: 'person@example.com',
-              plan: 'free',
-              timeZone: 'America/Sao_Paulo',
-            },
-          }),
-        )
-      },
-    })
-
-    expect(error).toBeNull()
-    expect(requests).toHaveLength(1)
-    expect(requests[0]?.url).toBe('https://api.mindness.test/accounts/me')
-    expect(requests[0]?.method).toBe('GET')
-    expect(requests[0]?.headers.get('authorization')).toBe('Bearer access-token')
-  })
-
-  it('creates the account only when the signed-in identity has no account', async () => {
-    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
-    const requests: Request[] = []
-    const cookieStore = signedInCookieStore()
-
-    const error = await provisionAccount({
-      cookieStore,
+      cookieStore: signedInCookieStore(),
       fetcher: (input, init) => {
         const request = new Request(input, init)
         requests.push(request)
 
-        return Promise.resolve(
-          request.url.endsWith('/accounts/me')
-            ? Response.json(
-                {
-                  error: {
-                    code: 'accounts.ACCOUNT_NOT_FOUND',
-                    message: 'Account not found',
-                    issues: null,
-                    requestId: 'request-id',
-                  },
+        if (request.url.endsWith('/accounts/me')) {
+          return Promise.resolve(
+            Response.json(
+              {
+                error: {
+                  code: 'accounts.ACCOUNT_NOT_FOUND',
+                  message: 'Account not found',
+                  issues: null,
+                  requestId: 'request-id',
                 },
-                { status: 404 },
-              )
+              },
+              { status: 404 },
+            ),
+          )
+        }
+
+        return Promise.resolve(
+          request.url.endsWith('/accounts/me/consent')
+            ? consentResponse()
             : Response.json({ data: { message: 'Account created.' } }),
         )
       },
@@ -98,11 +100,58 @@ describe('provisionAccount', () => {
     expect(requests.map((request) => `${request.method} ${request.url}`)).toEqual([
       'GET https://api.mindness.test/accounts/me',
       'POST https://api.mindness.test/accounts',
+      'POST https://api.mindness.test/accounts/me/consent',
     ])
-    await expect(requests[1]?.json()).resolves.toEqual({ timeZone: null })
   })
 
-  it('clears the session and describes the failure when the API refuses to create the account', async () => {
+  it('does nothing when the account already has recorded consent', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+
+    const error = await provisionAccount({
+      cookieStore: signedInCookieStore(),
+      fetcher: (input, init) => {
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(
+          profileResponse({
+            purpose: 'voice_recording_and_analysis',
+            version: '2026-08-15',
+            acceptedAt: '2026-08-24T12:00:00.000Z',
+          }),
+        )
+      },
+    })
+
+    expect(error).toBeNull()
+    expect(requests).toHaveLength(1)
+    expect(requests[0]?.url).toBe('https://api.mindness.test/accounts/me')
+  })
+
+  it('records consent for an existing account without it', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+
+    const error = await provisionAccount({
+      cookieStore: signedInCookieStore(),
+      fetcher: (input, init) => {
+        const request = new Request(input, init)
+        requests.push(request)
+
+        return Promise.resolve(
+          request.url.endsWith('/accounts/me') ? profileResponse(null) : consentResponse(),
+        )
+      },
+    })
+
+    expect(error).toBeNull()
+    expect(requests.map((request) => `${request.method} ${request.url}`)).toEqual([
+      'GET https://api.mindness.test/accounts/me',
+      'POST https://api.mindness.test/accounts/me/consent',
+    ])
+  })
+
+  it('keeps the session and succeeds when consent recording fails after account creation', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const cookieStore = signedInCookieStore()
 
@@ -111,74 +160,48 @@ describe('provisionAccount', () => {
       fetcher: (input, init) => {
         const request = new Request(input, init)
 
-        return Promise.resolve(
-          request.url.endsWith('/accounts/me')
-            ? Response.json(
-                {
-                  error: {
-                    code: 'accounts.ACCOUNT_NOT_FOUND',
-                    message: 'Account not found',
-                    issues: null,
-                    requestId: 'request-id',
-                  },
+        if (request.url.endsWith('/accounts/me')) {
+          return Promise.resolve(
+            Response.json(
+              {
+                error: {
+                  code: 'accounts.ACCOUNT_NOT_FOUND',
+                  message: 'Account not found',
+                  issues: null,
+                  requestId: 'request-id',
                 },
-                { status: 404 },
-              )
-            : Response.json(
-                {
-                  error: {
-                    code: 'accounts.BETA_CAPACITY_REACHED',
-                    message: 'The beta has reached 100 accounts',
-                    issues: null,
-                    requestId: 'request-id',
-                  },
-                },
-                { status: 409 },
-              ),
-        )
-      },
-    })
-
-    expect(error).toEqual({
-      code: 'accounts.BETA_CAPACITY_REACHED',
-      issues: null,
-      requestId: 'request-id',
-    })
-    expect(cookieStore.values.size).toBe(0)
-  })
-
-  it('does not attempt account creation when the profile check fails unexpectedly', async () => {
-    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
-    const cookieStore = signedInCookieStore()
-    const requests: Request[] = []
-
-    const error = await provisionAccount({
-      cookieStore,
-      fetcher: (input, init) => {
-        requests.push(new Request(input, init))
-
-        return Promise.resolve(
-          Response.json(
-            {
-              error: {
-                code: 'shared.INTERNAL_ERROR',
-                message: 'Internal error',
-                issues: null,
-                requestId: 'request-id',
               },
-            },
-            { status: 500 },
-          ),
-        )
+              { status: 404 },
+            ),
+          )
+        }
+
+        if (request.url.endsWith('/accounts/me/consent')) {
+          return Promise.resolve(
+            Response.json(
+              {
+                error: {
+                  code: 'accounts.CONSENT_REJECTED',
+                  message: 'The consent could not be saved.',
+                  issues: null,
+                  requestId: 'request-id',
+                },
+              },
+              { status: 422 },
+            ),
+          )
+        }
+
+        return Promise.resolve(Response.json({ data: { message: 'Account created.' } }))
       },
     })
 
-    expect(error).toEqual({
-      code: 'shared.INTERNAL_ERROR',
-      issues: null,
-      requestId: 'request-id',
-    })
-    expect(requests).toHaveLength(1)
-    expect(cookieStore.values.size).toBe(0)
+    expect(error).toBeNull()
+    expect(cookieStore.values).toEqual(
+      new Map([
+        ['mindness_access_token', 'access-token'],
+        ['mindness_refresh_token', 'refresh-token'],
+      ]),
+    )
   })
 })

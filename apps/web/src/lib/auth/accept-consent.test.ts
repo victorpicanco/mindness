@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createAcceptConsentAction, initialConsentActionState } from './actions'
+import { acceptConsent } from './accept-consent'
 
 class InMemoryCookieStore {
   get(): undefined {
@@ -16,11 +16,12 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-describe('acceptConsentAction', () => {
+describe('acceptConsent', () => {
   it('records consent through the API', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const requests: Request[] = []
-    const action = createAcceptConsentAction({
+
+    const error = await acceptConsent({
       cookieStore: new InMemoryCookieStore(),
       fetcher: (input, init) => {
         requests.push(new Request(input, init))
@@ -30,24 +31,23 @@ describe('acceptConsentAction', () => {
             data: {
               purpose: 'voice_recording_and_analysis',
               version: '2026-08-15',
-              acceptedAt: '2026-08-23T12:00:00.000Z',
+              acceptedAt: '2026-08-24T12:00:00.000Z',
             },
           }),
         )
       },
     })
 
-    const result = await action(initialConsentActionState, new FormData())
-
-    expect(result).toEqual({ status: 'success', messageKey: 'messages.consentRecorded' })
+    expect(error).toBeNull()
     expect(requests).toHaveLength(1)
     expect(requests[0]?.url).toBe('https://api.mindness.test/accounts/me/consent')
     expect(requests[0]?.method).toBe('POST')
   })
 
-  it('returns the API error details without exposing the API message', async () => {
+  it('returns API error details without exposing the API message', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
-    const action = createAcceptConsentAction({
+
+    const error = await acceptConsent({
       cookieStore: new InMemoryCookieStore(),
       fetcher: () =>
         Promise.resolve(
@@ -65,15 +65,10 @@ describe('acceptConsentAction', () => {
         ),
     })
 
-    const result = await action(initialConsentActionState, new FormData())
-
-    expect(result).toEqual({
-      status: 'api-error',
-      error: {
-        code: 'accounts.CONSENT_REJECTED',
-        issues: null,
-        requestId: 'request-id',
-      },
+    expect(error).toEqual({
+      code: 'accounts.CONSENT_REJECTED',
+      issues: null,
+      requestId: 'request-id',
     })
   })
 })

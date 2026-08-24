@@ -3,8 +3,8 @@ import { Buenard } from 'next/font/google'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 
-import { SignUpForm } from './sign-up-form'
-import { SignInShowcase } from '@/app/auth/sign-in/sign-in-showcase'
+import { SignInForm } from './sign-in-form'
+import { SignInShowcase } from './sign-in-showcase'
 
 const buenard = Buenard({
   display: 'swap',
@@ -13,8 +13,8 @@ const buenard = Buenard({
   weight: ['400', '700'],
 })
 
-export default function SignUpPage() {
-  const t = useTranslations('auth.signUp')
+export default function SignInPage() {
+  const t = useTranslations('auth.signIn')
   const commonT = useTranslations('common')
 
   return (
@@ -35,12 +35,12 @@ export default function SignUpPage() {
             </h1>
             <p className="text-sm text-text-muted">{t('description')}</p>
           </div>
-          <SignUpForm />
+          <SignInForm />
           <p className="text-center text-sm text-text-muted">
             {t('accountPrompt')}{' '}
             <Link
               className="font-medium text-text underline-offset-2 hover:underline"
-              href="/auth/sign-in"
+              href="/auth/sign-up"
             >
               {t('accountLink')}
             </Link>

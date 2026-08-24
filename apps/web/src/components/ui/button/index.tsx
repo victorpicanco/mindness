@@ -16,7 +16,7 @@ const buttonStyles = cva(
       size: {
         sm: 'min-h-8 px-3 text-sm',
         md: 'min-h-10 px-4 text-sm',
-        lg: 'min-h-12 px-6 text-base',
+        lg: 'min-h-14 px-6 py-4 text-base',
       },
     },
     defaultVariants: {

@@ -75,6 +75,7 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
 
   return (
     <form
+      className="grid gap-8"
       noValidate
       onSubmit={(event) => {
         void handleSubmit(event)
@@ -86,16 +87,26 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
           {...(errors.email === undefined ? {} : { error: errors.email })}
           label={t('signUp.emailLabel')}
         >
-          <Input autoComplete="email" name="email" type="email" />
+          <Input
+            autoComplete="email"
+            name="email"
+            placeholder={t('signIn.emailPlaceholder')}
+            type="email"
+          />
         </Field>
         <Field
           {...(errors.password === undefined ? {} : { error: errors.password })}
           label={t('signUp.passwordLabel')}
         >
-          <Input autoComplete="new-password" name="password" type="password" />
+          <Input
+            autoComplete="new-password"
+            name="password"
+            placeholder={t('signIn.passwordPlaceholder')}
+            type="password"
+          />
         </Field>
         {state.status === 'validation-error' ? <p role="alert">{t(state.messageKey)}</p> : null}
-        <Button isLoading={isSubmitting} type="submit">
+        <Button isLoading={isSubmitting} size="lg" type="submit">
           {t('signUp.submit')}
         </Button>
       </div>

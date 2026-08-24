@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createSignInAction, initialSignInActionState } from './actions'
+import { createSignInAction } from './sign-in-action-factory'
+import { initialSignInActionState } from './types'
 
 class RedirectSignal extends Error {
   constructor(readonly path: string) {

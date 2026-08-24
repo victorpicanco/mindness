@@ -61,6 +61,7 @@ function createHarness(session: Session | null, profileExists = true, wonTheRace
     resolveAccountId: () => Promise.resolve(null),
     findProfile: () =>
       Promise.resolve(profileExists ? { plan: 'free', timeZone: 'America/Sao_Paulo' } : null),
+    canStartPractice: () => Promise.resolve(true),
   }
   const eventPublisher: EventPublisher = {
     publish: (event) => {

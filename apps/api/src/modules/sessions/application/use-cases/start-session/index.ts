@@ -1,3 +1,4 @@
+import { PracticeNotAllowedError } from '@/modules/sessions/domain/errors/practice-not-allowed-error/index.js'
 import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/session-already-running-error/index.js'
 import { ThemeUnavailableError } from '@/modules/sessions/domain/errors/theme-unavailable-error/index.js'
 import { SessionStarted } from '@/modules/sessions/domain/events/session-started/index.js'
@@ -17,6 +18,10 @@ export class StartSessionUseCase {
       categorySlug: input.categorySlug,
       searchWindowMinutes: input.searchWindowMinutes,
     })
+
+    const allowed = await this.dependencies.accounts.canStartPractice(input.accountId)
+    if (!allowed) throw new PracticeNotAllowedError(input.accountId)
+
     const activeSession = await this.dependencies.sessions.findActiveByAccountId(input.accountId)
     const now = this.dependencies.clock.now()
 

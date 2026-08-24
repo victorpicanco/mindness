@@ -14,6 +14,7 @@ describe('AccountsPortAdapter', () => {
     const accountsFacade: AccountsIdentityReader = {
       authenticate: () => Promise.resolve({ accountId: 'account-1' }),
       getAccountSnapshot: () => Promise.resolve(null),
+      canStartPractice: () => Promise.resolve(true),
     }
     const adapter = new AccountsPortAdapter(accountsFacade)
 
@@ -24,6 +25,7 @@ describe('AccountsPortAdapter', () => {
     const accountsFacade: AccountsIdentityReader = {
       authenticate: () => Promise.resolve({ accountId: null }),
       getAccountSnapshot: () => Promise.resolve(null),
+      canStartPractice: () => Promise.resolve(true),
     }
     const adapter = new AccountsPortAdapter(accountsFacade)
 
@@ -35,6 +37,7 @@ describe('AccountsPortAdapter', () => {
     const accountsFacade: AccountsIdentityReader = {
       authenticate: () => Promise.reject(error),
       getAccountSnapshot: () => Promise.resolve(null),
+      canStartPractice: () => Promise.resolve(true),
     }
     const adapter = new AccountsPortAdapter(accountsFacade)
 
@@ -51,6 +54,7 @@ describe('AccountsPortAdapter', () => {
           createdAt: new Date('2026-08-22T00:00:00.000Z'),
           timeZone: 'America/Sao_Paulo',
         }),
+      canStartPractice: () => Promise.resolve(true),
     }
     const adapter = new AccountsPortAdapter(accountsFacade)
 
@@ -64,9 +68,21 @@ describe('AccountsPortAdapter', () => {
     const accountsFacade: AccountsIdentityReader = {
       authenticate: () => Promise.resolve({ accountId: null }),
       getAccountSnapshot: () => Promise.resolve(null),
+      canStartPractice: () => Promise.resolve(true),
     }
     const adapter = new AccountsPortAdapter(accountsFacade)
 
     await expect(adapter.findProfile('missing-account')).resolves.toBeNull()
+  })
+
+  it('delegates canStartPractice to the accounts facade', async () => {
+    const accountsFacade: AccountsIdentityReader = {
+      authenticate: () => Promise.resolve({ accountId: null }),
+      getAccountSnapshot: () => Promise.resolve(null),
+      canStartPractice: () => Promise.resolve(false),
+    }
+    const adapter = new AccountsPortAdapter(accountsFacade)
+
+    await expect(adapter.canStartPractice('account-1')).resolves.toBe(false)
   })
 })

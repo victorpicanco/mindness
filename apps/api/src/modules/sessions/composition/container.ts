@@ -158,7 +158,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
       clock: deps.clock,
     }),
     resolveAccountIdentity: new ResolveAccountIdentityUseCase({ accounts }),
-    startSession: new StartSessionUseCase({ ...expirationDependencies, themes }),
+    startSession: new StartSessionUseCase({ ...expirationDependencies, themes, accounts }),
     sweepExpiredSessions: new SweepExpiredSessionsUseCase({
       ...expirationDependencies,
       defaultLimit: deps.sweepLimit ?? DEFAULT_SWEEP_LIMIT,

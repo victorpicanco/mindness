@@ -68,6 +68,7 @@ function createHarness(params: {
           ? { plan: 'free', timeZone: 'America/Sao_Paulo' }
           : params.profile,
       ),
+    canStartPractice: () => Promise.resolve(true),
   }
   return {
     completedBetweenCalls: () => completedBetweenCalls,

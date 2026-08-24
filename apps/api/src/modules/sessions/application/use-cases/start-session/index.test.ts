@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
+import { PracticeNotAllowedError } from '@/modules/sessions/domain/errors/practice-not-allowed-error/index.js'
 import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/session-already-running-error/index.js'
 import { ThemeUnavailableError } from '@/modules/sessions/domain/errors/theme-unavailable-error/index.js'
+import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { EventPublisher } from '@/modules/sessions/domain/ports/event-publisher/index.js'
 import type { IdGenerator } from '@/modules/sessions/domain/ports/id-generator/index.js'
 import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
@@ -53,15 +55,23 @@ function createDependencies(input?: {
   readonly eligibleTheme?: { readonly themeId: string; readonly title?: string } | null
   readonly quotaError?: Error
   readonly saveError?: Error
+  readonly practiceAllowed?: boolean
 }) {
   const saved: Session[] = []
   const events = new FakeEventBus()
   const operations: string[] = []
   const quotaCalls: string[] = []
   const themeCalls: string[] = []
+  const accountsCalls: string[] = []
   const releasedSessionIds: string[] = []
   let transactionRuns = 0
   let nextId = 0
+  const accounts: Pick<AccountsPort, 'canStartPractice'> = {
+    canStartPractice: (accountId) => {
+      accountsCalls.push(accountId)
+      return Promise.resolve(input?.practiceAllowed ?? true)
+    },
+  }
   const sessions: SessionsRepository = {
     findById: () => Promise.resolve(input?.activeSession ?? null),
     findActiveByAccountId: () => Promise.resolve(input?.activeSession ?? null),
@@ -122,6 +132,7 @@ function createDependencies(input?: {
     operations,
     quotaCalls,
     themeCalls,
+    accountsCalls,
     releasedSessionIds,
     saved,
     transactionRuns: () => transactionRuns,
@@ -129,6 +140,7 @@ function createDependencies(input?: {
       sessions,
       themes,
       quota,
+      accounts,
       clock: { now: () => NOW },
       eventPublisher,
       idGenerator,
@@ -138,6 +150,23 @@ function createDependencies(input?: {
 }
 
 describe('StartSessionUseCase', () => {
+  it('rejects starting a session without a current consent, before drawing a theme or reserving quota', async () => {
+    const harness = createDependencies({
+      eligibleTheme: { themeId: 'theme-2' },
+      practiceAllowed: false,
+    })
+    const useCase = new StartSessionUseCase(harness.dependencies)
+
+    await expect(useCase.execute(VALID_INPUT)).rejects.toEqual(
+      new PracticeNotAllowedError('account-1'),
+    )
+
+    expect(harness.accountsCalls).toEqual(['account-1'])
+    expect(harness.themeCalls).toEqual([])
+    expect(harness.quotaCalls).toEqual([])
+    expect(harness.saved).toHaveLength(0)
+  })
+
   it('rejects a new session while the account has an unexpired session in progress', async () => {
     const harness = createDependencies({
       activeSession: createSession('session-1', new Date('2026-08-18T23:50:00.000Z')),

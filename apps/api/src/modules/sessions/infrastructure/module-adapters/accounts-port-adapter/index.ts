@@ -4,7 +4,10 @@ import type {
   AccountsPort,
 } from '@/modules/sessions/domain/ports/accounts-port/index.js'
 
-export type AccountsIdentityReader = Pick<AccountsFacade, 'authenticate' | 'getAccountSnapshot'>
+export type AccountsIdentityReader = Pick<
+  AccountsFacade,
+  'authenticate' | 'getAccountSnapshot' | 'canStartPractice'
+>
 
 export class AccountsPortAdapter implements AccountsPort {
   constructor(private readonly accountsFacade: AccountsIdentityReader) {}
@@ -17,5 +20,9 @@ export class AccountsPortAdapter implements AccountsPort {
   async findProfile(accountId: string): Promise<AccountProfile | null> {
     const snapshot = await this.accountsFacade.getAccountSnapshot(accountId)
     return snapshot === null ? null : { plan: snapshot.plan, timeZone: snapshot.timeZone }
+  }
+
+  canStartPractice(accountId: string): Promise<boolean> {
+    return this.accountsFacade.canStartPractice(accountId)
   }
 }

@@ -30,6 +30,7 @@ export interface FakeAccountsPort extends AccountsPort {
     accountId: string,
     profile: { readonly plan: AccountPlan; readonly timeZone: string },
   ): void
+  denyPractice(accountId: string): void
   reset(): void
 }
 
@@ -100,19 +101,25 @@ export function createFakeAccountsPort(): FakeAccountsPort {
     string,
     { readonly plan: AccountPlan; readonly timeZone: string }
   >()
+  const deniedPracticeAccountIds = new Set<string>()
 
   return {
     resolveAccountId: (accessToken) => Promise.resolve(accountsByToken.get(accessToken) ?? null),
     findProfile: (accountId) => Promise.resolve(profilesByAccountId.get(accountId) ?? null),
+    canStartPractice: (accountId) => Promise.resolve(!deniedPracticeAccountIds.has(accountId)),
     registerIdentity: (accessToken, accountId) => {
       accountsByToken.set(accessToken, accountId)
     },
     registerProfile: (accountId, profile) => {
       profilesByAccountId.set(accountId, profile)
     },
+    denyPractice: (accountId) => {
+      deniedPracticeAccountIds.add(accountId)
+    },
     reset: () => {
       accountsByToken.clear()
       profilesByAccountId.clear()
+      deniedPracticeAccountIds.clear()
     },
   }
 }

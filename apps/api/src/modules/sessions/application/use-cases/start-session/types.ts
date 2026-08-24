@@ -1,3 +1,4 @@
+import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { Clock } from '@/modules/sessions/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/sessions/domain/ports/event-publisher/index.js'
 import type { IdGenerator } from '@/modules/sessions/domain/ports/id-generator/index.js'
@@ -25,6 +26,7 @@ export interface StartSessionDependencies {
   readonly sessions: SessionsRepository
   readonly themes: ThemesPort
   readonly quota: QuotaPort
+  readonly accounts: Pick<AccountsPort, 'canStartPractice'>
   readonly clock: Clock
   readonly eventPublisher: EventPublisher
   readonly idGenerator: IdGenerator

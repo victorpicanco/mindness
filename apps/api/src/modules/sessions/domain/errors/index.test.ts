@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { AudioSizeRejectedError } from '@/modules/sessions/domain/errors/audio-size-rejected-error/index.js'
 import { AudioUploadFailedError } from '@/modules/sessions/domain/errors/audio-upload-failed-error/index.js'
 import { AudioValidationRejectedError } from '@/modules/sessions/domain/errors/audio-validation-rejected-error/index.js'
+import { PracticeNotAllowedError } from '@/modules/sessions/domain/errors/practice-not-allowed-error/index.js'
 import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/session-already-running-error/index.js'
 import { SessionAuthenticationRejectedError } from '@/modules/sessions/domain/errors/session-authentication-rejected-error/index.js'
 import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
@@ -68,6 +69,12 @@ describe('session domain errors', () => {
       'sessions.AUDIO_UNAVAILABLE',
       404,
       { sessionId: 'session-1' },
+    ],
+    [
+      new PracticeNotAllowedError('account-1'),
+      'sessions.PRACTICE_NOT_ALLOWED',
+      403,
+      { accountId: 'account-1' },
     ],
   ])('has the expected code, HTTP status, and context', (error, code, httpStatus, context) => {
     expect(error).toBeInstanceOf(BaseError)

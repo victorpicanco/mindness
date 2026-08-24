@@ -92,6 +92,7 @@ function createDependencies(
       accounts: {
         resolveAccountId: () => Promise.resolve(null),
         findProfile: () => Promise.resolve(null),
+        canStartPractice: () => Promise.resolve(true),
       },
       themes: {
         drawEligibleTheme: () => Promise.resolve(null),

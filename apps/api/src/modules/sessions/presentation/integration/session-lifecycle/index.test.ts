@@ -74,6 +74,24 @@ describe('session lifecycle integration', () => {
     })
   })
 
+  it('rejects starting a session for an account without a current consent', async () => {
+    harness.accounts.denyPractice(ACCOUNT_ID)
+
+    const response = await harness.app.inject({
+      method: 'POST',
+      url: '/sessions',
+      headers: { authorization: 'Bearer access-token' },
+      payload: { difficulty: 'balanced', categorySlug: 'focus', searchWindowMinutes: 4 },
+    })
+
+    expect(response.statusCode).toBe(403)
+    assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 403)
+    expect(response.json()).toMatchObject({ error: { code: 'sessions.PRACTICE_NOT_ALLOWED' } })
+    await expect(harness.prisma.session.count()).resolves.toBe(0)
+    expect(harness.quota.reserveCalls).toHaveLength(0)
+    expect(harness.eventBus.published).toHaveLength(0)
+  })
+
   it('returns the drawn theme title when the active session is reloaded', async () => {
     await harness.app.inject({
       method: 'POST',

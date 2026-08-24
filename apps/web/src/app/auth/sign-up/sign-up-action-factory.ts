@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { passwordSchema } from '../password-policy'
 import { apiErrorDetails } from '@/lib/api/api-error'
 import { apiFetch } from '@/lib/api/server-client'
 import type { writeSessionCookies } from '@/lib/auth/session'
@@ -8,7 +9,7 @@ import { type SignUpActionState } from './types'
 
 const credentialsSchema = z.object({
   email: z.email().max(254),
-  password: z.string().min(12).max(64),
+  password: passwordSchema,
 })
 
 const signUpResponseSchema = z.object({ message: z.string() })

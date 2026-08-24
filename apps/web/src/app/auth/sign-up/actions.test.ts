@@ -52,6 +52,34 @@ describe('signUpAction', () => {
     expect(requests).toEqual([])
   })
 
+  it('rejects passwords that do not meet the required character sets before calling the API', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+    const signUpAction = createSignUpAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: (input, init) => {
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(Response.json({ data: { message: 'unexpected' } }))
+      },
+    })
+
+    const result = await signUpAction(
+      initialSignUpActionState,
+      createFormData({
+        email: 'person@example.com',
+        password: 'valid-password',
+        captchaToken: 'captcha-token',
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'validation-error',
+      messageKey: 'errors.invalidPassword',
+    })
+    expect(requests).toEqual([])
+  })
+
   it('returns the email confirmation state without writing a session', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const signUpAction = createSignUpAction({
@@ -71,7 +99,7 @@ describe('signUpAction', () => {
       initialSignUpActionState,
       createFormData({
         email: 'person@example.com',
-        password: 'valid-password',
+        password: 'Valid_password1!',
         captchaToken: 'captcha-token',
       }),
     )
@@ -106,7 +134,7 @@ describe('signUpAction', () => {
       initialSignUpActionState,
       createFormData({
         email: 'person@example.com',
-        password: 'valid-password',
+        password: 'Valid_password1!',
         captchaToken: 'captcha-token',
       }),
     )

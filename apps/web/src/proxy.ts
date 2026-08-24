@@ -11,9 +11,9 @@ function createContentSecurityPolicy(nonce: string): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${developmentSource}`,
-    `style-src 'self' 'nonce-${nonce}'`,
+    `style-src 'self' 'nonce-${nonce}' https://use.hugeicons.com`,
     "img-src 'self' blob: data:",
-    "font-src 'self'",
+    "font-src 'self' https://use.hugeicons.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

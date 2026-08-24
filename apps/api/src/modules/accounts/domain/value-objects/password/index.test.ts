@@ -9,8 +9,12 @@ describe('Password', () => {
     expect(Password.create('Strong_password1!').value).toBe('Strong_password1!')
   })
 
+  it('accepts an eight-character password that meets every complexity requirement', () => {
+    expect(Password.create('Abcdef1!').value).toBe('Abcdef1!')
+  })
+
   it.each([
-    ['shorter than the minimum length', 'Short_1!'],
+    ['shorter than the minimum length', 'Abcde1!'],
     ['without a lower case letter', 'STRONG_PASSWORD1!'],
     ['without an upper case letter', 'strong_password1!'],
     ['without a digit', 'Strong_password!!'],

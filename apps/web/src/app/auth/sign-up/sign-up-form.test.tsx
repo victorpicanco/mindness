@@ -31,6 +31,22 @@ function renderSignUpForm(element: ReactElement) {
 describe('SignUpForm', () => {
   afterEach(cleanup)
 
+  it('shows the Supabase password requirements and marks satisfied requirements', () => {
+    renderSignUpForm(<SignUpForm action={validSignUpAction()} />)
+
+    const requirementList = screen.getByRole('list', { name: 'Requisitos da senha' })
+
+    expect(requirementList).toHaveTextContent('Pelo menos 8 caracteres')
+    expect(requirementList).toHaveTextContent('Uma letra minúscula')
+    expect(requirementList).toHaveTextContent('Uma letra maiúscula')
+    expect(requirementList).toHaveTextContent('Um número')
+    expect(requirementList).toHaveTextContent('Um símbolo')
+
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Abcdef1!' } })
+
+    expect(requirementList.querySelectorAll('[data-satisfied="true"]')).toHaveLength(5)
+  })
+
   it('submits valid credentials and shows the email confirmation state', async () => {
     const submittedFormData: FormData[] = []
     const signUpAction: SignUpAction = async (state, formData) => {
@@ -43,7 +59,10 @@ describe('SignUpForm', () => {
 
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
     fireEvent.change(screen.getByLabelText('Senha'), {
-      target: { value: 'a-valid-password' },
+      target: { value: 'Valid_password1!' },
+    })
+    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
+      target: { value: 'Valid_password1!' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
 
@@ -53,6 +72,28 @@ describe('SignUpForm', () => {
 
     expect(submittedFormData).toHaveLength(1)
     expect(submittedFormData[0]?.get('email')).toBe('person@example.com')
+  })
+
+  it('rejects a password confirmation that differs from the password without submitting', () => {
+    let submissions = 0
+    const signUpAction: SignUpAction = () => {
+      submissions += 1
+
+      return Promise.resolve(initialSignUpActionState)
+    }
+
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
+
+    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Valid_password1!' } })
+    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
+      target: { value: 'Different_password1!' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('As senhas não coincidem.')
+    expect(screen.getByLabelText('Confirme sua senha')).toHaveAttribute('aria-invalid', 'true')
+    expect(submissions).toBe(0)
   })
 
   it('announces invalid email and password values through their fields without submitting', () => {
@@ -88,7 +129,10 @@ describe('SignUpForm', () => {
     renderSignUpForm(<SignUpForm action={signUpAction} />)
 
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
-    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'a-valid-password' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Valid_password1!' } })
+    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
+      target: { value: 'Valid_password1!' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
 
     expect(
@@ -108,7 +152,10 @@ describe('SignUpForm', () => {
     renderSignUpForm(<SignUpForm action={signUpAction} />)
 
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
-    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'a-valid-password' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Valid_password1!' } })
+    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
+      target: { value: 'Valid_password1!' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
 
     expect(

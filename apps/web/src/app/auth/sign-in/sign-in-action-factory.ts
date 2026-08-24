@@ -8,7 +8,7 @@ import type { SignInActionState } from './types'
 
 const credentialsSchema = z.object({
   email: z.email().max(254),
-  password: z.string().min(12).max(64),
+  password: z.string().min(8).max(64),
 })
 
 const signInResponseSchema = z.object({

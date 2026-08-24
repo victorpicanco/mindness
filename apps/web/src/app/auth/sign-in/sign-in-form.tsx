@@ -8,6 +8,7 @@ import { initialSignInActionState, type SignInActionState } from './types'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { describeApiError } from '@/lib/errors/api-error-presentation'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
 
@@ -80,11 +81,12 @@ export function SignInForm({ action = signInAction }: SignInFormProps) {
           />
         </Field>
         <Field label={t('signIn.passwordLabel')}>
-          <Input
+          <PasswordInput
             autoComplete="current-password"
+            hidePasswordLabel={t('password.hide')}
             name="password"
             placeholder={t('signIn.passwordPlaceholder')}
-            type="password"
+            showPasswordLabel={t('password.show')}
           />
         </Field>
       </div>

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { REDIRECT_PARAM_NAME, SIGNED_IN_HOME } from '@/lib/auth/redirect-target'
 import { hasLiveSession } from '@/lib/auth/session'
 
-const protectedRoutePrefixes = ['/practice', '/history']
+const protectedRoutePrefixes = ['/', '/practice', '/history']
 
 // Routes whose only purpose is to start a session. Reaching them with a live
 // session is always a dead end; /auth/callback and /auth/confirm are

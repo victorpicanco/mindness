@@ -42,6 +42,13 @@ function redirectTarget(response: Response): string {
 
 describe('proxy', () => {
   describe('routes that need a session', () => {
+    it('redirects an unauthenticated request to the home route to sign-in', () => {
+      const response = proxy(request('/'))
+
+      expect(response.status).toBe(307)
+      expect(redirectTarget(response)).toBe('/auth/sign-in?redirect=%2F')
+    })
+
     it('redirects an unauthenticated request to a protected route to sign-in', () => {
       const response = proxy(request('/practice'))
 
@@ -114,14 +121,14 @@ describe('proxy', () => {
       const response = proxy(request(path, signedIn()))
 
       expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe('/practice')
+      expect(redirectTarget(response)).toBe('/')
     })
 
     it('sends a visitor whose access token is merely stale away from sign-in', () => {
       const response = proxy(request('/auth/sign-in', staleAccessToken()))
 
       expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe('/practice')
+      expect(redirectTarget(response)).toBe('/')
     })
 
     it('lets an expired session reach the sign-in route instead of looping', () => {
@@ -154,7 +161,7 @@ describe('proxy', () => {
     })
 
     it('exposes the nonce to the app so inline scripts can carry it', () => {
-      const response = proxy(request('/'))
+      const response = proxy(request('/', signedIn()))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
       const nonce = /'nonce-([^']+)'/u.exec(contentSecurityPolicy)?.[1]
 

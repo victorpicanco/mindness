@@ -101,7 +101,7 @@ describe('signInAction', () => {
     expect(requests).toEqual([])
   })
 
-  it('writes session cookies and redirects an existing account to practice', async () => {
+  it('writes session cookies and redirects an existing account home', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const cookieStore = new InMemoryCookieStore()
     const requests: Request[] = []
@@ -137,7 +137,7 @@ describe('signInAction', () => {
       }),
     )
 
-    await expect(result).rejects.toMatchObject({ path: '/practice' })
+    await expect(result).rejects.toMatchObject({ path: '/' })
     expect(cookieStore.values).toEqual(
       new Map([
         ['mindness_access_token', 'access-token'],
@@ -312,6 +312,6 @@ describe('signInAction redirect target', () => {
       createFormData({ ...credentials, redirectTo: 'https://evil.test/practice' }),
     )
 
-    await expect(result).rejects.toMatchObject({ path: '/practice' })
+    await expect(result).rejects.toMatchObject({ path: '/' })
   })
 })

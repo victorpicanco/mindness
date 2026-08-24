@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import { provisionAccount } from '@/lib/auth/provision-account'
+import { SIGNED_IN_HOME } from '@/lib/auth/redirect-target'
 import { writeSessionCookies } from '@/lib/auth/session'
 
 type CookieStore = Parameters<typeof writeSessionCookies>[0]
@@ -41,7 +42,7 @@ export function createGoogleCallbackRouteHandler({
 
     if (provisionError !== null) return signInWithError(request, provisionError.code)
 
-    return redirect(request, '/practice')
+    return redirect(request, SIGNED_IN_HOME)
   }
 }
 

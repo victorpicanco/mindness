@@ -32,7 +32,7 @@ afterEach(() => {
 })
 
 describe('Google callback route', () => {
-  it('writes session cookies and redirects to practice when both tokens are present', async () => {
+  it('writes session cookies and redirects home when both tokens are present', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const cookieStore = new InMemoryCookieStore()
     const handler = createGoogleCallbackRouteHandler({
@@ -43,7 +43,7 @@ describe('Google callback route', () => {
     const response = await handler(new Request(callbackUrl))
 
     expect(response.status).toBe(302)
-    expect(response.headers.get('location')).toBe('https://web.mindness.test/practice')
+    expect(response.headers.get('location')).toBe('https://web.mindness.test/')
     expect(cookieStore.values).toEqual(
       new Map([
         ['mindness_access_token', 'access-token'],

@@ -2,28 +2,28 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import HomePage from './page'
+import ShowcasePage from './page'
 import { messages } from '@/i18n/messages'
 
-function renderHomePage() {
+function renderShowcasePage() {
   return render(
     <NextIntlClientProvider locale="pt-BR" messages={messages}>
-      <HomePage />
+      <ShowcasePage />
     </NextIntlClientProvider>,
   )
 }
 
-describe('HomePage', () => {
+describe('ShowcasePage', () => {
   afterEach(cleanup)
 
   it('renders the main heading', () => {
-    renderHomePage()
+    renderShowcasePage()
 
     expect(screen.getByRole('heading', { level: 1, name: 'Mindness' })).toBeInTheDocument()
   })
 
   it('shows the temporary component showcase', () => {
-    renderHomePage()
+    renderShowcasePage()
 
     expect(screen.getByRole('heading', { level: 2, name: 'Botões' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Campos e seleção' })).toBeInTheDocument()

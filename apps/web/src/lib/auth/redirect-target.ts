@@ -1,6 +1,6 @@
 export const REDIRECT_PARAM_NAME = 'redirect'
 export const REDIRECT_FIELD_NAME = 'redirectTo'
-export const SIGNED_IN_HOME = '/practice'
+export const SIGNED_IN_HOME = '/'
 
 const LOCAL_ORIGIN = 'https://redirect-target.invalid'
 

@@ -98,21 +98,29 @@ describe('SignUpForm', () => {
     expect(requirementList.querySelectorAll('[data-satisfied="true"]')).toHaveLength(5)
   })
 
-  it('submits valid credentials and shows the email confirmation state', async () => {
+  it('submits valid credentials and notifies the page of the email confirmation state', async () => {
     const submittedFormData: FormData[] = []
+    let successNotifications = 0
     const signUpAction: SignUpAction = async (state, formData) => {
       submittedFormData.push(formData)
 
       return validSignUpAction()(state, formData)
     }
 
-    renderSignUpForm(<SignUpForm action={signUpAction} />)
+    renderSignUpForm(
+      <SignUpForm
+        action={signUpAction}
+        onSuccess={() => {
+          successNotifications += 1
+        }}
+      />,
+    )
     await verifyCaptcha()
     fillCredentials()
     submit()
 
     await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('Verifique seu e-mail para continuar.')
+      expect(successNotifications).toBe(1)
     })
 
     expect(submittedFormData).toHaveLength(1)

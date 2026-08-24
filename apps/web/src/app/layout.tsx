@@ -41,7 +41,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link href="https://use.hugeicons.com/font/icons.css" rel="stylesheet" />
-        <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} nonce={nonce} />
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
+          nonce={nonce}
+          suppressHydrationWarning
+        />
       </head>
       <body>
         <NextIntlClientProvider>

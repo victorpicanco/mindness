@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { signUpAction } from './actions'
 import { PasswordChecklist } from './password-checklist'
@@ -18,6 +18,7 @@ import { useAuthForm, type AuthFieldErrors, type AuthFormAction } from '../use-a
 
 type SignUpFormProps = {
   readonly action?: AuthFormAction
+  readonly onSuccess?: () => void
 }
 
 function validate(formData: FormData): AuthFieldErrors {
@@ -39,7 +40,7 @@ function validate(formData: FormData): AuthFieldErrors {
   return errors
 }
 
-export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
+export function SignUpForm({ action = signUpAction, onSuccess }: SignUpFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
   const [password, setPassword] = useState('')
@@ -49,8 +50,16 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
   const alertMessageKey =
     siteKey === undefined ? 'auth.errors.captchaUnavailable' : form.inlineMessageKey
 
-  if (form.state.status === 'success') {
-    return <p role="status">{t('signUp.success')}</p>
+  const hasSucceeded = form.state.status === 'success'
+
+  useEffect(() => {
+    if (hasSucceeded) {
+      onSuccess?.()
+    }
+  }, [hasSucceeded, onSuccess])
+
+  if (hasSucceeded) {
+    return null
   }
 
   return (

@@ -1,10 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import type { UpdatePasswordUseCase } from '@/modules/accounts/application/use-cases/update-password/index.js'
-import {
-  readBearerToken,
-  requireAuthenticatedIdentity,
-} from '@/modules/accounts/presentation/middleware/authenticated-identity/index.js'
+import { requireAuthenticatedIdentity } from '@/modules/accounts/presentation/middleware/authenticated-identity/index.js'
 import { ok } from '@/shared/http/envelope/index.js'
 
 import type { UpdatePasswordBody } from './schemas.js'
@@ -18,7 +15,6 @@ export class UpdatePasswordController {
   ): Promise<void> {
     const identity = requireAuthenticatedIdentity(request)
     const output = await this.useCase.execute({
-      accessToken: readBearerToken(request),
       authUserId: identity.authUserId,
       password: request.body.password,
     })

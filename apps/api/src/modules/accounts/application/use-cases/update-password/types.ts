@@ -1,5 +1,4 @@
 export interface UpdatePasswordInput {
-  readonly accessToken: string
   readonly authUserId: string
   readonly password: string
 }

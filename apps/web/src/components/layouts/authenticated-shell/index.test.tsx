@@ -11,7 +11,7 @@ function renderShell(
   children: ReactNode,
   isInitiallyExpanded = true,
   pathname = '/',
-  quota = { allowance: 4, remaining: 4, renewsAt: '2026-08-24T12:05:00.000Z' },
+  header: ReactNode = <span>Header content</span>,
 ) {
   return render(
     <PathnameContext.Provider value={pathname}>
@@ -19,7 +19,7 @@ function renderShell(
         <AuthenticatedShell
           initialIsExpanded={isInitiallyExpanded}
           preferenceCookieName="mindness-sidebar-expanded"
-          quota={quota}
+          {...(header === undefined ? {} : { header })}
         >
           {children}
         </AuthenticatedShell>
@@ -131,12 +131,30 @@ describe('AuthenticatedShell', () => {
     expect(within(header).getByLabelText('Abrir navegação')).toBeInTheDocument()
   })
 
-  it('places the remaining session quota in the header', () => {
-    renderShell(<p>Content</p>)
+  it('places the given header content beside the mobile navigation trigger', () => {
+    renderShell(<p>Content</p>, true, '/', <span>4/4 sessões restantes</span>)
 
-    expect(
-      within(screen.getByRole('banner')).getByText('4/4 sessões restantes'),
-    ).toBeInTheDocument()
+    const header = screen.getByRole('banner')
+
+    expect(within(header).getByText('4/4 sessões restantes')).toBeInTheDocument()
+    expect(within(header).getByLabelText('Abrir navegação')).toBeInTheDocument()
+  })
+
+  it('renders only the mobile navigation trigger when no header content is provided', () => {
+    render(
+      <PathnameContext.Provider value="/">
+        <NextIntlClientProvider locale="pt-BR" messages={messages}>
+          <AuthenticatedShell initialIsExpanded preferenceCookieName="mindness-sidebar-expanded">
+            <p>Content</p>
+          </AuthenticatedShell>
+        </NextIntlClientProvider>
+      </PathnameContext.Provider>,
+    )
+
+    const header = screen.getByRole('banner')
+
+    expect(within(header).getByLabelText('Abrir navegação')).toBeInTheDocument()
+    expect(header.querySelector('.ml-auto')).not.toBeInTheDocument()
   })
 
   it('opens the mobile sidebar from its toggle and closes it from the backdrop', () => {

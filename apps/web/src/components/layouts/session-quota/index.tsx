@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 
-interface SessionQuotaProps {
+export interface SessionQuotaProps {
   readonly allowance: number
   readonly remaining: number
   readonly renewsAt: string

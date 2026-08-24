@@ -1,11 +1,17 @@
+import { cookies } from 'next/headers'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 
+import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
+import { SessionQuota } from '@/components/layouts/session-quota'
+import type { SessionQuotaProps } from '@/components/layouts/session-quota'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { apiFetch } from '@/lib/api/server-client'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
+
+const SIDEBAR_PREFERENCE_COOKIE_NAME = 'mindness-sidebar-expanded'
 
 const categoriesSchema = z.array(
   z.object({
@@ -14,6 +20,16 @@ const categoriesSchema = z.array(
     slug: z.string(),
   }),
 )
+
+const quotaSchema = z.discriminatedUnion('enforced', [
+  z.object({
+    allowance: z.number().nonnegative(),
+    enforced: z.literal(true),
+    remaining: z.number().nonnegative(),
+    renewsAt: z.iso.datetime(),
+  }),
+  z.object({ enforced: z.literal(false) }),
+])
 
 const activeSessionSchema = z
   .object({
@@ -47,6 +63,16 @@ async function getPracticeTranslations(): Promise<PracticeTranslations> {
   const t = await getTranslations('home.practice')
 
   return (key) => t(key)
+}
+
+function sessionQuotaSummary(quota: z.output<typeof quotaSchema>): SessionQuotaProps | null {
+  if (!quota.enforced) return null
+
+  return {
+    allowance: quota.allowance,
+    remaining: quota.remaining,
+    renewsAt: quota.renewsAt,
+  }
 }
 
 function initialPracticeSession(
@@ -124,4 +150,33 @@ export function createHomePage(
   }
 }
 
-export default createHomePage(apiFetch)
+const HomePageContent = createHomePage(apiFetch)
+
+export default async function HomePage() {
+  const [cookieStore, quota] = await Promise.all([
+    cookies(),
+    apiFetch('/sessions/quota', { cache: 'no-store', schema: quotaSchema }),
+  ])
+  const isSidebarExpanded = cookieStore.get(SIDEBAR_PREFERENCE_COOKIE_NAME)?.value !== 'false'
+  const summary = sessionQuotaSummary(quota)
+
+  return (
+    <AuthenticatedShell
+      initialIsExpanded={isSidebarExpanded}
+      preferenceCookieName={SIDEBAR_PREFERENCE_COOKIE_NAME}
+      {...(summary === null
+        ? {}
+        : {
+            header: (
+              <SessionQuota
+                allowance={summary.allowance}
+                remaining={summary.remaining}
+                renewsAt={summary.renewsAt}
+              />
+            ),
+          })}
+    >
+      <HomePageContent />
+    </AuthenticatedShell>
+  )
+}

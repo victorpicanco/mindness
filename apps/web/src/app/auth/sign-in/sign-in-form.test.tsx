@@ -98,7 +98,7 @@ describe('SignInForm', () => {
 
     expect(
       screen.getByText(
-        'Ao criar sua conta, você aceita os termos de uso e a política de privacidade. Sua voz será gravada e analisada para gerar sua devolutiva. O áudio é retido por 30 dias.',
+        'Ao criar sua conta, você aceita os termos de uso e a política de privacidade.',
       ),
     ).toBeInTheDocument()
 

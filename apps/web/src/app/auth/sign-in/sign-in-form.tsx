@@ -86,7 +86,7 @@ export function SignInForm({ action = signInAction, initialError, redirectTo }: 
         >
           {t('signIn.google')}
         </a>
-        <p className="text-sm text-text-muted">{t('consent.notice')}</p>
+        <p className="text-xs text-text-muted">{t('consent.notice')}</p>
         <div className="flex items-center gap-3 text-xs text-text-muted" role="separator">
           <span className="h-px flex-1 bg-divider" />
           {t('signIn.divider')}

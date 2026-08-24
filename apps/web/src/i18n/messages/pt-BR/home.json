@@ -27,6 +27,24 @@
   },
   "feedback": {
     "title": "Preparando sua prática",
-    "description": "O indicador inclui um rótulo de status visualmente oculto."
+    "description": "O indicador inclui um rótulo de status visualmente oculto.",
+    "toasts": {
+      "info": {
+        "button": "Informativo",
+        "message": "Este é um toast informativo."
+      },
+      "success": {
+        "button": "Sucesso",
+        "message": "Ação concluída com sucesso."
+      },
+      "warning": {
+        "button": "Aviso",
+        "message": "Atenção: revise esta informação."
+      },
+      "error": {
+        "button": "Erro",
+        "message": "Não foi possível concluir a ação."
+      }
+    }
   }
 }

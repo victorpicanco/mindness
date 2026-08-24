@@ -42,9 +42,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body>
         <NextIntlClientProvider>
           <Providers>
-            <ThemeProvider>{children}</ThemeProvider>
+            <ThemeProvider>
+              {children}
+              <ToastProvider />
+            </ThemeProvider>
           </Providers>
-          <ToastProvider />
         </NextIntlClientProvider>
       </body>
     </html>

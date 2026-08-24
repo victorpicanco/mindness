@@ -1,3 +1,6 @@
+import { useTranslations } from 'next-intl'
+
+import { ToastTrigger } from '@/components/showcase/toast-trigger'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -72,9 +75,11 @@ export default function HomePage() {
               <p className="text-sm text-text-muted">{t('feedback.description')}</p>
             </div>
           </Surface>
+          <Surface>
+            <ToastTrigger />
+          </Surface>
         </section>
       </div>
     </main>
   )
 }
-import { useTranslations } from 'next-intl'

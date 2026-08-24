@@ -46,6 +46,24 @@ describe('AuthenticatedShell', () => {
     expect(progressLink.querySelector('.hgi-chart-increase')).toBeInTheDocument()
   })
 
+  it('renders a submit control for signing out in desktop and mobile sidebars', () => {
+    renderShell(<p>Content</p>)
+
+    const railSidebar = screen.getByRole('complementary')
+    const railSignOut = within(railSidebar).getByRole('button', { name: 'Sair' })
+
+    expect(railSignOut).toHaveAttribute('type', 'submit')
+    expect(railSignOut.closest('form')).not.toBeNull()
+
+    fireEvent.click(within(screen.getByRole('banner')).getByLabelText('Abrir navegação'))
+
+    const mobileSidebar = screen.getByRole('dialog', { name: 'Navegação do aplicativo' })
+    const mobileSignOut = within(mobileSidebar).getByRole('button', { name: 'Sair' })
+
+    expect(mobileSignOut).toHaveAttribute('type', 'submit')
+    expect(mobileSignOut.closest('form')).not.toBeNull()
+  })
+
   it('highlights the navigation item matching the current route', () => {
     renderShell(<p>Content</p>, true, '/history')
 

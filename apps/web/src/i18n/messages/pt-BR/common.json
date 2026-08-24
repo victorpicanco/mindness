@@ -24,6 +24,7 @@
     "navigationLabel": "Navegação do aplicativo",
     "primaryNavigationLabel": "Navegação principal",
     "newSession": "Nova sessão",
-    "progress": "Seu progresso"
+    "progress": "Seu progresso",
+    "signOut": "Sair"
   }
 }

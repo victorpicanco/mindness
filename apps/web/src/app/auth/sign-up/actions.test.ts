@@ -52,6 +52,34 @@ describe('signUpAction', () => {
     expect(requests).toEqual([])
   })
 
+  it('requires a captcha token before calling the API', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+    const signUpAction = createSignUpAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: (input, init) => {
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(Response.json({ data: {} }))
+      },
+    })
+
+    const result = await signUpAction(
+      initialSignUpActionState,
+      createFormData({
+        email: 'person@example.com',
+        password: 'Valid_password1!',
+        captchaToken: '',
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'validation-error',
+      messageKey: 'errors.captchaRequired',
+    })
+    expect(requests).toEqual([])
+  })
+
   it('rejects passwords that do not meet the required character sets before calling the API', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const requests: Request[] = []

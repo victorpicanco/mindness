@@ -20,7 +20,15 @@ async function confirmedPasswordSession(email: string): Promise<string> {
     url: '/auth/sign-up',
     payload: { email, password, captchaToken },
   })
-  harness.authIdentityProvider.confirmEmail(email)
+  const tokenHash = harness.authIdentityProvider.emailConfirmationTokenFor(email)
+  if (tokenHash !== null) {
+    const confirmation = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/email/confirm',
+      payload: { tokenHash, type: 'email' },
+    })
+    expect(confirmation.statusCode).toBe(200)
+  }
   const response = await harness.app.inject({
     method: 'POST',
     url: '/auth/sign-in',
@@ -37,7 +45,13 @@ async function confirmedPasswordTokens(
     url: '/auth/sign-up',
     payload: { email, password, captchaToken },
   })
-  harness.authIdentityProvider.confirmEmail(email)
+  const tokenHash = harness.authIdentityProvider.emailConfirmationTokenFor(email)
+  const confirmation = await harness.app.inject({
+    method: 'POST',
+    url: '/auth/email/confirm',
+    payload: { tokenHash, type: 'email' },
+  })
+  expect(confirmation.statusCode).toBe(200)
   const response = await harness.app.inject({
     method: 'POST',
     url: '/auth/sign-in',
@@ -101,6 +115,95 @@ beforeEach(async () => {
 })
 
 describe('authentication lifecycle', () => {
+  it('confirms a real token hash once and rejects an already-used link', async () => {
+    const email = 'confirmation@example.com'
+    await harness.app.inject({
+      method: 'POST',
+      url: '/auth/sign-up',
+      payload: { email, password, captchaToken },
+    })
+    const tokenHash = harness.authIdentityProvider.emailConfirmationTokenFor(email)
+
+    const confirmed = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/email/confirm',
+      payload: { tokenHash, type: 'email' },
+    })
+    const reused = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/email/confirm',
+      payload: { tokenHash, type: 'email' },
+    })
+
+    expect(confirmed.statusCode).toBe(200)
+    assertResponseMatchesSchema(harness.app, 'POST', '/auth/email/confirm', confirmed, 200)
+    expect(reused.statusCode).toBe(401)
+    assertResponseMatchesSchema(harness.app, 'POST', '/auth/email/confirm', reused, 401)
+  })
+
+  it('recovers a password, revokes the recovery session and accepts only the new password', async () => {
+    const email = 'recovery@example.com'
+    await confirmedPasswordSession(email)
+
+    const requested = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/password/recovery',
+      payload: { email, captchaToken },
+    })
+    const tokenHash = harness.authIdentityProvider.passwordRecoveryTokenFor(email)
+    const recovery = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/email/confirm',
+      payload: { tokenHash, type: 'recovery' },
+    })
+    const recoveryToken = recovery.json<{ data: { accessToken: string } }>().data.accessToken
+    const updated = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/password',
+      headers: { authorization: `Bearer ${recoveryToken}` },
+      payload: { password: 'New_password1!' },
+    })
+    const oldPassword = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/sign-in',
+      payload: { email, password, captchaToken },
+    })
+    const newPassword = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/sign-in',
+      payload: { email, password: 'New_password1!', captchaToken },
+    })
+
+    expect(requested.statusCode).toBe(202)
+    expect(updated.statusCode).toBe(200)
+    expect(oldPassword.statusCode).toBe(401)
+    expect(newPassword.statusCode).toBe(200)
+  })
+
+  it('resends confirmation neutrally and signs out globally', async () => {
+    const email = 'logout@example.com'
+    const accessToken = await confirmedPasswordSession(email)
+    const resend = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/email/resend',
+      payload: { email: 'unknown@example.com', captchaToken },
+    })
+    const signOut = await harness.app.inject({
+      method: 'POST',
+      url: '/auth/sign-out',
+      headers: { authorization: `Bearer ${accessToken}` },
+    })
+    const rejected = await harness.app.inject({
+      method: 'GET',
+      url: '/accounts/me',
+      headers: { authorization: `Bearer ${accessToken}` },
+    })
+
+    expect(resend.statusCode).toBe(202)
+    expect(signOut.statusCode).toBe(200)
+    expect(rejected.statusCode).toBe(401)
+  })
+
   it('refreshes a valid session and rejects a reused refresh token', async () => {
     const tokens = await confirmedPasswordTokens('refresh@example.com')
 
@@ -153,7 +256,7 @@ describe('authentication lifecycle', () => {
     )
   })
 
-  it('rejects an unverified Google identity without persisting an account', async () => {
+  it('sends an unverified Google identity back to the web sign-in without persisting an account', async () => {
     const cookie = await googleCookieHeader()
     harness.authIdentityProvider.registerGoogleCode('unverified-google-code', {
       authUserId: 'unverified-google-user',
@@ -166,8 +269,10 @@ describe('authentication lifecycle', () => {
       headers: { cookie },
     })
 
-    expect(response.statusCode).toBe(401)
-    assertResponseMatchesSchema(harness.app, 'GET', '/auth/google/callback', response, 401)
+    expect(response.statusCode).toBe(302)
+    expect(response.headers.location).toBe(
+      'https://app.test/auth/sign-in?error=google_callback_failed',
+    )
     await expect(harness.repositories.accounts.count()).resolves.toBe(0)
     expect(harness.eventBus.published).toContainEqual(
       expect.objectContaining({
@@ -183,8 +288,10 @@ describe('authentication lifecycle', () => {
       url: '/auth/google/callback?code=google-code',
     })
 
-    expect(response.statusCode).toBe(401)
-    assertResponseMatchesSchema(harness.app, 'GET', '/auth/google/callback', response, 401)
+    expect(response.statusCode).toBe(302)
+    expect(response.headers.location).toBe(
+      'https://app.test/auth/sign-in?error=google_callback_failed',
+    )
     await expect(harness.repositories.accounts.count()).resolves.toBe(0)
     expect(harness.eventBus.published).toContainEqual(
       expect.objectContaining({

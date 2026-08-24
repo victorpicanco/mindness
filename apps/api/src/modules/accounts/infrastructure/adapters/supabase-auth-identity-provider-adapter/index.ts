@@ -2,10 +2,12 @@ import { AuthenticationRejectedError } from '@/modules/accounts/domain/errors/au
 import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
 import type { AuthenticationRejectionReason } from '@/modules/accounts/domain/errors/authentication-rejected-error/index.js'
 import { AuthProviderError } from '@/modules/accounts/domain/errors/auth-provider-error/index.js'
+import { CaptchaRejectedError } from '@/modules/accounts/domain/errors/captcha-rejected-error/index.js'
 import type {
   AuthIdentityProvider,
   AuthSession,
   AuthenticationMethod,
+  EmailOtpVerificationType,
   GoogleAuthorization,
   SignInWithPasswordParams,
   SignUpWithPasswordParams,
@@ -18,6 +20,8 @@ interface SupabaseSessionTokens {
   readonly refreshToken: string
   readonly expiresAt: Date
 }
+
+const CAPTCHA_FAILED_PROVIDER_CODE = 'captcha_failed'
 
 const REJECTION_REASON_BY_PROVIDER_CODE = new Map<string, AuthenticationRejectionReason>([
   ['email_not_confirmed', 'email_unconfirmed'],
@@ -49,7 +53,15 @@ function readAuthenticationMethod(claims: Record<string, unknown>): Authenticati
   for (const reference of references) {
     if (!isRecord(reference)) continue
     const method = readString(reference, 'method')
-    if (method === 'password') return 'password'
+    if (
+      method === 'password' ||
+      method === 'otp' ||
+      method === 'recovery' ||
+      method === 'email/signup' ||
+      method === 'token_refresh'
+    ) {
+      return 'password'
+    }
     if (method === 'oauth') return 'google'
   }
 
@@ -58,6 +70,9 @@ function readAuthenticationMethod(claims: Record<string, unknown>): Authenticati
 
 function rejectionFrom(error: unknown, fallback: AuthenticationRejectionReason): never {
   const code = providerErrorCode(error)
+
+  if (code === CAPTCHA_FAILED_PROVIDER_CODE) throw new CaptchaRejectedError({ cause: error })
+
   const reason =
     code === null ? fallback : (REJECTION_REASON_BY_PROVIDER_CODE.get(code) ?? fallback)
 
@@ -144,6 +159,47 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
     if (result.error !== null) rejectionFrom(result.error, 'refresh_token_invalid')
 
     return this.sessionFrom(result.data, 'refresh_token_invalid')
+  }
+
+  async verifyEmailOtp(tokenHash: string, type: EmailOtpVerificationType): Promise<AuthSession> {
+    const result = await this.call(() => this.api.verifyOtp(tokenHash, type))
+    if (result.error !== null) {
+      throw new AuthenticationRejectedError(
+        type === 'recovery' ? 'recovery_link_invalid' : 'email_link_invalid',
+        { cause: result.error },
+      )
+    }
+
+    return this.sessionFrom(
+      result.data,
+      type === 'recovery' ? 'recovery_link_invalid' : 'email_link_invalid',
+    )
+  }
+
+  async resendSignUpConfirmation(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<void> {
+    const result = await this.call(() => this.api.resendSignUpConfirmation(params))
+    if (result.error !== null) rejectionFrom(result.error, 'invalid_credentials')
+  }
+
+  async requestPasswordRecovery(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<void> {
+    const result = await this.call(() => this.api.requestPasswordRecovery(params))
+    if (result.error !== null) rejectionFrom(result.error, 'invalid_credentials')
+  }
+
+  async updatePassword(authUserId: string, password: string): Promise<void> {
+    const result = await this.call(() => this.api.updatePassword(authUserId, password))
+    if (result.error !== null) {
+      if (providerErrorCode(result.error) === 'weak_password') {
+        throw new InvalidAccountValueError('password', { cause: result.error })
+      }
+      throw new AuthProviderError({ cause: result.error })
+    }
   }
 
   async validateAccessToken(accessToken: string): Promise<VerifiedAuthIdentity> {

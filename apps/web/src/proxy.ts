@@ -4,16 +4,20 @@ import { readSessionCookies } from '@/lib/auth/session'
 
 const protectedRoutePrefixes = ['/practice', '/history']
 
+const CAPTCHA_ORIGIN = 'https://challenges.cloudflare.com'
+
 function createContentSecurityPolicy(nonce: string): string {
   const isDevelopment = process.env.NODE_ENV === 'development'
   const developmentSource = isDevelopment ? " 'unsafe-eval'" : ''
 
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${developmentSource}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${CAPTCHA_ORIGIN}${developmentSource}`,
     `style-src 'self' 'nonce-${nonce}' https://use.hugeicons.com`,
     "img-src 'self' blob: data:",
     "font-src 'self' https://use.hugeicons.com",
+    `connect-src 'self' ${CAPTCHA_ORIGIN}`,
+    `frame-src 'self' ${CAPTCHA_ORIGIN}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -26,6 +30,20 @@ function isProtectedRoute(pathname: string): boolean {
   return protectedRoutePrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   )
+}
+
+function accessTokenIsExpired(accessToken: string, nowInSeconds = Date.now() / 1000): boolean {
+  const payload = accessToken.split('.')[1]
+  if (payload === undefined) return false
+
+  try {
+    const decoded: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    if (typeof decoded !== 'object' || decoded === null || !('exp' in decoded)) return false
+    const expiresAt = decoded.exp
+    return typeof expiresAt === 'number' && expiresAt <= nowInSeconds
+  } catch {
+    return false
+  }
 }
 
 function setSecurityHeaders(response: NextResponse, contentSecurityPolicy: string): NextResponse {
@@ -50,7 +68,10 @@ export function proxy(request: NextRequest): NextResponse {
   const contentSecurityPolicy = createContentSecurityPolicy(nonce)
   const { accessToken } = readSessionCookies(request.cookies)
 
-  if (isProtectedRoute(request.nextUrl.pathname) && accessToken === undefined) {
+  if (
+    isProtectedRoute(request.nextUrl.pathname) &&
+    (accessToken === undefined || accessTokenIsExpired(accessToken))
+  ) {
     return setSecurityHeaders(
       NextResponse.redirect(new URL('/auth/sign-in', request.url)),
       contentSecurityPolicy,

@@ -1,12 +1,15 @@
 import { z } from 'zod'
 
+import type { AuthActionMessageKey } from '../form-validation'
 import { apiErrorDetails } from '@/lib/api/api-error'
 import { apiFetch } from '@/lib/api/server-client'
+import { provisionAccount } from '@/lib/auth/provision-account'
 import { writeSessionCookies } from '@/lib/auth/session'
 
 import type { SignInActionState } from './types'
 
 const credentialsSchema = z.object({
+  captchaToken: z.string().min(1),
   email: z.email().max(254),
   password: z.string().min(8).max(64),
 })
@@ -31,19 +34,19 @@ function fieldValue(formData: FormData, field: string): string {
   return typeof value === 'string' ? value : ''
 }
 
-function validationMessageKey(
-  formData: FormData,
-): 'errors.invalidEmail' | 'errors.invalidPassword' | undefined {
+function validationMessageKey(formData: FormData): AuthActionMessageKey | undefined {
   const validation = credentialsSchema.safeParse({
+    captchaToken: fieldValue(formData, 'captchaToken'),
     email: fieldValue(formData, 'email'),
     password: fieldValue(formData, 'password'),
   })
 
   if (validation.success) return undefined
 
-  return validation.error.issues[0]?.path[0] === 'email'
-    ? 'errors.invalidEmail'
-    : 'errors.invalidPassword'
+  const field = validation.error.issues[0]?.path[0]
+
+  if (field === 'captchaToken') return 'errors.captchaRequired'
+  return field === 'email' ? 'errors.invalidEmail' : 'errors.invalidPassword'
 }
 
 export function createSignInAction({
@@ -81,6 +84,11 @@ export function createSignInAction({
     }
 
     writeSessionCookies(cookieStore, session)
+
+    const provisionError = await provisionAccount({ cookieStore, fetcher })
+
+    if (provisionError !== null) return { status: 'api-error', error: provisionError }
+
     return navigate('/practice')
   }
 }

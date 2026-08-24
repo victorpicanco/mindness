@@ -1,4 +1,5 @@
 export type AuthenticationMethod = 'password' | 'google'
+export type EmailOtpVerificationType = 'email' | 'recovery'
 
 export interface VerifiedAuthIdentity {
   readonly authUserId: string
@@ -48,6 +49,28 @@ export interface RefreshTokenAuthenticator {
   refreshSession(refreshToken: string): Promise<AuthSession>
 }
 
+export interface EmailOtpVerifier {
+  verifyEmailOtp(tokenHash: string, type: EmailOtpVerificationType): Promise<AuthSession>
+}
+
+export interface ConfirmationResender {
+  resendSignUpConfirmation(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<void>
+}
+
+export interface PasswordRecoveryRequester {
+  requestPasswordRecovery(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<void>
+}
+
+export interface PasswordUpdater {
+  updatePassword(authUserId: string, password: string): Promise<void>
+}
+
 export interface GoogleAuthenticator {
   createGoogleAuthorization(redirectTo: string): Promise<GoogleAuthorization>
   exchangeGoogleCode(code: string, pkceState: string): Promise<AuthSession>
@@ -60,4 +83,8 @@ export interface AuthIdentityProvider
     IdentityRegistrar,
     PasswordAuthenticator,
     RefreshTokenAuthenticator,
+    EmailOtpVerifier,
+    ConfirmationResender,
+    PasswordRecoveryRequester,
+    PasswordUpdater,
     GoogleAuthenticator {}

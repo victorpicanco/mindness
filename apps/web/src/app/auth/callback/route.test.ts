@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createGoogleCallbackRouteHandler } from './route'
 
@@ -20,16 +20,27 @@ class InMemoryCookieStore {
   }
 }
 
+function provisionedFetcher(): typeof fetch {
+  return () => Promise.resolve(Response.json({ data: { accountId: 'account-id' } }))
+}
+
+const callbackUrl =
+  'https://web.mindness.test/auth/callback?access_token=access-token&refresh_token=refresh-token'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 describe('Google callback route', () => {
   it('writes session cookies and redirects to practice when both tokens are present', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const cookieStore = new InMemoryCookieStore()
-    const handler = createGoogleCallbackRouteHandler({ cookieStore })
+    const handler = createGoogleCallbackRouteHandler({
+      cookieStore,
+      fetcher: provisionedFetcher(),
+    })
 
-    const response = await handler(
-      new Request(
-        'https://web.mindness.test/auth/callback?access_token=access-token&refresh_token=refresh-token',
-      ),
-    )
+    const response = await handler(new Request(callbackUrl))
 
     expect(response.status).toBe(302)
     expect(response.headers.get('location')).toBe('https://web.mindness.test/practice')
@@ -41,9 +52,47 @@ describe('Google callback route', () => {
     )
   })
 
+  it('provisions the account of the Google identity before redirecting', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+    const handler = createGoogleCallbackRouteHandler({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: (input, init) => {
+        const request = new Request(input, init)
+        requests.push(request)
+
+        return Promise.resolve(
+          request.url.endsWith('/accounts/me')
+            ? Response.json(
+                {
+                  error: {
+                    code: 'accounts.ACCOUNT_NOT_FOUND',
+                    message: 'Account not found',
+                    issues: null,
+                    requestId: 'request-id',
+                  },
+                },
+                { status: 404 },
+              )
+            : Response.json({ data: { message: 'Account created.' } }),
+        )
+      },
+    })
+
+    await handler(new Request(callbackUrl))
+
+    expect(requests.map((request) => request.url)).toEqual([
+      'https://api.mindness.test/accounts/me',
+      'https://api.mindness.test/accounts',
+    ])
+  })
+
   it('redirects to sign-in with an error without writing cookies when either token is absent', async () => {
     const cookieStore = new InMemoryCookieStore()
-    const handler = createGoogleCallbackRouteHandler({ cookieStore })
+    const handler = createGoogleCallbackRouteHandler({
+      cookieStore,
+      fetcher: provisionedFetcher(),
+    })
 
     const response = await handler(
       new Request('https://web.mindness.test/auth/callback?access_token=access-token'),
@@ -52,6 +101,51 @@ describe('Google callback route', () => {
     expect(response.status).toBe(302)
     expect(response.headers.get('location')).toBe(
       'https://web.mindness.test/auth/sign-in?error=google_callback_failed',
+    )
+    expect(cookieStore.values).toEqual(new Map())
+  })
+
+  it('sends the visitor back to sign-in when the account cannot be provisioned', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const cookieStore = new InMemoryCookieStore()
+    const handler = createGoogleCallbackRouteHandler({
+      cookieStore,
+      fetcher: (input, init) => {
+        const request = new Request(input, init)
+
+        return Promise.resolve(
+          request.url.endsWith('/accounts/me')
+            ? Response.json(
+                {
+                  error: {
+                    code: 'accounts.ACCOUNT_NOT_FOUND',
+                    message: 'Account not found',
+                    issues: null,
+                    requestId: 'request-id',
+                  },
+                },
+                { status: 404 },
+              )
+            : Response.json(
+                {
+                  error: {
+                    code: 'accounts.BETA_CAPACITY_REACHED',
+                    message: 'The beta has reached 100 accounts',
+                    issues: null,
+                    requestId: 'request-id',
+                  },
+                },
+                { status: 409 },
+              ),
+        )
+      },
+    })
+
+    const response = await handler(new Request(callbackUrl))
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe(
+      'https://web.mindness.test/auth/sign-in?error=accounts.BETA_CAPACITY_REACHED',
     )
     expect(cookieStore.values).toEqual(new Map())
   })

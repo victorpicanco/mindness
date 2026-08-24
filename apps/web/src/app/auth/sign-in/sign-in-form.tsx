@@ -9,8 +9,17 @@ import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
+import { Turnstile, TURNSTILE_TOKEN_FIELD_NAME } from '@/components/ui/turnstile'
 import { describeApiError } from '@/lib/errors/api-error-presentation'
+import { describeApiFieldIssues } from '@/lib/errors/api-field-issues'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
+
+import {
+  EMAIL_PATTERN,
+  fieldOfActionMessageKey,
+  formFieldValue,
+  type AuthFormMessageKey,
+} from '../form-validation'
 
 export type SignInFormAction = (
   state: SignInActionState,
@@ -19,6 +28,13 @@ export type SignInFormAction = (
 
 type SignInFormProps = {
   readonly action?: SignInFormAction
+  readonly initialErrorMessageKey?: AuthFormMessageKey
+}
+
+type FieldErrors = {
+  readonly captchaToken?: AuthFormMessageKey
+  readonly email?: AuthFormMessageKey
+  readonly password?: AuthFormMessageKey
 }
 
 function googleAuthorizationUrl(): string {
@@ -27,27 +43,74 @@ function googleAuthorizationUrl(): string {
   return apiBaseUrl === undefined ? '/auth/google' : `${apiBaseUrl}/auth/google`
 }
 
-export function SignInForm({ action = signInAction }: SignInFormProps) {
+function validate(formData: FormData): FieldErrors {
+  const errors: { -readonly [Key in keyof FieldErrors]: FieldErrors[Key] } = {}
+
+  if (!EMAIL_PATTERN.test(formFieldValue(formData, 'email'))) {
+    errors.email = 'auth.errors.invalidEmail'
+  }
+
+  if (formFieldValue(formData, 'password') === '') {
+    errors.password = 'auth.errors.passwordRequired'
+  }
+
+  if (formFieldValue(formData, TURNSTILE_TOKEN_FIELD_NAME) === '') {
+    errors.captchaToken = 'auth.errors.captchaRequired'
+  }
+
+  return errors
+}
+
+function hasFieldError(errors: FieldErrors): boolean {
+  return Object.values(errors).some((messageKey) => messageKey !== undefined)
+}
+
+export function SignInForm({ action = signInAction, initialErrorMessageKey }: SignInFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
   const [state, setState] = useState<SignInActionState>(initialSignInActionState)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const apiError = state.status === 'api-error' ? describeApiError(state.error.code) : undefined
-  const inlineError =
-    apiError?.presentation === 'inline' ? translate(apiError.messageKey) : undefined
+  const [captchaResetSignal, setCaptchaResetSignal] = useState(0)
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+
+  const alertMessageKey = ((): AuthFormMessageKey | undefined => {
+    if (siteKey === undefined) return 'auth.errors.captchaUnavailable'
+
+    if (state.status === 'api-error') {
+      const description = describeApiError(state.error.code)
+
+      return description.presentation === 'inline' ? description.messageKey : undefined
+    }
+
+    return state.status === 'idle' ? initialErrorMessageKey : undefined
+  })()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    setIsSubmitting(true)
+    const formData = new FormData(event.currentTarget)
+    const validationErrors = validate(formData)
 
-    const result = await action(state, new FormData(event.currentTarget))
+    setFieldErrors(validationErrors)
+
+    if (hasFieldError(validationErrors)) return
+
+    setIsSubmitting(true)
+    const result = await action(state, formData)
 
     setState(result)
     setIsSubmitting(false)
+    setCaptchaResetSignal((signal) => signal + 1)
 
-    if (result.status === 'api-error') {
-      showApiErrorToast(result.error, translate)
+    if (result.status === 'error') {
+      setFieldErrors({ [fieldOfActionMessageKey(result.messageKey)]: `auth.${result.messageKey}` })
+      return
     }
+
+    if (result.status !== 'api-error') return
+
+    setFieldErrors(describeApiFieldIssues(result.error.issues))
+    showApiErrorToast(result.error, translate)
   }
 
   return (
@@ -72,7 +135,10 @@ export function SignInForm({ action = signInAction }: SignInFormProps) {
         </div>
       </div>
       <div className="grid gap-4">
-        <Field label={t('signIn.emailLabel')}>
+        <Field
+          {...(fieldErrors.email === undefined ? {} : { error: translate(fieldErrors.email) })}
+          label={t('signIn.emailLabel')}
+        >
           <Input
             autoComplete="email"
             name="email"
@@ -80,7 +146,12 @@ export function SignInForm({ action = signInAction }: SignInFormProps) {
             type="email"
           />
         </Field>
-        <Field label={t('signIn.passwordLabel')}>
+        <Field
+          {...(fieldErrors.password === undefined
+            ? {}
+            : { error: translate(fieldErrors.password) })}
+          label={t('signIn.passwordLabel')}
+        >
           <PasswordInput
             autoComplete="current-password"
             hidePasswordLabel={t('password.hide')}
@@ -90,14 +161,44 @@ export function SignInForm({ action = signInAction }: SignInFormProps) {
           />
         </Field>
       </div>
-      <input name="captchaToken" type="hidden" value="" />
+      {siteKey === undefined ? null : (
+        <div className="grid gap-1.5">
+          <Turnstile
+            onError={() => {
+              setFieldErrors((current) => ({
+                ...current,
+                captchaToken: 'auth.errors.captchaUnavailable',
+              }))
+            }}
+            onVerify={() => {
+              setFieldErrors((current) => ({
+                ...(current.email === undefined ? {} : { email: current.email }),
+                ...(current.password === undefined ? {} : { password: current.password }),
+              }))
+            }}
+            resetSignal={captchaResetSignal}
+            siteKey={siteKey}
+          />
+          {fieldErrors.captchaToken === undefined ? null : (
+            <p className="text-sm text-error" role="alert">
+              {translate(fieldErrors.captchaToken)}
+            </p>
+          )}
+        </div>
+      )}
       <div className="grid gap-4">
-        {inlineError === undefined ? null : (
+        {alertMessageKey === undefined ? null : (
           <p className="text-sm text-error" role="alert">
-            {inlineError}
+            {translate(alertMessageKey)}
           </p>
         )}
-        <Button className="w-full" isLoading={isSubmitting} size="lg" type="submit">
+        <Button
+          className="w-full"
+          disabled={siteKey === undefined}
+          isLoading={isSubmitting}
+          size="lg"
+          type="submit"
+        >
           {t('signIn.submit')}
         </Button>
       </div>

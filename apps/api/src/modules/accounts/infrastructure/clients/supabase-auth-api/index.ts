@@ -25,6 +25,16 @@ export interface SupabaseAuthApi {
   createGoogleAuthorization(redirectTo: string): Promise<SupabaseGoogleAuthorizationResult>
   exchangeGoogleCode(code: string, pkceState: string): Promise<SupabaseAuthResult>
   refreshSession(refreshToken: string): Promise<SupabaseAuthResult>
+  verifyOtp(tokenHash: string, type: 'email' | 'recovery'): Promise<SupabaseAuthResult>
+  resendSignUpConfirmation(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<SupabaseAuthResult>
+  requestPasswordRecovery(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<SupabaseAuthResult>
+  updatePassword(authUserId: string, password: string): Promise<SupabaseAuthResult>
   getClaims(accessToken: string): Promise<SupabaseAuthResult>
   signOut(accessToken: string): Promise<{ readonly error: unknown }>
 }
@@ -127,6 +137,38 @@ export class SupabaseAuthApiClient implements SupabaseAuthApi {
 
   refreshSession(refreshToken: string): Promise<SupabaseAuthResult> {
     return this.client().auth.refreshSession({ refresh_token: refreshToken })
+  }
+
+  verifyOtp(tokenHash: string, type: 'email' | 'recovery'): Promise<SupabaseAuthResult> {
+    return this.client().auth.verifyOtp({ token_hash: tokenHash, type })
+  }
+
+  resendSignUpConfirmation(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<SupabaseAuthResult> {
+    return this.client().auth.resend({
+      type: 'signup',
+      email: params.email,
+      options: {
+        captchaToken: params.captchaToken,
+        emailRedirectTo: this.config.emailRedirectUrl,
+      },
+    })
+  }
+
+  requestPasswordRecovery(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<SupabaseAuthResult> {
+    return this.client().auth.resetPasswordForEmail(params.email, {
+      captchaToken: params.captchaToken,
+      redirectTo: this.config.emailRedirectUrl,
+    })
+  }
+
+  updatePassword(authUserId: string, password: string): Promise<SupabaseAuthResult> {
+    return this.client().auth.admin.updateUserById(authUserId, { password })
   }
 
   getClaims(accessToken: string): Promise<SupabaseAuthResult> {

@@ -2,6 +2,8 @@ import { UnauthorizedError } from '@/shared/errors/categories/unauthorized-error
 
 export type AuthenticationRejectionReason =
   | 'email_unconfirmed'
+  | 'email_link_invalid'
+  | 'recovery_link_invalid'
   | 'google_failed'
   | 'invalid_credentials'
   | 'invalid_token'

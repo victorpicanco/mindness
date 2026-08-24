@@ -11,7 +11,17 @@ import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
+import { Turnstile, TURNSTILE_TOKEN_FIELD_NAME } from '@/components/ui/turnstile'
+import { describeApiError } from '@/lib/errors/api-error-presentation'
+import { describeApiFieldIssues } from '@/lib/errors/api-field-issues'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
+
+import {
+  EMAIL_PATTERN,
+  fieldOfActionMessageKey,
+  formFieldValue,
+  type AuthFormMessageKey,
+} from '../form-validation'
 
 export type SignUpFormAction = (
   state: SignUpActionState,
@@ -22,67 +32,85 @@ type SignUpFormProps = {
   readonly action?: SignUpFormAction
 }
 
-type ValidationErrors = {
-  readonly email?: string
-  readonly password?: string
-  readonly passwordConfirmation?: string
+type FieldErrors = {
+  readonly captchaToken?: AuthFormMessageKey
+  readonly email?: AuthFormMessageKey
+  readonly password?: AuthFormMessageKey
+  readonly passwordConfirmation?: AuthFormMessageKey
 }
 
-type AuthTranslator = (
-  key: 'errors.invalidEmail' | 'errors.invalidPassword' | 'errors.passwordMismatch',
-) => string
+function validate(formData: FormData): FieldErrors {
+  const errors: { -readonly [Key in keyof FieldErrors]: FieldErrors[Key] } = {}
+  const password = formFieldValue(formData, 'password')
 
-function validate(formData: FormData, t: AuthTranslator): ValidationErrors {
-  const email = formData.get('email')
-  const password = formData.get('password')
-  const passwordConfirmation = formData.get('passwordConfirmation')
-
-  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) {
-    return { email: t('errors.invalidEmail') }
+  if (!EMAIL_PATTERN.test(formFieldValue(formData, 'email'))) {
+    errors.email = 'auth.errors.invalidEmail'
   }
 
-  if (typeof password !== 'string' || !passwordSchema.safeParse(password).success) {
-    return { password: t('errors.invalidPassword') }
+  if (!passwordSchema.safeParse(password).success) {
+    errors.password = 'auth.errors.invalidPassword'
   }
 
-  if (typeof passwordConfirmation !== 'string' || passwordConfirmation !== password) {
-    return { passwordConfirmation: t('errors.passwordMismatch') }
+  if (formFieldValue(formData, 'passwordConfirmation') !== password) {
+    errors.passwordConfirmation = 'auth.errors.passwordMismatch'
   }
 
-  return {}
+  if (formFieldValue(formData, TURNSTILE_TOKEN_FIELD_NAME) === '') {
+    errors.captchaToken = 'auth.errors.captchaRequired'
+  }
+
+  return errors
+}
+
+function hasFieldError(errors: FieldErrors): boolean {
+  return Object.values(errors).some((messageKey) => messageKey !== undefined)
 }
 
 export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
   const [state, setState] = useState<SignUpActionState>(initialSignUpActionState)
-  const [errors, setErrors] = useState<ValidationErrors>({})
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [captchaResetSignal, setCaptchaResetSignal] = useState(0)
   const [password, setPassword] = useState('')
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+
+  const alertMessageKey = ((): AuthFormMessageKey | undefined => {
+    if (siteKey === undefined) return 'auth.errors.captchaUnavailable'
+
+    if (state.status !== 'api-error') return undefined
+
+    const description = describeApiError(state.error.code)
+
+    return description.presentation === 'inline' ? description.messageKey : undefined
+  })()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    const validationErrors = validate(formData, t)
+    const validationErrors = validate(formData)
 
-    setErrors(validationErrors)
+    setFieldErrors(validationErrors)
 
-    if (
-      validationErrors.email !== undefined ||
-      validationErrors.password !== undefined ||
-      validationErrors.passwordConfirmation !== undefined
-    ) {
-      return
-    }
+    if (hasFieldError(validationErrors)) return
 
     setIsSubmitting(true)
     const result = await action(state, formData)
+
     setState(result)
     setIsSubmitting(false)
+    setCaptchaResetSignal((signal) => signal + 1)
 
-    if (result.status === 'api-error') {
-      showApiErrorToast(result.error, translate)
+    if (result.status === 'validation-error') {
+      setFieldErrors({ [fieldOfActionMessageKey(result.messageKey)]: `auth.${result.messageKey}` })
+      return
     }
+
+    if (result.status !== 'api-error') return
+
+    setFieldErrors(describeApiFieldIssues(result.error.issues))
+    showApiErrorToast(result.error, translate)
   }
 
   if (state.status === 'success') {
@@ -97,10 +125,9 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
         void handleSubmit(event)
       }}
     >
-      <input name="captchaToken" type="hidden" value="" />
       <div className="grid gap-4">
         <Field
-          {...(errors.email === undefined ? {} : { error: errors.email })}
+          {...(fieldErrors.email === undefined ? {} : { error: translate(fieldErrors.email) })}
           label={t('signUp.emailLabel')}
         >
           <Input
@@ -111,7 +138,9 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
           />
         </Field>
         <Field
-          {...(errors.password === undefined ? {} : { error: errors.password })}
+          {...(fieldErrors.password === undefined
+            ? {}
+            : { error: translate(fieldErrors.password) })}
           label={t('signUp.passwordLabel')}
         >
           <PasswordInput
@@ -137,9 +166,9 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
           title={t('password.requirements.title')}
         />
         <Field
-          {...(errors.passwordConfirmation === undefined
+          {...(fieldErrors.passwordConfirmation === undefined
             ? {}
-            : { error: errors.passwordConfirmation })}
+            : { error: translate(fieldErrors.passwordConfirmation) })}
           label={t('signUp.passwordConfirmationLabel')}
         >
           <PasswordInput
@@ -150,8 +179,40 @@ export function SignUpForm({ action = signUpAction }: SignUpFormProps) {
             showPasswordLabel={t('password.show')}
           />
         </Field>
-        {state.status === 'validation-error' ? <p role="alert">{t(state.messageKey)}</p> : null}
-        <Button isLoading={isSubmitting} size="lg" type="submit">
+        {siteKey === undefined ? null : (
+          <div className="grid gap-1.5">
+            <Turnstile
+              onError={() => {
+                setFieldErrors((current) => ({
+                  ...current,
+                  captchaToken: 'auth.errors.captchaUnavailable',
+                }))
+              }}
+              onVerify={() => {
+                setFieldErrors((current) => ({
+                  ...(current.email === undefined ? {} : { email: current.email }),
+                  ...(current.password === undefined ? {} : { password: current.password }),
+                  ...(current.passwordConfirmation === undefined
+                    ? {}
+                    : { passwordConfirmation: current.passwordConfirmation }),
+                }))
+              }}
+              resetSignal={captchaResetSignal}
+              siteKey={siteKey}
+            />
+            {fieldErrors.captchaToken === undefined ? null : (
+              <p className="text-sm text-error" role="alert">
+                {translate(fieldErrors.captchaToken)}
+              </p>
+            )}
+          </div>
+        )}
+        {alertMessageKey === undefined ? null : (
+          <p className="text-sm text-error" role="alert">
+            {translate(alertMessageKey)}
+          </p>
+        )}
+        <Button disabled={siteKey === undefined} isLoading={isSubmitting} size="lg" type="submit">
           {t('signUp.submit')}
         </Button>
       </div>

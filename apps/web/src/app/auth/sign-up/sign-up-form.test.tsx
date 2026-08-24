@@ -1,15 +1,46 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactElement } from 'react'
 import { Toaster } from 'sonner'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { TurnstileApi, TurnstileRenderOptions } from '@/components/ui/turnstile/types'
 import { messages } from '@/i18n/messages'
 
 import { SignUpForm } from './sign-up-form'
 import { initialSignUpActionState, type SignUpActionState } from './types'
 
 type SignUpAction = (state: SignUpActionState, formData: FormData) => Promise<SignUpActionState>
+
+const widgets: TurnstileRenderOptions[] = []
+const resetWidgets: string[] = []
+
+function installTurnstile(): void {
+  const api: TurnstileApi = {
+    render: (_container, options) => {
+      widgets.push(options)
+
+      return `widget-${String(widgets.length - 1)}`
+    },
+    remove: () => {},
+    reset: (widgetId) => {
+      resetWidgets.push(widgetId)
+    },
+  }
+
+  window.turnstile = api
+}
+
+async function verifyCaptcha(token = 'captcha-token'): Promise<void> {
+  await waitFor(() => {
+    expect(widgets).not.toHaveLength(0)
+  })
+  await act(() => {
+    widgets[0]?.callback(token)
+
+    return Promise.resolve()
+  })
+}
 
 function validSignUpAction(): SignUpAction {
   return () =>
@@ -28,9 +59,32 @@ function renderSignUpForm(element: ReactElement) {
   )
 }
 
-describe('SignUpForm', () => {
-  afterEach(cleanup)
+function fillCredentials(password = 'Valid_password1!', confirmation = password): void {
+  fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
+  fireEvent.change(screen.getByLabelText('Senha'), { target: { value: password } })
+  fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
+    target: { value: confirmation },
+  })
+}
 
+function submit(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+}
+
+beforeEach(() => {
+  widgets.length = 0
+  resetWidgets.length = 0
+  vi.stubEnv('NEXT_PUBLIC_TURNSTILE_SITE_KEY', 'site-key')
+  installTurnstile()
+})
+
+afterEach(() => {
+  cleanup()
+  vi.unstubAllEnvs()
+  delete window.turnstile
+})
+
+describe('SignUpForm', () => {
   it('shows the Supabase password requirements and marks satisfied requirements', () => {
     renderSignUpForm(<SignUpForm action={validSignUpAction()} />)
 
@@ -56,15 +110,9 @@ describe('SignUpForm', () => {
     }
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
-
-    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
-    fireEvent.change(screen.getByLabelText('Senha'), {
-      target: { value: 'Valid_password1!' },
-    })
-    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
-      target: { value: 'Valid_password1!' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    await verifyCaptcha()
+    fillCredentials()
+    submit()
 
     await waitFor(() => {
       expect(screen.getByRole('status')).toHaveTextContent('Verifique seu e-mail para continuar.')
@@ -72,9 +120,10 @@ describe('SignUpForm', () => {
 
     expect(submittedFormData).toHaveLength(1)
     expect(submittedFormData[0]?.get('email')).toBe('person@example.com')
+    expect(submittedFormData[0]?.get('captchaToken')).toBe('captcha-token')
   })
 
-  it('rejects a password confirmation that differs from the password without submitting', () => {
+  it('rejects a password confirmation that differs from the password without submitting', async () => {
     let submissions = 0
     const signUpAction: SignUpAction = () => {
       submissions += 1
@@ -83,20 +132,16 @@ describe('SignUpForm', () => {
     }
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
-
-    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
-    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Valid_password1!' } })
-    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
-      target: { value: 'Different_password1!' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    await verifyCaptcha()
+    fillCredentials('Valid_password1!', 'Different_password1!')
+    submit()
 
     expect(screen.getByRole('alert')).toHaveTextContent('As senhas não coincidem.')
     expect(screen.getByLabelText('Confirme sua senha')).toHaveAttribute('aria-invalid', 'true')
     expect(submissions).toBe(0)
   })
 
-  it('announces invalid email and password values through their fields without submitting', () => {
+  it('announces every invalid field at once without submitting', async () => {
     let submissions = 0
     const signUpAction: SignUpAction = () => {
       submissions += 1
@@ -105,41 +150,110 @@ describe('SignUpForm', () => {
     }
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
-
+    await verifyCaptcha()
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'invalid' } })
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'short' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    fireEvent.change(screen.getByLabelText('Confirme sua senha'), { target: { value: 'other' } })
+    submit()
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Informe um e-mail válido.')
     expect(screen.getByLabelText('E-mail')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Senha')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Confirme sua senha')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByText('Informe um e-mail válido.')).toBeInTheDocument()
+    expect(screen.getByText('As senhas não coincidem.')).toBeInTheDocument()
     expect(submissions).toBe(0)
   })
 
-  it('shows a translated toast when the backend rejects account creation', async () => {
+  it('asks for the security verification before calling the action', () => {
+    let submissions = 0
+    const signUpAction: SignUpAction = () => {
+      submissions += 1
+
+      return Promise.resolve(initialSignUpActionState)
+    }
+
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
+    fillCredentials()
+    submit()
+
+    expect(
+      screen.getByText('Conclua a verificação de segurança para continuar.'),
+    ).toBeInTheDocument()
+    expect(submissions).toBe(0)
+  })
+
+  it('reports when the security verification becomes unavailable', async () => {
+    renderSignUpForm(<SignUpForm action={validSignUpAction()} />)
+
+    await waitFor(() => {
+      expect(widgets).not.toHaveLength(0)
+    })
+    act(() => {
+      widgets[0]?.['error-callback']('network-error')
+    })
+
+    expect(
+      screen.getByText(
+        'A verificação de segurança não carregou. Recarregue a página e tente novamente.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows inline the password the identity provider refused', async () => {
     const signUpAction: SignUpAction = () =>
       Promise.resolve({
         status: 'api-error',
         error: {
-          code: 'accounts.ACCOUNT_CREATION_REJECTED',
+          code: 'accounts.INVALID_ACCOUNT_VALUE',
           issues: null,
           requestId: 'request-id',
         },
       })
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
+    await verifyCaptcha()
+    fillCredentials()
+    submit()
 
-    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
-    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Valid_password1!' } })
-    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
-      target: { value: 'Valid_password1!' },
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Use uma senha de 8 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
+    )
+  })
+
+  it('resets the security verification after a rejected submission', async () => {
+    const signUpAction: SignUpAction = () =>
+      Promise.resolve({
+        status: 'api-error',
+        error: { code: 'accounts.INVALID_ACCOUNT_VALUE', issues: null, requestId: 'request-id' },
+      })
+
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
+    await verifyCaptcha()
+    fillCredentials()
+    submit()
+
+    await waitFor(() => {
+      expect(resetWidgets).toEqual(['widget-0'])
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+  })
 
-    expect(
-      await screen.findByText(
-        'Verifique seu e-mail para continuar, caso exista uma conta elegível para este endereço.',
-      ),
-    ).toBeInTheDocument()
+  it('attaches an API field issue to the field it belongs to', async () => {
+    const signUpAction: SignUpAction = () =>
+      Promise.resolve({
+        status: 'api-error',
+        error: {
+          code: 'shared.VALIDATION_FAILED',
+          issues: [{ field: 'email', message: 'must match format "email"' }],
+          requestId: 'request-id',
+        },
+      })
+
+    renderSignUpForm(<SignUpForm action={signUpAction} />)
+    await verifyCaptcha()
+    fillCredentials()
+    submit()
+
+    expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument()
   })
 
   it('falls back to a generic toast when the backend error code is unmapped', async () => {
@@ -150,13 +264,9 @@ describe('SignUpForm', () => {
       })
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
-
-    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
-    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Valid_password1!' } })
-    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
-      target: { value: 'Valid_password1!' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    await verifyCaptcha()
+    fillCredentials()
+    submit()
 
     expect(
       await screen.findByText('Não foi possível concluir a ação. Tente novamente.'),

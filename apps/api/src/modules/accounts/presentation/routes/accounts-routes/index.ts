@@ -5,6 +5,10 @@ import type { FastifyInstance } from 'fastify'
 import type { AuthenticateUseCase } from '@/modules/accounts/application/use-cases/authenticate/index.js'
 import { AcceptConsentResponseSchema } from '@/modules/accounts/presentation/controllers/accept-consent-controller/schemas.js'
 import {
+  ConfirmEmailBodySchema,
+  type ConfirmEmailBody,
+} from '@/modules/accounts/presentation/controllers/confirm-email-controller/schemas.js'
+import {
   GoogleCallbackQuerySchema,
   type GoogleCallbackQuery,
 } from '@/modules/accounts/presentation/controllers/complete-google-sign-in-controller/schemas.js'
@@ -25,6 +29,15 @@ import {
   type RefreshSessionBody,
 } from '@/modules/accounts/presentation/controllers/refresh-session-controller/schemas.js'
 import {
+  RequestPasswordRecoveryBodySchema,
+  type RequestPasswordRecoveryBody,
+} from '@/modules/accounts/presentation/controllers/request-password-recovery-controller/schemas.js'
+import {
+  NeutralAuthResponseSchema,
+  ResendSignUpConfirmationBodySchema,
+  type ResendSignUpConfirmationBody,
+} from '@/modules/accounts/presentation/controllers/resend-sign-up-confirmation-controller/schemas.js'
+import {
   SignUpBodySchema,
   SignUpResponseSchema,
   type SignUpBody,
@@ -34,6 +47,11 @@ import {
   UpdateTimeZoneResponseSchema,
   type UpdateTimeZoneBody,
 } from '@/modules/accounts/presentation/controllers/update-time-zone-controller/schemas.js'
+import {
+  AuthMessageResponseSchema,
+  UpdatePasswordBodySchema,
+  type UpdatePasswordBody,
+} from '@/modules/accounts/presentation/controllers/update-password-controller/schemas.js'
 import { registerAccountsErrorHandler } from '@/modules/accounts/presentation/error-handler/index.js'
 import { registerAuthenticatedIdentity } from '@/modules/accounts/presentation/middleware/authenticated-identity/index.js'
 import { ErrorResponseSchema } from '@/shared/http/envelope/index.js'
@@ -98,6 +116,39 @@ export async function registerAccountsRoutes(
     (request, reply) => controllers.refreshSession.handle(request, reply),
   )
 
+  publicRoutes.post<{ Body: ConfirmEmailBody }>(
+    ACCOUNTS_ROUTE_PATHS.confirmEmail,
+    {
+      schema: {
+        body: ConfirmEmailBodySchema,
+        response: { 200: SessionResponseSchema, ...ERROR_RESPONSES },
+      },
+    },
+    (request, reply) => controllers.confirmEmail.handle(request, reply),
+  )
+
+  publicRoutes.post<{ Body: ResendSignUpConfirmationBody }>(
+    ACCOUNTS_ROUTE_PATHS.resendSignUpConfirmation,
+    {
+      schema: {
+        body: ResendSignUpConfirmationBodySchema,
+        response: { 202: NeutralAuthResponseSchema, ...ERROR_RESPONSES },
+      },
+    },
+    (request, reply) => controllers.resendSignUpConfirmation.handle(request, reply),
+  )
+
+  publicRoutes.post<{ Body: RequestPasswordRecoveryBody }>(
+    ACCOUNTS_ROUTE_PATHS.requestPasswordRecovery,
+    {
+      schema: {
+        body: RequestPasswordRecoveryBodySchema,
+        response: { 202: NeutralAuthResponseSchema, ...ERROR_RESPONSES },
+      },
+    },
+    (request, reply) => controllers.requestPasswordRecovery.handle(request, reply),
+  )
+
   publicRoutes.get(
     ACCOUNTS_ROUTE_PATHS.googleStart,
     { schema: { response: ERROR_RESPONSES } },
@@ -109,7 +160,7 @@ export async function registerAccountsRoutes(
     {
       schema: {
         querystring: GoogleCallbackQuerySchema,
-        response: { 200: SessionResponseSchema, ...ERROR_RESPONSES },
+        response: ERROR_RESPONSES,
       },
     },
     (request, reply) => controllers.completeGoogleSignIn.handle(request, reply),
@@ -140,6 +191,23 @@ export async function registerAccountsRoutes(
       ACCOUNTS_ROUTE_PATHS.consent,
       { schema: { response: { 200: AcceptConsentResponseSchema, ...ERROR_RESPONSES } } },
       (request, reply) => controllers.acceptConsent.handle(request, reply),
+    )
+
+    authenticated.post<{ Body: UpdatePasswordBody }>(
+      ACCOUNTS_ROUTE_PATHS.updatePassword,
+      {
+        schema: {
+          body: UpdatePasswordBodySchema,
+          response: { 200: AuthMessageResponseSchema, ...ERROR_RESPONSES },
+        },
+      },
+      (request, reply) => controllers.updatePassword.handle(request, reply),
+    )
+
+    authenticated.post(
+      ACCOUNTS_ROUTE_PATHS.signOut,
+      { schema: { response: { 200: AuthMessageResponseSchema, ...ERROR_RESPONSES } } },
+      (request, reply) => controllers.signOut.handle(request, reply),
     )
 
     authenticated.patch<{ Body: UpdateTimeZoneBody }>(

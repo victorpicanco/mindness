@@ -18,19 +18,17 @@ describe('showApiErrorToast', () => {
   it('shows the translated message for a known error code', async () => {
     const { toast } = await import('sonner')
     const t = fakeTranslator({
-      'auth.errors.accountCreationRejected':
-        'Verifique seu e-mail para continuar, caso exista uma conta elegível para este endereço.',
+      'auth.errors.sessionExpired': 'Sua sessão expirou. Entre novamente.',
     })
 
     showApiErrorToast(
-      { code: 'accounts.ACCOUNT_CREATION_REJECTED', issues: null, requestId: 'request-id' },
+      { code: 'web.AUTHENTICATION_EXPIRED', issues: null, requestId: 'request-id' },
       t,
     )
 
-    expect(toast.error).toHaveBeenCalledWith(
-      'Verifique seu e-mail para continuar, caso exista uma conta elegível para este endereço.',
-      { id: 'request-id' },
-    )
+    expect(toast.error).toHaveBeenCalledWith('Sua sessão expirou. Entre novamente.', {
+      id: 'request-id',
+    })
   })
 
   it('falls back to the generic message for an unmapped error code', async () => {

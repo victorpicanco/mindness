@@ -1,16 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
+import { readSessionCookies } from '@/lib/auth/session'
+
 import { apiFetch } from './server-client'
 import type { ApiClientError } from './server-client'
 
 class InMemoryCookieStore {
   private readonly values = new Map<string, string>()
 
-  constructor(accessToken: string | undefined) {
+  constructor(accessToken: string | undefined, refreshToken?: string) {
     if (accessToken !== undefined) {
       this.values.set('mindness_access_token', accessToken)
     }
+    if (refreshToken !== undefined) this.values.set('mindness_refresh_token', refreshToken)
   }
 
   get(name: string): { value: string } | undefined {
@@ -19,7 +22,9 @@ class InMemoryCookieStore {
     return value === undefined ? undefined : { value }
   }
 
-  set(): void {}
+  set(name: string, value: string): void {
+    this.values.set(name, value)
+  }
 
   delete(): void {}
 }
@@ -116,5 +121,58 @@ describe('apiFetch', () => {
     await expect(request).rejects.toMatchObject({
       code: 'web.API_RESPONSE_INVALID',
     } satisfies Pick<ApiClientError, 'code'>)
+  })
+
+  it('refreshes an expired session once and retries the original request', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const store = new InMemoryCookieStore('expired-access', 'valid-refresh')
+    const requests: Request[] = []
+
+    const data = await apiFetch('/sessions/quota', {
+      schema: z.object({ remaining: z.number() }),
+      cookieStore: store,
+      fetcher: (input, init) => {
+        const request = new Request(input, init)
+        requests.push(request)
+        if (request.url.endsWith('/auth/refresh')) {
+          return Promise.resolve(
+            Response.json({
+              data: {
+                accessToken: 'fresh-access',
+                refreshToken: 'rotated-refresh',
+                expiresAt: '2026-08-15T13:00:00.000Z',
+              },
+            }),
+          )
+        }
+        if (request.headers.get('authorization') === 'Bearer expired-access') {
+          return Promise.resolve(
+            Response.json(
+              {
+                error: {
+                  code: 'accounts.AUTHENTICATION_REJECTED',
+                  message: 'Authentication rejected',
+                  issues: null,
+                  requestId: 'request-id',
+                },
+              },
+              { status: 401 },
+            ),
+          )
+        }
+        return Promise.resolve(Response.json({ data: { remaining: 2 } }))
+      },
+    })
+
+    expect(data).toEqual({ remaining: 2 })
+    expect(requests.map((request) => request.url)).toEqual([
+      'https://api.mindness.test/sessions/quota',
+      'https://api.mindness.test/auth/refresh',
+      'https://api.mindness.test/sessions/quota',
+    ])
+    expect(readSessionCookies(store)).toEqual({
+      accessToken: 'fresh-access',
+      refreshToken: 'rotated-refresh',
+    })
   })
 })

@@ -3,6 +3,7 @@ import type {
   AuthIdentityProvider,
   AuthSession,
   AuthenticationMethod,
+  EmailOtpVerificationType,
   GoogleAuthorization,
   SignInWithPasswordParams,
   SignUpWithPasswordParams,
@@ -15,7 +16,7 @@ import type { BaseError } from '@/shared/errors/base-error/index.js'
 interface PasswordUser {
   readonly authUserId: string
   readonly email: string
-  readonly password: string
+  password: string
   confirmed: boolean
 }
 
@@ -32,6 +33,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
   private readonly sessionsByToken = new Map<string, AuthSession>()
   private readonly sessionsByRefreshToken = new Map<string, AuthSession>()
   private readonly currentTokenByUser = new Map<string, string>()
+  private readonly emailByOtpToken = new Map<string, string>()
   private failure: BaseError | null = null
 
   constructor(
@@ -49,6 +51,9 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       password: params.password,
       confirmed: false,
     })
+    const user = this.passwordUsers.get(params.email)
+    if (user !== undefined)
+      this.emailByOtpToken.set(`confirmation-${user.authUserId}`, params.email)
   }
 
   async signInWithPassword(params: SignInWithPasswordParams): Promise<AuthSession> {
@@ -98,6 +103,50 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     )
   }
 
+  async verifyEmailOtp(tokenHash: string, type: EmailOtpVerificationType): Promise<AuthSession> {
+    await this.ensureNoSimulatedFailure()
+    const email = this.emailByOtpToken.get(tokenHash)
+    this.emailByOtpToken.delete(tokenHash)
+    const user = email === undefined ? undefined : this.passwordUsers.get(email)
+    if (user === undefined) {
+      throw new AuthenticationRejectedError(
+        type === 'recovery' ? 'recovery_link_invalid' : 'email_link_invalid',
+      )
+    }
+    if (type === 'email') user.confirmed = true
+
+    return this.createSession(user.authUserId, user.email, 'password')
+  }
+
+  async resendSignUpConfirmation(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<void> {
+    await this.ensureNoSimulatedFailure()
+    const user = this.passwordUsers.get(params.email)
+    if (user !== undefined && !user.confirmed) {
+      this.emailByOtpToken.set(`confirmation-${user.authUserId}`, params.email)
+    }
+  }
+
+  async requestPasswordRecovery(params: {
+    readonly email: string
+    readonly captchaToken: string
+  }): Promise<void> {
+    await this.ensureNoSimulatedFailure()
+    const user = this.passwordUsers.get(params.email)
+    if (user !== undefined && user.confirmed) {
+      this.emailByOtpToken.set(`recovery-${user.authUserId}`, params.email)
+    }
+  }
+
+  async updatePassword(authUserId: string, password: string): Promise<void> {
+    await this.ensureNoSimulatedFailure()
+    for (const user of this.passwordUsers.values()) {
+      if (user.authUserId === authUserId) user.password = password
+    }
+  }
+
   async validateAccessToken(accessToken: string): Promise<VerifiedAuthIdentity> {
     await this.ensureNoSimulatedFailure()
     const session = this.sessionsByToken.get(accessToken)
@@ -122,6 +171,20 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     if (user !== undefined) user.confirmed = true
   }
 
+  emailConfirmationTokenFor(email: string): string | null {
+    for (const [token, tokenEmail] of this.emailByOtpToken) {
+      if (tokenEmail === email && token.startsWith('confirmation-')) return token
+    }
+    return null
+  }
+
+  passwordRecoveryTokenFor(email: string): string | null {
+    for (const [token, tokenEmail] of this.emailByOtpToken) {
+      if (tokenEmail === email && token.startsWith('recovery-')) return token
+    }
+    return null
+  }
+
   registerGoogleCode(code: string, identity: InMemoryGoogleIdentity): void {
     this.googleCodes.set(code, identity)
   }
@@ -137,6 +200,7 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     this.sessionsByToken.clear()
     this.sessionsByRefreshToken.clear()
     this.currentTokenByUser.clear()
+    this.emailByOtpToken.clear()
     this.failure = null
   }
 

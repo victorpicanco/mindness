@@ -29,6 +29,10 @@ class FakeSupabaseAuthApi implements SupabaseAuthApi {
   }
   googleResult: SupabaseAuthResult = this.signInResult
   refreshResult: SupabaseAuthResult = this.signInResult
+  verifyOtpResult: SupabaseAuthResult = this.signInResult
+  resendResult: SupabaseAuthResult = { data: {}, error: null }
+  recoveryResult: SupabaseAuthResult = { data: {}, error: null }
+  updatePasswordResult: SupabaseAuthResult = { data: {}, error: null }
   claimsResult: SupabaseAuthResult = { data: { claims }, error: null }
   readonly calls: string[] = []
 
@@ -61,6 +65,26 @@ class FakeSupabaseAuthApi implements SupabaseAuthApi {
     return Promise.resolve(this.refreshResult)
   }
 
+  verifyOtp(): Promise<SupabaseAuthResult> {
+    this.calls.push('verify-otp')
+    return Promise.resolve(this.verifyOtpResult)
+  }
+
+  resendSignUpConfirmation(): Promise<SupabaseAuthResult> {
+    this.calls.push('resend-sign-up')
+    return Promise.resolve(this.resendResult)
+  }
+
+  requestPasswordRecovery(): Promise<SupabaseAuthResult> {
+    this.calls.push('request-recovery')
+    return Promise.resolve(this.recoveryResult)
+  }
+
+  updatePassword(): Promise<SupabaseAuthResult> {
+    this.calls.push('update-password')
+    return Promise.resolve(this.updatePasswordResult)
+  }
+
   getClaims(): Promise<SupabaseAuthResult> {
     this.calls.push('get-claims')
     return Promise.resolve(this.claimsResult)
@@ -89,6 +113,30 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
     await expect(adapter.signUpWithPassword(credentials)).rejects.toMatchObject({
       code: 'accounts.INVALID_ACCOUNT_VALUE',
       context: { field: 'password' },
+    })
+  })
+
+  it('translates a rejected captcha on sign-up', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signUpResult = { data: null, error: { code: 'captcha_failed' } }
+
+    await expect(adapter.signUpWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.CAPTCHA_REJECTED',
+      httpStatus: 400,
+    })
+  })
+
+  it('translates a rejected captcha on sign-in', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.signInResult = { data: null, error: { code: 'captcha_failed' } }
+
+    await expect(adapter.signInWithPassword(credentials)).rejects.toMatchObject({
+      code: 'accounts.CAPTCHA_REJECTED',
+      httpStatus: 400,
     })
   })
 
@@ -165,5 +213,59 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
     await adapter.revokeSession('access-token')
 
     expect(api.calls).toEqual(['sign-out'])
+  })
+
+  it('verifies a server-side email token hash and validates the returned session', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.verifyEmailOtp('token-hash', 'email')).resolves.toMatchObject({
+      accessToken: 'access-token',
+      identity: { email: 'person@example.com' },
+    })
+    expect(api.calls).toEqual(['verify-otp', 'get-claims'])
+
+    api.verifyOtpResult = { data: null, error: { code: 'otp_expired' } }
+    await expect(adapter.verifyEmailOtp('expired-token', 'email')).rejects.toMatchObject({
+      context: { reason: 'email_link_invalid' },
+    })
+  })
+
+  it('attributes signup and recovery OTP sessions to the password flow', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = {
+      data: { claims: { ...claims, amr: [{ method: 'email/signup', timestamp: 1_786_795_200 }] } },
+      error: null,
+    }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.verifyEmailOtp('token-hash', 'email')).resolves.toMatchObject({
+      identity: { authenticationMethod: 'password' },
+    })
+  })
+
+  it('resends confirmation and requests recovery with captcha protection', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await adapter.resendSignUpConfirmation({
+      email: credentials.email,
+      captchaToken: credentials.captchaToken,
+    })
+    await adapter.requestPasswordRecovery({
+      email: credentials.email,
+      captchaToken: credentials.captchaToken,
+    })
+
+    expect(api.calls).toEqual(['resend-sign-up', 'request-recovery'])
+  })
+
+  it('updates a password through the verified identity', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await adapter.updatePassword('auth-user-1', 'New_password1!')
+
+    expect(api.calls).toEqual(['update-password'])
   })
 })

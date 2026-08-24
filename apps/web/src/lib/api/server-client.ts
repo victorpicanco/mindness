@@ -3,7 +3,7 @@ import 'server-only' // server-only
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 
-import { readSessionCookies } from '@/lib/auth/session'
+import { clearSessionCookies, readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
 
 import type { ApiErrorDetails, ApiFieldIssue } from './api-error'
 
@@ -28,7 +28,13 @@ const successEnvelopeSchema = z.object({
   meta: z.unknown().optional(),
 })
 
-type CookieStore = Parameters<typeof readSessionCookies>[0]
+const refreshedSessionSchema = z.object({
+  accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
+  expiresAt: z.iso.datetime(),
+})
+
+type CookieStore = Parameters<typeof writeSessionCookies>[0]
 type Fetcher = typeof fetch
 
 type ApiFetchOptions<TSchema extends z.ZodType> = Omit<RequestInit, 'headers'> & {
@@ -85,19 +91,59 @@ function withAuthorization(
   return authorizedHeaders
 }
 
+function requestApi(
+  fetcher: Fetcher,
+  path: string,
+  init: RequestInit,
+  accessToken: string | undefined,
+): Promise<Response> {
+  return fetcher(apiUrl(path), {
+    ...init,
+    headers: withAuthorization(init.headers, accessToken),
+  })
+}
+
+async function refreshAndRetry(
+  path: string,
+  store: CookieStore,
+  fetcher: Fetcher,
+  init: RequestInit,
+  refreshToken: string,
+): Promise<Response | null> {
+  if (path === '/auth/refresh') return null
+
+  const refreshResponse = await fetcher(apiUrl('/auth/refresh'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  })
+  if (!refreshResponse.ok) {
+    clearSessionCookies(store)
+    return null
+  }
+
+  const refreshBody: unknown = await refreshResponse.json()
+  const { data } = successEnvelopeSchema.parse(refreshBody)
+  const session = refreshedSessionSchema.parse(data)
+  writeSessionCookies(store, session)
+  return requestApi(fetcher, path, init, session.accessToken)
+}
+
 export async function apiFetch<TSchema extends z.ZodType>(
   path: string,
   { cookieStore, fetcher = fetch, headers, schema, ...init }: ApiFetchOptions<TSchema>,
 ): Promise<z.output<TSchema>> {
   const store = cookieStore ?? (await cookies())
-  const { accessToken } = readSessionCookies(store)
+  const { accessToken, refreshToken } = readSessionCookies(store)
   let response: Response
+  const requestInit: RequestInit = headers === undefined ? init : { ...init, headers }
 
   try {
-    response = await fetcher(apiUrl(path), {
-      ...init,
-      headers: withAuthorization(headers, accessToken),
-    })
+    response = await requestApi(fetcher, path, requestInit, accessToken)
+    if (response.status === 401 && refreshToken !== undefined) {
+      response =
+        (await refreshAndRetry(path, store, fetcher, requestInit, refreshToken)) ?? response
+    }
   } catch (cause: unknown) {
     throw new ApiClientError({
       code: 'web.API_REQUEST_FAILED',

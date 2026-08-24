@@ -1,6 +1,7 @@
 import { AcceptConsentUseCase } from '@/modules/accounts/application/use-cases/accept-consent/index.js'
 import { AuthenticateUseCase } from '@/modules/accounts/application/use-cases/authenticate/index.js'
 import { CheckPracticeEligibilityUseCase } from '@/modules/accounts/application/use-cases/check-practice-eligibility/index.js'
+import { ConfirmEmailUseCase } from '@/modules/accounts/application/use-cases/confirm-email/index.js'
 import { CompleteGoogleSignInUseCase } from '@/modules/accounts/application/use-cases/complete-google-sign-in/index.js'
 import { CreateAccountUseCase } from '@/modules/accounts/application/use-cases/create-account/index.js'
 import { DeleteAccountUseCase } from '@/modules/accounts/application/use-cases/delete-account/index.js'
@@ -8,9 +9,13 @@ import { GetAccountProfileUseCase } from '@/modules/accounts/application/use-cas
 import { GetAccountSnapshotUseCase } from '@/modules/accounts/application/use-cases/get-account-snapshot/index.js'
 import { SignInUseCase } from '@/modules/accounts/application/use-cases/sign-in/index.js'
 import { RefreshSessionUseCase } from '@/modules/accounts/application/use-cases/refresh-session/index.js'
+import { RequestPasswordRecoveryUseCase } from '@/modules/accounts/application/use-cases/request-password-recovery/index.js'
+import { ResendSignUpConfirmationUseCase } from '@/modules/accounts/application/use-cases/resend-sign-up-confirmation/index.js'
+import { SignOutUseCase } from '@/modules/accounts/application/use-cases/sign-out/index.js'
 import { SignUpUseCase } from '@/modules/accounts/application/use-cases/sign-up/index.js'
 import { StartGoogleSignInUseCase } from '@/modules/accounts/application/use-cases/start-google-sign-in/index.js'
 import { UpdateTimeZoneUseCase } from '@/modules/accounts/application/use-cases/update-time-zone/index.js'
+import { UpdatePasswordUseCase } from '@/modules/accounts/application/use-cases/update-password/index.js'
 import type { AuthIdentityProvider } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 import type { Clock } from '@/modules/accounts/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/accounts/domain/ports/event-publisher/index.js'
@@ -32,14 +37,19 @@ import { PrismaAccountDeletionRequestsRepository } from '@/modules/accounts/infr
 import { PrismaAccountsRepository } from '@/modules/accounts/infrastructure/repositories/prisma-accounts-repository/index.js'
 import { AcceptConsentController } from '@/modules/accounts/presentation/controllers/accept-consent-controller/index.js'
 import { CompleteGoogleSignInController } from '@/modules/accounts/presentation/controllers/complete-google-sign-in-controller/index.js'
+import { ConfirmEmailController } from '@/modules/accounts/presentation/controllers/confirm-email-controller/index.js'
 import { CreateAccountController } from '@/modules/accounts/presentation/controllers/create-account-controller/index.js'
 import { DeleteAccountController } from '@/modules/accounts/presentation/controllers/delete-account-controller/index.js'
 import { GetAccountProfileController } from '@/modules/accounts/presentation/controllers/get-account-profile-controller/index.js'
 import { SignInController } from '@/modules/accounts/presentation/controllers/sign-in-controller/index.js'
 import { RefreshSessionController } from '@/modules/accounts/presentation/controllers/refresh-session-controller/index.js'
+import { RequestPasswordRecoveryController } from '@/modules/accounts/presentation/controllers/request-password-recovery-controller/index.js'
+import { ResendSignUpConfirmationController } from '@/modules/accounts/presentation/controllers/resend-sign-up-confirmation-controller/index.js'
+import { SignOutController } from '@/modules/accounts/presentation/controllers/sign-out-controller/index.js'
 import { SignUpController } from '@/modules/accounts/presentation/controllers/sign-up-controller/index.js'
 import { StartGoogleSignInController } from '@/modules/accounts/presentation/controllers/start-google-sign-in-controller/index.js'
 import { UpdateTimeZoneController } from '@/modules/accounts/presentation/controllers/update-time-zone-controller/index.js'
+import { UpdatePasswordController } from '@/modules/accounts/presentation/controllers/update-password-controller/index.js'
 import { ACCOUNTS_ROUTE_PATHS } from '@/modules/accounts/presentation/routes/accounts-routes/types.js'
 import type { AccountsControllers } from '@/modules/accounts/presentation/routes/accounts-routes/types.js'
 
@@ -114,6 +124,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     }),
     authenticate: new AuthenticateUseCase({ accounts, authIdentityProvider }),
     checkPracticeEligibility: new CheckPracticeEligibilityUseCase(accounts),
+    confirmEmail: new ConfirmEmailUseCase({ authIdentityProvider }),
     completeGoogleSignIn: new CompleteGoogleSignInUseCase(shared),
     createAccount: new CreateAccountUseCase(shared),
     deleteAccount: new DeleteAccountUseCase({
@@ -125,32 +136,45 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     getAccountSnapshot: new GetAccountSnapshotUseCase(accounts),
     signIn: new SignInUseCase(shared),
     refreshSession: new RefreshSessionUseCase({ authIdentityProvider }),
+    requestPasswordRecovery: new RequestPasswordRecoveryUseCase({ authIdentityProvider }),
+    resendSignUpConfirmation: new ResendSignUpConfirmationUseCase({ authIdentityProvider }),
+    signOut: new SignOutUseCase({ authIdentityProvider }),
     signUp: new SignUpUseCase({ authIdentityProvider }),
     startGoogleSignIn: new StartGoogleSignInUseCase({
       authIdentityProvider,
       googleCallbackUrl: `${deps.config.publicApiUrl}${ACCOUNTS_ROUTE_PATHS.googleCallback}`,
     }),
     updateTimeZone: new UpdateTimeZoneUseCase(shared),
+    updatePassword: new UpdatePasswordUseCase({ authIdentityProvider }),
   }
 
   const controllers: AccountsControllers = {
     acceptConsent: new AcceptConsentController(useCases.acceptConsent),
-    completeGoogleSignIn: new CompleteGoogleSignInController(
-      useCases.completeGoogleSignIn,
-      ACCOUNTS_ROUTE_PATHS.googleCallback,
-      `${deps.config.publicWebUrl}/auth/callback`,
-    ),
+    completeGoogleSignIn: new CompleteGoogleSignInController(useCases.completeGoogleSignIn, {
+      callbackPath: ACCOUNTS_ROUTE_PATHS.googleCallback,
+      webCallbackUrl: `${deps.config.publicWebUrl}/auth/callback`,
+      webSignInUrl: `${deps.config.publicWebUrl}/auth/sign-in`,
+    }),
+    confirmEmail: new ConfirmEmailController(useCases.confirmEmail),
     createAccount: new CreateAccountController(useCases.createAccount),
     deleteAccount: new DeleteAccountController(useCases.deleteAccount),
     getAccountProfile: new GetAccountProfileController(useCases.getAccountProfile),
     signIn: new SignInController(useCases.signIn),
     refreshSession: new RefreshSessionController(useCases.refreshSession),
+    requestPasswordRecovery: new RequestPasswordRecoveryController(
+      useCases.requestPasswordRecovery,
+    ),
+    resendSignUpConfirmation: new ResendSignUpConfirmationController(
+      useCases.resendSignUpConfirmation,
+    ),
+    signOut: new SignOutController(useCases.signOut),
     signUp: new SignUpController(useCases.signUp),
     startGoogleSignIn: new StartGoogleSignInController(useCases.startGoogleSignIn, {
       secureCookie: deps.config.secureCookies,
       callbackPath: ACCOUNTS_ROUTE_PATHS.googleCallback,
     }),
     updateTimeZone: new UpdateTimeZoneController(useCases.updateTimeZone),
+    updatePassword: new UpdatePasswordController(useCases.updatePassword),
   }
 
   const facade: AccountsFacade = createAccountsFacade({

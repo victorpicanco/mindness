@@ -73,21 +73,56 @@ describe('signInAction', () => {
     expect(requests).toEqual([])
   })
 
-  it('writes session cookies and redirects to practice after signing in', async () => {
+  it('requires a captcha token before calling the API', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+    const signInAction = createSignInAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: (input, init) => {
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(Response.json({ data: {} }))
+      },
+      redirect: (path): never => {
+        throw new RedirectSignal(path)
+      },
+    })
+
+    const result = await signInAction(
+      initialSignInActionState,
+      createFormData({
+        email: 'person@example.com',
+        password: 'valid-password',
+        captchaToken: '',
+      }),
+    )
+
+    expect(result).toEqual({ status: 'error', messageKey: 'errors.captchaRequired' })
+    expect(requests).toEqual([])
+  })
+
+  it('writes session cookies and redirects an existing account to practice', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const cookieStore = new InMemoryCookieStore()
+    const requests: Request[] = []
     const signInAction = createSignInAction({
       cookieStore,
-      fetcher: () =>
-        Promise.resolve(
-          Response.json({
-            data: {
-              accessToken: 'access-token',
-              refreshToken: 'refresh-token',
-              expiresAt: '2026-08-23T12:00:00.000Z',
-            },
-          }),
-        ),
+      fetcher: (input, init) => {
+        const request = new Request(input, init)
+        requests.push(request)
+
+        return Promise.resolve(
+          request.url.endsWith('/accounts/me')
+            ? Response.json({ data: { accountId: 'account-id' } })
+            : Response.json({
+                data: {
+                  accessToken: 'access-token',
+                  refreshToken: 'refresh-token',
+                  expiresAt: '2026-08-23T12:00:00.000Z',
+                },
+              }),
+        )
+      },
       redirect: (path): never => {
         throw new RedirectSignal(path)
       },
@@ -109,6 +144,73 @@ describe('signInAction', () => {
         ['mindness_refresh_token', 'refresh-token'],
       ]),
     )
+    expect(requests.map((request) => request.url)).toEqual([
+      'https://api.mindness.test/auth/sign-in',
+      'https://api.mindness.test/accounts/me',
+    ])
+  })
+
+  it('clears the session when the API refuses to provision the account', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const cookieStore = new InMemoryCookieStore()
+    const signInAction = createSignInAction({
+      cookieStore,
+      fetcher: (input, init) => {
+        const request = new Request(input, init)
+
+        return Promise.resolve(
+          request.url.endsWith('/auth/sign-in')
+            ? Response.json({
+                data: {
+                  accessToken: 'access-token',
+                  refreshToken: 'refresh-token',
+                  expiresAt: '2026-08-23T12:00:00.000Z',
+                },
+              })
+            : request.url.endsWith('/accounts/me')
+              ? Response.json(
+                  {
+                    error: {
+                      code: 'accounts.ACCOUNT_NOT_FOUND',
+                      message: 'Account not found',
+                      issues: null,
+                      requestId: 'request-id',
+                    },
+                  },
+                  { status: 404 },
+                )
+              : Response.json(
+                  {
+                    error: {
+                      code: 'accounts.BETA_CAPACITY_REACHED',
+                      message: 'The beta has reached 100 accounts',
+                      issues: null,
+                      requestId: 'request-id',
+                    },
+                  },
+                  { status: 409 },
+                ),
+        )
+      },
+      redirect: (path): never => {
+        throw new RedirectSignal(path)
+      },
+    })
+
+    const result = await signInAction(
+      initialSignInActionState,
+      createFormData({
+        email: 'person@example.com',
+        password: 'valid-password',
+        captchaToken: 'captcha-token',
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'api-error',
+      error: { code: 'accounts.BETA_CAPACITY_REACHED', issues: null, requestId: 'request-id' },
+    })
+    expect(cookieStore.values.size).toBe(0)
   })
 
   it('turns backend login rejections into an actionable state', async () => {

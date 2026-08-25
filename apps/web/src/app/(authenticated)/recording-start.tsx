@@ -170,6 +170,9 @@ export function RecordingStart({
           </h1>
         </div>
         <div>
+          <p aria-live="polite" className="text-5xl tabular-nums" role="timer">
+            {formatCountdown(seconds)}
+          </p>
           {failure === null ? null : (
             <p className="mt-4 text-sm text-error" role="alert">
               {failureMessage(failure)}

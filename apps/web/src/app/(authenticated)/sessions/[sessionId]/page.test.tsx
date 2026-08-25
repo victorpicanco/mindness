@@ -77,8 +77,14 @@ describe('SessionPage', () => {
 
     renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
+    const deadline = new Intl.DateTimeFormat('pt-BR', {
+      hour: '2-digit',
+      hour12: false,
+      minute: '2-digit',
+    }).format(new Date(activeSession().expiresAt))
+
     expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeEnabled()
-    expect(screen.getByRole('timer')).toHaveTextContent('01:00')
+    expect(screen.getByText(`Inicie sua gravação até ${deadline}`)).toBeInTheDocument()
     vi.useRealTimers()
   })
 

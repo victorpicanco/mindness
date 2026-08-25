@@ -14,7 +14,7 @@ import {
 import { MicrophoneUnavailableError } from '@/lib/media/microphone-unavailable-error'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
-import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from '@/components/practice/countdown'
+import { countdownSeconds, TIMER_TICK_MS } from '@/components/practice/countdown'
 import { SessionRecorder } from '@/components/practice/session-recorder'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 
@@ -50,6 +50,14 @@ async function reportDeniedMicrophonePermission(sessionId: string): Promise<void
   })
 }
 
+function deadlineTime(expiresAt: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    hour12: false,
+    minute: '2-digit',
+  }).format(new Date(expiresAt))
+}
+
 export function RecordingStart({
   audioLevelSource,
   reportMicrophonePermissionDenied = reportDeniedMicrophonePermission,
@@ -63,9 +71,6 @@ export function RecordingStart({
   const status = usePracticeSessionStore((state) => state.status)
   const beginRecording = usePracticeSessionStore((state) => state.beginRecording)
   const expireSession = usePracticeSessionStore((state) => state.expireSession)
-  const [seconds, setSeconds] = useState(() =>
-    session === null ? 0 : countdownSeconds(session.expiresAt),
-  )
   const [failure, setFailure] = useState<StartFailure | null>(null)
   const [isCapturing, setIsCapturing] = useState(false)
   const expiredRef = useRef(false)
@@ -109,20 +114,16 @@ export function RecordingStart({
     if (session === null || status !== 'awaiting-recording') return
     const expiresAt = session.expiresAt
 
-    function updateCountdown() {
-      const nextSeconds = countdownSeconds(expiresAt)
-
-      setSeconds(nextSeconds)
-
-      if (nextSeconds === 0 && !expiredRef.current) {
+    function checkExpiration() {
+      if (countdownSeconds(expiresAt) === 0 && !expiredRef.current) {
         expiredRef.current = true
         expireSession()
         router.refresh()
       }
     }
 
-    updateCountdown()
-    const timer = window.setInterval(updateCountdown, TIMER_TICK_MS)
+    checkExpiration()
+    const timer = window.setInterval(checkExpiration, TIMER_TICK_MS)
 
     return () => window.clearInterval(timer)
   }, [expireSession, router, session, status])
@@ -181,18 +182,16 @@ export function RecordingStart({
             {session.themeTitle}
           </h1>
         </div>
-        <div>
-          <p aria-live="polite" className="text-5xl tabular-nums" role="timer">
-            {formatCountdown(seconds)}
+        {failure === null ? null : (
+          <p className="text-sm text-error" role="alert">
+            {failureMessage(failure)}
           </p>
-          {failure === null ? null : (
-            <p className="mt-4 text-sm text-error" role="alert">
-              {failureMessage(failure)}
-            </p>
-          )}
-        </div>
+        )}
       </div>
       <div className="mx-auto w-full max-w-3xl">
+        <p className="mb-2 text-center text-xs text-text-muted">
+          {t('recordUntil', { time: deadlineTime(session.expiresAt) })}
+        </p>
         <SessionRecorder
           isDisabled={mutation.isPending}
           isRecording={false}

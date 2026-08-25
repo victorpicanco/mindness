@@ -114,9 +114,15 @@ describe('RecordingStart', () => {
 
   it('offers an enabled recording bar for the two-minute grace', () => {
     const { container } = renderRecordingStart()
+    const deadline = new Intl.DateTimeFormat('pt-BR', {
+      hour: '2-digit',
+      hour12: false,
+      minute: '2-digit',
+    }).format(new Date(NOW.getTime() + GRACE_SECONDS * 1_000))
 
     expect(screen.getByRole('heading', { name: 'Comunicação clara' })).toBeInTheDocument()
-    expect(screen.getByRole('timer')).toHaveTextContent('02:00')
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument()
+    expect(screen.getByText(`Inicie sua gravação até ${deadline}`)).toBeInTheDocument()
     expect(recorder()).toHaveAttribute('data-recording-state', 'idle')
     expect(container.querySelectorAll('[data-waveform="bar"]')).toHaveLength(0)
     expect(recordingButton()).toBeEnabled()

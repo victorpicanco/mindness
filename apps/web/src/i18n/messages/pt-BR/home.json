@@ -31,6 +31,7 @@
     "recordingActiveLabel": "Gravação em andamento",
     "recordingInProgress": "Gravando",
     "recordingInputLabel": "Gravador de áudio",
+    "recordUntil": "Inicie sua gravação até {time}",
     "startRecording": "Iniciar gravação",
     "stopRecording": "Parar gravação",
     "expired": "Sua sessão expirou porque a gravação não começou a tempo."

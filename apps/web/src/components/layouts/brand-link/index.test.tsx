@@ -33,4 +33,22 @@ describe('BrandLink', () => {
     expect(link).toHaveClass('grid', 'size-10', 'relative', 'z-10')
     expect(onClick).toHaveBeenCalledOnce()
   })
+
+  it('renders the icon logo by default', () => {
+    render(<BrandLink label="Página inicial do Mindness" logoAlt="Mindness" />)
+
+    const link = screen.getByRole('link', { name: 'Página inicial do Mindness' })
+
+    expect(within(link).getByAltText('Mindness')).toBeInTheDocument()
+    expect(screen.queryByText('Mindness')).not.toBeInTheDocument()
+  })
+
+  it('renders the wordmark instead of the icon when expanded', () => {
+    render(<BrandLink isExpanded label="Página inicial do Mindness" logoAlt="Mindness" />)
+
+    const link = screen.getByRole('link', { name: 'Página inicial do Mindness' })
+
+    expect(within(link).queryByAltText('Mindness')).not.toBeInTheDocument()
+    expect(within(link).getByText('Mindness')).toHaveClass('font-(family-name:--font-buenard)')
+  })
 })

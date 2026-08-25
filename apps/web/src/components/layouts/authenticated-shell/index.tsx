@@ -142,7 +142,7 @@ export function AuthenticatedShell({
         >
           {isSidebarExpanded ? (
             <SidebarHeader>
-              <BrandLink label={t('homeLabel')} logoAlt={t('logoAlt')} />
+              <BrandLink isExpanded label={t('homeLabel')} logoAlt={t('logoAlt')} />
 
               <IconButton
                 aria-controls={RAIL_SIDEBAR_ID}
@@ -223,7 +223,12 @@ export function AuthenticatedShell({
           variant="drawer"
         >
           <SidebarHeader>
-            <BrandLink label={t('homeLabel')} logoAlt={t('logoAlt')} onClick={closeMobileSidebar} />
+            <BrandLink
+              isExpanded
+              label={t('homeLabel')}
+              logoAlt={t('logoAlt')}
+              onClick={closeMobileSidebar}
+            />
 
             <IconButton
               icon="cancel-01"

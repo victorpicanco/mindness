@@ -2,7 +2,11 @@ import { z } from 'zod'
 
 import { apiErrorDetails } from '@/lib/api/api-error'
 import { apiFetch } from '@/lib/api/server-client'
-import { clearSessionCookies, readSessionCookies } from '@/lib/auth/session'
+import {
+  clearSessionCookies,
+  readSessionCookies,
+  type SessionCookieStore,
+} from '@/lib/auth/session'
 
 import type { AuthActionState } from './auth-action-state'
 import { captchaTokenSchema, emailSchema } from './auth-credentials'
@@ -11,7 +15,7 @@ import { passwordSchema } from './password-policy'
 
 const messageSchema = z.object({ message: z.string() })
 
-type CookieStore = Parameters<typeof clearSessionCookies>[0]
+type CookieStore = SessionCookieStore
 type EmailRequestPath = '/auth/email/resend' | '/auth/password/recovery'
 
 type CommonDependencies = {

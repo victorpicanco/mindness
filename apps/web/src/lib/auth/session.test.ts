@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   clearSessionCookies,
   hasLiveSession,
+  needsAccessTokenRefresh,
   readSessionCookies,
+  sessionCookiesToSet,
   writeSessionCookies,
 } from './session'
 
@@ -185,5 +187,80 @@ describe('hasLiveSession', () => {
     })
 
     expect(hasLiveSession(store, nowInSeconds)).toBe(false)
+  })
+})
+
+describe('needsAccessTokenRefresh', () => {
+  const nowInSeconds = 1_700_000_000
+
+  it('asks for no refresh while the access token is still valid', () => {
+    const store = new InMemoryCookieStore()
+
+    writeSessionCookies(store, {
+      accessToken: accessTokenExpiringAt(nowInSeconds + 3_600),
+      refreshToken: 'refresh-token',
+    })
+
+    expect(needsAccessTokenRefresh(store, nowInSeconds)).toBe(false)
+  })
+
+  it('asks for a refresh when the access token expired and can be renewed', () => {
+    const store = new InMemoryCookieStore()
+
+    writeSessionCookies(store, {
+      accessToken: accessTokenExpiringAt(nowInSeconds - 1),
+      refreshToken: 'refresh-token',
+    })
+
+    expect(needsAccessTokenRefresh(store, nowInSeconds)).toBe(true)
+  })
+
+  it('asks for a refresh when only the refresh token survived', () => {
+    const store = new InMemoryCookieStore()
+
+    store.set('mindness_refresh_token', 'refresh-token', {
+      httpOnly: true,
+      maxAge: 60,
+      path: '/',
+      sameSite: 'lax',
+      secure: false,
+    })
+
+    expect(needsAccessTokenRefresh(store, nowInSeconds)).toBe(true)
+  })
+
+  it('asks for no refresh when there is nothing left to renew the session with', () => {
+    const store = new InMemoryCookieStore()
+
+    store.set('mindness_access_token', accessTokenExpiringAt(nowInSeconds - 1), {
+      httpOnly: true,
+      maxAge: 60,
+      path: '/',
+      sameSite: 'lax',
+      secure: false,
+    })
+
+    expect(needsAccessTokenRefresh(store, nowInSeconds)).toBe(false)
+  })
+})
+
+describe('sessionCookiesToSet', () => {
+  it('describes both session cookies so a caller can write them anywhere', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+
+    expect(
+      sessionCookiesToSet({ accessToken: 'access-token', refreshToken: 'refresh-token' }),
+    ).toEqual([
+      {
+        name: 'mindness_access_token',
+        value: 'access-token',
+        options: { httpOnly: true, maxAge: 2_592_000, path: '/', sameSite: 'lax', secure: true },
+      },
+      {
+        name: 'mindness_refresh_token',
+        value: 'refresh-token',
+        options: { httpOnly: true, maxAge: 2_592_000, path: '/', sameSite: 'lax', secure: true },
+      },
+    ])
   })
 })

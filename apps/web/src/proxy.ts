@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { REDIRECT_PARAM_NAME, SIGNED_IN_HOME } from '@/lib/auth/redirect-target'
-import { hasLiveSession } from '@/lib/auth/session'
+import { renewSession, type SessionRenewal } from '@/lib/auth/renew-session'
+import { clearSessionCookies, hasLiveSession, sessionCookiesToSet } from '@/lib/auth/session'
 
 const protectedRoutePrefixes = ['/', '/history']
 
@@ -34,6 +35,7 @@ function createContentSecurityPolicy(nonce: string): string {
     // nonce, and a nonce in style-src would make the browser ignore this.
     `style-src 'self' 'unsafe-inline' https://use.hugeicons.com`,
     "img-src 'self' blob: data:",
+    "media-src 'self' data: blob:",
     "font-src 'self' https://use.hugeicons.com",
     `connect-src 'self' ${CAPTCHA_ORIGIN}`,
     `frame-src 'self' ${CAPTCHA_ORIGIN}`,
@@ -91,19 +93,55 @@ function setSecurityHeaders(response: NextResponse, contentSecurityPolicy: strin
   return response
 }
 
-export function proxy(request: NextRequest): NextResponse {
+// Renewing on the incoming request is what lets the render that follows read
+// the fresh access token: a Server Component can only read cookies.
+function applyRenewalToRequest(request: NextRequest, renewal: SessionRenewal): void {
+  if (renewal.status === 'renewed') {
+    for (const { name, value } of sessionCookiesToSet(renewal.tokens)) {
+      request.cookies.set(name, value)
+    }
+  }
+
+  if (renewal.status === 'ended') clearSessionCookies(request.cookies)
+}
+
+function applyRenewalToResponse(response: NextResponse, renewal: SessionRenewal): NextResponse {
+  if (renewal.status === 'renewed') {
+    for (const { name, value, options } of sessionCookiesToSet(renewal.tokens)) {
+      response.cookies.set(name, value, options)
+    }
+  }
+
+  if (renewal.status === 'ended') clearSessionCookies(response.cookies)
+
+  return response
+}
+
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = btoa(crypto.randomUUID())
   const contentSecurityPolicy = createContentSecurityPolicy(nonce)
+  const renewal = requiresSession(request.nextUrl)
+    ? await renewSession({ cookieStore: request.cookies })
+    : ({ status: 'untouched' } as const)
+
+  applyRenewalToRequest(request, renewal)
+
   const isSignedIn = hasLiveSession(request.cookies)
 
   if (requiresSession(request.nextUrl) && !isSignedIn) {
-    return setSecurityHeaders(NextResponse.redirect(signInUrl(request)), contentSecurityPolicy)
+    return applyRenewalToResponse(
+      setSecurityHeaders(NextResponse.redirect(signInUrl(request)), contentSecurityPolicy),
+      renewal,
+    )
   }
 
   if (isSignedOutOnlyRoute(request.nextUrl.pathname) && isSignedIn) {
-    return setSecurityHeaders(
-      NextResponse.redirect(new URL(SIGNED_IN_HOME, request.url)),
-      contentSecurityPolicy,
+    return applyRenewalToResponse(
+      setSecurityHeaders(
+        NextResponse.redirect(new URL(SIGNED_IN_HOME, request.url)),
+        contentSecurityPolicy,
+      ),
+      renewal,
     )
   }
 
@@ -111,20 +149,18 @@ export function proxy(request: NextRequest): NextResponse {
   requestHeaders.set('Content-Security-Policy', contentSecurityPolicy)
   requestHeaders.set('x-nonce', nonce)
 
-  return setSecurityHeaders(
-    NextResponse.next({ request: { headers: requestHeaders } }),
-    contentSecurityPolicy,
+  return applyRenewalToResponse(
+    setSecurityHeaders(
+      NextResponse.next({ request: { headers: requestHeaders } }),
+      contentSecurityPolicy,
+    ),
+    renewal,
   )
 }
 
+// Prefetches are deliberately included: they are the only requests that reach a
+// protected render without a proxy pass, and renewing the session is the one
+// thing a Server Component cannot do for itself.
 export const config = {
-  matcher: [
-    {
-      source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
-      missing: [
-        { type: 'header', key: 'next-router-prefetch' },
-        { type: 'header', key: 'purpose', value: 'prefetch' },
-      ],
-    },
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }

@@ -3,6 +3,7 @@ import 'server-only' // server-only
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 
+import { requestRefreshedTokens } from '@/lib/auth/renew-session'
 import { clearSessionCookies, readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
 
 import type { ApiErrorDetails, ApiFieldIssue } from './api-error'
@@ -26,12 +27,6 @@ const errorEnvelopeSchema = z.object({
 const successEnvelopeSchema = z.object({
   data: z.unknown(),
   meta: z.unknown().optional(),
-})
-
-const refreshedSessionSchema = z.object({
-  accessToken: z.string().min(1),
-  refreshToken: z.string().min(1),
-  expiresAt: z.iso.datetime(),
 })
 
 type CookieStore = Parameters<typeof writeSessionCookies>[0]
@@ -112,21 +107,20 @@ async function refreshAndRetry(
 ): Promise<Response | null> {
   if (path === '/auth/refresh') return null
 
-  const refreshResponse = await fetcher(apiUrl('/auth/refresh'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
+  const tokens = await requestRefreshedTokens({
+    endpoint: apiUrl('/auth/refresh'),
+    fetcher,
+    refreshToken,
   })
-  if (!refreshResponse.ok) {
+
+  if (tokens === null) {
     clearSessionCookies(store)
     return null
   }
 
-  const refreshBody: unknown = await refreshResponse.json()
-  const { data } = successEnvelopeSchema.parse(refreshBody)
-  const session = refreshedSessionSchema.parse(data)
-  writeSessionCookies(store, session)
-  return requestApi(fetcher, path, init, session.accessToken)
+  writeSessionCookies(store, tokens)
+
+  return requestApi(fetcher, path, init, tokens.accessToken)
 }
 
 export async function apiFetch<TSchema extends z.ZodType>(

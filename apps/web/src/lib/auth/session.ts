@@ -18,9 +18,19 @@ type SessionCookieReader = {
   get(name: string): { value: string } | undefined
 }
 
-type SessionCookieStore = SessionCookieReader & {
-  set(name: string, value: string, options: SessionCookieOptions): void
+type SessionCookieEraser = {
   delete(name: string): void
+}
+
+export type SessionCookieStore = SessionCookieReader &
+  SessionCookieEraser & {
+    set(name: string, value: string, options: SessionCookieOptions): void
+  }
+
+type SessionCookie = {
+  name: string
+  value: string
+  options: SessionCookieOptions
 }
 
 type SessionCookies = {
@@ -28,7 +38,7 @@ type SessionCookies = {
   refreshToken: string | undefined
 }
 
-type SessionTokens = {
+export type SessionTokens = {
   accessToken: string
   refreshToken: string
 }
@@ -50,14 +60,22 @@ export function readSessionCookies(store: SessionCookieReader): SessionCookies {
   }
 }
 
-export function writeSessionCookies(store: SessionCookieStore, tokens: SessionTokens): void {
+export function sessionCookiesToSet(tokens: SessionTokens): readonly SessionCookie[] {
   const options = createSessionCookieOptions()
 
-  store.set(ACCESS_TOKEN_COOKIE_NAME, tokens.accessToken, options)
-  store.set(REFRESH_TOKEN_COOKIE_NAME, tokens.refreshToken, options)
+  return [
+    { name: ACCESS_TOKEN_COOKIE_NAME, value: tokens.accessToken, options },
+    { name: REFRESH_TOKEN_COOKIE_NAME, value: tokens.refreshToken, options },
+  ]
 }
 
-export function clearSessionCookies(store: SessionCookieStore): void {
+export function writeSessionCookies(store: SessionCookieStore, tokens: SessionTokens): void {
+  for (const { name, value, options } of sessionCookiesToSet(tokens)) {
+    store.set(name, value, options)
+  }
+}
+
+export function clearSessionCookies(store: SessionCookieEraser): void {
   store.delete(ACCESS_TOKEN_COOKIE_NAME)
   store.delete(REFRESH_TOKEN_COOKIE_NAME)
 }
@@ -88,4 +106,17 @@ export function hasLiveSession(
   if (refreshToken !== undefined) return true
 
   return accessToken !== undefined && accessTokenIsLive(accessToken, nowInSeconds)
+}
+
+// The proxy renews the access token before a render reads it, because a Server
+// Component may only read cookies: writing them there throws.
+export function needsAccessTokenRefresh(
+  store: SessionCookieReader,
+  nowInSeconds = Date.now() / 1000,
+): boolean {
+  const { accessToken, refreshToken } = readSessionCookies(store)
+
+  if (refreshToken === undefined) return false
+
+  return accessToken === undefined || !accessTokenIsLive(accessToken, nowInSeconds)
 }

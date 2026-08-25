@@ -4,7 +4,7 @@ import { apiErrorDetails, type ApiErrorDetails } from '@/lib/api/api-error'
 import { apiFetch } from '@/lib/api/server-client'
 
 import { acceptConsent } from './accept-consent'
-import { clearSessionCookies } from './session'
+import { clearSessionCookies, type SessionCookieStore } from './session'
 
 const provisionAccountResponseSchema = z.object({ message: z.string() })
 const accountProfileResponseSchema = z.object({
@@ -18,7 +18,7 @@ const accountProfileResponseSchema = z.object({
     .nullable(),
 })
 
-type CookieStore = Parameters<typeof clearSessionCookies>[0]
+type CookieStore = SessionCookieStore
 
 type ProvisionAccountDependencies = {
   readonly cookieStore: CookieStore

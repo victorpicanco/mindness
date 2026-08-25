@@ -9,8 +9,8 @@ type RequireSessionDependencies = {
   readonly redirect: (path: string) => never
 }
 
-// The proxy gates these routes too, but it is skipped for prefetch requests,
-// so a protected page has to refuse to render its payload on its own.
+// The proxy already gates these routes; this is the second lock, for any render
+// its matcher does not reach.
 export function createRequireSession({
   cookieStore,
   redirect,

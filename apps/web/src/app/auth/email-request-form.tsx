@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { clientEnv } from '@/lib/env/client'
 
 import { AuthCaptchaField } from './auth-captcha-field'
 import { AuthFormAlert } from './auth-form-alert'
@@ -29,7 +30,7 @@ export function EmailRequestForm({
 }) {
   const t = useTranslations('auth')
   const translate = useTranslations()
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  const siteKey = clientEnv().turnstileSiteKey
   const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined, validate })
 
   const alertMessageKey =

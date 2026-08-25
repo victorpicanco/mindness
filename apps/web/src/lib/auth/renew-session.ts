@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { readServerEnv } from '@/lib/env/server'
+
 import { needsAccessTokenRefresh, readSessionCookies, type SessionTokens } from './session'
 
 const REFRESH_PATH = '/auth/refresh'
@@ -61,15 +63,12 @@ export async function renewSession({
   if (!needsAccessTokenRefresh(cookieStore, nowInSeconds)) return { status: 'untouched' }
 
   const { refreshToken } = readSessionCookies(cookieStore)
-  const apiBaseUrl = process.env.API_BASE_URL
 
-  if (refreshToken === undefined || apiBaseUrl === undefined || apiBaseUrl === '') {
-    return { status: 'untouched' }
-  }
+  if (refreshToken === undefined) return { status: 'untouched' }
 
   try {
     const tokens = await requestRefreshedTokens({
-      endpoint: new URL(REFRESH_PATH, apiBaseUrl).toString(),
+      endpoint: new URL(REFRESH_PATH, readServerEnv().API_BASE_URL).toString(),
       fetcher,
       refreshToken,
     })

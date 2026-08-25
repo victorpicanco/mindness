@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 
 import { requestRefreshedTokens } from '@/lib/auth/renew-session'
+import { EnvironmentError } from '@/lib/env/errors'
+import { readServerEnv } from '@/lib/env/server'
 import { clearSessionCookies, readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
 
 import type { ApiErrorDetails, ApiFieldIssue } from './api-error'
@@ -59,18 +61,7 @@ export class ApiClientError extends Error {
 }
 
 function apiUrl(path: string): string {
-  const baseUrl = process.env.API_BASE_URL
-
-  if (baseUrl === undefined) {
-    throw new ApiClientError({
-      code: 'web.API_BASE_URL_MISSING',
-      message: 'The API base URL is not configured.',
-      issues: null,
-      requestId: null,
-    })
-  }
-
-  return new URL(path, baseUrl).toString()
+  return new URL(path, readServerEnv().API_BASE_URL).toString()
 }
 
 function withAuthorization(
@@ -139,6 +130,8 @@ export async function apiFetch<TSchema extends z.ZodType>(
         (await refreshAndRetry(path, store, fetcher, requestInit, refreshToken)) ?? response
     }
   } catch (cause: unknown) {
+    if (cause instanceof EnvironmentError) throw cause
+
     throw new ApiClientError({
       code: 'web.API_REQUEST_FAILED',
       message: 'Unable to reach the API.',

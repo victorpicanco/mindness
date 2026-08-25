@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { REDIRECT_FIELD_NAME } from '@/lib/auth/redirect-target'
 import type { ApiErrorDescription } from '@/lib/errors/api-error-presentation'
+import { clientEnv } from '@/lib/env/client'
 
 import { AuthCaptchaField } from '../auth-captcha-field'
 import { AuthFormAlert } from '../auth-form-alert'
@@ -28,7 +29,7 @@ type SignInFormProps = {
 }
 
 function googleAuthorizationUrl(): string {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+  const { apiBaseUrl } = clientEnv()
 
   return apiBaseUrl === undefined ? '/auth/google' : `${apiBaseUrl}/auth/google`
 }
@@ -50,7 +51,7 @@ function validate(formData: FormData): AuthFieldErrors {
 export function SignInForm({ action = signInAction, initialError, redirectTo }: SignInFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  const siteKey = clientEnv().turnstileSiteKey
   const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined, validate })
   const announcedInitialError = useRef(false)
 

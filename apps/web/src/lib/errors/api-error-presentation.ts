@@ -80,7 +80,7 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
     messageKey: 'common.errors.validationFailed',
     presentation: 'inline',
   },
-  'web.API_BASE_URL_MISSING': UNKNOWN_API_ERROR,
+  'web.ENVIRONMENT_INVALID': UNKNOWN_API_ERROR,
   'web.API_REQUEST_FAILED': {
     messageKey: 'common.errors.network',
     presentation: 'toast',

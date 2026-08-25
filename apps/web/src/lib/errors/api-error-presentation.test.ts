@@ -95,7 +95,7 @@ describe('describeApiError', () => {
   })
 
   it('describes a missing API base URL as an unexpected failure', () => {
-    expect(describeApiError('web.API_BASE_URL_MISSING')).toEqual({
+    expect(describeApiError('web.ENVIRONMENT_INVALID')).toEqual({
       messageKey: 'common.errors.unknown',
       presentation: 'toast',
     })

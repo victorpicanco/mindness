@@ -54,6 +54,18 @@ describe('apiFetch', () => {
     expect(requests[0]?.headers.get('authorization')).toBe('Bearer access-token')
   })
 
+  it('surfaces an unconfigured API base URL instead of reporting a network failure', async () => {
+    vi.stubEnv('API_BASE_URL', '')
+
+    const request = apiFetch('/sessions/quota', {
+      schema: z.object({ remaining: z.number() }),
+      cookieStore: new InMemoryCookieStore('access-token'),
+      fetcher: () => Promise.reject(new TypeError('fetcher must never be reached')),
+    })
+
+    await expect(request).rejects.toMatchObject({ code: 'web.ENVIRONMENT_INVALID' })
+  })
+
   it('translates network failures into an API client error', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
 

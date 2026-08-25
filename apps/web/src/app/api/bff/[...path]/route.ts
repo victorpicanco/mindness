@@ -2,6 +2,8 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 
 import { clearSessionCookies, readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
+import { EnvironmentError } from '@/lib/env/errors'
+import { readServerEnv } from '@/lib/env/server'
 
 const refreshResponseSchema = z.object({
   data: z.object({
@@ -128,9 +130,15 @@ export function createBffRouteHandler({
 }
 
 async function handle(request: Request, context: BffRouteContext): Promise<Response> {
-  const apiBaseUrl = process.env.API_BASE_URL
+  let apiBaseUrl: string
 
-  if (apiBaseUrl === undefined) return errorResponse(500, 'web.API_BASE_URL_MISSING')
+  try {
+    apiBaseUrl = readServerEnv().API_BASE_URL
+  } catch (cause: unknown) {
+    if (!(cause instanceof EnvironmentError)) throw cause
+
+    return errorResponse(500, cause.code)
+  }
 
   const cookieStore = await cookies()
 

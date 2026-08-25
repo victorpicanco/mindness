@@ -2,6 +2,7 @@ import type { SessionConfiguration } from '@/modules/sessions/domain/value-objec
 import type { SessionAudio } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
 import { SessionNotDeletableError } from '@/modules/sessions/domain/errors/session-not-deletable-error/index.js'
+import { RecordingWindowNotOpenError } from '@/modules/sessions/domain/errors/recording-window-not-open-error/index.js'
 
 import type {
   ReconstituteSessionParams,
@@ -10,7 +11,13 @@ import type {
   StartSessionParams,
 } from './types.js'
 
-const SESSION_DURATION_MILLISECONDS = 15 * 60 * 1000
+const MINUTE_IN_MILLISECONDS = 60 * 1000
+const RECORDING_START_GRACE_MILLISECONDS = 2 * MINUTE_IN_MILLISECONDS
+const SESSION_DURATION_MILLISECONDS = 15 * MINUTE_IN_MILLISECONDS
+
+function researchEndsAtEpoch(createdAtEpoch: number, configuration: SessionConfiguration): number {
+  return createdAtEpoch + configuration.searchWindowMinutes * MINUTE_IN_MILLISECONDS
+}
 
 export class Session {
   private constructor(
@@ -21,9 +28,10 @@ export class Session {
     readonly quotaReservationId: string,
     private _state: SessionState,
     private readonly createdAtEpoch: number,
-    private readonly expiresAtEpoch: number,
+    private expiresAtEpoch: number,
     private _expiredReason: SessionExpiredReason | null,
     private expiredAtEpoch: number | null,
+    private recordingStartedAtEpoch: number | null,
     private _audio: SessionAudio | null,
     private recordedAtEpoch: number | null,
     private _totalScore: number | null,
@@ -42,6 +50,14 @@ export class Session {
 
   get expiresAt(): Date {
     return new Date(this.expiresAtEpoch)
+  }
+
+  get researchEndsAt(): Date {
+    return new Date(researchEndsAtEpoch(this.createdAtEpoch, this.configuration))
+  }
+
+  get recordingStartedAt(): Date | null {
+    return this.recordingStartedAtEpoch === null ? null : new Date(this.recordingStartedAtEpoch)
   }
 
   get expiredReason(): SessionExpiredReason | null {
@@ -87,7 +103,9 @@ export class Session {
       params.quotaReservationId,
       'in_progress',
       createdAtEpoch,
-      createdAtEpoch + SESSION_DURATION_MILLISECONDS,
+      researchEndsAtEpoch(createdAtEpoch, params.configuration) +
+        RECORDING_START_GRACE_MILLISECONDS,
+      null,
       null,
       null,
       null,
@@ -111,6 +129,7 @@ export class Session {
       params.expiresAt.getTime(),
       params.expiredReason,
       params.expiredAt?.getTime() ?? null,
+      params.recordingStartedAt?.getTime() ?? null,
       params.audio ?? null,
       params.recordedAt?.getTime() ?? null,
       params.totalScore ?? null,
@@ -126,6 +145,23 @@ export class Session {
 
   hasElapsedAt(at: Date): boolean {
     return this._state === 'in_progress' && this.expiresAtEpoch <= at.getTime()
+  }
+
+  startRecording(at: Date): Date {
+    if (!this.isLiveAt(at)) {
+      throw new SessionNotInProgressError(this.hasElapsedAt(at) ? 'expired' : this._state)
+    }
+    if (this.recordingStartedAtEpoch !== null) return new Date(this.recordingStartedAtEpoch)
+    if (at.getTime() < researchEndsAtEpoch(this.createdAtEpoch, this.configuration)) {
+      throw new RecordingWindowNotOpenError(this.researchEndsAt)
+    }
+
+    this.recordingStartedAtEpoch = at.getTime()
+    // Until the recording starts, the deadline is the grace to start it; from here on
+    // it is the fifteen-minute bound of DA-11, which covers recording and upload.
+    this.expiresAtEpoch = this.createdAtEpoch + SESSION_DURATION_MILLISECONDS
+
+    return new Date(this.recordingStartedAtEpoch)
   }
 
   expire(reason: SessionExpiredReason, at: Date): void {

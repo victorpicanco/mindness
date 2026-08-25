@@ -8,6 +8,7 @@ import type { ListThemeCategoriesController } from '@/modules/sessions/presentat
 import type { ReportMicrophonePermissionDeniedController } from '@/modules/sessions/presentation/controllers/report-microphone-permission-denied-controller/index.js'
 import type { RequestAudioPlaybackUrlController } from '@/modules/sessions/presentation/controllers/request-audio-playback-url-controller/index.js'
 import type { RequestAudioUploadUrlController } from '@/modules/sessions/presentation/controllers/request-audio-upload-url-controller/index.js'
+import type { StartRecordingController } from '@/modules/sessions/presentation/controllers/start-recording-controller/index.js'
 import type { StartSessionController } from '@/modules/sessions/presentation/controllers/start-session-controller/index.js'
 
 export interface SessionsControllers {
@@ -17,6 +18,7 @@ export interface SessionsControllers {
   readonly listThemeCategories: ListThemeCategoriesController
   readonly abandonSession: AbandonSessionController
   readonly reportMicrophonePermissionDenied: ReportMicrophonePermissionDeniedController
+  readonly startRecording: StartRecordingController
   readonly requestAudioUploadUrl: RequestAudioUploadUrlController
   readonly confirmAudioUpload: ConfirmAudioUploadController
   readonly deleteSession: DeleteSessionController
@@ -32,6 +34,7 @@ export const SESSIONS_ROUTE_PATHS = {
   themeCategories: '/sessions/theme-categories',
   abandon: '/sessions/:sessionId/abandon',
   microphonePermissionDenied: '/sessions/:sessionId/microphone-permission-denied',
+  recording: '/sessions/:sessionId/recording',
   audioUploadUrl: '/sessions/:sessionId/audio/upload-url',
   audioConfirm: '/sessions/:sessionId/audio/confirm',
   audioPlaybackUrl: '/sessions/:sessionId/audio/playback-url',

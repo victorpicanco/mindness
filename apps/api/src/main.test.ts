@@ -138,6 +138,7 @@ function createSessionRow(): SessionRow {
     createdAt: new Date(),
     expiresAt: new Date(),
     expiredAt: null,
+    recordingStartedAt: null,
     recordedAt: null,
     totalScore: null,
     completedAt: null,

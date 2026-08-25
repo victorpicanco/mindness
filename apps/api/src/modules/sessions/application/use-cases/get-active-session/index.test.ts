@@ -89,7 +89,7 @@ function createHarness(activeSession: Session | null) {
 
 describe('GetActiveSessionUseCase', () => {
   it('returns the unexpired active session data without leaking its entity', async () => {
-    const harness = createHarness(createSession(new Date('2026-08-18T23:50:00.000Z')))
+    const harness = createHarness(createSession(new Date('2026-08-18T23:58:00.000Z')))
 
     await expect(harness.useCase.execute({ accountId: 'account-1' })).resolves.toEqual({
       sessionId: 'session-1',
@@ -100,8 +100,10 @@ describe('GetActiveSessionUseCase', () => {
         categorySlug: 'communication',
         searchWindowMinutes: 5,
       },
-      createdAt: '2026-08-18T23:50:00.000Z',
+      createdAt: '2026-08-18T23:58:00.000Z',
+      researchEndsAt: '2026-08-19T00:03:00.000Z',
       expiresAt: '2026-08-19T00:05:00.000Z',
+      recordingStartedAt: null,
     })
     expect(harness.lookedUpThemeIds).toEqual(['theme-1'])
   })

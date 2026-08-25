@@ -41,6 +41,11 @@ import {
   type SessionIdParams as RequestAudioPlaybackUrlParams,
 } from '@/modules/sessions/presentation/controllers/request-audio-playback-url-controller/schemas.js'
 import {
+  StartRecordingResponseSchema,
+  SessionIdParamsSchema as StartRecordingParamsSchema,
+  type SessionIdParams as StartRecordingParams,
+} from '@/modules/sessions/presentation/controllers/start-recording-controller/schemas.js'
+import {
   StartSessionBodySchema,
   StartSessionResponseSchema,
   type StartSessionBody,
@@ -135,6 +140,17 @@ export async function registerSessionsRoutes(
         },
       },
       (request, reply) => controllers.reportMicrophonePermissionDenied.handle(request, reply),
+    )
+
+    authenticated.post<{ Params: StartRecordingParams }>(
+      SESSIONS_ROUTE_PATHS.recording,
+      {
+        schema: {
+          params: StartRecordingParamsSchema,
+          response: { 200: StartRecordingResponseSchema, ...ERROR_RESPONSES },
+        },
+      },
+      (request, reply) => controllers.startRecording.handle(request, reply),
     )
 
     authenticated.post<{ Params: RequestAudioUploadUrlParams }>(

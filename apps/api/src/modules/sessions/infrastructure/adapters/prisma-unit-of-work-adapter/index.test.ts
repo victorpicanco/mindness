@@ -39,6 +39,7 @@ function createRunner(failures: Error[] = []): FakeRunner {
           createdAt: new Date(),
           expiresAt: new Date(),
           expiredAt: null,
+          recordingStartedAt: null,
           recordedAt: null,
           audio: null,
         }),

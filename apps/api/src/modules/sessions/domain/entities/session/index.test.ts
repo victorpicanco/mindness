@@ -4,19 +4,23 @@ import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/se
 import { SessionAudio } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
 import { SessionNotDeletableError } from '@/modules/sessions/domain/errors/session-not-deletable-error/index.js'
+import { RecordingWindowNotOpenError } from '@/modules/sessions/domain/errors/recording-window-not-open-error/index.js'
 
 import { Session, type SessionState } from './index.js'
 
 const CREATED_AT = new Date('2026-08-18T12:00:00.000Z')
-const WITHIN_WINDOW = new Date('2026-08-18T12:14:59.999Z')
-const DEADLINE = new Date('2026-08-18T12:15:00.000Z')
-const AFTER_DEADLINE = new Date('2026-08-18T12:15:00.001Z')
+const BEFORE_RESEARCH_ENDS = new Date('2026-08-18T12:03:59.999Z')
+const RESEARCH_ENDS_AT = new Date('2026-08-18T12:04:00.000Z')
+const WITHIN_WINDOW = new Date('2026-08-18T12:05:59.999Z')
+const DEADLINE = new Date('2026-08-18T12:06:00.000Z')
+const AFTER_DEADLINE = new Date('2026-08-18T12:06:00.001Z')
+const RECORDING_DEADLINE = new Date('2026-08-18T12:15:00.000Z')
 const RECORDED_AT = new Date('2026-08-18T12:07:00.000Z')
 const COMPLETED_AT = new Date('2026-08-18T12:08:00.000Z')
 const STALE_STATES = ['processing', 'expired', 'completed', 'failed', 'deleted'] as const
 
 describe('Session', () => {
-  it('starts an in-progress session with a fifteen-minute expiration', () => {
+  it('starts an in-progress session that expires two minutes after the research window', () => {
     const configuration = createConfiguration()
 
     const session = Session.start({
@@ -35,7 +39,76 @@ describe('Session', () => {
     expect(session.quotaReservationId).toBe('reservation-id')
     expect(session.createdAt).toEqual(CREATED_AT)
     expect(session.state).toBe('in_progress')
+    expect(session.researchEndsAt).toEqual(RESEARCH_ENDS_AT)
     expect(session.expiresAt).toEqual(DEADLINE)
+    expect(session.recordingStartedAt).toBeNull()
+  })
+
+  it.each([
+    { moment: 'as soon as the research window ends', at: RESEARCH_ENDS_AT },
+    { moment: 'at the last instant of the grace', at: WITHIN_WINDOW },
+  ])('starts the recording $moment and extends the session deadline', ({ at }) => {
+    const session = createSession()
+
+    expect(session.startRecording(at)).toEqual(at)
+    expect(session.state).toBe('in_progress')
+    expect(session.recordingStartedAt).toEqual(at)
+    expect(session.expiresAt).toEqual(RECORDING_DEADLINE)
+    expect(session.isLiveAt(AFTER_DEADLINE)).toBe(true)
+  })
+
+  it('keeps the first recording instant when the recording is started twice', () => {
+    const session = createSession()
+
+    session.startRecording(RESEARCH_ENDS_AT)
+
+    expect(session.startRecording(WITHIN_WINDOW)).toEqual(RESEARCH_ENDS_AT)
+    expect(session.recordingStartedAt).toEqual(RESEARCH_ENDS_AT)
+    expect(session.expiresAt).toEqual(RECORDING_DEADLINE)
+  })
+
+  it('refuses to start the recording before the research window ends', () => {
+    const session = createSession()
+
+    expect(() => session.startRecording(BEFORE_RESEARCH_ENDS)).toThrow(RecordingWindowNotOpenError)
+    expect(session.recordingStartedAt).toBeNull()
+    expect(session.expiresAt).toEqual(DEADLINE)
+  })
+
+  it.each([
+    { moment: 'exactly at the grace deadline', at: DEADLINE },
+    { moment: 'after the grace deadline', at: AFTER_DEADLINE },
+  ])('refuses to start the recording $moment', ({ at }) => {
+    const session = createSession()
+
+    expect(() => session.startRecording(at)).toThrow(SessionNotInProgressError)
+    expect(session.recordingStartedAt).toBeNull()
+    expect(session.expiresAt).toEqual(DEADLINE)
+  })
+
+  it.each(STALE_STATES)('rejects starting the recording from the %s state', (state) => {
+    const session = reconstituteWithState(state)
+
+    expect(() => session.startRecording(RESEARCH_ENDS_AT)).toThrow(SessionNotInProgressError)
+  })
+
+  it('preserves the recording instant when reconstituted', () => {
+    const session = Session.reconstitute({
+      sessionId: 'session-id',
+      accountId: 'account-id',
+      themeId: 'theme-id',
+      configuration: createConfiguration(),
+      quotaReservationId: 'reservation-id',
+      state: 'in_progress',
+      createdAt: CREATED_AT,
+      expiresAt: RECORDING_DEADLINE,
+      expiredReason: null,
+      expiredAt: null,
+      recordedAt: null,
+      recordingStartedAt: RESEARCH_ENDS_AT,
+    })
+
+    expect(session.recordingStartedAt).toEqual(RESEARCH_ENDS_AT)
   })
 
   it.each(['timeout', 'abandoned', 'microphone_permission_denied'] as const)(

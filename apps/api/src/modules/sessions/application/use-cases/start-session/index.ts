@@ -86,6 +86,7 @@ export class StartSessionUseCase {
       themeId: theme.themeId,
       themeTitle: theme.title,
       expiresAt: session.expiresAt.toISOString(),
+      researchEndsAt: session.researchEndsAt.toISOString(),
       remaining: reservation.remaining,
     }
   }

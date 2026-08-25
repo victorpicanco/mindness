@@ -27,6 +27,7 @@ export interface SessionRow {
   readonly createdAt: Date
   readonly expiresAt: Date
   readonly expiredAt: Date | null
+  readonly recordingStartedAt: Date | null
   readonly recordedAt: Date | null
   readonly totalScore?: number | null
   readonly completedAt?: Date | null
@@ -48,6 +49,7 @@ export interface SessionScalars {
   readonly createdAt: Date
   readonly expiresAt: Date
   readonly expiredAt: Date | null
+  readonly recordingStartedAt: Date | null
   readonly recordedAt: Date | null
   readonly totalScore: number | null
   readonly completedAt: Date | null

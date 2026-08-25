@@ -19,6 +19,7 @@ export interface StartSessionOutput {
   readonly themeId: string
   readonly themeTitle: string
   readonly expiresAt: string
+  readonly researchEndsAt: string
   readonly remaining: number | null
 }
 

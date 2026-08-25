@@ -169,7 +169,7 @@ describe('StartSessionUseCase', () => {
 
   it('rejects a new session while the account has an unexpired session in progress', async () => {
     const harness = createDependencies({
-      activeSession: createSession('session-1', new Date('2026-08-18T23:50:00.000Z')),
+      activeSession: createSession('session-1', new Date('2026-08-18T23:58:00.000Z')),
       eligibleTheme: { themeId: 'theme-2' },
     })
     const useCase = new StartSessionUseCase(harness.dependencies)
@@ -203,7 +203,7 @@ describe('StartSessionUseCase', () => {
     expect(harness.saved).toHaveLength(2)
     expect(harness.transactionRuns()).toBe(2)
     expect(result.themeId).toBe('theme-2')
-    expect(result.expiresAt).toBe('2026-08-19T00:15:00.000Z')
+    expect(result.expiresAt).toBe('2026-08-19T00:06:00.000Z')
   })
 
   it('publishes an unavailable theme event without reserving quota or saving a session', async () => {
@@ -250,7 +250,8 @@ describe('StartSessionUseCase', () => {
       quotaReservationId: 'reservation-generated-1',
       state: 'in_progress',
     })
-    expect(harness.saved[0]?.expiresAt).toEqual(new Date('2026-08-19T00:15:00.000Z'))
+    expect(harness.saved[0]?.expiresAt).toEqual(new Date('2026-08-19T00:06:00.000Z'))
+    expect(harness.saved[0]?.researchEndsAt).toEqual(new Date('2026-08-19T00:04:00.000Z'))
     expect(harness.events.published[0]).toMatchObject({
       eventName: 'session_started',
       payload: { sessionId: 'generated-1', remaining: 3, surface: 'web' },
@@ -259,7 +260,8 @@ describe('StartSessionUseCase', () => {
       sessionId: 'generated-1',
       themeId: 'theme-2',
       themeTitle: 'Theme',
-      expiresAt: '2026-08-19T00:15:00.000Z',
+      expiresAt: '2026-08-19T00:06:00.000Z',
+      researchEndsAt: '2026-08-19T00:04:00.000Z',
       remaining: 3,
     })
   })

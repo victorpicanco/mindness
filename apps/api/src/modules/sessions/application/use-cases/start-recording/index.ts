@@ -1,41 +1,35 @@
 import type { Session } from '@/modules/sessions/domain/entities/session/index.js'
+import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
+import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
 import { SessionExpiration } from '@/modules/sessions/domain/services/session-expiration/index.js'
 
 import type {
-  GetActiveSessionDependencies,
-  GetActiveSessionInput,
-  GetActiveSessionOutput,
+  StartRecordingDependencies,
+  StartRecordingInput,
+  StartRecordingOutput,
 } from './types.js'
 
-export class GetActiveSessionUseCase {
-  constructor(private readonly dependencies: GetActiveSessionDependencies) {}
+export class StartRecordingUseCase {
+  constructor(private readonly dependencies: StartRecordingDependencies) {}
 
-  async execute(input: GetActiveSessionInput): Promise<GetActiveSessionOutput | null> {
-    const session = await this.dependencies.sessions.findActiveByAccountId(input.accountId)
-
-    if (session === null) return null
+  async execute(input: StartRecordingInput): Promise<StartRecordingOutput> {
+    const session = await this.dependencies.sessions.findById(input.sessionId)
+    if (session === null || session.accountId !== input.accountId) {
+      throw new SessionNotFoundError(input.sessionId)
+    }
 
     const now = this.dependencies.clock.now()
     if (session.hasElapsedAt(now)) {
       await this.expireStaleSession(session, now)
-      return null
+      throw new SessionNotInProgressError('expired')
     }
 
-    const theme = await this.dependencies.themes.findThemeById(session.themeId)
+    const recordingStartedAt = session.startRecording(now)
+    await this.dependencies.unitOfWork.run(() => this.dependencies.sessions.save(session))
 
     return {
-      sessionId: session.id,
-      themeId: session.themeId,
-      themeTitle: theme.title,
-      configuration: {
-        difficulty: session.configuration.difficulty,
-        categorySlug: session.configuration.categorySlug,
-        searchWindowMinutes: session.configuration.searchWindowMinutes,
-      },
-      createdAt: session.createdAt.toISOString(),
-      researchEndsAt: session.researchEndsAt.toISOString(),
+      recordingStartedAt: recordingStartedAt.toISOString(),
       expiresAt: session.expiresAt.toISOString(),
-      recordingStartedAt: session.recordingStartedAt?.toISOString() ?? null,
     }
   }
 
@@ -62,7 +56,7 @@ export class GetActiveSessionUseCase {
 }
 
 export type {
-  GetActiveSessionDependencies,
-  GetActiveSessionInput,
-  GetActiveSessionOutput,
+  StartRecordingDependencies,
+  StartRecordingInput,
+  StartRecordingOutput,
 } from './types.js'

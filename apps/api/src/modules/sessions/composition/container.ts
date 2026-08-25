@@ -12,6 +12,7 @@ import { ListSessionThemeCategoriesUseCase } from '@/modules/sessions/applicatio
 import { RequestAudioPlaybackUrlUseCase } from '@/modules/sessions/application/use-cases/request-audio-playback-url/index.js'
 import { RequestAudioUploadUrlUseCase } from '@/modules/sessions/application/use-cases/request-audio-upload-url/index.js'
 import { ResolveAccountIdentityUseCase } from '@/modules/sessions/application/use-cases/resolve-account-identity/index.js'
+import { StartRecordingUseCase } from '@/modules/sessions/application/use-cases/start-recording/index.js'
 import { StartSessionUseCase } from '@/modules/sessions/application/use-cases/start-session/index.js'
 import { SweepExpiredSessionsUseCase } from '@/modules/sessions/application/use-cases/sweep-expired-sessions/index.js'
 import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
@@ -58,6 +59,7 @@ import { ListThemeCategoriesController } from '@/modules/sessions/presentation/c
 import { ReportMicrophonePermissionDeniedController } from '@/modules/sessions/presentation/controllers/report-microphone-permission-denied-controller/index.js'
 import { RequestAudioUploadUrlController } from '@/modules/sessions/presentation/controllers/request-audio-upload-url-controller/index.js'
 import { RequestAudioPlaybackUrlController } from '@/modules/sessions/presentation/controllers/request-audio-playback-url-controller/index.js'
+import { StartRecordingController } from '@/modules/sessions/presentation/controllers/start-recording-controller/index.js'
 import { StartSessionController } from '@/modules/sessions/presentation/controllers/start-session-controller/index.js'
 import type { SessionsControllers } from '@/modules/sessions/presentation/routes/sessions-routes/types.js'
 import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
@@ -158,6 +160,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
       clock: deps.clock,
     }),
     resolveAccountIdentity: new ResolveAccountIdentityUseCase({ accounts }),
+    startRecording: new StartRecordingUseCase(expirationDependencies),
     startSession: new StartSessionUseCase({ ...expirationDependencies, themes, accounts }),
     sweepExpiredSessions: new SweepExpiredSessionsUseCase({
       ...expirationDependencies,
@@ -174,6 +177,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     reportMicrophonePermissionDenied: new ReportMicrophonePermissionDeniedController(
       useCases.expireSession,
     ),
+    startRecording: new StartRecordingController(useCases.startRecording),
     requestAudioUploadUrl: new RequestAudioUploadUrlController(useCases.requestAudioUploadUrl),
     confirmAudioUpload: new ConfirmAudioUploadController(useCases.confirmAudioUpload),
     deleteSession: new DeleteSessionController(useCases.deleteSession),

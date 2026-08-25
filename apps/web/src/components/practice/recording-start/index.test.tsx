@@ -5,12 +5,18 @@ import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
+import { AudioUploadFailedError } from '@/lib/api/audio-upload-failed-error'
+import type { SubmitRecordingInput } from '@/lib/api/submit-recording'
 import {
   PracticeSessionProvider,
   usePracticeSessionStore,
 } from '@/stores/practice-session/provider'
 
-import { RecordingStart, type RecordingStartProps } from '@/components/practice/recording-start'
+import {
+  RecordingStart,
+  type AudioRecordingSession,
+  type RecordingStartProps,
+} from '@/components/practice/recording-start'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 import { BAR_INTERVAL_MS } from '@/components/practice/use-audio-levels'
 import { MAX_RECORDING_SECONDS } from '@/components/practice/use-recording-clock'
@@ -21,8 +27,14 @@ const GRACE_SECONDS = 120
 
 function PracticeSessionProbe() {
   const status = usePracticeSessionStore((state) => state.status)
+  const audioBlob = usePracticeSessionStore((state) => state.audioBlob)
 
-  return <output aria-label="practice status">{status}</output>
+  return (
+    <>
+      <output aria-label="practice status">{status}</output>
+      <output aria-label="captured audio">{audioBlob === null ? 'none' : 'retained'}</output>
+    </>
+  )
 }
 
 const refreshes: string[] = []
@@ -84,6 +96,14 @@ async function advanceBySeconds(seconds: number) {
   })
 }
 
+async function settleMutation() {
+  for (let i = 0; i < 5; i += 1) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
+  }
+}
+
 async function clickRecordingButton() {
   await act(async () => {
     recordingButton().click()
@@ -96,6 +116,28 @@ function grantedMicrophone(source: AudioLevelSource): RecordingStartProps {
     audioLevelSource: source,
     requestMicrophone: () => Promise.resolve(),
     startRecording: () => Promise.resolve(),
+  }
+}
+
+function fakeAudioCapture(audioBlob: Blob) {
+  const stop = vi.fn(() => Promise.resolve(audioBlob))
+  const captureRecording = (): Promise<AudioRecordingSession> => Promise.resolve({ stop })
+
+  return { captureRecording, stop }
+}
+
+function pendingSubmission(): {
+  submitRecording: (input: SubmitRecordingInput) => Promise<void>
+  submitted: SubmitRecordingInput[]
+} {
+  const submitted: SubmitRecordingInput[] = []
+
+  return {
+    submitRecording: (input) => {
+      submitted.push(input)
+      return new Promise<void>(() => undefined)
+    },
+    submitted,
   }
 }
 
@@ -166,33 +208,45 @@ describe('RecordingStart', () => {
     expect(screen.getByRole('timer')).toHaveTextContent('00:02')
   })
 
-  it('releases the microphone when the recording is stopped by hand', async () => {
+  it('releases the microphone and uploads the audio when the recording is stopped by hand', async () => {
     const { source, stop } = fakeAudioLevelSource()
-    const { container } = renderRecordingStart(grantedMicrophone(source))
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { captureRecording } = fakeAudioCapture(audioBlob)
+    const { submitRecording, submitted } = pendingSubmission()
+    const { container } = renderRecordingStart({
+      ...grantedMicrophone(source),
+      captureRecording,
+      submitRecording,
+    })
 
     await clickRecordingButton()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(BAR_INTERVAL_MS * 3)
     })
-    act(() => {
+    await act(async () => {
       screen.getByRole('button', { name: 'Parar gravação' }).click()
+      await vi.advanceTimersByTimeAsync(0)
     })
 
     expect(stop).toHaveBeenCalledOnce()
     expect(container.querySelectorAll('[data-waveform="bar"]')).toHaveLength(0)
-    expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeDisabled()
+    expect(submitted).toEqual([{ audioBlob, sessionId: SESSION_ID }])
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('uploading')
   })
 
-  it('stops the recording by itself at the one minute limit', async () => {
+  it('stops the recording by itself at the one minute limit and uploads the audio', async () => {
     const { source, stop } = fakeAudioLevelSource()
-    renderRecordingStart(grantedMicrophone(source))
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { captureRecording } = fakeAudioCapture(audioBlob)
+    const { submitRecording, submitted } = pendingSubmission()
+    renderRecordingStart({ ...grantedMicrophone(source), captureRecording, submitRecording })
 
     await clickRecordingButton()
     await advanceBySeconds(MAX_RECORDING_SECONDS)
 
     expect(stop).toHaveBeenCalledOnce()
-    expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeDisabled()
-    expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
+    expect(submitted).toEqual([{ audioBlob, sessionId: SESSION_ID }])
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('uploading')
   })
 
   it('expires the session when the grace runs out unused', async () => {
@@ -228,6 +282,67 @@ describe('RecordingStart', () => {
     )
     expect(screen.getByLabelText('practice status')).toHaveTextContent('expired')
     expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
+  })
+
+  it('moves the session to processing once the upload is confirmed', async () => {
+    const { source } = fakeAudioLevelSource()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { captureRecording } = fakeAudioCapture(audioBlob)
+
+    renderRecordingStart({
+      ...grantedMicrophone(source),
+      captureRecording,
+      submitRecording: () => Promise.resolve(),
+    })
+
+    await clickRecordingButton()
+    await advanceBySeconds(MAX_RECORDING_SECONDS)
+    await settleMutation()
+
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('processing')
+  })
+
+  it('keeps the captured audio and offers retry or discard when the upload fails', async () => {
+    const { source } = fakeAudioLevelSource()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { captureRecording } = fakeAudioCapture(audioBlob)
+
+    renderRecordingStart({
+      ...grantedMicrophone(source),
+      captureRecording,
+      submitRecording: () => Promise.reject(new AudioUploadFailedError()),
+    })
+
+    await clickRecordingButton()
+    await advanceBySeconds(MAX_RECORDING_SECONDS)
+    await settleMutation()
+
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('uploading')
+    expect(screen.getByLabelText('captured audio')).toHaveTextContent('retained')
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível enviar o áudio. Tente novamente.',
+    )
+    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Descartar gravação' })).toBeInTheDocument()
+  })
+
+  it('does not allow starting a second recording while the current one is uploading', async () => {
+    const { source } = fakeAudioLevelSource()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { captureRecording } = fakeAudioCapture(audioBlob)
+    const { submitRecording } = pendingSubmission()
+
+    renderRecordingStart({ ...grantedMicrophone(source), captureRecording, submitRecording })
+
+    await clickRecordingButton()
+    await advanceBySeconds(MAX_RECORDING_SECONDS)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.queryByRole('group', { name: 'Gravador de áudio' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Parar gravação' })).not.toBeInTheDocument()
   })
 
   it('holds the recording bar while the server is opening the recording', async () => {

@@ -52,6 +52,14 @@ export const quotaSchema = z.discriminatedUnion('enforced', [
   z.object({ enforced: z.literal(false) }),
 ])
 
+export const audioUploadCredentialSchema = z.object({
+  path: z.string(),
+  token: z.string(),
+  uploadUrl: z.string(),
+})
+
+export const confirmAudioUploadSchema = z.null()
+
 export const microphonePermissionDeniedSchema = z.null()
 
 export const recordingStartedSchema = z.object({

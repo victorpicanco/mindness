@@ -34,7 +34,12 @@
     "recordUntil": "Inicie sua gravação até {time}",
     "startRecording": "Iniciar gravação",
     "stopRecording": "Parar gravação",
-    "expired": "Sua sessão expirou porque a gravação não começou a tempo."
+    "expired": "Sua sessão expirou porque a gravação não começou a tempo.",
+    "uploadingLabel": "Enviando gravação",
+    "uploading": "Enviando sua gravação…",
+    "audioUploadFailed": "Não foi possível enviar o áudio. Tente novamente.",
+    "retryUpload": "Tentar novamente",
+    "discardRecording": "Descartar gravação"
   },
   "session": {
     "totalScore": "Pontuação total",

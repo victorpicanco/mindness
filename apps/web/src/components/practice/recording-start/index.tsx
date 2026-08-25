@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { bffFetch } from '@/lib/api/bff-client'
 import {
   microphonePermissionDeniedSchema,
   recordingStartedSchema,
 } from '@/lib/api/contracts/sessions'
+import { submitRecording as requestRecordingSubmission } from '@/lib/api/submit-recording'
 import { MicrophoneUnavailableError } from '@/lib/media/microphone-unavailable-error'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
@@ -18,11 +20,24 @@ import { countdownSeconds, TIMER_TICK_MS } from '@/components/practice/countdown
 import { SessionRecorder } from '@/components/practice/session-recorder'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 
+export interface AudioRecordingSession {
+  readonly stop: () => Promise<Blob>
+}
+
+export type AudioRecordingSource = () => Promise<AudioRecordingSession>
+
+export type SubmitRecordingRequest = (input: {
+  readonly audioBlob: Blob
+  readonly sessionId: string
+}) => Promise<void>
+
 export interface RecordingStartProps {
   readonly audioLevelSource?: AudioLevelSource
+  readonly captureRecording?: AudioRecordingSource
   readonly reportMicrophonePermissionDenied?: (sessionId: string) => Promise<void>
   readonly requestMicrophone?: () => Promise<void>
   readonly startRecording?: (sessionId: string) => Promise<void>
+  readonly submitRecording?: SubmitRecordingRequest
 }
 
 type StartFailure = 'microphone' | 'permission-denied' | 'request'
@@ -50,6 +65,32 @@ async function reportDeniedMicrophonePermission(sessionId: string): Promise<void
   })
 }
 
+async function browserAudioRecordingSource(): Promise<AudioRecordingSession> {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  const chunks: Blob[] = []
+  const recorder = new MediaRecorder(stream)
+
+  recorder.addEventListener('dataavailable', (event) => {
+    if (event.data.size > 0) chunks.push(event.data)
+  })
+  recorder.start()
+
+  return {
+    stop: () =>
+      new Promise((resolve) => {
+        recorder.addEventListener(
+          'stop',
+          () => {
+            for (const track of stream.getTracks()) track.stop()
+            resolve(new Blob(chunks, { type: recorder.mimeType }))
+          },
+          { once: true },
+        )
+        recorder.stop()
+      }),
+  }
+}
+
 function deadlineTime(expiresAt: string): string {
   return new Intl.DateTimeFormat('pt-BR', {
     hour: '2-digit',
@@ -60,20 +101,26 @@ function deadlineTime(expiresAt: string): string {
 
 export function RecordingStart({
   audioLevelSource,
+  captureRecording = browserAudioRecordingSource,
   reportMicrophonePermissionDenied = reportDeniedMicrophonePermission,
   requestMicrophone = requestBrowserMicrophone,
   startRecording = requestRecordingStart,
+  submitRecording = requestRecordingSubmission,
 }: RecordingStartProps) {
   const t = useTranslations('home.research')
   const translate = useTranslations()
   const router = useRouter()
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
+  const storedAudioBlob = usePracticeSessionStore((state) => state.audioBlob)
   const beginRecording = usePracticeSessionStore((state) => state.beginRecording)
   const expireSession = usePracticeSessionStore((state) => state.expireSession)
+  const captureAudio = usePracticeSessionStore((state) => state.captureAudio)
+  const discardAudio = usePracticeSessionStore((state) => state.discardAudio)
+  const beginProcessing = usePracticeSessionStore((state) => state.beginProcessing)
   const [failure, setFailure] = useState<StartFailure | null>(null)
-  const [isCapturing, setIsCapturing] = useState(false)
   const expiredRef = useRef(false)
+  const captureRef = useRef<AudioRecordingSession | null>(null)
 
   const mutation = useMutation({
     mutationFn: async (sessionId: string) => {
@@ -105,8 +152,14 @@ export function RecordingStart({
     },
     onSuccess: () => {
       setFailure(null)
-      setIsCapturing(true)
       beginRecording()
+    },
+  })
+
+  const submitMutation = useMutation({
+    mutationFn: submitRecording,
+    onSuccess: () => {
+      beginProcessing()
     },
   })
 
@@ -128,6 +181,49 @@ export function RecordingStart({
     return () => window.clearInterval(timer)
   }, [expireSession, router, session, status])
 
+  useEffect(() => {
+    if (status !== 'recording') return
+
+    let isCancelled = false
+
+    captureRecording()
+      .then((recordingSession) => {
+        if (isCancelled) {
+          void recordingSession.stop()
+          return
+        }
+
+        captureRef.current = recordingSession
+      })
+      .catch(() => undefined)
+
+    return () => {
+      isCancelled = true
+      captureRef.current = null
+    }
+  }, [captureRecording, status])
+
+  async function finishRecording() {
+    const recordingSession = captureRef.current
+    if (recordingSession === null || session === null) return
+
+    captureRef.current = null
+    const audioBlob = await recordingSession.stop()
+
+    captureAudio(audioBlob)
+    submitMutation.mutate({ audioBlob, sessionId: session.sessionId })
+  }
+
+  function retryUpload() {
+    if (session === null || storedAudioBlob === null) return
+    submitMutation.mutate({ audioBlob: storedAudioBlob, sessionId: session.sessionId })
+  }
+
+  function discardRecording() {
+    discardAudio()
+    submitMutation.reset()
+  }
+
   if (session === null) return null
 
   if (status === 'expired') {
@@ -148,20 +244,48 @@ export function RecordingStart({
         </div>
         <div className="mx-auto w-full max-w-3xl">
           <SessionRecorder
-            isDisabled={!isCapturing}
-            isRecording={isCapturing}
+            isDisabled={false}
+            isRecording
             onLimitReached={() => {
-              setIsCapturing(false)
+              void finishRecording()
             }}
             onToggleRecording={() => {
-              setIsCapturing(false)
+              void finishRecording()
             }}
             {...(audioLevelSource === undefined ? {} : { source: audioLevelSource })}
           />
-          <VisuallyHidden aria-live="polite">
-            {isCapturing ? t('recordingInProgress') : ''}
-          </VisuallyHidden>
+          <VisuallyHidden aria-live="polite">{t('recordingInProgress')}</VisuallyHidden>
         </div>
+      </section>
+    )
+  }
+
+  if (status === 'uploading') {
+    return (
+      <section
+        aria-label={t('uploadingLabel')}
+        className="m-auto flex flex-col items-center gap-4 text-center"
+      >
+        <h1 className={THEME_CLASSES}>{session.themeTitle}</h1>
+        {submitMutation.isError ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-sm text-error" role="alert">
+              {t('audioUploadFailed')}
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={retryUpload} type="button">
+                {t('retryUpload')}
+              </Button>
+              <Button onClick={discardRecording} type="button" variant="secondary">
+                {t('discardRecording')}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-text-muted" role="status">
+            {t('uploading')}
+          </p>
+        )}
       </section>
     )
   }

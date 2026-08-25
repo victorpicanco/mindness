@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
 import {
@@ -15,7 +15,7 @@ import {
   type PracticeQuota,
   type StartSessionInput,
   type StartSessionRequest,
-} from './practice-config-form'
+} from '@/components/practice/config-form'
 
 const CATEGORIES = [
   { categoryId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa', name: 'Foco', slug: 'focus' },
@@ -47,6 +47,7 @@ function PracticeSessionProbe() {
 function renderPracticeConfigForm(
   startSession: StartSessionRequest,
   onSessionStarted?: (sessionId: string) => void,
+  signOut: () => void = () => undefined,
 ) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
@@ -55,6 +56,7 @@ function renderPracticeConfigForm(
           <PracticeConfigForm
             categories={CATEGORIES}
             quota={QUOTA}
+            signOut={signOut}
             startSession={startSession}
             {...(onSessionStarted === undefined ? {} : { onSessionStarted })}
           />
@@ -148,5 +150,16 @@ describe('PracticeConfigForm', () => {
     expect(screen.getByRole('button', { name: 'Sair e entrar de novo' })).toBeInTheDocument()
     expect(screen.getByText('idle')).toBeInTheDocument()
     expect(screen.getByText('none')).toBeInTheDocument()
+  })
+
+  it('submits the consent retry control to the sign-out action it was given', async () => {
+    const signOut = vi.fn()
+
+    renderPracticeConfigForm(rejectingRequest('sessions.PRACTICE_NOT_ALLOWED'), undefined, signOut)
+    submitConfiguration()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sair e entrar de novo' }))
+
+    expect(signOut).toHaveBeenCalledOnce()
   })
 })

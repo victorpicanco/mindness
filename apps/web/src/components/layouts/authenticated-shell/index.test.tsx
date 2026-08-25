@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { PathnameContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { AuthenticatedShell } from './index'
 import { messages } from '@/i18n/messages'
@@ -19,6 +19,7 @@ function renderShell(
       label: 'Foco · 24/08 09:00',
     },
   ],
+  signOut: () => void = () => undefined,
 ) {
   return render(
     <PathnameContext.Provider value={pathname}>
@@ -27,6 +28,7 @@ function renderShell(
           initialIsExpanded={isInitiallyExpanded}
           preferenceCookieName="mindness-sidebar-expanded"
           sessionItems={sessionItems}
+          signOut={signOut}
           {...(header === undefined ? {} : { header })}
         >
           {children}
@@ -162,7 +164,11 @@ describe('AuthenticatedShell', () => {
     render(
       <PathnameContext.Provider value="/">
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
-          <AuthenticatedShell initialIsExpanded preferenceCookieName="mindness-sidebar-expanded">
+          <AuthenticatedShell
+            initialIsExpanded
+            preferenceCookieName="mindness-sidebar-expanded"
+            signOut={() => undefined}
+          >
             <p>Content</p>
           </AuthenticatedShell>
         </NextIntlClientProvider>
@@ -214,5 +220,20 @@ describe('AuthenticatedShell', () => {
     expect(mobileToggle).toHaveAttribute('aria-expanded', 'false')
     expect(mobileSidebar).toHaveClass('-translate-x-full')
     expect(backdrop).toHaveClass('pointer-events-none', 'opacity-0')
+  })
+
+  it('submits the sign-out control to the action it was given', () => {
+    const signOut = vi.fn()
+
+    renderShell(<p>Content</p>, true, '/', undefined, [], signOut)
+
+    // The drawer copy of the control is inert while the mobile sidebar is closed,
+    // so only the rail copy is exposed to the accessibility tree.
+    const signOutControls = screen.getAllByRole('button', { name: 'Sair' })
+
+    expect(signOutControls).toHaveLength(1)
+    for (const control of signOutControls) fireEvent.click(control)
+
+    expect(signOut).toHaveBeenCalledOnce()
   })
 })

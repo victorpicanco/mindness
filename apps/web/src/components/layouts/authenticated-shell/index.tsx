@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
-import { signOutAction } from '@/app/auth/sign-out/actions'
 import { BrandLink } from '@/components/layouts/brand-link'
 import { Header } from '@/components/layouts/header'
 import { IconButton } from '@/components/ui/icon-button'
@@ -24,20 +23,24 @@ interface AuthenticatedShellProps {
   readonly initialIsExpanded: boolean
   readonly preferenceCookieName: string
   readonly sessionItems?: readonly SidebarNavigationItem[]
+  readonly signOut: SignOutAction
 }
 
 const ONE_YEAR_IN_SECONDS = 31_536_000
 const RAIL_SIDEBAR_ID = 'authenticated-sidebar'
 const DRAWER_SIDEBAR_ID = 'mobile-authenticated-sidebar'
 
+type SignOutAction = () => void | Promise<void>
+
 interface SignOutControlProps {
   readonly isExpanded: boolean
   readonly label: string
+  readonly signOut: SignOutAction
 }
 
-function SignOutControl({ isExpanded, label }: SignOutControlProps) {
+function SignOutControl({ isExpanded, label, signOut }: SignOutControlProps) {
   return (
-    <form action={signOutAction} className="mt-auto pt-4">
+    <form action={signOut} className="mt-auto pt-4">
       <button
         aria-label={isExpanded ? undefined : label}
         className={`relative z-10 h-10 w-full cursor-pointer items-center overflow-hidden rounded-xl text-text-muted transition-colors hover:bg-input hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text ${isExpanded ? 'grid grid-cols-[2.25rem_minmax(0,1fr)]' : 'grid place-items-center'}`}
@@ -60,6 +63,7 @@ export function AuthenticatedShell({
   initialIsExpanded,
   preferenceCookieName,
   sessionItems = [],
+  signOut,
 }: AuthenticatedShellProps) {
   const t = useTranslations('common.authenticatedShell')
   const activeHref = usePathname()
@@ -161,7 +165,7 @@ export function AuthenticatedShell({
               label={t('sessionsLabel')}
             />
           )}
-          <SignOutControl isExpanded={isSidebarExpanded} label={t('signOut')} />
+          <SignOutControl isExpanded={isSidebarExpanded} label={t('signOut')} signOut={signOut} />
         </Sidebar>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -226,7 +230,7 @@ export function AuthenticatedShell({
               onNavigate={closeMobileSidebar}
             />
           )}
-          <SignOutControl isExpanded label={t('signOut')} />
+          <SignOutControl isExpanded label={t('signOut')} signOut={signOut} />
         </Sidebar>
       </div>
     </div>

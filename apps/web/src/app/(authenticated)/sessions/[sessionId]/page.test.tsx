@@ -62,7 +62,7 @@ describe('SessionPage', () => {
     vi.setSystemTime(new Date('2026-08-24T12:00:00.000Z'))
     const Page = createSessionPage(createApiFetch(activeSession()))
 
-    renderPage(await Page({ params: Promise.resolve({ id: SESSION_ID }) }))
+    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
     expect(screen.getByRole('heading', { name: 'Comunicação clara' })).toBeInTheDocument()
     expect(screen.getByRole('timer')).toHaveTextContent('03:00')
@@ -75,7 +75,7 @@ describe('SessionPage', () => {
     vi.setSystemTime(new Date('2026-08-24T12:04:00.000Z'))
     const Page = createSessionPage(createApiFetch(activeSession()))
 
-    renderPage(await Page({ params: Promise.resolve({ id: SESSION_ID }) }))
+    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
     expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeEnabled()
     expect(screen.getByRole('timer')).toHaveTextContent('01:00')
@@ -88,7 +88,9 @@ describe('SessionPage', () => {
     })
     const Page = createSessionPage(createApiFetch(null), notFound)
 
-    await expect(Page({ params: Promise.resolve({ id: SESSION_ID }) })).rejects.toMatchObject({
+    await expect(
+      Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
+    ).rejects.toMatchObject({
       name: 'NotFoundError',
     })
     expect(notFound).toHaveBeenCalledOnce()
@@ -111,7 +113,7 @@ describe('SessionPage', () => {
       ]),
     )
 
-    renderPage(await Page({ params: Promise.resolve({ id: SESSION_ID }) }))
+    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
     expect(screen.getByRole('heading', { name: 'focus' })).toBeInTheDocument()
     expect(screen.getByText('Concluída')).toBeInTheDocument()

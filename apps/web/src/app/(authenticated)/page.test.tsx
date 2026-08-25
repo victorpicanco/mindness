@@ -95,6 +95,6 @@ describe('HomePage', () => {
     )
 
     await expect(Page({ quota: null })).rejects.toMatchObject({ name: 'RedirectError' })
-    expect(redirects).toEqual(['/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'])
+    expect(redirects).toEqual(['/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'])
   })
 })

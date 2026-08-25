@@ -92,6 +92,15 @@ describe('proxy', () => {
       expect(response.headers.get('x-middleware-next')).toBe('1')
     })
 
+    it('redirects an unauthenticated request to a session route to sign-in', async () => {
+      const response = await proxy(request('/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'))
+
+      expect(response.status).toBe(307)
+      expect(redirectTarget(response)).toBe(
+        '/auth/sign-in?redirect=%2Fsessions%2F7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+      )
+    })
+
     it('allows an authenticated request to a protected route to continue', async () => {
       const response = await proxy(request('/history', signedIn()))
 

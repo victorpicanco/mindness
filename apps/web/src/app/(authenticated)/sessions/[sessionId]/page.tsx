@@ -4,9 +4,9 @@ import { z } from 'zod'
 import { apiFetch } from '@/lib/api/server-client'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 
-import { RecordingStart } from '../recording-start'
-import { ResearchTimer } from '../research-timer'
-import { SessionSummary } from './session-summary'
+import { RecordingStart } from '@/components/practice/recording-start'
+import { ResearchTimer } from '@/components/practice/research-timer'
+import { SessionSummary } from '@/components/practice/session-summary'
 
 const activeSessionSchema = z
   .object({
@@ -43,19 +43,19 @@ type ApiFetch = typeof apiFetch
 type NotFound = typeof notFound
 
 interface SessionPageProps {
-  readonly params: Promise<{ readonly id: string }>
+  readonly params: Promise<{ readonly sessionId: string }>
 }
 
 export function createSessionPage(fetchFromApi: ApiFetch, renderNotFound: NotFound = notFound) {
   return async function SessionPage({ params }: SessionPageProps) {
-    const [{ id }, activeSession, sessions] = await Promise.all([
+    const [{ sessionId }, activeSession, sessions] = await Promise.all([
       params,
       fetchFromApi('/sessions/active', { cache: 'no-store', schema: activeSessionSchema }),
       fetchFromApi('/sessions', { cache: 'no-store', schema: sessionHistorySchema }),
     ])
 
-    if (activeSession === null || activeSession.sessionId !== id) {
-      const session = sessions.find((candidate) => candidate.sessionId === id)
+    if (activeSession === null || activeSession.sessionId !== sessionId) {
+      const session = sessions.find((candidate) => candidate.sessionId === sessionId)
 
       if (session === undefined) renderNotFound()
 

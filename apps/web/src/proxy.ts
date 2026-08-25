@@ -2,9 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { REDIRECT_PARAM_NAME, SIGNED_IN_HOME } from '@/lib/auth/redirect-target'
 import { renewSession, type SessionRenewal } from '@/lib/auth/renew-session'
+import { SESSIONS_ROUTE_PREFIX } from '@/lib/navigation/session-routes'
 import { clearSessionCookies, hasLiveSession, sessionCookiesToSet } from '@/lib/auth/session'
 
-const protectedRoutePrefixes = ['/', '/history']
+const protectedRoutePrefixes = ['/history', SESSIONS_ROUTE_PREFIX]
 
 // Routes whose only purpose is to start a session. Reaching them with a live
 // session is always a dead end; /auth/callback and /auth/confirm are
@@ -55,6 +56,7 @@ function matchesRoute(pathname: string, prefixes: readonly string[]): boolean {
 // needs one; its invalid-link notice is the dead end of a recovery that never
 // produced a session and has to stay reachable without one.
 function requiresSession(url: NextRequest['nextUrl']): boolean {
+  if (url.pathname === SIGNED_IN_HOME) return true
   if (matchesRoute(url.pathname, protectedRoutePrefixes)) return true
 
   return (

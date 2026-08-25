@@ -7,7 +7,7 @@ import {
   SLOT_PITCH,
   WaveformTrack,
   waveformBarHeight,
-} from './waveform-track'
+} from '@/components/practice/waveform-track'
 
 type ResizeCallback = (
   entries: readonly { readonly contentRect: { readonly width: number } }[],

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { TIMER_TICK_MS } from './practice-countdown'
+import { TIMER_TICK_MS } from '@/components/practice/countdown'
 
 export const MAX_RECORDING_SECONDS = 60
 

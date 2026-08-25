@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 
-import { SessionRecorder } from '@/app/(authenticated)/session-recorder'
-import type { AudioLevelSource } from '@/app/(authenticated)/use-audio-levels'
+import { SessionRecorder } from '@/components/practice/session-recorder'
+import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
 import { SessionQuota } from '@/components/layouts/session-quota'
 
@@ -28,6 +28,7 @@ export function PreRecordingLab({ source }: PreRecordingLabProps) {
       initialIsExpanded
       preferenceCookieName={SIDEBAR_COOKIE_NAME}
       sessionItems={[]}
+      signOut={() => undefined}
     >
       <div className="flex min-h-0 flex-1 flex-col px-6 pt-6 pb-10">
         <div className="flex min-h-0 flex-1 items-center justify-center">

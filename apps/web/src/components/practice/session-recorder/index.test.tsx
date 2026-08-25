@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
 
-import { SessionRecorder, type SessionRecorderProps } from './session-recorder'
-import { BAR_INTERVAL_MS, type AudioLevelSource } from './use-audio-levels'
-import { MAX_RECORDING_SECONDS } from './use-recording-clock'
+import { SessionRecorder, type SessionRecorderProps } from '@/components/practice/session-recorder'
+import { BAR_INTERVAL_MS, type AudioLevelSource } from '@/components/practice/use-audio-levels'
+import { MAX_RECORDING_SECONDS } from '@/components/practice/use-recording-clock'
 
 class FakeMicrophoneError extends Error {
   constructor() {

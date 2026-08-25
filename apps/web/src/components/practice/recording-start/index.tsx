@@ -8,9 +8,9 @@ import { useEffect, useRef, useState } from 'react'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
-import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from './practice-countdown'
-import { SessionRecorder } from './session-recorder'
-import type { AudioLevelSource } from './use-audio-levels'
+import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from '@/components/practice/countdown'
+import { SessionRecorder } from '@/components/practice/session-recorder'
+import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 
 export class RecordingNotOpenedError extends Error {
   readonly code = 'web.RECORDING_NOT_OPENED'

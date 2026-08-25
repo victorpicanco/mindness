@@ -3,11 +3,13 @@ import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { z } from 'zod'
 
+import { signOutAction } from '@/app/auth/sign-out/actions'
 import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
 import { SessionQuota } from '@/components/layouts/session-quota'
 import type { SidebarNavigationItem } from '@/components/ui/sidebar'
 import { apiFetch } from '@/lib/api/server-client'
 import { createRequireSession } from '@/lib/auth/require-session'
+import { sessionPath } from '@/lib/navigation/session-routes'
 
 const SIDEBAR_PREFERENCE_COOKIE_NAME = 'mindness-sidebar-expanded'
 
@@ -41,7 +43,7 @@ export function sessionNavigationItems(
   sessions: readonly SessionHistoryItem[],
 ): readonly SidebarNavigationItem[] {
   return sessions.map((session) => ({
-    href: `/${session.sessionId}`,
+    href: sessionPath(session.sessionId),
     icon: 'clock-01',
     label: `${session.categorySlug} · ${session.localDate} ${session.localTime}`,
   }))
@@ -65,6 +67,7 @@ export default async function AuthenticatedLayout({ children }: AuthenticatedLay
       initialIsExpanded={isSidebarExpanded}
       preferenceCookieName={SIDEBAR_PREFERENCE_COOKIE_NAME}
       sessionItems={sessionNavigationItems(sessions)}
+      signOut={signOutAction}
       {...(!quota.enforced
         ? {}
         : {

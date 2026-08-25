@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { MAX_RECORDING_SECONDS, useRecordingClock } from './use-recording-clock'
+import { MAX_RECORDING_SECONDS, useRecordingClock } from '@/components/practice/use-recording-clock'
 
 async function advance(milliseconds: number) {
   await act(async () => {

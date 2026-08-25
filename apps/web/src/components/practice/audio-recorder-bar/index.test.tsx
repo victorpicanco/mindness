@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { AudioRecorderBar } from './audio-recorder-bar'
+import { AudioRecorderBar } from '@/components/practice/audio-recorder-bar'
 
 const LABELS = {
   groupLabel: 'Gravador de áudio',

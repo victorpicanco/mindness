@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
 
-import type { AudioLevelSource } from '@/app/(authenticated)/use-audio-levels'
-import { BAR_INTERVAL_MS } from '@/app/(authenticated)/use-audio-levels'
+import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
+import { BAR_INTERVAL_MS } from '@/components/practice/use-audio-levels'
 
 import { PreRecordingLab } from './pre-recording-lab'
 

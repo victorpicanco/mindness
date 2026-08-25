@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '@/i18n/messages'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 
-import { PracticeSessionStart } from './practice-session-start'
+import { PracticeSessionStart } from '@/components/practice/session-start'
 
 describe('PracticeSessionStart', () => {
   afterEach(cleanup)
@@ -38,6 +38,7 @@ describe('PracticeSessionStart', () => {
                     slug: 'focus',
                   },
                 ]}
+                signOut={() => undefined}
                 quota={null}
                 startSession={() =>
                   Promise.resolve({
@@ -59,7 +60,7 @@ describe('PracticeSessionStart', () => {
     fireEvent.change(screen.getByLabelText('Tempo de pesquisa'), { target: { value: '4' } })
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar sessão' }))
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith(`/${sessionId}`))
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/sessions/${sessionId}`))
     expect(refresh).toHaveBeenCalledOnce()
   })
 })

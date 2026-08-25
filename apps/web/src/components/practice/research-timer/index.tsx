@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
-import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from './practice-countdown'
+import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from '@/components/practice/countdown'
 
 const WARNING_THRESHOLD_SECONDS = 10
 const WARNING_AUDIO_SOURCE =

@@ -2,11 +2,11 @@
 
 import { useTranslations } from 'next-intl'
 
-import { AudioRecorderBar } from './audio-recorder-bar'
-import { formatCountdown } from './practice-countdown'
-import { type AudioLevelSource, useAudioLevels } from './use-audio-levels'
-import { useRecordingClock } from './use-recording-clock'
-import { WAVEFORM_SLOT_COUNT } from './waveform-track'
+import { AudioRecorderBar } from '@/components/practice/audio-recorder-bar'
+import { formatCountdown } from '@/components/practice/countdown'
+import { type AudioLevelSource, useAudioLevels } from '@/components/practice/use-audio-levels'
+import { useRecordingClock } from '@/components/practice/use-recording-clock'
+import { WAVEFORM_SLOT_COUNT } from '@/components/practice/waveform-track'
 
 export interface SessionRecorderProps {
   readonly isDisabled?: boolean

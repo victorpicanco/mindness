@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl'
 import { useState, type FormEvent } from 'react'
 import { z } from 'zod'
 
-import { signOutAction } from '@/app/auth/sign-out/actions'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
@@ -65,6 +64,8 @@ export interface StartedSession {
 }
 
 export type StartSessionRequest = (input: StartSessionInput) => Promise<StartedSession>
+
+export type SignOutAction = () => void | Promise<void>
 
 type PracticeSessionRequestErrorOptions = ApiErrorDetails & {
   readonly message: string
@@ -131,6 +132,7 @@ interface PracticeConfigFormProps {
   readonly categories: readonly PracticeCategory[]
   readonly onSessionStarted?: (sessionId: string) => void
   readonly quota: PracticeQuota | null
+  readonly signOut: SignOutAction
   readonly startSession?: StartSessionRequest
 }
 
@@ -138,6 +140,7 @@ export function PracticeConfigForm({
   categories,
   onSessionStarted,
   quota,
+  signOut,
   startSession = requestSessionStart,
 }: PracticeConfigFormProps) {
   const t = useTranslations('home.practice')
@@ -250,7 +253,7 @@ export function PracticeConfigForm({
         <div className="flex flex-col items-start gap-3 text-sm text-error" role="alert">
           <p>{failureMessage(failureCode)}</p>
           {isConsentPending ? (
-            <form action={signOutAction}>
+            <form action={signOut}>
               <Button size="sm" type="submit" variant="secondary">
                 {t('signOutToRetry')}
               </Button>

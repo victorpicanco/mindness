@@ -1,11 +1,8 @@
 'use client'
 
-import {
-  PracticeConfigForm,
-  type StartSessionRequest,
-} from '@/app/(authenticated)/practice-config-form'
-import { RecordingStart } from '@/app/(authenticated)/recording-start'
-import { ResearchTimer } from '@/app/(authenticated)/research-timer'
+import { PracticeConfigForm, type StartSessionRequest } from '@/components/practice/config-form'
+import { RecordingStart } from '@/components/practice/recording-start'
+import { ResearchTimer } from '@/components/practice/research-timer'
 import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
 import { SessionQuota } from '@/components/layouts/session-quota'
 import {
@@ -53,6 +50,7 @@ function SessionLabContent() {
       initialIsExpanded
       preferenceCookieName="mindness-session-lab-sidebar-expanded"
       sessionItems={[]}
+      signOut={() => undefined}
     >
       <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
         <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center justify-between gap-6">
@@ -72,6 +70,7 @@ function SessionLabContent() {
                   categories={FAKE_CATEGORIES}
                   onSessionStarted={() => undefined}
                   quota={{ allowance: FAKE_QUOTA.allowance, renewsAt: FAKE_QUOTA.renewsAt }}
+                  signOut={() => undefined}
                   startSession={startFakeSession}
                 />
               </>

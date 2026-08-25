@@ -1,6 +1,6 @@
 import { IconButton } from '@/components/ui/icon-button'
 
-import { WaveformTrack } from './waveform-track'
+import { WaveformTrack } from '@/components/practice/waveform-track'
 
 export interface AudioRecorderBarProps {
   readonly elapsedLabel: string

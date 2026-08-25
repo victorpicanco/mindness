@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { BAR_INTERVAL_MS, useAudioLevels } from './use-audio-levels'
+import { BAR_INTERVAL_MS, useAudioLevels } from '@/components/practice/use-audio-levels'
 
 class FakeMicrophoneError extends Error {
   constructor() {

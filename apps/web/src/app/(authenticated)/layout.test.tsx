@@ -20,7 +20,7 @@ describe('authenticated layout session navigation', () => {
       ]),
     ).toEqual([
       {
-        href: '/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+        href: '/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
         icon: 'clock-01',
         label: 'focus · 24/08/2026 09:00',
       },

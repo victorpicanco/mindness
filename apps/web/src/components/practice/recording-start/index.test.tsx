@@ -10,10 +10,10 @@ import {
   usePracticeSessionStore,
 } from '@/stores/practice-session/provider'
 
-import { RecordingStart, type RecordingStartProps } from './recording-start'
-import type { AudioLevelSource } from './use-audio-levels'
-import { BAR_INTERVAL_MS } from './use-audio-levels'
-import { MAX_RECORDING_SECONDS } from './use-recording-clock'
+import { RecordingStart, type RecordingStartProps } from '@/components/practice/recording-start'
+import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
+import { BAR_INTERVAL_MS } from '@/components/practice/use-audio-levels'
+import { MAX_RECORDING_SECONDS } from '@/components/practice/use-recording-clock'
 
 const NOW = new Date('2026-08-24T12:00:00.000Z')
 const SESSION_ID = '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'

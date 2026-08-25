@@ -2,11 +2,13 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 
+import { signOutAction } from '@/app/auth/sign-out/actions'
 import { apiFetch } from '@/lib/api/server-client'
+import { sessionPath } from '@/lib/navigation/session-routes'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 
-import type { PracticeQuota } from './practice-config-form'
-import { PracticeSessionStart } from './practice-session-start'
+import type { PracticeQuota } from '@/components/practice/config-form'
+import { PracticeSessionStart } from '@/components/practice/session-start'
 
 const categoriesSchema = z.array(
   z.object({
@@ -75,7 +77,7 @@ export function createHomePage(
       fetchFromApi('/sessions/theme-categories', { cache: 'no-store', schema: categoriesSchema }),
       fetchFromApi('/sessions/active', { cache: 'no-store', schema: activeSessionSchema }),
     ])
-    if (activeSession !== null) openActiveSession(`/${activeSession.sessionId}`)
+    if (activeSession !== null) openActiveSession(sessionPath(activeSession.sessionId))
 
     return (
       <PracticeSessionProvider>
@@ -85,7 +87,7 @@ export function createHomePage(
               <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
                 {t('title')}
               </h1>
-              <PracticeSessionStart categories={categories} quota={quota} />
+              <PracticeSessionStart categories={categories} quota={quota} signOut={signOutAction} />
             </div>
           </div>
         </div>

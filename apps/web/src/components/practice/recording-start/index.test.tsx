@@ -202,17 +202,26 @@ describe('RecordingStart', () => {
     expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
   })
 
-  it('keeps the session waiting when the microphone is refused', async () => {
+  it('reports the denied microphone permission, shows the instruction and expires the session', async () => {
+    const reports: string[] = []
+
     renderRecordingStart({
+      reportMicrophonePermissionDenied: (sessionId) => {
+        reports.push(sessionId)
+        return Promise.resolve()
+      },
       requestMicrophone: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')),
       startRecording: () => Promise.resolve(),
     })
 
     await clickRecordingButton()
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível acessar o microfone.')
-    expect(screen.getByLabelText('practice status')).toHaveTextContent('awaiting-recording')
-    expect(recordingButton()).toBeEnabled()
+    expect(reports).toEqual([SESSION_ID])
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Autorize o microfone para gravar sua apresentação.',
+    )
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('expired')
+    expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
   })
 
   it('holds the recording bar while the server is opening the recording', async () => {

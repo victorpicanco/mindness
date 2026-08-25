@@ -7,7 +7,10 @@ import { useEffect, useRef, useState } from 'react'
 
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { bffFetch } from '@/lib/api/bff-client'
-import { recordingStartedSchema } from '@/lib/api/contracts/sessions'
+import {
+  microphonePermissionDeniedSchema,
+  recordingStartedSchema,
+} from '@/lib/api/contracts/sessions'
 import { MicrophoneUnavailableError } from '@/lib/media/microphone-unavailable-error'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
@@ -17,11 +20,12 @@ import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 
 export interface RecordingStartProps {
   readonly audioLevelSource?: AudioLevelSource
+  readonly reportMicrophonePermissionDenied?: (sessionId: string) => Promise<void>
   readonly requestMicrophone?: () => Promise<void>
   readonly startRecording?: (sessionId: string) => Promise<void>
 }
 
-type StartFailure = 'microphone' | 'request'
+type StartFailure = 'microphone' | 'permission-denied' | 'request'
 
 const THEME_CLASSES =
   'font-(family-name:--font-buenard) text-4xl leading-tight tracking-tight text-balance sm:text-5xl'
@@ -39,8 +43,16 @@ async function requestRecordingStart(sessionId: string): Promise<void> {
   })
 }
 
+async function reportDeniedMicrophonePermission(sessionId: string): Promise<void> {
+  await bffFetch(`/sessions/${sessionId}/microphone-permission-denied`, {
+    method: 'POST',
+    schema: microphonePermissionDeniedSchema,
+  })
+}
+
 export function RecordingStart({
   audioLevelSource,
+  reportMicrophonePermissionDenied = reportDeniedMicrophonePermission,
   requestMicrophone = requestBrowserMicrophone,
   startRecording = requestRecordingStart,
 }: RecordingStartProps) {
@@ -65,10 +77,25 @@ export function RecordingStart({
       try {
         await requestMicrophone()
       } catch (cause) {
+        if (cause instanceof DOMException && cause.name === 'NotAllowedError') {
+          await reportMicrophonePermissionDenied(sessionId)
+        }
+
         throw new MicrophoneUnavailableError(cause)
       }
     },
     onError: (error) => {
+      const permissionDenied =
+        error instanceof MicrophoneUnavailableError &&
+        error.cause instanceof DOMException &&
+        error.cause.name === 'NotAllowedError'
+
+      if (permissionDenied) {
+        setFailure('permission-denied')
+        expireSession()
+        return
+      }
+
       setFailure(error instanceof MicrophoneUnavailableError ? 'microphone' : 'request')
     },
     onSuccess: () => {
@@ -105,7 +132,9 @@ export function RecordingStart({
   if (status === 'expired') {
     return (
       <section className="m-auto text-center" role="alert">
-        <p className="text-text-muted">{t('expired')}</p>
+        <p className="text-text-muted">
+          {failure === 'permission-denied' ? t('microphonePermissionDenied') : t('expired')}
+        </p>
       </section>
     )
   }
@@ -139,6 +168,7 @@ export function RecordingStart({
   if (status !== 'awaiting-recording') return null
 
   function failureMessage(reason: StartFailure): string {
+    if (reason === 'permission-denied') return t('microphonePermissionDenied')
     return reason === 'microphone' ? t('microphoneError') : translate('common.errors.unknown')
   }
 

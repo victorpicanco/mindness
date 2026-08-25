@@ -26,6 +26,7 @@
   "research": {
     "eyebrow": "Pesquise sobre o tema",
     "microphoneError": "Não foi possível acessar o microfone.",
+    "microphonePermissionDenied": "Autorize o microfone para gravar sua apresentação.",
     "recordingEyebrow": "Seu tempo de pesquisa terminou",
     "recordingActiveLabel": "Gravação em andamento",
     "recordingInProgress": "Gravando",

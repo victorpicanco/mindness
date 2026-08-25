@@ -25,6 +25,7 @@ const QUOTA: PracticeQuota = { allowance: 4, renewsAt: '2026-09-01T12:05:00.000Z
 
 const STARTED_SESSION = {
   expiresAt: '2026-08-24T12:05:00.000Z',
+  researchEndsAt: '2026-08-24T12:03:00.000Z',
   sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91ab',
   themeTitle: 'Comunicação clara',
 }
@@ -43,12 +44,20 @@ function PracticeSessionProbe() {
   )
 }
 
-function renderPracticeConfigForm(startSession: StartSessionRequest) {
+function renderPracticeConfigForm(
+  startSession: StartSessionRequest,
+  onSessionStarted?: (sessionId: string) => void,
+) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
         <PracticeSessionProvider>
-          <PracticeConfigForm categories={CATEGORIES} quota={QUOTA} startSession={startSession} />
+          <PracticeConfigForm
+            categories={CATEGORIES}
+            quota={QUOTA}
+            startSession={startSession}
+            {...(onSessionStarted === undefined ? {} : { onSessionStarted })}
+          />
           <PracticeSessionProbe />
         </PracticeSessionProvider>
       </NextIntlClientProvider>
@@ -88,13 +97,14 @@ describe('PracticeConfigForm', () => {
 
   it('moves the practice session store to researching with the started session', async () => {
     const requests: StartSessionInput[] = []
+    const openedSessions: string[] = []
     const startSession: StartSessionRequest = (input) => {
       requests.push(input)
 
       return Promise.resolve(STARTED_SESSION)
     }
 
-    renderPracticeConfigForm(startSession)
+    renderPracticeConfigForm(startSession, (sessionId) => openedSessions.push(sessionId))
     submitConfiguration()
 
     await waitFor(() => {
@@ -104,6 +114,7 @@ describe('PracticeConfigForm', () => {
     expect(requests).toEqual([
       { categorySlug: 'focus', difficulty: 'balanced', searchWindowMinutes: 4 },
     ])
+    expect(openedSessions).toEqual([STARTED_SESSION.sessionId])
   })
 
   it('offers the plus plan with the renewal date when the quota is exhausted', async () => {

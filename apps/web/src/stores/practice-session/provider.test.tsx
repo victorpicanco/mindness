@@ -18,6 +18,7 @@ describe('PracticeSessionProvider', () => {
         initialState={{
           session: {
             expiresAt: '2026-08-24T12:05:00.000Z',
+            researchEndsAt: '2026-08-24T12:03:00.000Z',
             sessionId: 'session-1',
             themeTitle: 'Communicating with clarity',
           },

@@ -23,6 +23,7 @@ interface AuthenticatedShellProps {
   readonly header?: ReactNode
   readonly initialIsExpanded: boolean
   readonly preferenceCookieName: string
+  readonly sessionItems?: readonly SidebarNavigationItem[]
 }
 
 const ONE_YEAR_IN_SECONDS = 31_536_000
@@ -58,6 +59,7 @@ export function AuthenticatedShell({
   header,
   initialIsExpanded,
   preferenceCookieName,
+  sessionItems = [],
 }: AuthenticatedShellProps) {
   const t = useTranslations('common.authenticatedShell')
   const activeHref = usePathname()
@@ -151,6 +153,14 @@ export function AuthenticatedShell({
             items={navigationItems}
             label={t('primaryNavigationLabel')}
           />
+          {sessionItems.length === 0 ? null : (
+            <SidebarNavigation
+              activeHref={activeHref}
+              isExpanded={isSidebarExpanded}
+              items={sessionItems}
+              label={t('sessionsLabel')}
+            />
+          )}
           <SignOutControl isExpanded={isSidebarExpanded} label={t('signOut')} />
         </Sidebar>
 
@@ -207,6 +217,15 @@ export function AuthenticatedShell({
             label={t('primaryNavigationLabel')}
             onNavigate={closeMobileSidebar}
           />
+          {sessionItems.length === 0 ? null : (
+            <SidebarNavigation
+              activeHref={activeHref}
+              isExpanded
+              items={sessionItems}
+              label={t('sessionsLabel')}
+              onNavigate={closeMobileSidebar}
+            />
+          )}
           <SignOutControl isExpanded label={t('signOut')} />
         </Sidebar>
       </div>

@@ -12,13 +12,17 @@ describe('practice session store', () => {
     const store = createPracticeSessionStore()
     const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
     const session = {
-      expiresAt: '2026-08-24T12:05:00.000Z',
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
       sessionId: 'session-1',
       themeTitle: 'Communicating with clarity',
     }
 
     store.getState().startResearching(session)
     expect(store.getState()).toMatchObject({ status: 'researching', session })
+
+    store.getState().openRecordingWindow()
+    expect(store.getState().status).toBe('awaiting-recording')
 
     store.getState().beginRecording()
     expect(store.getState().status).toBe('recording')
@@ -53,9 +57,40 @@ describe('practice session store', () => {
     )
   })
 
+  it('refuses to begin the recording before the recording window opens', () => {
+    const store = createPracticeSessionStore()
+
+    store.getState().startResearching({
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    })
+
+    expect(() => store.getState().beginRecording()).toThrow(InvalidPracticeSessionTransitionError)
+  })
+
+  it('expires the session when the recording window closes unused', () => {
+    const store = createPracticeSessionStore()
+    const session = {
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    }
+
+    store.getState().startResearching(session)
+    store.getState().openRecordingWindow()
+    store.getState().expireSession()
+
+    expect(store.getState()).toMatchObject({ status: 'expired', session })
+    expect(() => store.getState().expireSession()).toThrow(InvalidPracticeSessionTransitionError)
+  })
+
   it('starts hydrated with an active session', () => {
     const session = {
       expiresAt: '2026-08-24T12:05:00.000Z',
+      researchEndsAt: '2026-08-24T12:03:00.000Z',
       sessionId: 'session-1',
       themeTitle: 'Communicating with clarity',
     }
@@ -69,7 +104,8 @@ describe('practice session store', () => {
     const store = createPracticeSessionStore()
     const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
     const session = {
-      expiresAt: '2026-08-24T12:05:00.000Z',
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
       sessionId: 'session-1',
       themeTitle: 'Communicating with clarity',
     }
@@ -77,6 +113,7 @@ describe('practice session store', () => {
     expect(() => store.getState().beginProcessing()).toThrow(InvalidPracticeSessionTransitionError)
 
     store.getState().startResearching(session)
+    store.getState().openRecordingWindow()
     store.getState().beginRecording()
     store.getState().captureAudio(audioBlob)
     store.getState().beginProcessing()
@@ -91,10 +128,12 @@ describe('practice session store', () => {
     const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
 
     store.getState().startResearching({
-      expiresAt: '2026-08-23T12:05:00.000Z',
+      expiresAt: '2026-08-23T12:07:00.000Z',
+      researchEndsAt: '2026-08-23T12:05:00.000Z',
       sessionId: 'session-1',
       themeTitle: 'Communicating with clarity',
     })
+    store.getState().openRecordingWindow()
     store.getState().beginRecording()
     store.getState().captureAudio(audioBlob)
 

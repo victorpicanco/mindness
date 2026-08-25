@@ -21,6 +21,7 @@ const PRACTICE_NOT_ALLOWED_CODE = 'sessions.PRACTICE_NOT_ALLOWED'
 
 const startedSessionSchema = z.object({
   expiresAt: z.iso.datetime(),
+  researchEndsAt: z.iso.datetime(),
   sessionId: z.uuid(),
   themeTitle: z.string(),
 })
@@ -58,6 +59,7 @@ export interface StartSessionInput {
 
 export interface StartedSession {
   readonly expiresAt: string
+  readonly researchEndsAt: string
   readonly sessionId: string
   readonly themeTitle: string
 }
@@ -127,12 +129,14 @@ function renewalDate(renewsAt: string): string {
 
 interface PracticeConfigFormProps {
   readonly categories: readonly PracticeCategory[]
+  readonly onSessionStarted?: (sessionId: string) => void
   readonly quota: PracticeQuota | null
   readonly startSession?: StartSessionRequest
 }
 
 export function PracticeConfigForm({
   categories,
+  onSessionStarted,
   quota,
   startSession = requestSessionStart,
 }: PracticeConfigFormProps) {
@@ -147,6 +151,7 @@ export function PracticeConfigForm({
     mutationFn: startSession,
     onSuccess: (session) => {
       startResearching(session)
+      onSessionStarted?.(session.sessionId)
     },
   })
 

@@ -12,6 +12,13 @@ function renderShell(
   isInitiallyExpanded = true,
   pathname = '/',
   header: ReactNode = <span>Header content</span>,
+  sessionItems = [
+    {
+      href: '/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+      icon: 'clock-01',
+      label: 'Foco · 24/08 09:00',
+    },
+  ],
 ) {
   return render(
     <PathnameContext.Provider value={pathname}>
@@ -19,6 +26,7 @@ function renderShell(
         <AuthenticatedShell
           initialIsExpanded={isInitiallyExpanded}
           preferenceCookieName="mindness-sidebar-expanded"
+          sessionItems={sessionItems}
           {...(header === undefined ? {} : { header })}
         >
           {children}
@@ -50,6 +58,16 @@ describe('AuthenticatedShell', () => {
     expect(newSessionLink.querySelector('.hgi-pencil-edit-02')).toBeInTheDocument()
     expect(progressLink).toHaveAttribute('href', '/history')
     expect(progressLink.querySelector('.hgi-chart-increase')).toBeInTheDocument()
+  })
+
+  it('renders the server-synchronized session aggregate in the sidebar', () => {
+    renderShell(<p>Content</p>)
+
+    const sidebar = screen.getByRole('complementary')
+    const sessionLink = within(sidebar).getByRole('link', { name: 'Foco · 24/08 09:00' })
+
+    expect(within(sidebar).getByRole('navigation', { name: 'Sessões' })).toBeInTheDocument()
+    expect(sessionLink).toHaveAttribute('href', '/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa')
   })
 
   it('renders a submit control for signing out in desktop and mobile sidebars', () => {

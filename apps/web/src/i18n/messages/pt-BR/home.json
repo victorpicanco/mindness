@@ -23,6 +23,25 @@
       "practiceNotAllowed": "Autorize a gravação e análise de voz para iniciar."
     }
   },
+  "research": {
+    "eyebrow": "Pesquise sobre o tema",
+    "instruction": "Quando o tempo terminar, você terá 2 minutos para iniciar a gravação.",
+    "microphoneError": "Não foi possível acessar o microfone.",
+    "recordingEyebrow": "Seu tempo de pesquisa terminou",
+    "recordingInstruction": "Clique para gravar sua apresentação de até 1 minuto. Se você não começar dentro do tempo, a sessão expira.",
+    "startRecording": "Iniciar gravação",
+    "expired": "Sua sessão expirou porque a gravação não começou a tempo."
+  },
+  "session": {
+    "totalScore": "Pontuação total",
+    "states": {
+      "in_progress": "Em andamento",
+      "expired": "Expirada",
+      "processing": "Em processamento",
+      "completed": "Concluída",
+      "failed": "Falhou"
+    }
+  },
   "showcase": "Mostruário temporário de componentes",
   "description": "Uma visão compacta dos componentes atuais da interface em temas claros e escuros.",
   "buttonsHeading": "Botões",

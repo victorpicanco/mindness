@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen } from '@testing-library/react'
+import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactElement } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -39,12 +40,23 @@ function createApiFetch(activeSession: unknown): typeof apiFetch {
 }
 
 function renderPage(page: ReactElement) {
+  const router = {
+    back: () => undefined,
+    forward: () => undefined,
+    prefetch: () => undefined,
+    push: () => undefined,
+    refresh: () => undefined,
+    replace: () => undefined,
+  }
+
   return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <NextIntlClientProvider locale="pt-BR" messages={messages}>
-        {page}
-      </NextIntlClientProvider>
-    </QueryClientProvider>,
+    <AppRouterContext.Provider value={router}>
+      <QueryClientProvider client={new QueryClient()}>
+        <NextIntlClientProvider locale="pt-BR" messages={messages}>
+          {page}
+        </NextIntlClientProvider>
+      </QueryClientProvider>
+    </AppRouterContext.Provider>,
   )
 }
 
@@ -64,7 +76,8 @@ describe('HomePage', () => {
     expect(screen.getByRole('option', { name: 'Foco' })).toBeInTheDocument()
   })
 
-  it('keeps an active session on the home route and passes it into the session provider', async () => {
+  it('redirects an active session from the creation route to its canonical URL', async () => {
+    const redirects: string[] = []
     const Page = createHomePage(
       createApiFetch({
         configuration: { categorySlug: 'focus', difficulty: 'balanced', searchWindowMinutes: 4 },
@@ -75,10 +88,13 @@ describe('HomePage', () => {
         themeTitle: 'Comunicação clara',
       }),
       () => Promise.resolve(practiceTranslations),
+      (path) => {
+        redirects.push(path)
+        throw new DOMException('Redirected', 'RedirectError')
+      },
     )
 
-    renderPage(await Page({ quota: null }))
-
-    expect(screen.getByText('Comunicação clara')).toBeInTheDocument()
+    await expect(Page({ quota: null })).rejects.toMatchObject({ name: 'RedirectError' })
+    expect(redirects).toEqual(['/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'])
   })
 })

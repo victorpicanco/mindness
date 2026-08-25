@@ -6,6 +6,7 @@ export type PracticeSessionStatus =
   | 'idle'
   | 'researching'
   | 'countdown-warning'
+  | 'awaiting-recording'
   | 'recording'
   | 'uploading'
   | 'processing'
@@ -14,13 +15,14 @@ export type PracticeSessionStatus =
 
 export interface PracticeSession {
   readonly expiresAt: string
+  readonly researchEndsAt: string
   readonly sessionId: string
   readonly themeTitle: string
 }
 
 export interface PracticeSessionInitialState {
   readonly session: PracticeSession
-  readonly status: 'researching'
+  readonly status: 'researching' | 'awaiting-recording'
 }
 
 export interface PracticeSessionState {
@@ -29,7 +31,9 @@ export interface PracticeSessionState {
   readonly audioBlob: Blob | null
   readonly retentionDeadline: number | null
   readonly startResearching: (session: PracticeSession) => void
+  readonly openRecordingWindow: () => void
   readonly beginRecording: () => void
+  readonly expireSession: () => void
   readonly captureAudio: (audioBlob: Blob) => void
   readonly discardAudio: () => void
   readonly beginProcessing: () => void
@@ -40,6 +44,7 @@ const ALL_STATUSES: readonly PracticeSessionStatus[] = [
   'idle',
   'researching',
   'countdown-warning',
+  'awaiting-recording',
   'recording',
   'uploading',
   'processing',
@@ -80,11 +85,24 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
         return { session, status: 'researching' }
       })
     },
+    openRecordingWindow: () => {
+      set((state) => {
+        assertTransition(state.status, 'openRecordingWindow', ['researching', 'countdown-warning'])
+        return { status: 'awaiting-recording' }
+      })
+    },
     beginRecording: () => {
       set((state) => {
-        assertTransition(state.status, 'beginRecording', ['researching', 'countdown-warning'])
+        assertTransition(state.status, 'beginRecording', ['awaiting-recording'])
         return { status: 'recording' }
       })
+    },
+    expireSession: () => {
+      set((state) => {
+        assertTransition(state.status, 'expireSession', ['awaiting-recording'])
+        return { status: 'expired' }
+      })
+      clearRetentionTimer()
     },
     captureAudio: (audioBlob) => {
       const retentionDeadline = Date.now() + AUDIO_RETENTION_WINDOW_MS

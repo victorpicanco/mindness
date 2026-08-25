@@ -5,6 +5,8 @@ export type PracticeSessionAction =
   | 'beginRecording'
   | 'captureAudio'
   | 'discardAudio'
+  | 'expireSession'
+  | 'openRecordingWindow'
   | 'reset'
   | 'startResearching'
 

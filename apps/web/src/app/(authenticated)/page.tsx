@@ -1,17 +1,12 @@
-import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 
-import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
-import { SessionQuota } from '@/components/layouts/session-quota'
-import type { SessionQuotaProps } from '@/components/layouts/session-quota'
 import { apiFetch } from '@/lib/api/server-client'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
-import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
 
-import { PracticeConfigForm, type PracticeQuota } from './practice-config-form'
-
-const SIDEBAR_PREFERENCE_COOKIE_NAME = 'mindness-sidebar-expanded'
+import type { PracticeQuota } from './practice-config-form'
+import { PracticeSessionStart } from './practice-session-start'
 
 const categoriesSchema = z.array(
   z.object({
@@ -56,28 +51,12 @@ async function getPracticeTranslations(): Promise<PracticeTranslations> {
   return (key) => t(key)
 }
 
-function sessionQuotaSummary(quota: z.output<typeof quotaSchema>): SessionQuotaProps | null {
+function sessionQuotaSummary(quota: z.output<typeof quotaSchema>): PracticeQuota | null {
   if (!quota.enforced) return null
 
   return {
     allowance: quota.allowance,
-    remaining: quota.remaining,
     renewsAt: quota.renewsAt,
-  }
-}
-
-function initialPracticeSession(
-  activeSession: z.output<typeof activeSessionSchema>,
-): PracticeSessionInitialState | undefined {
-  if (activeSession === null) return undefined
-
-  return {
-    session: {
-      expiresAt: activeSession.expiresAt,
-      sessionId: activeSession.sessionId,
-      themeTitle: activeSession.themeTitle,
-    },
-    status: 'researching',
   }
 }
 
@@ -88,6 +67,7 @@ interface HomePageContentProps {
 export function createHomePage(
   fetchFromApi: ApiFetch,
   loadPracticeTranslations: () => Promise<PracticeTranslations> = getPracticeTranslations,
+  openActiveSession: (path: string) => never = redirect,
 ) {
   return async function HomePage({ quota }: HomePageContentProps) {
     const [t, categories, activeSession] = await Promise.all([
@@ -95,30 +75,17 @@ export function createHomePage(
       fetchFromApi('/sessions/theme-categories', { cache: 'no-store', schema: categoriesSchema }),
       fetchFromApi('/sessions/active', { cache: 'no-store', schema: activeSessionSchema }),
     ])
-    const initialState = initialPracticeSession(activeSession)
+    if (activeSession !== null) openActiveSession(`/${activeSession.sessionId}`)
 
     return (
-      <PracticeSessionProvider {...(initialState === undefined ? {} : { initialState })}>
+      <PracticeSessionProvider>
         <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
           <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center justify-between gap-6">
             <div className="flex size-full flex-col items-center justify-center px-6 py-12 sm:px-10">
-              {activeSession === null ? (
-                <>
-                  <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
-                    {t('title')}
-                  </h1>
-                  <PracticeConfigForm categories={categories} quota={quota} />
-                </>
-              ) : (
-                <section aria-labelledby="active-session-title" className="text-center">
-                  <p className="text-text-muted" id="active-session-title">
-                    {t('activeSession')}
-                  </p>
-                  <h1 className="font-(family-name:--font-buenard) mt-2 text-3xl leading-tight tracking-tight sm:text-4xl">
-                    {activeSession.themeTitle}
-                  </h1>
-                </section>
-              )}
+              <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
+                {t('title')}
+              </h1>
+              <PracticeSessionStart categories={categories} quota={quota} />
             </div>
           </div>
         </div>
@@ -130,30 +97,8 @@ export function createHomePage(
 const HomePageContent = createHomePage(apiFetch)
 
 export default async function HomePage() {
-  const [cookieStore, quota] = await Promise.all([
-    cookies(),
-    apiFetch('/sessions/quota', { cache: 'no-store', schema: quotaSchema }),
-  ])
-  const isSidebarExpanded = cookieStore.get(SIDEBAR_PREFERENCE_COOKIE_NAME)?.value !== 'false'
+  const quota = await apiFetch('/sessions/quota', { cache: 'no-store', schema: quotaSchema })
   const summary = sessionQuotaSummary(quota)
 
-  return (
-    <AuthenticatedShell
-      initialIsExpanded={isSidebarExpanded}
-      preferenceCookieName={SIDEBAR_PREFERENCE_COOKIE_NAME}
-      {...(summary === null
-        ? {}
-        : {
-            header: (
-              <SessionQuota
-                allowance={summary.allowance}
-                remaining={summary.remaining}
-                renewsAt={summary.renewsAt}
-              />
-            ),
-          })}
-    >
-      <HomePageContent quota={summary} />
-    </AuthenticatedShell>
-  )
+  return <HomePageContent quota={summary} />
 }

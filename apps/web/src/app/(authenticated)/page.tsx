@@ -1,47 +1,14 @@
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { z } from 'zod'
 
-import { signOutAction } from '@/app/auth/sign-out/actions'
+import { activeSessionSchema, categoriesSchema, quotaSchema } from '@/lib/api/contracts/sessions'
 import { apiFetch } from '@/lib/api/server-client'
+import { signOutAction } from '@/lib/auth/sign-out'
 import { sessionPath } from '@/lib/navigation/session-routes'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 
 import type { PracticeQuota } from '@/components/practice/config-form'
 import { PracticeSessionStart } from '@/components/practice/session-start'
-
-const categoriesSchema = z.array(
-  z.object({
-    categoryId: z.uuid(),
-    name: z.string(),
-    slug: z.string(),
-  }),
-)
-
-const quotaSchema = z.discriminatedUnion('enforced', [
-  z.object({
-    allowance: z.number().nonnegative(),
-    enforced: z.literal(true),
-    remaining: z.number().nonnegative(),
-    renewsAt: z.iso.datetime(),
-  }),
-  z.object({ enforced: z.literal(false) }),
-])
-
-const activeSessionSchema = z
-  .object({
-    configuration: z.object({
-      categorySlug: z.string(),
-      difficulty: z.enum(['easy', 'balanced', 'hard']),
-      searchWindowMinutes: z.union([z.literal(3), z.literal(4), z.literal(5)]),
-    }),
-    createdAt: z.iso.datetime(),
-    expiresAt: z.iso.datetime(),
-    sessionId: z.uuid(),
-    themeId: z.uuid(),
-    themeTitle: z.string(),
-  })
-  .nullable()
 
 type ApiFetch = typeof apiFetch
 type PracticeTranslationKey = 'activeSession' | 'title'
@@ -53,7 +20,7 @@ async function getPracticeTranslations(): Promise<PracticeTranslations> {
   return (key) => t(key)
 }
 
-function sessionQuotaSummary(quota: z.output<typeof quotaSchema>): PracticeQuota | null {
+function sessionQuotaSummary(quota: ReturnType<typeof quotaSchema.parse>): PracticeQuota | null {
   if (!quota.enforced) return null
 
   return {
@@ -62,22 +29,20 @@ function sessionQuotaSummary(quota: z.output<typeof quotaSchema>): PracticeQuota
   }
 }
 
-interface HomePageContentProps {
-  readonly quota: PracticeQuota | null
-}
-
 export function createHomePage(
   fetchFromApi: ApiFetch,
   loadPracticeTranslations: () => Promise<PracticeTranslations> = getPracticeTranslations,
   openActiveSession: (path: string) => never = redirect,
 ) {
-  return async function HomePage({ quota }: HomePageContentProps) {
-    const [t, categories, activeSession] = await Promise.all([
+  return async function HomePage() {
+    const [t, quota, categories, activeSession] = await Promise.all([
       loadPracticeTranslations(),
+      fetchFromApi('/sessions/quota', { cache: 'no-store', schema: quotaSchema }),
       fetchFromApi('/sessions/theme-categories', { cache: 'no-store', schema: categoriesSchema }),
       fetchFromApi('/sessions/active', { cache: 'no-store', schema: activeSessionSchema }),
     ])
     if (activeSession !== null) openActiveSession(sessionPath(activeSession.sessionId))
+    const summary = sessionQuotaSummary(quota)
 
     return (
       <PracticeSessionProvider>
@@ -87,7 +52,11 @@ export function createHomePage(
               <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
                 {t('title')}
               </h1>
-              <PracticeSessionStart categories={categories} quota={quota} signOut={signOutAction} />
+              <PracticeSessionStart
+                categories={categories}
+                quota={summary}
+                signOut={signOutAction}
+              />
             </div>
           </div>
         </div>
@@ -98,9 +67,4 @@ export function createHomePage(
 
 const HomePageContent = createHomePage(apiFetch)
 
-export default async function HomePage() {
-  const quota = await apiFetch('/sessions/quota', { cache: 'no-store', schema: quotaSchema })
-  const summary = sessionQuotaSummary(quota)
-
-  return <HomePageContent quota={summary} />
-}
+export default HomePageContent

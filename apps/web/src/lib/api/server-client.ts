@@ -1,35 +1,14 @@
 import 'server-only' // server-only
 
 import { cookies } from 'next/headers'
-import { z } from 'zod'
+import type { z } from 'zod'
 
+import { ApiClientError } from '@/lib/api/client-error'
+import { errorEnvelopeSchema, successEnvelopeSchema } from '@/lib/api/contracts/envelopes'
 import { requestRefreshedTokens } from '@/lib/auth/renew-session'
 import { EnvironmentError } from '@/lib/env/errors'
 import { readServerEnv } from '@/lib/env/server'
 import { clearSessionCookies, readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
-
-import type { ApiErrorDetails, ApiFieldIssue } from './api-error'
-
-const errorEnvelopeSchema = z.object({
-  error: z.object({
-    code: z.string(),
-    message: z.string(),
-    issues: z
-      .array(
-        z.object({
-          field: z.string(),
-          message: z.string(),
-        }),
-      )
-      .nullable(),
-    requestId: z.string(),
-  }),
-})
-
-const successEnvelopeSchema = z.object({
-  data: z.unknown(),
-  meta: z.unknown().optional(),
-})
 
 type CookieStore = Parameters<typeof writeSessionCookies>[0]
 type Fetcher = typeof fetch
@@ -39,25 +18,6 @@ type ApiFetchOptions<TSchema extends z.ZodType> = Omit<RequestInit, 'headers'> &
   readonly fetcher?: Fetcher
   readonly headers?: HeadersInit
   readonly schema: TSchema
-}
-
-type ApiClientErrorOptions = ApiErrorDetails & {
-  readonly message: string
-  readonly cause?: unknown
-}
-
-export class ApiClientError extends Error {
-  readonly code: string
-  readonly issues: readonly ApiFieldIssue[] | null
-  readonly requestId: string | null
-
-  constructor({ code, message, issues, requestId, cause }: ApiClientErrorOptions) {
-    super(message, cause === undefined ? undefined : { cause })
-    this.name = 'ApiClientError'
-    this.code = code
-    this.issues = issues
-    this.requestId = requestId
-  }
 }
 
 function apiUrl(path: string): string {

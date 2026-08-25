@@ -1,0 +1,67 @@
+import { z } from 'zod'
+
+const sessionDifficultySchema = z.enum(['easy', 'balanced', 'hard'])
+
+const sessionConfigurationSchema = z.object({
+  categorySlug: z.string(),
+  difficulty: sessionDifficultySchema,
+  searchWindowMinutes: z.union([z.literal(3), z.literal(4), z.literal(5)]),
+})
+
+const sessionHistoryItemSchema = z.object({
+  bestOfDay: z.boolean(),
+  categorySlug: z.string(),
+  difficulty: sessionDifficultySchema,
+  localDate: z.string(),
+  localTime: z.string(),
+  sessionId: z.uuid(),
+  startedAt: z.iso.datetime(),
+  state: z.enum(['in_progress', 'expired', 'processing', 'completed', 'failed']),
+  totalScore: z.number().int().min(0).max(100).nullable(),
+})
+
+export const activeSessionSchema = z
+  .object({
+    configuration: sessionConfigurationSchema,
+    createdAt: z.iso.datetime(),
+    expiresAt: z.iso.datetime(),
+    recordingStartedAt: z.iso.datetime().nullable(),
+    researchEndsAt: z.iso.datetime(),
+    sessionId: z.uuid(),
+    themeId: z.uuid(),
+    themeTitle: z.string(),
+  })
+  .nullable()
+
+export const categoriesSchema = z.array(
+  z.object({
+    categoryId: z.uuid(),
+    name: z.string(),
+    slug: z.string(),
+  }),
+)
+
+export const quotaSchema = z.discriminatedUnion('enforced', [
+  z.object({
+    allowance: z.number().nonnegative(),
+    enforced: z.literal(true),
+    remaining: z.number().nonnegative(),
+    renewsAt: z.iso.datetime(),
+  }),
+  z.object({ enforced: z.literal(false) }),
+])
+
+export const recordingStartedSchema = z.object({
+  recordingStartedAt: z.iso.datetime(),
+})
+
+export const sessionHistorySchema = z.array(sessionHistoryItemSchema)
+
+export const startedSessionSchema = z.object({
+  expiresAt: z.iso.datetime(),
+  researchEndsAt: z.iso.datetime(),
+  sessionId: z.uuid(),
+  themeTitle: z.string(),
+})
+
+export type SessionHistoryItem = z.output<typeof sessionHistoryItemSchema>

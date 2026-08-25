@@ -1,43 +1,12 @@
 import { notFound } from 'next/navigation'
-import { z } from 'zod'
 
+import { activeSessionSchema, sessionHistorySchema } from '@/lib/api/contracts/sessions'
 import { apiFetch } from '@/lib/api/server-client'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 
 import { RecordingStart } from '@/components/practice/recording-start'
 import { ResearchTimer } from '@/components/practice/research-timer'
 import { SessionSummary } from '@/components/practice/session-summary'
-
-const activeSessionSchema = z
-  .object({
-    configuration: z.object({
-      categorySlug: z.string(),
-      difficulty: z.enum(['easy', 'balanced', 'hard']),
-      searchWindowMinutes: z.union([z.literal(3), z.literal(4), z.literal(5)]),
-    }),
-    createdAt: z.iso.datetime(),
-    expiresAt: z.iso.datetime(),
-    recordingStartedAt: z.iso.datetime().nullable(),
-    researchEndsAt: z.iso.datetime(),
-    sessionId: z.uuid(),
-    themeId: z.uuid(),
-    themeTitle: z.string(),
-  })
-  .nullable()
-
-const sessionHistorySchema = z.array(
-  z.object({
-    bestOfDay: z.boolean(),
-    categorySlug: z.string(),
-    difficulty: z.enum(['easy', 'balanced', 'hard']),
-    localDate: z.string(),
-    localTime: z.string(),
-    sessionId: z.uuid(),
-    startedAt: z.iso.datetime(),
-    state: z.enum(['in_progress', 'expired', 'processing', 'completed', 'failed']),
-    totalScore: z.number().int().min(0).max(100).nullable(),
-  }),
-)
 
 type ApiFetch = typeof apiFetch
 type NotFound = typeof notFound

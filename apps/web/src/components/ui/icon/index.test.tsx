@@ -1,22 +1,41 @@
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { Icon } from './index'
+import { Icon, type IconName } from './index'
+
+const ICON_NAMES = [
+  'audio-wave-01',
+  'cancel-01',
+  'chart-increase',
+  'checkmark-circle-02',
+  'circle',
+  'clock-01',
+  'logout-01',
+  'menu-01',
+  'mic-01',
+  'pencil-edit-02',
+  'sidebar-left',
+  'stop',
+  'view',
+  'view-off',
+] as const satisfies readonly IconName[]
 
 describe('Icon', () => {
   afterEach(cleanup)
 
-  it('renders a decorative hugeicons glyph for the given name', () => {
-    const { container } = render(<Icon name="chart-increase" />)
+  it.each(ICON_NAMES)('renders the typed %s icon as inline SVG', (name) => {
+    const { container } = render(<Icon name={name} />)
 
-    expect(container.firstElementChild).toHaveClass('hgi-stroke', 'hgi-chart-increase', 'text-xl')
+    expect(container.firstElementChild?.tagName).toBe('svg')
+    expect(container.firstElementChild).toHaveAttribute('data-icon', name)
+    expect(container.querySelector('path, line, polyline, rect, circle')).not.toBeNull()
     expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('replaces the default size with the given class name', () => {
     const { container } = render(<Icon className="text-3xl" name="cancel-01" />)
 
-    expect(container.firstElementChild).toHaveClass('hgi-stroke', 'hgi-cancel-01', 'text-3xl')
+    expect(container.firstElementChild).toHaveClass('text-3xl')
     expect(container.firstElementChild).not.toHaveClass('text-xl')
   })
 })

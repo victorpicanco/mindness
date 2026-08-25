@@ -40,7 +40,7 @@ describe('AudioRecorderBar', () => {
 
     const record = screen.getByRole('button', { name: LABELS.recordLabel })
 
-    expect(record.querySelector('.hgi-audio-wave-01')).toBeInTheDocument()
+    expect(record.querySelector('[data-icon="audio-wave-01"]')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: LABELS.stopLabel })).not.toBeInTheDocument()
     expect(screen.getAllByRole('button')).toHaveLength(1)
   })
@@ -58,7 +58,7 @@ describe('AudioRecorderBar', () => {
 
     const stop = screen.getByRole('button', { name: LABELS.stopLabel })
 
-    expect(stop.querySelector('.hgi-stop')).toBeInTheDocument()
+    expect(stop.querySelector('[data-icon="stop"]')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: LABELS.recordLabel })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: LABELS.groupLabel })).toHaveAttribute(
       'data-recording-state',

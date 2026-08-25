@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react'
 
+import { MicrophoneUnavailableError } from '@/lib/media/microphone-unavailable-error'
+
 export const BAR_INTERVAL_MS = 64
 
 const FFT_SIZE = 2048
 const BYTE_MIDPOINT = 128
-
-export class MicrophoneUnavailableError extends Error {
-  readonly code = 'web.MICROPHONE_UNAVAILABLE'
-
-  constructor(cause: unknown) {
-    super('The microphone stream could not be opened', { cause })
-    this.name = 'MicrophoneUnavailableError'
-  }
-}
 
 export interface AudioLevelReader {
   readonly read: () => number

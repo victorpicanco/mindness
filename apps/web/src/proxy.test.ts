@@ -279,6 +279,14 @@ describe('proxy', () => {
       expect(contentSecurityPolicy).not.toMatch(/script-src [^;]*'unsafe-inline'/u)
     })
 
+    it('does not allow the removed external icon font origin', async () => {
+      const response = await proxy(request('/auth/sign-in'))
+      const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
+
+      expect(contentSecurityPolicy).not.toContain('use.hugeicons.com')
+      expect(contentSecurityPolicy).toContain("font-src 'self'")
+    })
+
     it('exposes the nonce to the app so inline scripts can carry it', async () => {
       const response = await proxy(request('/', signedIn()))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''

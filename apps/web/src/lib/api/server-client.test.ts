@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
 import { readSessionCookies } from '@/lib/auth/session'
+import type { ApiClientError } from '@/lib/api/client-error'
 
 import { apiFetch } from './server-client'
-import type { ApiClientError } from './server-client'
 
 class InMemoryCookieStore {
   private readonly values = new Map<string, string>()

@@ -79,10 +79,10 @@ describe('SidebarNavigation', () => {
     expect(links).toHaveLength(2)
     expect(links[0]).toHaveAccessibleName('Nova sessão')
     expect(links[0]).toHaveAttribute('href', '/')
-    expect(links[0]?.querySelector('.hgi-pencil-edit-02')).toBeInTheDocument()
+    expect(links[0]?.querySelector('[data-icon="pencil-edit-02"]')).toBeInTheDocument()
     expect(links[1]).toHaveAccessibleName('Seu progresso')
     expect(links[1]).toHaveAttribute('href', '/history')
-    expect(links[1]?.querySelector('.hgi-chart-increase')).toBeInTheDocument()
+    expect(links[1]?.querySelector('[data-icon="chart-increase"]')).toBeInTheDocument()
   })
 
   it('highlights only the item matching the active path', () => {

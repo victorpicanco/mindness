@@ -34,10 +34,10 @@ function createContentSecurityPolicy(nonce: string): string {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${CAPTCHA_ORIGIN}${developmentSource}`,
     // The toast library injects its stylesheet at runtime and cannot carry a
     // nonce, and a nonce in style-src would make the browser ignore this.
-    `style-src 'self' 'unsafe-inline' https://use.hugeicons.com`,
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "media-src 'self' data: blob:",
-    "font-src 'self' https://use.hugeicons.com",
+    "font-src 'self'",
     `connect-src 'self' ${CAPTCHA_ORIGIN}`,
     `frame-src 'self' ${CAPTCHA_ORIGIN}`,
     "object-src 'none'",

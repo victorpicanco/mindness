@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { Buenard } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { ToastProvider } from '@/components/providers/toast-provider'
@@ -42,18 +42,25 @@ interface RootLayoutProps {
   readonly children: ReactNode
 }
 
-export default async function RootLayout({ children }: RootLayoutProps) {
+async function ThemeInitializationScript() {
   const nonce = (await headers()).get('x-nonce') ?? undefined
 
   return (
+    <script
+      dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
+      nonce={nonce}
+      suppressHydrationWarning
+    />
+  )
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
+  return (
     <html className={buenard.variable} lang="pt-BR" suppressHydrationWarning>
       <head>
-        <link href="https://use.hugeicons.com/font/icons.css" rel="stylesheet" />
-        <script
-          dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
-          nonce={nonce}
-          suppressHydrationWarning
-        />
+        <Suspense fallback={null}>
+          <ThemeInitializationScript />
+        </Suspense>
       </head>
       <body>
         <NextIntlClientProvider>

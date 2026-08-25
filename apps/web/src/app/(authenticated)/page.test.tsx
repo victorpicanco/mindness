@@ -33,7 +33,12 @@ function practiceTranslations(key: string): string {
 
 function createApiFetch(activeSession: unknown): typeof apiFetch {
   return <TSchema extends z.ZodType>(path: string, options: { readonly schema: TSchema }) => {
-    const response = path === '/sessions/theme-categories' ? categories : activeSession
+    const response =
+      path === '/sessions/quota'
+        ? { enforced: false }
+        : path === '/sessions/theme-categories'
+          ? categories
+          : activeSession
 
     return Promise.resolve(options.schema.parse(response))
   }
@@ -63,11 +68,35 @@ function renderPage(page: ReactElement) {
 describe('HomePage', () => {
   afterEach(cleanup)
 
+  it('starts quota, categories and active-session requests in one render pass', async () => {
+    const paths: string[] = []
+    const fetchFromApi: typeof apiFetch = <TSchema extends z.ZodType>(
+      path: string,
+      options: { readonly schema: TSchema },
+    ) => {
+      paths.push(path)
+      const response =
+        path === '/sessions/quota'
+          ? { enforced: false }
+          : path === '/sessions/theme-categories'
+            ? categories
+            : null
+
+      return Promise.resolve(options.schema.parse(response))
+    }
+    const Page = createHomePage(fetchFromApi, () => Promise.resolve(practiceTranslations))
+    const rendered = Page()
+
+    expect(paths).toEqual(['/sessions/quota', '/sessions/theme-categories', '/sessions/active'])
+
+    await rendered
+  })
+
   it('shows available categories without repeating the quota shown in the header', async () => {
     // Vitest cannot execute next-intl's async server translation API in jsdom.
     const Page = createHomePage(createApiFetch(null), () => Promise.resolve(practiceTranslations))
 
-    renderPage(await Page({ quota: null }))
+    renderPage(await Page())
 
     expect(screen.queryByText(/análises restantes/u)).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Qual será o assunto de hoje?' })).toHaveClass(
@@ -83,6 +112,8 @@ describe('HomePage', () => {
         configuration: { categorySlug: 'focus', difficulty: 'balanced', searchWindowMinutes: 4 },
         createdAt: '2026-08-24T11:50:00.000Z',
         expiresAt: '2026-08-24T12:05:00.000Z',
+        recordingStartedAt: null,
+        researchEndsAt: '2026-08-24T12:03:00.000Z',
         sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
         themeId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91ab',
         themeTitle: 'Comunicação clara',
@@ -94,7 +125,7 @@ describe('HomePage', () => {
       },
     )
 
-    await expect(Page({ quota: null })).rejects.toMatchObject({ name: 'RedirectError' })
+    await expect(Page()).rejects.toMatchObject({ name: 'RedirectError' })
     expect(redirects).toEqual(['/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'])
   })
 })

@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import type { ComponentPropsWithRef } from 'react'
 
-import { Icon } from '@/components/ui/icon'
+import { Icon, type IconName } from '@/components/ui/icon'
 
 const iconButtonStyles = cva(
   'grid shrink-0 cursor-pointer place-items-center transition-[background-color,color,opacity] duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text disabled:cursor-not-allowed disabled:opacity-70',
@@ -25,7 +25,7 @@ const iconButtonStyles = cva(
 
 type IconButtonProps = Omit<ComponentPropsWithRef<'button'>, 'children'> &
   VariantProps<typeof iconButtonStyles> & {
-    readonly icon: string
+    readonly icon: IconName
     readonly label: string
   }
 

@@ -1,43 +1,22 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import type { ReactNode } from 'react'
-import { z } from 'zod'
+import { Suspense, type ReactNode } from 'react'
 
-import { signOutAction } from '@/app/auth/sign-out/actions'
 import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
+import { RouteLoading } from '@/components/layouts/route-loading'
 import { SessionQuota } from '@/components/layouts/session-quota'
 import type { SidebarNavigationItem } from '@/components/ui/sidebar'
+import {
+  quotaSchema,
+  sessionHistorySchema,
+  type SessionHistoryItem,
+} from '@/lib/api/contracts/sessions'
 import { apiFetch } from '@/lib/api/server-client'
 import { createRequireSession } from '@/lib/auth/require-session'
+import { signOutAction } from '@/lib/auth/sign-out'
 import { sessionPath } from '@/lib/navigation/session-routes'
 
 const SIDEBAR_PREFERENCE_COOKIE_NAME = 'mindness-sidebar-expanded'
-
-const quotaSchema = z.discriminatedUnion('enforced', [
-  z.object({
-    allowance: z.number().nonnegative(),
-    enforced: z.literal(true),
-    remaining: z.number().nonnegative(),
-    renewsAt: z.iso.datetime(),
-  }),
-  z.object({ enforced: z.literal(false) }),
-])
-
-const sessionHistoryItemSchema = z.object({
-  bestOfDay: z.boolean(),
-  categorySlug: z.string(),
-  difficulty: z.enum(['easy', 'balanced', 'hard']),
-  localDate: z.string(),
-  localTime: z.string(),
-  sessionId: z.uuid(),
-  startedAt: z.iso.datetime(),
-  state: z.enum(['in_progress', 'expired', 'processing', 'completed', 'failed']),
-  totalScore: z.number().int().min(0).max(100).nullable(),
-})
-
-const sessionHistorySchema = z.array(sessionHistoryItemSchema)
-
-type SessionHistoryItem = z.output<typeof sessionHistoryItemSchema>
 
 export function sessionNavigationItems(
   sessions: readonly SessionHistoryItem[],
@@ -53,7 +32,7 @@ interface AuthenticatedLayoutProps {
   readonly children: ReactNode
 }
 
-export default async function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
+async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
   const cookieStore = await cookies()
   createRequireSession({ cookieStore, redirect })()
   const [quota, sessions] = await Promise.all([
@@ -82,5 +61,13 @@ export default async function AuthenticatedLayout({ children }: AuthenticatedLay
     >
       {children}
     </AuthenticatedShell>
+  )
+}
+
+export default function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
+  return (
+    <Suspense fallback={<RouteLoading />}>
+      <AuthenticatedLayoutContent>{children}</AuthenticatedLayoutContent>
+    </Suspense>
   )
 }

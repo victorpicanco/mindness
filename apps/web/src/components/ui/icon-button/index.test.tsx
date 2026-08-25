@@ -13,7 +13,10 @@ describe('IconButton', () => {
     const button = screen.getByRole('button', { name: 'Recolher barra lateral' })
 
     expect(button).toHaveAttribute('type', 'button')
-    expect(button.querySelector('.hgi-sidebar-left')).toHaveAttribute('aria-hidden', 'true')
+    expect(button.querySelector('[data-icon="sidebar-left"]')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
   })
 
   it('forwards button attributes, the click handler and the ref', () => {

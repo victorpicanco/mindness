@@ -2,6 +2,7 @@
 
 import { forwardRef, type ComponentPropsWithoutRef, useState } from 'react'
 
+import { Icon } from '@/components/ui/icon'
 import { Input } from '@/components/ui/input'
 
 type PasswordInputProps = Omit<ComponentPropsWithoutRef<'input'>, 'type'> & {
@@ -14,9 +15,6 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
     const [isVisible, setIsVisible] = useState(false)
     const inputClassName = className === undefined ? 'pr-14' : `${className} pr-14`
     const toggleLabel = isVisible ? hidePasswordLabel : showPasswordLabel
-    const iconClassName = isVisible
-      ? 'hgi hgi-stroke hgi-view-off text-xl'
-      : 'hgi hgi-stroke hgi-view text-xl'
 
     return (
       <div className="relative">
@@ -34,7 +32,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           }}
           type="button"
         >
-          <i aria-hidden="true" className={iconClassName} />
+          <Icon name={isVisible ? 'view-off' : 'view'} />
         </button>
       </div>
     )

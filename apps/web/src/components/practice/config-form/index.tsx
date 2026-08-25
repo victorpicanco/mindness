@@ -3,12 +3,13 @@
 import { useMutation } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState, type FormEvent } from 'react'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
-import { apiErrorDetails, type ApiErrorDetails, type ApiFieldIssue } from '@/lib/api/api-error'
+import { apiErrorDetails } from '@/lib/api/api-error'
+import { bffFetch } from '@/lib/api/bff-client'
+import { startedSessionSchema } from '@/lib/api/contracts/sessions'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
 const DIFFICULTIES = ['easy', 'balanced', 'hard'] as const
@@ -17,24 +18,6 @@ const SEARCH_WINDOWS = [3, 4, 5] as const
 const QUOTA_EXHAUSTED_CODE = 'quota.QUOTA_EXHAUSTED'
 const THEME_UNAVAILABLE_CODE = 'sessions.THEME_UNAVAILABLE'
 const PRACTICE_NOT_ALLOWED_CODE = 'sessions.PRACTICE_NOT_ALLOWED'
-
-const startedSessionSchema = z.object({
-  expiresAt: z.iso.datetime(),
-  researchEndsAt: z.iso.datetime(),
-  sessionId: z.uuid(),
-  themeTitle: z.string(),
-})
-
-const successEnvelopeSchema = z.object({ data: z.unknown() })
-
-const errorEnvelopeSchema = z.object({
-  error: z.object({
-    code: z.string(),
-    issues: z.array(z.object({ field: z.string(), message: z.string() })).nullable(),
-    message: z.string(),
-    requestId: z.string(),
-  }),
-})
 
 export type SessionDifficulty = (typeof DIFFICULTIES)[number]
 export type SearchWindowMinutes = (typeof SEARCH_WINDOWS)[number]
@@ -67,49 +50,13 @@ export type StartSessionRequest = (input: StartSessionInput) => Promise<StartedS
 
 export type SignOutAction = () => void | Promise<void>
 
-type PracticeSessionRequestErrorOptions = ApiErrorDetails & {
-  readonly message: string
-  readonly cause?: unknown
-}
-
-export class PracticeSessionRequestError extends Error {
-  readonly code: string
-  readonly issues: readonly ApiFieldIssue[] | null
-  readonly requestId: string | null
-
-  constructor({ cause, code, issues, message, requestId }: PracticeSessionRequestErrorOptions) {
-    super(message, cause === undefined ? undefined : { cause })
-    this.name = 'PracticeSessionRequestError'
-    this.code = code
-    this.issues = issues
-    this.requestId = requestId
-  }
-}
-
 async function requestSessionStart(input: StartSessionInput): Promise<StartedSession> {
-  const response = await fetch('/api/bff/sessions', {
+  return bffFetch('/sessions', {
     body: JSON.stringify(input),
     headers: { 'content-type': 'application/json' },
     method: 'POST',
+    schema: startedSessionSchema,
   })
-  const body: unknown = await response.json()
-
-  if (!response.ok) {
-    const envelope = errorEnvelopeSchema.safeParse(body)
-
-    throw new PracticeSessionRequestError(
-      envelope.success
-        ? envelope.data.error
-        : {
-            code: 'web.API_RESPONSE_INVALID',
-            issues: null,
-            message: 'The API returned an invalid response.',
-            requestId: null,
-          },
-    )
-  }
-
-  return startedSessionSchema.parse(successEnvelopeSchema.parse(body).data)
 }
 
 function toDifficulty(value: string): SessionDifficulty | null {

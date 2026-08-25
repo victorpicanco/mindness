@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
+import { ApiClientError } from '@/lib/api/client-error'
 import {
   PracticeSessionProvider,
   usePracticeSessionStore,
@@ -11,7 +12,6 @@ import {
 
 import {
   PracticeConfigForm,
-  PracticeSessionRequestError,
   type PracticeQuota,
   type StartSessionInput,
   type StartSessionRequest,
@@ -77,7 +77,7 @@ function submitConfiguration() {
 function rejectingRequest(code: string): StartSessionRequest {
   return () =>
     Promise.reject(
-      new PracticeSessionRequestError({
+      new ApiClientError({
         code,
         issues: null,
         message: 'The session could not be started.',

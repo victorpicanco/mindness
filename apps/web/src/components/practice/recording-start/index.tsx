@@ -6,29 +6,14 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
+import { bffFetch } from '@/lib/api/bff-client'
+import { recordingStartedSchema } from '@/lib/api/contracts/sessions'
+import { MicrophoneUnavailableError } from '@/lib/media/microphone-unavailable-error'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
 import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from '@/components/practice/countdown'
 import { SessionRecorder } from '@/components/practice/session-recorder'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
-
-export class RecordingNotOpenedError extends Error {
-  readonly code = 'web.RECORDING_NOT_OPENED'
-
-  constructor(cause: unknown) {
-    super('The server refused to open the recording', { cause })
-    this.name = 'RecordingNotOpenedError'
-  }
-}
-
-export class MicrophoneUnavailableError extends Error {
-  readonly code = 'web.MICROPHONE_UNAVAILABLE'
-
-  constructor(cause: unknown) {
-    super('The microphone is not available', { cause })
-    this.name = 'MicrophoneUnavailableError'
-  }
-}
 
 export interface RecordingStartProps {
   readonly audioLevelSource?: AudioLevelSource
@@ -48,9 +33,10 @@ async function requestBrowserMicrophone(): Promise<void> {
 }
 
 async function requestRecordingStart(sessionId: string): Promise<void> {
-  const response = await fetch(`/api/bff/sessions/${sessionId}/recording`, { method: 'POST' })
-
-  if (!response.ok) throw new RecordingNotOpenedError(response.status)
+  await bffFetch(`/sessions/${sessionId}/recording`, {
+    method: 'POST',
+    schema: recordingStartedSchema,
+  })
 }
 
 export function RecordingStart({
@@ -74,11 +60,7 @@ export function RecordingStart({
 
   const mutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      try {
-        await startRecording(sessionId)
-      } catch (cause) {
-        throw new RecordingNotOpenedError(cause)
-      }
+      await startRecording(sessionId)
 
       try {
         await requestMicrophone()

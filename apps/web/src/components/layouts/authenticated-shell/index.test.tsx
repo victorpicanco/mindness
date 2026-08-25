@@ -4,15 +4,17 @@ import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { AuthenticatedShell } from './index'
+import type { SidebarNavigationItem } from '@/components/ui/sidebar'
 import { messages } from '@/i18n/messages'
+
+import { AuthenticatedShell } from './index'
 
 function renderShell(
   children: ReactNode,
   isInitiallyExpanded = true,
   pathname = '/',
   header: ReactNode = <span>Header content</span>,
-  sessionItems = [
+  sessionItems: readonly SidebarNavigationItem[] = [
     {
       href: '/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
       icon: 'clock-01',
@@ -57,9 +59,9 @@ describe('AuthenticatedShell', () => {
     const progressLink = within(sidebar).getByRole('link', { name: 'Seu progresso' })
 
     expect(newSessionLink).toHaveAttribute('href', '/')
-    expect(newSessionLink.querySelector('.hgi-pencil-edit-02')).toBeInTheDocument()
+    expect(newSessionLink.querySelector('[data-icon="pencil-edit-02"]')).toBeInTheDocument()
     expect(progressLink).toHaveAttribute('href', '/history')
-    expect(progressLink.querySelector('.hgi-chart-increase')).toBeInTheDocument()
+    expect(progressLink.querySelector('[data-icon="chart-increase"]')).toBeInTheDocument()
   })
 
   it('renders the server-synchronized session aggregate in the sidebar', () => {

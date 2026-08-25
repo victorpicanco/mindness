@@ -228,5 +228,65 @@ export default tseslint.config(
       ...jsxA11y.flatConfigs.recommended.rules,
     },
   },
+  {
+    files: ['apps/web/src/components/**/*.{ts,tsx}'],
+    rules: restrictedImports([
+      {
+        group: ['@/app/**'],
+        message: 'Web boundary: components receive route dependencies through props.',
+      },
+    ]),
+  },
+  {
+    files: ['apps/web/src/lib/**/*.{ts,tsx}'],
+    rules: restrictedImports([
+      {
+        group: ['@/app/**', '@/components/**', '@/stores/**'],
+        message: 'Web boundary: lib is independent from app, components and stores.',
+      },
+    ]),
+  },
+  {
+    files: ['apps/web/src/stores/**/*.{ts,tsx}'],
+    rules: restrictedImports([
+      {
+        group: ['@/app/**', '@/components/**'],
+        message: 'Web boundary: stores are independent from routes and rendering components.',
+      },
+    ]),
+  },
+  {
+    files: ['apps/web/src/components/ui/**/*.{ts,tsx}'],
+    rules: restrictedImports([
+      {
+        group: [
+          '@/app/**',
+          '@/components/layouts/**',
+          '@/components/practice/**',
+          '@/components/providers/**',
+          '@/stores/**',
+        ],
+        message: 'Web boundary: UI primitives do not depend on features, layouts or routes.',
+      },
+    ]),
+  },
+  {
+    files: ['apps/web/src/components/layouts/**/*.{ts,tsx}'],
+    rules: restrictedImports([
+      {
+        group: ['@/app/**', '@/components/practice/**', '@/components/providers/**', '@/stores/**'],
+        message: 'Web boundary: layouts depend only on UI primitives and lib contracts.',
+      },
+    ]),
+  },
+  {
+    files: ['apps/web/src/components/practice/**/*.{ts,tsx}'],
+    rules: restrictedImports([
+      {
+        group: ['@/app/**', '@/components/layouts/**', '@/components/providers/**'],
+        message: 'Web boundary: practice features do not depend on routes or shell components.',
+      },
+    ]),
+  },
   prettier,
 )

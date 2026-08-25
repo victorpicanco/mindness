@@ -10,6 +10,16 @@
   "loading": {
     "label": "Carregando"
   },
+  "notFound": {
+    "title": "Página não encontrada",
+    "description": "O endereço acessado não existe ou não está mais disponível.",
+    "home": "Voltar ao início"
+  },
+  "routeError": {
+    "title": "Algo deu errado",
+    "description": "Não foi possível carregar esta página.",
+    "retry": "Tentar novamente"
+  },
   "sessionQuota": {
     "label": "Cota de sessões",
     "remaining": "{remaining}/{allowance} sessões restantes",

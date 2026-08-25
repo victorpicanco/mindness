@@ -23,6 +23,10 @@ class FakeThemesRepository implements ThemesRepository {
     return Promise.resolve(this.themes.find((theme) => theme.id === themeId) ?? null)
   }
 
+  listByIds(themeIds: readonly string[]): Promise<Theme[]> {
+    return Promise.resolve(this.themes.filter((theme) => themeIds.includes(theme.id)))
+  }
+
   findByNormalizedTitle(params: {
     categoryId: string
     normalizedTitle: string

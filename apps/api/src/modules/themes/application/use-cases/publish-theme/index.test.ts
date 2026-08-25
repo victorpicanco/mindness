@@ -35,6 +35,7 @@ function createHarness(theme: Theme | null) {
     useCase: new PublishThemeUseCase({
       themes: {
         findById: () => Promise.resolve(theme),
+        listByIds: () => Promise.resolve([]),
         findByNormalizedTitle: () => Promise.resolve(null),
         save: () => {
           operations.push('save')

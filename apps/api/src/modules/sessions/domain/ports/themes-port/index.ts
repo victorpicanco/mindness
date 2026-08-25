@@ -16,8 +16,14 @@ export interface EligibleThemeCategory {
   readonly name: string
 }
 
+export interface ThemeTitle {
+  readonly themeId: string
+  readonly title: string
+}
+
 export interface ThemesPort {
   drawEligibleTheme(input: DrawEligibleThemeInput): Promise<EligibleTheme | null>
   findThemeById(themeId: string): Promise<{ readonly themeId: string; readonly title: string }>
   listCategories(): Promise<EligibleThemeCategory[]>
+  listThemeTitles(themeIds: readonly string[]): Promise<readonly ThemeTitle[]>
 }

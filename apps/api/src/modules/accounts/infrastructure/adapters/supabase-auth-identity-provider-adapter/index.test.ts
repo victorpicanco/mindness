@@ -176,6 +176,21 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
     })
   })
 
+  it('preserves unexpected refresh failures as provider errors', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.refreshResult = {
+      data: null,
+      error: { name: 'AuthRetryableFetchError', status: 503 },
+    }
+
+    await expect(adapter.refreshSession('refresh-token')).rejects.toMatchObject({
+      code: 'accounts.AUTH_PROVIDER_ERROR',
+      httpStatus: 500,
+    })
+  })
+
   it('round-trips the opaque PKCE state through Google OAuth', async () => {
     const api = new FakeSupabaseAuthApi()
     api.claimsResult = {
@@ -203,6 +218,21 @@ describe('SupabaseAuthIdentityProviderAdapter', () => {
     await expect(adapter.validateAccessToken('invalid-token')).rejects.toMatchObject({
       code: 'accounts.AUTHENTICATION_REJECTED',
       context: { reason: 'invalid_token' },
+    })
+  })
+
+  it('preserves claims provider failures instead of rejecting a valid token', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    api.claimsResult = {
+      data: null,
+      error: { name: 'AuthRetryableFetchError', status: 503 },
+    }
+
+    await expect(adapter.validateAccessToken('access-token')).rejects.toMatchObject({
+      code: 'accounts.AUTH_PROVIDER_ERROR',
+      httpStatus: 500,
     })
   })
 

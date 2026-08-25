@@ -1,8 +1,35 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { Sidebar, SidebarHeader, SidebarNavigation } from './index'
-import type { SidebarNavigationItem } from './types'
+import { Sidebar, SidebarHeader, SidebarNavigation, SidebarSessionGroups } from './index'
+import type { SidebarNavigationItem, SidebarSessionGroup } from './types'
+
+const groups: readonly SidebarSessionGroup[] = [
+  {
+    heading: 'Hoje',
+    key: '2026-08-25',
+    items: [
+      { href: '/sessions/session-1', label: 'Notícias do dia', sessionId: 'session-1' },
+      { href: '/sessions/session-2', label: 'Controlar o celular', sessionId: 'session-2' },
+    ],
+  },
+  {
+    heading: '01/08/2026',
+    key: '2026-08-01',
+    items: [{ href: '/sessions/session-3', label: 'Sessão sem tema', sessionId: 'session-3' }],
+  },
+]
+
+function renderSessionGroups(activeHref: string | null = null, onNavigate?: () => void) {
+  return render(
+    <SidebarSessionGroups
+      activeHref={activeHref}
+      groups={groups}
+      label="Sessões"
+      onNavigate={onNavigate}
+    />,
+  )
+}
 
 const items: readonly SidebarNavigationItem[] = [
   { href: '/', icon: 'pencil-edit-02', label: 'Nova sessão' },
@@ -165,5 +192,71 @@ describe('SidebarNavigation', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Seu progresso' }))
 
     expect(onNavigate).toHaveBeenCalledOnce()
+  })
+})
+
+describe('SidebarSessionGroups', () => {
+  afterEach(cleanup)
+
+  it('renders one labelled list per day, in the order it receives them', () => {
+    renderSessionGroups()
+
+    const navigation = screen.getByRole('navigation', { name: 'Sessões' })
+    const lists = within(navigation).getAllByRole('list')
+
+    expect(within(navigation).getByRole('heading', { name: 'Hoje' })).toBeInTheDocument()
+    expect(within(navigation).getByRole('heading', { name: '01/08/2026' })).toBeInTheDocument()
+    expect(lists).toHaveLength(2)
+    expect(within(lists[0] ?? navigation).getAllByRole('link')).toHaveLength(2)
+    expect(within(lists[1] ?? navigation).getAllByRole('link')).toHaveLength(1)
+    expect(lists[0]).toHaveAccessibleName('Hoje')
+    expect(lists[1]).toHaveAccessibleName('01/08/2026')
+  })
+
+  it('links each session by its own path and keeps the title on a single line', () => {
+    renderSessionGroups()
+
+    const link = screen.getByRole('link', { name: 'Notícias do dia' })
+
+    expect(link).toHaveAttribute('href', '/sessions/session-1')
+    expect(within(link).getByText('Notícias do dia')).toHaveClass('truncate')
+  })
+
+  it('highlights only the session of the active path', () => {
+    renderSessionGroups('/sessions/session-2')
+
+    expect(screen.getByRole('link', { name: 'Controlar o celular' })).toHaveClass('bg-input')
+    expect(screen.getByRole('link', { name: 'Controlar o celular' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('link', { name: 'Notícias do dia' })).not.toHaveClass('bg-input')
+  })
+
+  it('scrolls on its own so the sign-out control stays in place', () => {
+    renderSessionGroups()
+
+    expect(screen.getByRole('navigation', { name: 'Sessões' })).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-y-auto',
+    )
+  })
+
+  it('notifies the consumer when a session is followed', () => {
+    const onNavigate = vi.fn()
+    renderSessionGroups(null, onNavigate)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Notícias do dia' }))
+
+    expect(onNavigate).toHaveBeenCalledOnce()
+  })
+
+  it('renders nothing when there is no session to list', () => {
+    const { container } = render(
+      <SidebarSessionGroups activeHref={null} groups={[]} label="Sessões" />,
+    )
+
+    expect(container).toBeEmptyDOMElement()
   })
 })

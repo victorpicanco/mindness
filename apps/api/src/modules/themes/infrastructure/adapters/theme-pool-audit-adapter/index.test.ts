@@ -18,6 +18,7 @@ const COMBINATION: ThemeCombination = { categoryId: 'category-1', difficulty: 'b
 function themesRepositoryReturning(publishedCount: number): ThemesRepository {
   return {
     findById: () => Promise.resolve(null),
+    listByIds: () => Promise.resolve([]),
     findByNormalizedTitle: () => Promise.resolve(null),
     save: () => Promise.resolve(),
     countPublishedBy: () => Promise.resolve(publishedCount),

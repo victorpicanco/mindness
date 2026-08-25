@@ -10,6 +10,10 @@ import type {
   ListThemeCategoriesInput,
   ListThemeCategoriesOutput,
 } from '@/modules/themes/application/use-cases/list-theme-categories/index.js'
+import type {
+  ListThemeTitlesInput,
+  ListThemeTitlesOutput,
+} from '@/modules/themes/application/use-cases/list-theme-titles/index.js'
 
 type ThemeDifficulty = 'easy' | 'balanced' | 'hard'
 
@@ -18,6 +22,11 @@ export interface PublicTheme {
   readonly title: string
   readonly categorySlug: string
   readonly difficulty: ThemeDifficulty
+}
+
+export interface PublicThemeTitle {
+  readonly themeId: string
+  readonly title: string
 }
 
 export interface PublicThemeCategory {
@@ -30,6 +39,7 @@ export interface ThemesPublicApi {
   drawEligibleTheme(input: DrawEligibleThemeInput): Promise<PublicTheme | null>
   findThemeById(themeId: string): Promise<PublicTheme>
   listCategories(): Promise<readonly PublicThemeCategory[]>
+  listThemeTitles(themeIds: readonly string[]): Promise<readonly PublicThemeTitle[]>
 }
 
 interface DrawEligibleTheme {
@@ -44,10 +54,15 @@ interface ListThemeCategories {
   execute(input: ListThemeCategoriesInput): Promise<ListThemeCategoriesOutput>
 }
 
+interface ListThemeTitles {
+  execute(input: ListThemeTitlesInput): Promise<ListThemeTitlesOutput>
+}
+
 export interface ThemesPublicApiDependencies {
   readonly drawEligibleTheme: DrawEligibleTheme
   readonly findThemeById: FindThemeById
   readonly listThemeCategories: ListThemeCategories
+  readonly listThemeTitles: ListThemeTitles
 }
 
 export class ThemesPublicApiImpl implements ThemesPublicApi {
@@ -71,6 +86,12 @@ export class ThemesPublicApiImpl implements ThemesPublicApi {
       slug: category.slug,
       name: category.name,
     }))
+  }
+
+  async listThemeTitles(themeIds: readonly string[]): Promise<readonly PublicThemeTitle[]> {
+    const titles = await this.dependencies.listThemeTitles.execute({ themeIds })
+
+    return titles.map((theme) => ({ themeId: theme.themeId, title: theme.title }))
   }
 
   private toPublicTheme(theme: DrawEligibleThemeOutput | FindThemeByIdOutput): PublicTheme {

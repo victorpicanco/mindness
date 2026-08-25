@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { Prisma } from '@/generated/prisma/client.js'
+import { DatabaseError } from '@/shared/errors/database-error/index.js'
 import { ThemeTitleAlreadyUsedError } from '@/modules/themes/domain/errors/theme-title-already-used-error/index.js'
 import { InvalidThemeValueError } from '@/modules/themes/domain/errors/invalid-theme-value-error/index.js'
 import type {
-  ThemeCombinationRow,
   ThemeRow,
   ThemesPrismaClient,
   ThemeUpsertArgs,
@@ -28,19 +28,38 @@ interface FakeClientOptions {
   readonly row?: ThemeRow
   readonly writeFailure?: Prisma.PrismaClientKnownRequestError
   readonly rawResult?: unknown
-  readonly combinations?: ThemeCombinationRow[]
+  readonly combinations?: ThemeRow[]
+  readonly rows?: ThemeRow[]
+  readonly readFailure?: DatabaseError
 }
 
 interface FakeClient {
   readonly client: ThemesPrismaClient
   readonly upserts: ThemeUpsertArgs[]
+  readonly idQueries: (readonly string[])[]
+}
+
+function createFindMany(
+  options: FakeClientOptions,
+  idQueries: (readonly string[])[],
+): ThemesPrismaClient['theme']['findMany'] {
+  return (args) => {
+    if (!('id' in args.where)) return Promise.resolve(options.combinations ?? [])
+    if (options.readFailure !== undefined) return Promise.reject(options.readFailure)
+
+    idQueries.push(args.where.id.in)
+
+    return Promise.resolve(options.rows ?? [])
+  }
 }
 
 function createFakeClient(options: FakeClientOptions = {}): FakeClient {
   const upserts: ThemeUpsertArgs[] = []
+  const idQueries: (readonly string[])[] = []
 
   return {
     upserts,
+    idQueries,
     client: {
       theme: {
         findUnique: () => Promise.resolve(options.row ?? null),
@@ -51,7 +70,7 @@ function createFakeClient(options: FakeClientOptions = {}): FakeClient {
           return Promise.resolve(args.create)
         },
         count: () => Promise.resolve(0),
-        findMany: () => Promise.resolve(options.combinations ?? []),
+        findMany: createFindMany(options, idQueries),
       },
       themeCategory: {
         findUnique: () => Promise.resolve(null),
@@ -131,13 +150,47 @@ describe('PrismaThemesRepository', () => {
     })
   })
 
-  it('maps published-combination projections before returning them', async () => {
-    const combination: ThemeCombinationRow = { categoryId: row.categoryId, difficulty: 'balanced' }
-    const repository = createRepository(createFakeClient({ combinations: [combination] }))
+  it('maps every row returned for a batch of theme identifiers', async () => {
+    const other: ThemeRow = {
+      ...row,
+      id: 'a2b1e0a4-6c1d-4f0e-9a2b-5f0d3c8e7b61',
+      title: 'Housing Crisis',
+      normalizedTitle: 'housing crisis',
+    }
+    const fake = createFakeClient({ rows: [row, other] })
+    const repository = createRepository(fake)
+
+    await expect(repository.listByIds([row.id, other.id])).resolves.toMatchObject([
+      { id: row.id, title: { value: 'Climate Change' } },
+      { id: other.id, title: { value: 'Housing Crisis' } },
+    ])
+    expect(fake.idQueries).toEqual([[row.id, other.id]])
+  })
+
+  it('resolves an empty batch without reaching the database', async () => {
+    const fake = createFakeClient({ rows: [row] })
+    const repository = createRepository(fake)
+
+    await expect(repository.listByIds([])).resolves.toEqual([])
+    expect(fake.idQueries).toEqual([])
+  })
+
+  it('translates a failure raised while reading a batch of themes', async () => {
+    const failure = new DatabaseError('connection lost')
+    const repository = createRepository(createFakeClient({ readFailure: failure }))
+
+    await expect(repository.listByIds([row.id])).rejects.toMatchObject({
+      code: 'shared.DATABASE_ERROR',
+      cause: failure,
+      context: { themeIds: [row.id] },
+    })
+  })
+
+  it('projects the published combinations out of the rows it reads', async () => {
+    const repository = createRepository(createFakeClient({ combinations: [row] }))
 
     const combinations = await repository.listPublishedCombinations()
 
-    expect(combinations).toEqual([combination])
-    expect(combinations[0]).not.toBe(combination)
+    expect(combinations).toEqual([{ categoryId: row.categoryId, difficulty: row.difficulty }])
   })
 })

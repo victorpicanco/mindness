@@ -4,11 +4,12 @@ import type {
   EligibleTheme,
   EligibleThemeCategory,
   ThemesPort,
+  ThemeTitle,
 } from '@/modules/sessions/domain/ports/themes-port/index.js'
 
 export type ThemesEligibilityReader = Pick<
   ThemesPublicApi,
-  'drawEligibleTheme' | 'findThemeById' | 'listCategories'
+  'drawEligibleTheme' | 'findThemeById' | 'listCategories' | 'listThemeTitles'
 >
 
 export class ThemesPortAdapter implements ThemesPort {
@@ -24,6 +25,12 @@ export class ThemesPortAdapter implements ThemesPort {
   ): Promise<{ readonly themeId: string; readonly title: string }> {
     const theme = await this.themesFacade.findThemeById(themeId)
     return { themeId: theme.themeId, title: theme.title }
+  }
+
+  async listThemeTitles(themeIds: readonly string[]): Promise<readonly ThemeTitle[]> {
+    const titles = await this.themesFacade.listThemeTitles(themeIds)
+
+    return titles.map((theme) => ({ themeId: theme.themeId, title: theme.title }))
   }
 
   async listCategories(): Promise<EligibleThemeCategory[]> {

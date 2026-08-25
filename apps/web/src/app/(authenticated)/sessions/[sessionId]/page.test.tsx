@@ -108,6 +108,7 @@ describe('SessionPage', () => {
           sessionId: SESSION_ID,
           startedAt: '2026-08-24T12:00:00.000Z',
           state: 'completed',
+          themeTitle: 'Notícias do dia',
           totalScore: 87,
         },
       ]),

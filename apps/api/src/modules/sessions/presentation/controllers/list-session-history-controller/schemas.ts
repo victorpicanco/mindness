@@ -16,6 +16,7 @@ const SessionHistoryItemSchema = Type.Object(
     localDate: Type.String(),
     localTime: Type.String(),
     categorySlug: Type.String(),
+    themeTitle: Type.Union([Type.String(), Type.Null()]),
     difficulty: Type.Union([Type.Literal('easy'), Type.Literal('balanced'), Type.Literal('hard')]),
     totalScore: Type.Union([Type.Integer({ minimum: 0, maximum: 100 }), Type.Null()]),
     state: Type.Union([

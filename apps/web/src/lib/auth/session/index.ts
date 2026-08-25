@@ -1,5 +1,6 @@
 const ACCESS_TOKEN_COOKIE_NAME = 'mindness_access_token'
 const REFRESH_TOKEN_COOKIE_NAME = 'mindness_refresh_token'
+const ACCESS_TOKEN_REFRESH_MARGIN_SECONDS = 60
 
 // Matches the Supabase refresh token lifetime: the access token inside expires
 // in an hour, but the cookie has to survive a browser restart for the BFF to be
@@ -118,5 +119,8 @@ export function needsAccessTokenRefresh(
 
   if (refreshToken === undefined) return false
 
-  return accessToken === undefined || !accessTokenIsLive(accessToken, nowInSeconds)
+  return (
+    accessToken === undefined ||
+    !accessTokenIsLive(accessToken, nowInSeconds + ACCESS_TOKEN_REFRESH_MARGIN_SECONDS)
+  )
 }

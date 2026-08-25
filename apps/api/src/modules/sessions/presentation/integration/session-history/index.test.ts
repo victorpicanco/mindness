@@ -100,6 +100,11 @@ beforeEach(async () => {
   harness.reset()
   harness.accounts.registerIdentity('account-a', ACCOUNT_A)
   harness.accounts.registerIdentity('account-b', ACCOUNT_B)
+  harness.themes.registerEligibleTheme({
+    categorySlug: 'history',
+    difficulty: 'balanced',
+    themeId: THEME_ID,
+  })
 })
 
 describe('session history integration', () => {
@@ -150,6 +155,7 @@ describe('session history integration', () => {
       const item = body.data.find((candidate) => candidate.sessionId === seed.sessionId)
       expect(item).toMatchObject({
         state: seed.state,
+        themeTitle: 'Theme',
         localDate: LocalCalendar.localDayOf(seed.createdAt, timeZone),
         localTime: LocalCalendar.localTimeOf(seed.createdAt, timeZone),
       })

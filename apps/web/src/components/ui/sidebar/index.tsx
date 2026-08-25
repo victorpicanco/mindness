@@ -4,7 +4,7 @@ import type { ComponentPropsWithRef, ReactNode } from 'react'
 
 import { Icon } from '@/components/ui/icon'
 
-import type { SidebarNavigationItem } from './types'
+import type { SidebarNavigationItem, SidebarSessionGroup } from './types'
 
 const sidebarStyles = cva('flex-col overflow-hidden border-divider p-3', {
   variants: {
@@ -25,6 +25,18 @@ const navigationLinkStyles = cva(
     variants: {
       isActive: {
         true: 'bg-input',
+        false: '',
+      },
+    },
+  },
+)
+
+const sessionLinkStyles = cva(
+  'flex h-9 items-center rounded-lg px-3 text-[0.875rem] font-normal text-text-muted transition-colors hover:bg-input hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text',
+  {
+    variants: {
+      isActive: {
+        true: 'bg-input text-text',
         false: '',
       },
     },
@@ -116,4 +128,53 @@ export function SidebarNavigation({
   )
 }
 
-export type { SidebarNavigationItem } from './types'
+interface SidebarSessionGroupsProps {
+  readonly activeHref: string | null
+  readonly groups: readonly SidebarSessionGroup[]
+  readonly label: string
+  readonly onNavigate?: (() => void) | undefined
+}
+
+export function SidebarSessionGroups({
+  activeHref,
+  groups,
+  label,
+  onNavigate,
+}: SidebarSessionGroupsProps) {
+  if (groups.length === 0) return null
+
+  return (
+    <nav
+      aria-label={label}
+      className="mt-6 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1"
+    >
+      {groups.map((group) => (
+        <div key={group.key}>
+          <h2
+            className="px-3 pb-1 text-[0.75rem] font-medium text-text-muted"
+            id={`sidebar-session-group-${group.key}`}
+          >
+            {group.heading}
+          </h2>
+
+          <ul aria-labelledby={`sidebar-session-group-${group.key}`} className="flex flex-col">
+            {group.items.map((item) => (
+              <li key={item.sessionId}>
+                <Link
+                  aria-current={item.href === activeHref ? 'page' : undefined}
+                  className={sessionLinkStyles({ isActive: item.href === activeHref })}
+                  href={item.href}
+                  onClick={() => onNavigate?.()}
+                >
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  )
+}
+
+export type { SidebarNavigationItem, SidebarSessionGroup, SidebarSessionItem } from './types'

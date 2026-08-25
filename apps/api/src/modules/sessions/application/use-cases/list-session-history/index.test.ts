@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
 import { SessionAuthenticationRejectedError } from '@/modules/sessions/domain/errors/session-authentication-rejected-error/index.js'
 import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
+import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 
@@ -15,11 +16,12 @@ function createSession(params: {
   readonly createdAt: Date
   readonly totalScore?: number
   readonly accountId?: string
+  readonly themeId?: string
 }): Session {
   return Session.reconstitute({
     sessionId: params.id,
     accountId: params.accountId ?? 'account-1',
-    themeId: 'theme-1',
+    themeId: params.themeId ?? 'theme-1',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'communication',
@@ -44,8 +46,10 @@ function createHarness(params: {
   readonly candidates?: readonly Session[]
   readonly profile?: { readonly plan: 'free'; readonly timeZone: string } | null
   readonly cursorSession?: Session | null
+  readonly themeTitles?: Readonly<Record<string, string>>
 }) {
   let completedBetweenCalls = 0
+  const requestedThemeIds: (readonly string[])[] = []
   const sessions: SessionsRepository = {
     findById: (sessionId) =>
       Promise.resolve(sessionId === 'cursor' ? (params.cursorSession ?? null) : null),
@@ -70,9 +74,25 @@ function createHarness(params: {
       ),
     canStartPractice: () => Promise.resolve(true),
   }
+  const titles = params.themeTitles ?? { 'theme-1': 'Climate change' }
+  const themes: Pick<ThemesPort, 'listThemeTitles'> = {
+    listThemeTitles: (themeIds) => {
+      requestedThemeIds.push(themeIds)
+
+      return Promise.resolve(
+        themeIds.flatMap((themeId) => {
+          const title = titles[themeId]
+
+          return title === undefined ? [] : [{ themeId, title }]
+        }),
+      )
+    },
+  }
+
   return {
     completedBetweenCalls: () => completedBetweenCalls,
-    useCase: new ListSessionHistoryUseCase({ sessions, accounts }),
+    requestedThemeIds: () => requestedThemeIds,
+    useCase: new ListSessionHistoryUseCase({ sessions, accounts, themes }),
   }
 }
 
@@ -129,6 +149,7 @@ describe('ListSessionHistoryUseCase', () => {
           localDate: '2026-08-22',
           localTime: '11:00',
           categorySlug: 'communication',
+          themeTitle: 'Climate change',
           difficulty: 'balanced',
           totalScore: null,
           state: 'processing',
@@ -140,6 +161,7 @@ describe('ListSessionHistoryUseCase', () => {
           localDate: '2026-08-22',
           localTime: '10:00',
           categorySlug: 'communication',
+          themeTitle: 'Climate change',
           difficulty: 'balanced',
           totalScore: 90,
           state: 'completed',
@@ -151,6 +173,7 @@ describe('ListSessionHistoryUseCase', () => {
           localDate: '2026-08-22',
           localTime: '09:00',
           categorySlug: 'communication',
+          themeTitle: 'Climate change',
           difficulty: 'balanced',
           totalScore: 70,
           state: 'completed',
@@ -161,6 +184,59 @@ describe('ListSessionHistoryUseCase', () => {
       pageSize: 20,
       timeZone: 'America/Sao_Paulo',
     })
+  })
+
+  it('asks the themes module for each distinct theme of the page only once', async () => {
+    const harness = createHarness({
+      page: [
+        createSession({
+          id: 'session-1',
+          state: 'completed',
+          createdAt: new Date('2026-08-22T12:00:00.000Z'),
+          themeId: 'theme-1',
+        }),
+        createSession({
+          id: 'session-2',
+          state: 'completed',
+          createdAt: new Date('2026-08-22T11:00:00.000Z'),
+          themeId: 'theme-2',
+        }),
+        createSession({
+          id: 'session-3',
+          state: 'completed',
+          createdAt: new Date('2026-08-22T10:00:00.000Z'),
+          themeId: 'theme-1',
+        }),
+      ],
+      themeTitles: { 'theme-1': 'Climate change', 'theme-2': 'Housing crisis' },
+    })
+
+    const output = await harness.useCase.execute({ accountId: 'account-1', cursor: null })
+
+    expect(output.items.map((item) => item.themeTitle)).toEqual([
+      'Climate change',
+      'Housing crisis',
+      'Climate change',
+    ])
+    expect(harness.requestedThemeIds()).toEqual([['theme-1', 'theme-2']])
+  })
+
+  it('emits a session whose theme no longer resolves, without a title', async () => {
+    const harness = createHarness({
+      page: [
+        createSession({
+          id: 'session-1',
+          state: 'completed',
+          createdAt: new Date('2026-08-22T12:00:00.000Z'),
+          themeId: 'theme-gone',
+        }),
+      ],
+      themeTitles: {},
+    })
+
+    const output = await harness.useCase.execute({ accountId: 'account-1', cursor: null })
+
+    expect(output.items).toMatchObject([{ sessionId: 'session-1', themeTitle: null }])
   })
 
   it('limits each page to twenty sessions and returns the twentieth id as the next cursor', async () => {
@@ -193,6 +269,7 @@ describe('ListSessionHistoryUseCase', () => {
       timeZone: 'America/Sao_Paulo',
     })
     expect(harness.completedBetweenCalls()).toBe(0)
+    expect(harness.requestedThemeIds()).toEqual([])
   })
 
   it.each([

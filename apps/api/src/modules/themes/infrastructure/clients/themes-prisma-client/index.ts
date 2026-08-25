@@ -25,6 +25,13 @@ export interface ThemeCombinationRow {
   readonly difficulty: ThemeDifficulty
 }
 
+export interface ThemeFindManyArgs {
+  readonly where:
+    | { readonly publicationStatus: ThemePublicationStatus }
+    | { readonly id: { readonly in: string[] } }
+  readonly distinct?: ['categoryId', 'difficulty']
+}
+
 export interface ThemesPrismaClient {
   readonly theme: {
     findUnique(args: { readonly where: { readonly id: string } }): Promise<ThemeRow | null>
@@ -39,11 +46,7 @@ export interface ThemesPrismaClient {
         readonly publicationStatus: ThemePublicationStatus
       }
     }): Promise<number>
-    findMany(args: {
-      readonly where: { readonly publicationStatus: ThemePublicationStatus }
-      readonly distinct: ['categoryId', 'difficulty']
-      readonly select: { readonly categoryId: true; readonly difficulty: true }
-    }): Promise<ThemeCombinationRow[]>
+    findMany(args: ThemeFindManyArgs): Promise<ThemeRow[]>
   }
   readonly themeCategory: {
     findUnique(args: {

@@ -88,6 +88,22 @@ export class PrismaThemesRepository implements ThemesRepository {
     return row === null ? null : this.mapper.toDomain(row)
   }
 
+  async listByIds(themeIds: readonly string[]): Promise<Theme[]> {
+    if (themeIds.length === 0) return []
+
+    let rows
+    try {
+      rows = await this.client().theme.findMany({ where: { id: { in: [...themeIds] } } })
+    } catch (error) {
+      throw new DatabaseError('Failed to read the themes', {
+        cause: error,
+        context: { themeIds: [...themeIds] },
+      })
+    }
+
+    return rows.map((row) => this.mapper.toDomain(row))
+  }
+
   async findByNormalizedTitle(params: {
     categoryId: string
     normalizedTitle: string
@@ -168,7 +184,6 @@ export class PrismaThemesRepository implements ThemesRepository {
       const rows = await this.client().theme.findMany({
         where: { publicationStatus: PUBLISHED_STATUS },
         distinct: ['categoryId', 'difficulty'],
-        select: { categoryId: true, difficulty: true },
       })
       return rows.map((row) => ({ categoryId: row.categoryId, difficulty: row.difficulty }))
     } catch (error) {

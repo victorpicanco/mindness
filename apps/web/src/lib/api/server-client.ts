@@ -5,18 +5,20 @@ import type { z } from 'zod'
 
 import { ApiClientError } from '@/lib/api/client-error'
 import { errorEnvelopeSchema, successEnvelopeSchema } from '@/lib/api/contracts/envelopes'
-import { requestRefreshedTokens } from '@/lib/auth/renew-session'
 import { EnvironmentError } from '@/lib/env/errors'
 import { readServerEnv } from '@/lib/env/server'
-import { clearSessionCookies, readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
+import { readSessionCookies } from '@/lib/auth/session'
 
-type CookieStore = Parameters<typeof writeSessionCookies>[0]
+type CookieStore = Parameters<typeof readSessionCookies>[0]
 type Fetcher = typeof fetch
 
-type ApiFetchOptions<TSchema extends z.ZodType> = Omit<RequestInit, 'headers'> & {
+type ApiRequestOptions = Omit<RequestInit, 'headers'> & {
   readonly cookieStore?: CookieStore
   readonly fetcher?: Fetcher
   readonly headers?: HeadersInit
+}
+
+type ApiFetchOptions<TSchema extends z.ZodType> = ApiRequestOptions & {
   readonly schema: TSchema
 }
 
@@ -49,46 +51,62 @@ function requestApi(
   })
 }
 
-async function refreshAndRetry(
+type ApiFetchWithMetaOptions<
+  TSchema extends z.ZodType,
+  TMetaSchema extends z.ZodType,
+> = ApiFetchOptions<TSchema> & { readonly metaSchema: TMetaSchema }
+
+export interface ApiResponse<TData, TMeta> {
+  readonly data: TData
+  readonly meta: TMeta
+}
+
+export async function apiFetchWithMeta<TSchema extends z.ZodType, TMetaSchema extends z.ZodType>(
   path: string,
-  store: CookieStore,
-  fetcher: Fetcher,
-  init: RequestInit,
-  refreshToken: string,
-): Promise<Response | null> {
-  if (path === '/auth/refresh') return null
+  { metaSchema, schema, ...request }: ApiFetchWithMetaOptions<TSchema, TMetaSchema>,
+): Promise<ApiResponse<z.output<TSchema>, z.output<TMetaSchema>>> {
+  const envelope = await requestEnvelope(path, request)
 
-  const tokens = await requestRefreshedTokens({
-    endpoint: apiUrl('/auth/refresh'),
-    fetcher,
-    refreshToken,
-  })
-
-  if (tokens === null) {
-    clearSessionCookies(store)
-    return null
-  }
-
-  writeSessionCookies(store, tokens)
-
-  return requestApi(fetcher, path, init, tokens.accessToken)
+  return parseEnvelope(() => ({
+    data: schema.parse(envelope.data),
+    meta: metaSchema.parse(envelope.meta),
+  }))
 }
 
 export async function apiFetch<TSchema extends z.ZodType>(
   path: string,
-  { cookieStore, fetcher = fetch, headers, schema, ...init }: ApiFetchOptions<TSchema>,
+  { schema, ...request }: ApiFetchOptions<TSchema>,
 ): Promise<z.output<TSchema>> {
+  const envelope = await requestEnvelope(path, request)
+
+  return parseEnvelope(() => schema.parse(envelope.data))
+}
+
+function parseEnvelope<TResult>(parse: () => TResult): TResult {
+  try {
+    return parse()
+  } catch (cause: unknown) {
+    throw new ApiClientError({
+      code: 'web.API_RESPONSE_INVALID',
+      message: 'The API returned an invalid response.',
+      issues: null,
+      requestId: null,
+      cause,
+    })
+  }
+}
+
+async function requestEnvelope(
+  path: string,
+  { cookieStore, fetcher = fetch, headers, ...init }: ApiRequestOptions,
+): Promise<z.output<typeof successEnvelopeSchema>> {
   const store = cookieStore ?? (await cookies())
-  const { accessToken, refreshToken } = readSessionCookies(store)
+  const { accessToken } = readSessionCookies(store)
   let response: Response
   const requestInit: RequestInit = headers === undefined ? init : { ...init, headers }
 
   try {
     response = await requestApi(fetcher, path, requestInit, accessToken)
-    if (response.status === 401 && refreshToken !== undefined) {
-      response =
-        (await refreshAndRetry(path, store, fetcher, requestInit, refreshToken)) ?? response
-    }
   } catch (cause: unknown) {
     if (cause instanceof EnvironmentError) throw cause
 
@@ -122,9 +140,7 @@ export async function apiFetch<TSchema extends z.ZodType>(
       throw new ApiClientError({ ...error, requestId: error.requestId })
     }
 
-    const { data } = successEnvelopeSchema.parse(body)
-
-    return schema.parse(data)
+    return successEnvelopeSchema.parse(body)
   } catch (cause: unknown) {
     if (cause instanceof ApiClientError) throw cause
 

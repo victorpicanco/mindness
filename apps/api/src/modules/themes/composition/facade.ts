@@ -1,6 +1,7 @@
 import type { DrawEligibleThemeUseCase } from '@/modules/themes/application/use-cases/draw-eligible-theme/index.js'
 import type { FindThemeByIdUseCase } from '@/modules/themes/application/use-cases/find-theme-by-id/index.js'
 import type { ListThemeCategoriesUseCase } from '@/modules/themes/application/use-cases/list-theme-categories/index.js'
+import type { ListThemeTitlesUseCase } from '@/modules/themes/application/use-cases/list-theme-titles/index.js'
 import {
   ThemesPublicApiImpl,
   type ThemesPublicApi,
@@ -10,6 +11,7 @@ export function createThemesFacade(dependencies: {
   readonly drawEligibleTheme: DrawEligibleThemeUseCase
   readonly findThemeById: FindThemeByIdUseCase
   readonly listThemeCategories: ListThemeCategoriesUseCase
+  readonly listThemeTitles: ListThemeTitlesUseCase
 }): ThemesPublicApi {
   return new ThemesPublicApiImpl(dependencies)
 }

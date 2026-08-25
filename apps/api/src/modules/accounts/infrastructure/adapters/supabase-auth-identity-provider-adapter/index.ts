@@ -30,6 +30,22 @@ const REJECTION_REASON_BY_PROVIDER_CODE = new Map<string, AuthenticationRejectio
   ['invalid_credentials', 'invalid_credentials'],
 ])
 
+const INVALID_REFRESH_TOKEN_CODES = new Set([
+  'refresh_token_not_found',
+  'refresh_token_already_used',
+  'session_not_found',
+  'session_expired',
+])
+
+const INVALID_ACCESS_TOKEN_CODES = new Set([
+  'bad_jwt',
+  'no_authorization',
+  'session_not_found',
+  'session_expired',
+])
+
+const INVALID_ACCESS_TOKEN_ERROR_NAMES = new Set(['AuthInvalidJwtError', 'AuthSessionMissingError'])
+
 const ERROR_BY_PROVIDER_CODE = new Map<string, (cause: unknown) => never>([
   [
     'captcha_failed',
@@ -127,6 +143,18 @@ function readEpochSeconds(source: Record<string, unknown>, key: string): Date | 
 
 function providerErrorCode(error: unknown): string | null {
   return isRecord(error) ? readString(error, 'code') : null
+}
+
+function providerErrorName(error: unknown): string | null {
+  return isRecord(error) ? readString(error, 'name') : null
+}
+
+function isInvalidAccessTokenError(error: unknown): boolean {
+  const code = providerErrorCode(error)
+  if (code !== null && INVALID_ACCESS_TOKEN_CODES.has(code)) return true
+
+  const name = providerErrorName(error)
+  return name !== null && INVALID_ACCESS_TOKEN_ERROR_NAMES.has(name)
 }
 
 function readAuthenticationMethod(claims: Record<string, unknown>): AuthenticationMethod | null {
@@ -240,7 +268,15 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
 
   async refreshSession(refreshToken: string): Promise<AuthSession> {
     const result = await this.call(() => this.api.refreshSession(refreshToken))
-    if (result.error !== null) rejectionFrom(result.error, 'refresh_token_invalid')
+    if (result.error !== null) {
+      translateProviderError(result.error)
+      const code = providerErrorCode(result.error)
+      if (code !== null && INVALID_REFRESH_TOKEN_CODES.has(code)) {
+        throw new AuthenticationRejectedError('refresh_token_invalid', { cause: result.error })
+      }
+
+      throw new AuthProviderError({ cause: result.error })
+    }
 
     return this.sessionFrom(result.data, 'refresh_token_invalid')
   }
@@ -315,7 +351,13 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
   private async readIdentityFor(accessToken: string): Promise<VerifiedAuthIdentity | null> {
     const result = await this.call(() => this.api.getClaims(accessToken))
 
-    return result.error === null ? readIdentity(result.data) : null
+    if (result.error !== null) {
+      if (isInvalidAccessTokenError(result.error)) return null
+
+      throw new AuthProviderError({ cause: result.error })
+    }
+
+    return readIdentity(result.data)
   }
 
   private async call<T extends { readonly error: unknown }>(

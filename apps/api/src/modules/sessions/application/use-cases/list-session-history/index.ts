@@ -61,6 +61,10 @@ export class ListSessionHistoryUseCase {
       profile.timeZone,
     )
 
+    const themeTitles = await this.readThemeTitles(
+      items.flatMap((session) => (session.state === 'deleted' ? [] : [session.themeId])),
+    )
+
     const historyItems: readonly SessionHistoryItem[] = items.flatMap((session) => {
       const state = session.state
       if (state === 'deleted') return []
@@ -72,6 +76,7 @@ export class ListSessionHistoryUseCase {
           localDate: LocalCalendar.localDayOf(session.createdAt, profile.timeZone),
           localTime: LocalCalendar.localTimeOf(session.createdAt, profile.timeZone),
           categorySlug: session.configuration.categorySlug,
+          themeTitle: themeTitles.get(session.themeId) ?? null,
           difficulty: session.configuration.difficulty,
           totalScore: session.totalScore,
           state,
@@ -86,6 +91,15 @@ export class ListSessionHistoryUseCase {
       pageSize: HISTORY_PAGE_SIZE,
       timeZone: profile.timeZone,
     }
+  }
+
+  private async readThemeTitles(themeIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
+    const distinctIds = [...new Set(themeIds)]
+    if (distinctIds.length === 0) return new Map()
+
+    const titles = await this.dependencies.themes.listThemeTitles(distinctIds)
+
+    return new Map(titles.map((theme) => [theme.themeId, theme.title]))
   }
 }
 

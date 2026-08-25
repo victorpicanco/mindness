@@ -9,7 +9,10 @@ type Equal<Left, Right> =
     : false
 type Assert<Condition extends true> = Condition
 type ThemesPublicApiExposesOnlyReads = Assert<
-  Equal<keyof ThemesPublicApi, 'drawEligibleTheme' | 'findThemeById' | 'listCategories'>
+  Equal<
+    keyof ThemesPublicApi,
+    'drawEligibleTheme' | 'findThemeById' | 'listCategories' | 'listThemeTitles'
+  >
 >
 
 const themesPublicApiExposesOnlyReads: ThemesPublicApiExposesOnlyReads = true
@@ -47,10 +50,18 @@ describe('ThemesPublicApiImpl', () => {
       execute: () =>
         Promise.resolve([{ categoryId: 'category-1', slug: 'reflection', name: 'Reflection' }]),
     }
+    const listThemeTitles = {
+      execute: ({ themeIds }: { readonly themeIds: readonly string[] }) => {
+        expect(themeIds).toEqual(['theme-1'])
+
+        return Promise.resolve([{ themeId: 'theme-1', title: 'Observe your thoughts' }])
+      },
+    }
     const api = new ThemesPublicApiImpl({
       drawEligibleTheme,
       findThemeById,
       listThemeCategories,
+      listThemeTitles,
     })
 
     await expect(
@@ -69,6 +80,9 @@ describe('ThemesPublicApiImpl', () => {
     })
     await expect(api.listCategories()).resolves.toEqual([
       { categoryId: 'category-1', slug: 'reflection', name: 'Reflection' },
+    ])
+    await expect(api.listThemeTitles(['theme-1'])).resolves.toEqual([
+      { themeId: 'theme-1', title: 'Observe your thoughts' },
     ])
   })
 

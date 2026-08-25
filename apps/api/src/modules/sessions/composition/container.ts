@@ -147,7 +147,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     getActiveSession: new GetActiveSessionUseCase({ ...expirationDependencies, themes }),
     getQuotaBalance: new GetSessionQuotaBalanceUseCase({ quota }),
     listStuckProcessingSessions: new ListStuckProcessingSessionsUseCase({ sessions }),
-    listSessionHistory: new ListSessionHistoryUseCase({ sessions, accounts }),
+    listSessionHistory: new ListSessionHistoryUseCase({ sessions, accounts, themes }),
     listThemeCategories: new ListSessionThemeCategoriesUseCase({ themes }),
     requestAudioPlaybackUrl: new RequestAudioPlaybackUrlUseCase({
       sessions,

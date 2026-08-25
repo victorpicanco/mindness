@@ -47,6 +47,7 @@ describe('FindThemeByIdUseCase', () => {
       categories,
       themes: {
         findById: () => Promise.resolve(theme),
+        listByIds: () => Promise.resolve([]),
         findByNormalizedTitle: () => Promise.resolve(null),
         save: () => Promise.resolve(),
         countPublishedBy: () => Promise.resolve(0),

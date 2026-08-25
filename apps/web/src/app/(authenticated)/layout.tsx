@@ -5,28 +5,17 @@ import { Suspense, type ReactNode } from 'react'
 import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
 import { RouteLoading } from '@/components/layouts/route-loading'
 import { SessionQuota } from '@/components/layouts/session-quota'
-import type { SidebarNavigationItem } from '@/components/ui/sidebar'
 import {
   quotaSchema,
+  sessionHistoryMetaSchema,
   sessionHistorySchema,
-  type SessionHistoryItem,
 } from '@/lib/api/contracts/sessions'
-import { apiFetch } from '@/lib/api/server-client'
+import { apiFetch, apiFetchWithMeta } from '@/lib/api/server-client'
 import { createRequireSession } from '@/lib/auth/require-session'
 import { signOutAction } from '@/lib/auth/sign-out'
-import { sessionPath } from '@/lib/navigation/session-routes'
+import { groupSessionsByDay } from '@/lib/sessions/session-day-groups'
 
 const SIDEBAR_PREFERENCE_COOKIE_NAME = 'mindness-sidebar-expanded'
-
-export function sessionNavigationItems(
-  sessions: readonly SessionHistoryItem[],
-): readonly SidebarNavigationItem[] {
-  return sessions.map((session) => ({
-    href: sessionPath(session.sessionId),
-    icon: 'clock-01',
-    label: `${session.categorySlug} · ${session.localDate} ${session.localTime}`,
-  }))
-}
 
 interface AuthenticatedLayoutProps {
   readonly children: ReactNode
@@ -35,9 +24,13 @@ interface AuthenticatedLayoutProps {
 async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
   const cookieStore = await cookies()
   createRequireSession({ cookieStore, redirect })()
-  const [quota, sessions] = await Promise.all([
+  const [quota, history] = await Promise.all([
     apiFetch('/sessions/quota', { cache: 'no-store', schema: quotaSchema }),
-    apiFetch('/sessions', { cache: 'no-store', schema: sessionHistorySchema }),
+    apiFetchWithMeta('/sessions', {
+      cache: 'no-store',
+      metaSchema: sessionHistoryMetaSchema,
+      schema: sessionHistorySchema,
+    }),
   ])
   const isSidebarExpanded = cookieStore.get(SIDEBAR_PREFERENCE_COOKIE_NAME)?.value !== 'false'
 
@@ -45,7 +38,11 @@ async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps
     <AuthenticatedShell
       initialIsExpanded={isSidebarExpanded}
       preferenceCookieName={SIDEBAR_PREFERENCE_COOKIE_NAME}
-      sessionItems={sessionNavigationItems(sessions)}
+      sessionGroups={groupSessionsByDay({
+        now: new Date(),
+        sessions: history.data,
+        timeZone: history.meta.timeZone,
+      })}
       signOut={signOutAction}
       {...(!quota.enforced
         ? {}

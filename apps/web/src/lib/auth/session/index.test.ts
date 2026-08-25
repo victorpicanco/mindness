@@ -204,6 +204,17 @@ describe('needsAccessTokenRefresh', () => {
     expect(needsAccessTokenRefresh(store, nowInSeconds)).toBe(false)
   })
 
+  it('asks for a refresh before the access token can expire during the request', () => {
+    const store = new InMemoryCookieStore()
+
+    writeSessionCookies(store, {
+      accessToken: accessTokenExpiringAt(nowInSeconds + 30),
+      refreshToken: 'refresh-token',
+    })
+
+    expect(needsAccessTokenRefresh(store, nowInSeconds)).toBe(true)
+  })
+
   it('asks for a refresh when the access token expired and can be renewed', () => {
     const store = new InMemoryCookieStore()
 

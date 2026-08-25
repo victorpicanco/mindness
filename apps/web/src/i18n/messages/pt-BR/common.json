@@ -39,6 +39,9 @@
     "navigationLabel": "Navegação do aplicativo",
     "primaryNavigationLabel": "Navegação principal",
     "sessionsLabel": "Sessões",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "untitledSession": "Sessão",
     "newSession": "Nova sessão",
     "progress": "Seu progresso",
     "signOut": "Sair"

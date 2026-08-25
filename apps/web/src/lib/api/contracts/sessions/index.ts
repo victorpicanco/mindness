@@ -17,6 +17,7 @@ const sessionHistoryItemSchema = z.object({
   sessionId: z.uuid(),
   startedAt: z.iso.datetime(),
   state: z.enum(['in_progress', 'expired', 'processing', 'completed', 'failed']),
+  themeTitle: z.string().nullable(),
   totalScore: z.number().int().min(0).max(100).nullable(),
 })
 
@@ -56,6 +57,12 @@ export const recordingStartedSchema = z.object({
 })
 
 export const sessionHistorySchema = z.array(sessionHistoryItemSchema)
+
+export const sessionHistoryMetaSchema = z.object({
+  nextCursor: z.uuid().nullable(),
+  pageSize: z.number().int().positive(),
+  timeZone: z.string(),
+})
 
 export const startedSessionSchema = z.object({
   expiresAt: z.iso.datetime(),

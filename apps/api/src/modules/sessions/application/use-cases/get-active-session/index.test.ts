@@ -61,6 +61,7 @@ function createHarness(activeSession: Session | null) {
       return Promise.resolve({ themeId, title: 'Communicating with clarity' })
     },
     listCategories: () => Promise.resolve([]),
+    listThemeTitles: () => Promise.resolve([]),
   }
   const useCase = new GetActiveSessionUseCase({
     sessions,

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { errorEnvelopeSchema } from '@/lib/api/contracts/envelopes'
 import { readServerEnv } from '@/lib/env/server'
 import { needsAccessTokenRefresh, readSessionCookies, type SessionTokens } from '@/lib/auth/session'
 
@@ -34,24 +35,57 @@ export type SessionRenewal =
   | { readonly status: 'renewed'; readonly tokens: SessionTokens }
   | { readonly status: 'ended' }
 
+export type SessionRefreshAttempt =
+  | { readonly status: 'renewed'; readonly tokens: SessionTokens }
+  | { readonly status: 'rejected' }
+  | { readonly status: 'unavailable' }
+
 export async function requestRefreshedTokens({
   endpoint,
   fetcher,
   refreshToken,
-}: RequestRefreshedTokensOptions): Promise<SessionTokens | null> {
-  const response = await fetcher(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-    cache: 'no-store',
-  })
+}: RequestRefreshedTokensOptions): Promise<SessionRefreshAttempt> {
+  let response: Response
 
-  if (!response.ok) return null
+  try {
+    response = await fetcher(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+      cache: 'no-store',
+    })
+  } catch {
+    return { status: 'unavailable' }
+  }
 
-  const body: unknown = await response.json()
-  const { data } = refreshEnvelopeSchema.parse(body)
+  let body: unknown
 
-  return { accessToken: data.accessToken, refreshToken: data.refreshToken }
+  try {
+    body = await response.json()
+  } catch {
+    return { status: 'unavailable' }
+  }
+
+  if (!response.ok) {
+    const parsed = errorEnvelopeSchema.safeParse(body)
+    const refreshWasRejected =
+      response.status === 401 &&
+      parsed.success &&
+      parsed.data.error.code === 'accounts.AUTHENTICATION_REJECTED'
+
+    return refreshWasRejected ? { status: 'rejected' } : { status: 'unavailable' }
+  }
+
+  const parsed = refreshEnvelopeSchema.safeParse(body)
+  if (!parsed.success) return { status: 'unavailable' }
+
+  return {
+    status: 'renewed',
+    tokens: {
+      accessToken: parsed.data.data.accessToken,
+      refreshToken: parsed.data.data.refreshToken,
+    },
+  }
 }
 
 export async function renewSession({
@@ -66,13 +100,16 @@ export async function renewSession({
   if (refreshToken === undefined) return { status: 'untouched' }
 
   try {
-    const tokens = await requestRefreshedTokens({
+    const attempt = await requestRefreshedTokens({
       endpoint: new URL(REFRESH_PATH, readServerEnv().API_BASE_URL).toString(),
       fetcher,
       refreshToken,
     })
 
-    return tokens === null ? { status: 'ended' } : { status: 'renewed', tokens }
+    if (attempt.status === 'renewed') return attempt
+    if (attempt.status === 'rejected') return { status: 'ended' }
+
+    return { status: 'untouched' }
   } catch {
     // A refresh that never produced an answer says nothing about the session.
     // Signing the visitor out here would turn an API blip into a forced

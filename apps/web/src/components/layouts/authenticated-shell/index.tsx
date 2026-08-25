@@ -13,16 +13,19 @@ import {
   Sidebar,
   SidebarHeader,
   SidebarNavigation,
+  SidebarSessionGroups,
   type SidebarNavigationItem,
+  type SidebarSessionGroup,
 } from '@/components/ui/sidebar'
 import { AUTHENTICATED_NAVIGATION_ITEMS } from '@/lib/navigation/authenticated-navigation'
+import type { SessionDayGroup, SessionDayHeading } from '@/lib/sessions/session-day-groups'
 
 interface AuthenticatedShellProps {
   readonly children: ReactNode
   readonly header?: ReactNode
   readonly initialIsExpanded: boolean
   readonly preferenceCookieName: string
-  readonly sessionItems?: readonly SidebarNavigationItem[]
+  readonly sessionGroups?: readonly SessionDayGroup[]
   readonly signOut: SignOutAction
 }
 
@@ -62,7 +65,7 @@ export function AuthenticatedShell({
   header,
   initialIsExpanded,
   preferenceCookieName,
-  sessionItems = [],
+  sessionGroups = [],
   signOut,
 }: AuthenticatedShellProps) {
   const t = useTranslations('common.authenticatedShell')
@@ -75,6 +78,23 @@ export function AuthenticatedShell({
   const navigationItems: readonly SidebarNavigationItem[] = AUTHENTICATED_NAVIGATION_ITEMS.map(
     (item) => ({ href: item.href, icon: item.icon, label: t(item.labelKey) }),
   )
+
+  function headingLabel(heading: SessionDayHeading): string {
+    if (heading.kind === 'today') return t('today')
+    if (heading.kind === 'yesterday') return t('yesterday')
+
+    return heading.value
+  }
+
+  const sessionSidebarGroups: readonly SidebarSessionGroup[] = sessionGroups.map((group) => ({
+    key: group.localDate,
+    heading: headingLabel(group.heading),
+    items: group.items.map((item) => ({
+      href: item.href,
+      label: item.title ?? t('untitledSession'),
+      sessionId: item.sessionId,
+    })),
+  }))
 
   useEffect(() => {
     if (!isMobileSidebarOpen) return
@@ -157,14 +177,13 @@ export function AuthenticatedShell({
             items={navigationItems}
             label={t('primaryNavigationLabel')}
           />
-          {sessionItems.length === 0 ? null : (
-            <SidebarNavigation
+          {isSidebarExpanded ? (
+            <SidebarSessionGroups
               activeHref={activeHref}
-              isExpanded={isSidebarExpanded}
-              items={sessionItems}
+              groups={sessionSidebarGroups}
               label={t('sessionsLabel')}
             />
-          )}
+          ) : null}
           <SignOutControl isExpanded={isSidebarExpanded} label={t('signOut')} signOut={signOut} />
         </Sidebar>
 
@@ -221,15 +240,12 @@ export function AuthenticatedShell({
             label={t('primaryNavigationLabel')}
             onNavigate={closeMobileSidebar}
           />
-          {sessionItems.length === 0 ? null : (
-            <SidebarNavigation
-              activeHref={activeHref}
-              isExpanded
-              items={sessionItems}
-              label={t('sessionsLabel')}
-              onNavigate={closeMobileSidebar}
-            />
-          )}
+          <SidebarSessionGroups
+            activeHref={activeHref}
+            groups={sessionSidebarGroups}
+            label={t('sessionsLabel')}
+            onNavigate={closeMobileSidebar}
+          />
           <SignOutControl isExpanded label={t('signOut')} signOut={signOut} />
         </Sidebar>
       </div>

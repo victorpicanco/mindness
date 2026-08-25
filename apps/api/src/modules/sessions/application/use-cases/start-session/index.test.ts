@@ -99,6 +99,7 @@ function createDependencies(input?: {
     },
     findThemeById: (themeId) => Promise.resolve({ themeId, title: 'Theme' }),
     listCategories: () => Promise.resolve([]),
+    listThemeTitles: () => Promise.resolve([]),
   }
   const quota: QuotaPort = {
     readBalance: () => Promise.resolve({ enforced: false }),

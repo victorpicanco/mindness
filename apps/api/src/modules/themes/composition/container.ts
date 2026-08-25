@@ -3,6 +3,7 @@ import { CreateThemeUseCase } from '@/modules/themes/application/use-cases/creat
 import { DrawEligibleThemeUseCase } from '@/modules/themes/application/use-cases/draw-eligible-theme/index.js'
 import { FindThemeByIdUseCase } from '@/modules/themes/application/use-cases/find-theme-by-id/index.js'
 import { ListThemeCategoriesUseCase } from '@/modules/themes/application/use-cases/list-theme-categories/index.js'
+import { ListThemeTitlesUseCase } from '@/modules/themes/application/use-cases/list-theme-titles/index.js'
 import { MoveThemeToDraftUseCase } from '@/modules/themes/application/use-cases/move-theme-to-draft/index.js'
 import { PublishThemeUseCase } from '@/modules/themes/application/use-cases/publish-theme/index.js'
 import { SynchronizeThemeCatalogUseCase } from '@/modules/themes/application/use-cases/synchronize-theme-catalog/index.js'
@@ -87,6 +88,7 @@ export function createThemesContainer(deps: ThemesModuleDeps) {
     }),
     findThemeById: new FindThemeByIdUseCase({ themes, categories }),
     listThemeCategories: new ListThemeCategoriesUseCase({ categories }),
+    listThemeTitles: new ListThemeTitlesUseCase({ themes }),
     moveThemeToDraft: new MoveThemeToDraftUseCase({ themes, themePoolAudit }),
     publishTheme: new PublishThemeUseCase({ themes, themePoolAudit }),
     synchronizeThemeCatalog: new SynchronizeThemeCatalogUseCase({
@@ -104,6 +106,7 @@ export function createThemesContainer(deps: ThemesModuleDeps) {
     drawEligibleTheme: useCases.drawEligibleTheme,
     findThemeById: useCases.findThemeById,
     listThemeCategories: useCases.listThemeCategories,
+    listThemeTitles: useCases.listThemeTitles,
   })
 
   return { publicApi, repositories: { themes, categories }, useCases }

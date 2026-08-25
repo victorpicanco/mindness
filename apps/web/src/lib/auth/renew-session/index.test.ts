@@ -51,7 +51,7 @@ describe('requestRefreshedTokens', () => {
   it('posts the refresh token and returns the rotated pair', async () => {
     const requests: Request[] = []
 
-    const tokens = await requestRefreshedTokens({
+    const result = await requestRefreshedTokens({
       endpoint: 'https://api.mindness.test/auth/refresh',
       fetcher: (input, init) => {
         requests.push(new Request(input, init))
@@ -61,20 +61,46 @@ describe('requestRefreshedTokens', () => {
       refreshToken: 'valid-refresh',
     })
 
-    expect(tokens).toEqual({ accessToken: 'fresh-access', refreshToken: 'rotated-refresh' })
+    expect(result).toEqual({
+      status: 'renewed',
+      tokens: { accessToken: 'fresh-access', refreshToken: 'rotated-refresh' },
+    })
     expect(requests[0]?.url).toBe('https://api.mindness.test/auth/refresh')
     expect(requests[0]?.method).toBe('POST')
     await expect(requests[0]?.json()).resolves.toEqual({ refreshToken: 'valid-refresh' })
   })
 
-  it('reports a rejected refresh token as no tokens at all', async () => {
-    const tokens = await requestRefreshedTokens({
+  it('reports a definitively rejected refresh token', async () => {
+    const result = await requestRefreshedTokens({
       endpoint: 'https://api.mindness.test/auth/refresh',
-      fetcher: () => Promise.resolve(Response.json({ error: {} }, { status: 401 })),
+      fetcher: () =>
+        Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.AUTHENTICATION_REJECTED',
+                message: 'Authentication rejected',
+                issues: null,
+                requestId: 'request-id',
+              },
+            },
+            { status: 401 },
+          ),
+        ),
       refreshToken: 'revoked-refresh',
     })
 
-    expect(tokens).toBeNull()
+    expect(result).toEqual({ status: 'rejected' })
+  })
+
+  it.each([429, 500, 503])('reports a %i refresh response as unavailable', async (status) => {
+    const result = await requestRefreshedTokens({
+      endpoint: 'https://api.mindness.test/auth/refresh',
+      fetcher: () => Promise.resolve(Response.json({ error: {} }, { status })),
+      refreshToken: 'valid-refresh',
+    })
+
+    expect(result).toEqual({ status: 'unavailable' })
   })
 })
 
@@ -122,7 +148,20 @@ describe('renewSession', () => {
 
     const renewal = await renewSession({
       cookieStore: staleSession(),
-      fetcher: () => Promise.resolve(Response.json({ error: {} }, { status: 401 })),
+      fetcher: () =>
+        Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.AUTHENTICATION_REJECTED',
+                message: 'Authentication rejected',
+                issues: null,
+                requestId: 'request-id',
+              },
+            },
+            { status: 401 },
+          ),
+        ),
       nowInSeconds: NOW_IN_SECONDS,
     })
 
@@ -135,6 +174,18 @@ describe('renewSession', () => {
     const renewal = await renewSession({
       cookieStore: staleSession(),
       fetcher: () => Promise.reject(new TypeError('Failed to fetch')),
+      nowInSeconds: NOW_IN_SECONDS,
+    })
+
+    expect(renewal).toEqual({ status: 'untouched' })
+  })
+
+  it('keeps the session when the refresh endpoint is temporarily unavailable', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+
+    const renewal = await renewSession({
+      cookieStore: staleSession(),
+      fetcher: () => Promise.resolve(Response.json({ error: {} }, { status: 503 })),
       nowInSeconds: NOW_IN_SECONDS,
     })
 

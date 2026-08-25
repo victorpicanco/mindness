@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { readSessionCookies } from '@/lib/auth/session'
 import type { ApiClientError } from '@/lib/api/client-error'
 
-import { apiFetch } from './server-client'
+import { apiFetch, apiFetchWithMeta } from './server-client'
 
 class InMemoryCookieStore {
   private readonly values = new Map<string, string>()
@@ -135,56 +134,71 @@ describe('apiFetch', () => {
     } satisfies Pick<ApiClientError, 'code'>)
   })
 
-  it('refreshes an expired session once and retries the original request', async () => {
+  it('does not mutate session cookies while handling a 401 during rendering', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const store = new InMemoryCookieStore('expired-access', 'valid-refresh')
     const requests: Request[] = []
 
-    const data = await apiFetch('/sessions/quota', {
+    const request = apiFetch('/sessions/quota', {
       schema: z.object({ remaining: z.number() }),
       cookieStore: store,
       fetcher: (input, init) => {
-        const request = new Request(input, init)
-        requests.push(request)
-        if (request.url.endsWith('/auth/refresh')) {
-          return Promise.resolve(
-            Response.json({
-              data: {
-                accessToken: 'fresh-access',
-                refreshToken: 'rotated-refresh',
-                expiresAt: '2026-08-15T13:00:00.000Z',
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.AUTHENTICATION_REJECTED',
+                message: 'Authentication rejected',
+                issues: null,
+                requestId: 'request-id',
               },
-            }),
-          )
-        }
-        if (request.headers.get('authorization') === 'Bearer expired-access') {
-          return Promise.resolve(
-            Response.json(
-              {
-                error: {
-                  code: 'accounts.AUTHENTICATION_REJECTED',
-                  message: 'Authentication rejected',
-                  issues: null,
-                  requestId: 'request-id',
-                },
-              },
-              { status: 401 },
-            ),
-          )
-        }
-        return Promise.resolve(Response.json({ data: { remaining: 2 } }))
+            },
+            { status: 401 },
+          ),
+        )
       },
     })
 
-    expect(data).toEqual({ remaining: 2 })
-    expect(requests.map((request) => request.url)).toEqual([
-      'https://api.mindness.test/sessions/quota',
-      'https://api.mindness.test/auth/refresh',
-      'https://api.mindness.test/sessions/quota',
-    ])
-    expect(readSessionCookies(store)).toEqual({
-      accessToken: 'fresh-access',
-      refreshToken: 'rotated-refresh',
+    await expect(request).rejects.toMatchObject({ code: 'accounts.AUTHENTICATION_REJECTED' })
+    expect(requests.map((item) => item.url)).toEqual(['https://api.mindness.test/sessions/quota'])
+  })
+})
+
+describe('apiFetchWithMeta', () => {
+  it('returns the validated data beside the validated envelope metadata', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+
+    await expect(
+      apiFetchWithMeta('/sessions', {
+        schema: z.array(z.object({ sessionId: z.string() })),
+        metaSchema: z.object({ timeZone: z.string() }),
+        cookieStore: new InMemoryCookieStore('access-token'),
+        fetcher: () =>
+          Promise.resolve(
+            Response.json({
+              data: [{ sessionId: 'session-1' }],
+              meta: { timeZone: 'America/Sao_Paulo' },
+            }),
+          ),
+      }),
+    ).resolves.toEqual({
+      data: [{ sessionId: 'session-1' }],
+      meta: { timeZone: 'America/Sao_Paulo' },
     })
+  })
+
+  it('rejects metadata that does not match the endpoint schema', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+
+    const request = apiFetchWithMeta('/sessions', {
+      schema: z.array(z.unknown()),
+      metaSchema: z.object({ timeZone: z.string() }),
+      cookieStore: new InMemoryCookieStore('access-token'),
+      fetcher: () => Promise.resolve(Response.json({ data: [], meta: {} })),
+    })
+
+    await expect(request).rejects.toMatchObject({ code: 'web.API_RESPONSE_INVALID' })
   })
 })

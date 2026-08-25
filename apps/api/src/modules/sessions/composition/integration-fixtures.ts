@@ -79,6 +79,14 @@ export function createFakeThemesPort(): FakeThemesPort {
     findThemeById: (themeId) =>
       Promise.resolve(themesById.get(themeId) ?? { themeId, title: 'Theme' }),
     listCategories: () => Promise.resolve([...categories.values()]),
+    listThemeTitles: (themeIds) =>
+      Promise.resolve(
+        themeIds.flatMap((themeId) => {
+          const theme = themesById.get(themeId)
+
+          return theme === undefined ? [] : [{ themeId, title: theme.title }]
+        }),
+      ),
     registerEligibleTheme: ({ categoryId, categorySlug, categoryName, difficulty, themeId }) => {
       const theme = { themeId, title: 'Theme' }
       themes.set(themeKey(categorySlug, difficulty), theme)

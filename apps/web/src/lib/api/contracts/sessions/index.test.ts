@@ -50,6 +50,7 @@ describe('session API contracts', () => {
           sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
           startedAt: '2026-08-24T12:00:00.000Z',
           state: 'completed',
+          themeTitle: 'Notícias do dia',
           totalScore: 87,
         },
       ]),

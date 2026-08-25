@@ -21,6 +21,7 @@ describe('ThemesPortAdapter', () => {
           difficulty: 'easy',
         }),
       listCategories: () => Promise.resolve([]),
+      listThemeTitles: () => Promise.resolve([]),
     }
     const adapter = new ThemesPortAdapter(themesFacade)
 
@@ -43,6 +44,7 @@ describe('ThemesPortAdapter', () => {
           difficulty: 'easy',
         }),
       listCategories: () => Promise.resolve([]),
+      listThemeTitles: () => Promise.resolve([]),
     }
     const adapter = new ThemesPortAdapter(themesFacade)
 
@@ -50,6 +52,32 @@ describe('ThemesPortAdapter', () => {
       themeId: 'theme-1',
       title: 'Describe a moment of calm',
     })
+  })
+
+  it('returns one title for every theme the facade resolves', async () => {
+    const requested: (readonly string[])[] = []
+    const themesFacade: ThemesEligibilityReader = {
+      drawEligibleTheme: () => Promise.resolve(null),
+      findThemeById: () =>
+        Promise.resolve({
+          themeId: 'theme-1',
+          title: 'Describe a moment of calm',
+          categorySlug: 'reflection',
+          difficulty: 'easy',
+        }),
+      listCategories: () => Promise.resolve([]),
+      listThemeTitles: (themeIds) => {
+        requested.push(themeIds)
+
+        return Promise.resolve([{ themeId: 'theme-1', title: 'Describe a moment of calm' }])
+      },
+    }
+    const adapter = new ThemesPortAdapter(themesFacade)
+
+    await expect(adapter.listThemeTitles(['theme-1', 'theme-2'])).resolves.toStrictEqual([
+      { themeId: 'theme-1', title: 'Describe a moment of calm' },
+    ])
+    expect(requested).toEqual([['theme-1', 'theme-2']])
   })
 
   it('returns the categories provided by the themes facade without changing their shape', async () => {
@@ -67,6 +95,7 @@ describe('ThemesPortAdapter', () => {
           difficulty: 'easy',
         }),
       listCategories: () => Promise.resolve(categories),
+      listThemeTitles: () => Promise.resolve([]),
     }
     const adapter = new ThemesPortAdapter(themesFacade)
 

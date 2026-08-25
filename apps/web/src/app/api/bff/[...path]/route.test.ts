@@ -121,7 +121,22 @@ describe('BFF proxy route', () => {
     const handler = createBffRouteHandler({
       apiBaseUrl: 'https://api.mindness.test',
       cookieStore,
-      fetcher: () => Promise.resolve(new Response(null, { status: 401 })),
+      fetcher: (input) =>
+        Promise.resolve(
+          new URL(new Request(input).url).pathname === '/auth/refresh'
+            ? Response.json(
+                {
+                  error: {
+                    code: 'accounts.AUTHENTICATION_REJECTED',
+                    message: 'Authentication rejected',
+                    issues: null,
+                    requestId: 'request-id',
+                  },
+                },
+                { status: 401 },
+              )
+            : new Response(null, { status: 401 }),
+        ),
     })
 
     const response = await handler(
@@ -136,6 +151,34 @@ describe('BFF proxy route', () => {
         code: 'web.AUTHENTICATION_EXPIRED',
         issues: null,
       },
+    })
+  })
+
+  it('preserves cookies and reports temporary unavailability when refresh returns 503', async () => {
+    const cookieStore = new InMemoryCookieStore({
+      accessToken: 'expired-access-token',
+      refreshToken: 'refresh-token',
+    })
+    const handler = createBffRouteHandler({
+      apiBaseUrl: 'https://api.mindness.test',
+      cookieStore,
+      fetcher: (input) =>
+        Promise.resolve(
+          new URL(new Request(input).url).pathname === '/auth/refresh'
+            ? Response.json({ error: {} }, { status: 503 })
+            : new Response(null, { status: 401 }),
+        ),
+    })
+
+    const response = await handler(
+      new Request('https://web.mindness.test/api/bff/sessions/quota'),
+      context(['sessions', 'quota']),
+    )
+
+    expect(response.status).toBe(503)
+    expect(cookieStore.deletedNames).toEqual([])
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'web.AUTHENTICATION_UNAVAILABLE' },
     })
   })
 })

@@ -9,6 +9,7 @@ function createThemes(categories: Awaited<ReturnType<ThemesPort['listCategories'
     drawEligibleTheme: () => Promise.resolve(null),
     findThemeById: (themeId) => Promise.resolve({ themeId, title: 'Theme' }),
     listCategories: () => Promise.resolve(categories),
+    listThemeTitles: () => Promise.resolve([]),
   }
 }
 

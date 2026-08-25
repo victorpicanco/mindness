@@ -22,6 +22,10 @@ class RecordingThemesRepository implements ThemesRepository {
     return Promise.resolve(this.themes.find((theme) => theme.id === themeId) ?? null)
   }
 
+  listByIds(themeIds: readonly string[]): Promise<Theme[]> {
+    return Promise.resolve(this.themes.filter((theme) => themeIds.includes(theme.id)))
+  }
+
   findByNormalizedTitle(): Promise<Theme | null> {
     return Promise.resolve(null)
   }

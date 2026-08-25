@@ -7,6 +7,7 @@ export interface ThemeCombination {
 
 export interface ThemesRepository {
   findById(themeId: string): Promise<Theme | null>
+  listByIds(themeIds: readonly string[]): Promise<Theme[]>
   findByNormalizedTitle(params: {
     categoryId: string
     normalizedTitle: string

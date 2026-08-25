@@ -218,7 +218,19 @@ describe('proxy', () => {
     })
 
     it('signs the visitor out when the refresh token is no longer accepted', async () => {
-      stubApi(() => Response.json({ error: {} }, { status: 401 }))
+      stubApi(() =>
+        Response.json(
+          {
+            error: {
+              code: 'accounts.AUTHENTICATION_REJECTED',
+              message: 'Authentication rejected',
+              issues: null,
+              requestId: 'request-id',
+            },
+          },
+          { status: 401 },
+        ),
+      )
 
       const response = await proxy(request('/', staleAccessToken()))
 

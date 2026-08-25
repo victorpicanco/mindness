@@ -1,17 +1,8 @@
 import { cookies } from 'next/headers'
-import { z } from 'zod'
-
 import { clearSessionCookies, readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
+import { requestRefreshedTokens } from '@/lib/auth/renew-session'
 import { EnvironmentError } from '@/lib/env/errors'
 import { readServerEnv } from '@/lib/env/server'
-
-const refreshResponseSchema = z.object({
-  data: z.object({
-    accessToken: z.string(),
-    expiresAt: z.string(),
-    refreshToken: z.string(),
-  }),
-})
 
 type CookieStore = Parameters<typeof writeSessionCookies>[0]
 type Fetcher = typeof fetch
@@ -62,32 +53,6 @@ function requestBody(method: string, body: ArrayBuffer): ArrayBuffer | undefined
   return method === 'GET' || method === 'HEAD' ? undefined : body
 }
 
-async function refreshSession(
-  apiBaseUrl: string,
-  cookieStore: CookieStore,
-  fetcher: Fetcher,
-  refreshToken: string | undefined,
-): Promise<string | undefined> {
-  if (refreshToken === undefined) return undefined
-
-  const response = await fetcher(new URL('/auth/refresh', apiBaseUrl), {
-    body: JSON.stringify({ refreshToken }),
-    headers: { 'content-type': 'application/json' },
-    method: 'POST',
-  })
-
-  if (!response.ok) return undefined
-
-  const body: unknown = await response.json()
-  const parsed = refreshResponseSchema.safeParse(body)
-
-  if (!parsed.success) return undefined
-
-  writeSessionCookies(cookieStore, parsed.data.data)
-
-  return parsed.data.data.accessToken
-}
-
 export function createBffRouteHandler({
   apiBaseUrl,
   cookieStore,
@@ -112,20 +77,29 @@ export function createBffRouteHandler({
 
     if (response.status !== 401) return response
 
-    const refreshedAccessToken = await refreshSession(
-      apiBaseUrl,
-      cookieStore,
-      fetcher,
-      refreshToken,
-    )
-
-    if (refreshedAccessToken === undefined) {
+    if (refreshToken === undefined) {
       clearSessionCookies(cookieStore)
-
       return errorResponse(401, 'web.AUTHENTICATION_EXPIRED')
     }
 
-    return forwardRequest(refreshedAccessToken)
+    const attempt = await requestRefreshedTokens({
+      endpoint: new URL('/auth/refresh', apiBaseUrl).toString(),
+      fetcher,
+      refreshToken,
+    })
+
+    if (attempt.status === 'unavailable') {
+      return errorResponse(503, 'web.AUTHENTICATION_UNAVAILABLE')
+    }
+
+    if (attempt.status === 'rejected') {
+      clearSessionCookies(cookieStore)
+      return errorResponse(401, 'web.AUTHENTICATION_EXPIRED')
+    }
+
+    writeSessionCookies(cookieStore, attempt.tokens)
+
+    return forwardRequest(attempt.tokens.accessToken)
   }
 }
 

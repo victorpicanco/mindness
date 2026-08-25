@@ -4,8 +4,8 @@ import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { SidebarNavigationItem } from '@/components/ui/sidebar'
 import { messages } from '@/i18n/messages'
+import type { SessionDayGroup } from '@/lib/sessions/session-day-groups'
 
 import { AuthenticatedShell } from './index'
 
@@ -14,11 +14,28 @@ function renderShell(
   isInitiallyExpanded = true,
   pathname = '/',
   header: ReactNode = <span>Header content</span>,
-  sessionItems: readonly SidebarNavigationItem[] = [
+  sessionGroups: readonly SessionDayGroup[] = [
     {
-      href: '/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
-      icon: 'clock-01',
-      label: 'Foco · 24/08 09:00',
+      heading: { kind: 'today' },
+      localDate: '2026-08-25',
+      items: [
+        {
+          href: '/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+          sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+          title: 'Notícias do dia',
+        },
+      ],
+    },
+    {
+      heading: { kind: 'date', value: '01/08/2026' },
+      localDate: '2026-08-01',
+      items: [
+        {
+          href: '/sessions/3c1c9f0e-2f3a-4a1e-9a44-2a0f8f5f2f11',
+          sessionId: '3c1c9f0e-2f3a-4a1e-9a44-2a0f8f5f2f11',
+          title: null,
+        },
+      ],
     },
   ],
   signOut: () => void = () => undefined,
@@ -29,7 +46,7 @@ function renderShell(
         <AuthenticatedShell
           initialIsExpanded={isInitiallyExpanded}
           preferenceCookieName="mindness-sidebar-expanded"
-          sessionItems={sessionItems}
+          sessionGroups={sessionGroups}
           signOut={signOut}
           {...(header === undefined ? {} : { header })}
         >
@@ -64,14 +81,54 @@ describe('AuthenticatedShell', () => {
     expect(progressLink.querySelector('[data-icon="chart-increase"]')).toBeInTheDocument()
   })
 
-  it('renders the server-synchronized session aggregate in the sidebar', () => {
+  it('groups the server-synchronized sessions by day, under a translated heading', () => {
     renderShell(<p>Content</p>)
 
-    const sidebar = screen.getByRole('complementary')
-    const sessionLink = within(sidebar).getByRole('link', { name: 'Foco · 24/08 09:00' })
+    const sessions = within(screen.getByRole('complementary')).getByRole('navigation', {
+      name: 'Sessões',
+    })
 
-    expect(within(sidebar).getByRole('navigation', { name: 'Sessões' })).toBeInTheDocument()
-    expect(sessionLink).toHaveAttribute('href', '/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa')
+    expect(within(sessions).getByRole('heading', { name: 'Hoje' })).toBeInTheDocument()
+    expect(within(sessions).getByRole('heading', { name: '01/08/2026' })).toBeInTheDocument()
+    expect(within(sessions).getByRole('link', { name: 'Notícias do dia' })).toHaveAttribute(
+      'href',
+      '/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+    )
+  })
+
+  it('names a session whose theme is unknown with the fallback copy', () => {
+    renderShell(<p>Content</p>)
+
+    const sessions = within(screen.getByRole('complementary')).getByRole('navigation', {
+      name: 'Sessões',
+    })
+
+    expect(within(sessions).getByRole('link', { name: 'Sessão' })).toHaveAttribute(
+      'href',
+      '/sessions/3c1c9f0e-2f3a-4a1e-9a44-2a0f8f5f2f11',
+    )
+  })
+
+  it('translates the previous day heading as yesterday', () => {
+    renderShell(<p>Content</p>, true, '/', undefined, [
+      {
+        heading: { kind: 'yesterday' },
+        localDate: '2026-08-24',
+        items: [
+          { href: '/sessions/session-1', sessionId: 'session-1', title: 'Controlar o celular' },
+        ],
+      },
+    ])
+
+    expect(screen.getAllByRole('heading', { name: 'Ontem' })[0]).toBeInTheDocument()
+  })
+
+  it('hides the session list while the sidebar is collapsed', () => {
+    renderShell(<p>Content</p>, false)
+
+    expect(
+      within(screen.getByRole('complementary')).queryByRole('navigation', { name: 'Sessões' }),
+    ).not.toBeInTheDocument()
   })
 
   it('renders a submit control for signing out in desktop and mobile sidebars', () => {

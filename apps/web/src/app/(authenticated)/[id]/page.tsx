@@ -89,7 +89,7 @@ export function createSessionPage(fetchFromApi: ApiFetch, renderNotFound: NotFou
         }}
       >
         <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
-          <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center justify-center">
+          <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
             <ResearchTimer />
             <RecordingStart />
           </div>

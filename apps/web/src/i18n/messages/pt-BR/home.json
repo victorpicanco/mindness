@@ -25,11 +25,13 @@
   },
   "research": {
     "eyebrow": "Pesquise sobre o tema",
-    "instruction": "Quando o tempo terminar, você terá 2 minutos para iniciar a gravação.",
     "microphoneError": "Não foi possível acessar o microfone.",
     "recordingEyebrow": "Seu tempo de pesquisa terminou",
-    "recordingInstruction": "Clique para gravar sua apresentação de até 1 minuto. Se você não começar dentro do tempo, a sessão expira.",
+    "recordingActiveLabel": "Gravação em andamento",
+    "recordingInProgress": "Gravando",
+    "recordingInputLabel": "Gravador de áudio",
     "startRecording": "Iniciar gravação",
+    "stopRecording": "Parar gravação",
     "expired": "Sua sessão expirou porque a gravação não começou a tempo."
   },
   "session": {

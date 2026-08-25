@@ -73,7 +73,7 @@ export function ResearchTimer({ logAudioFailure = logCountdownAudioFailure }: Re
   if (session === null || status !== 'researching') return null
 
   return (
-    <section aria-labelledby="research-theme" className="text-center">
+    <section aria-labelledby="research-theme" className="m-auto text-center">
       <p className="text-text-muted">{t('eyebrow')}</p>
       <h1
         className="font-(family-name:--font-buenard) mt-2 text-3xl leading-tight tracking-tight sm:text-4xl"
@@ -84,7 +84,6 @@ export function ResearchTimer({ logAudioFailure = logCountdownAudioFailure }: Re
       <p aria-live="polite" className="mt-8 text-5xl tabular-nums" role="timer">
         {formatCountdown(seconds)}
       </p>
-      <p className="mt-3 text-text-muted">{t('instruction')}</p>
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- The warning is a non-speech tone with no content to caption. */}
       <audio aria-hidden="true" preload="auto" ref={audioRef} src={WARNING_AUDIO_SOURCE} />
     </section>

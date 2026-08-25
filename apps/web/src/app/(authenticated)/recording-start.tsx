@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
+import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
 import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from './practice-countdown'
+import { SessionRecorder } from './session-recorder'
+import type { AudioLevelSource } from './use-audio-levels'
 
 export class RecordingNotOpenedError extends Error {
   readonly code = 'web.RECORDING_NOT_OPENED'
@@ -29,11 +31,15 @@ export class MicrophoneUnavailableError extends Error {
 }
 
 export interface RecordingStartProps {
+  readonly audioLevelSource?: AudioLevelSource
   readonly requestMicrophone?: () => Promise<void>
   readonly startRecording?: (sessionId: string) => Promise<void>
 }
 
 type StartFailure = 'microphone' | 'request'
+
+const THEME_CLASSES =
+  'font-(family-name:--font-buenard) text-4xl leading-tight tracking-tight text-balance sm:text-5xl'
 
 async function requestBrowserMicrophone(): Promise<void> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -48,6 +54,7 @@ async function requestRecordingStart(sessionId: string): Promise<void> {
 }
 
 export function RecordingStart({
+  audioLevelSource,
   requestMicrophone = requestBrowserMicrophone,
   startRecording = requestRecordingStart,
 }: RecordingStartProps) {
@@ -62,6 +69,7 @@ export function RecordingStart({
     session === null ? 0 : countdownSeconds(session.expiresAt),
   )
   const [failure, setFailure] = useState<StartFailure | null>(null)
+  const [isCapturing, setIsCapturing] = useState(false)
   const expiredRef = useRef(false)
 
   const mutation = useMutation({
@@ -83,6 +91,7 @@ export function RecordingStart({
     },
     onSuccess: () => {
       setFailure(null)
+      setIsCapturing(true)
       beginRecording()
     },
   })
@@ -113,8 +122,34 @@ export function RecordingStart({
 
   if (status === 'expired') {
     return (
-      <section className="text-center" role="alert">
+      <section className="m-auto text-center" role="alert">
         <p className="text-text-muted">{t('expired')}</p>
+      </section>
+    )
+  }
+
+  if (status === 'recording') {
+    return (
+      <section aria-label={t('recordingActiveLabel')} className="flex min-h-0 flex-1 flex-col">
+        <div className="mx-auto flex min-h-0 max-w-2xl flex-1 items-center justify-center">
+          <h1 className={`${THEME_CLASSES} text-center`}>{session.themeTitle}</h1>
+        </div>
+        <div className="mx-auto w-full max-w-3xl">
+          <SessionRecorder
+            isDisabled={!isCapturing}
+            isRecording={isCapturing}
+            onLimitReached={() => {
+              setIsCapturing(false)
+            }}
+            onToggleRecording={() => {
+              setIsCapturing(false)
+            }}
+            {...(audioLevelSource === undefined ? {} : { source: audioLevelSource })}
+          />
+          <VisuallyHidden aria-live="polite">
+            {isCapturing ? t('recordingInProgress') : ''}
+          </VisuallyHidden>
+        </div>
       </section>
     )
   }
@@ -126,35 +161,33 @@ export function RecordingStart({
   }
 
   return (
-    <section aria-labelledby="recording-theme" className="text-center">
-      <p className="text-text-muted">{t('recordingEyebrow')}</p>
-      <h1
-        className="font-(family-name:--font-buenard) mt-2 text-3xl leading-tight tracking-tight sm:text-4xl"
-        id="recording-theme"
-      >
-        {session.themeTitle}
-      </h1>
-      <p aria-live="polite" className="mt-8 text-5xl tabular-nums" role="timer">
-        {formatCountdown(seconds)}
-      </p>
-      <p className="mt-3 text-text-muted">{t('recordingInstruction')}</p>
-      <Button
-        className="mt-6"
-        isLoading={mutation.isPending}
-        onClick={() => {
-          setFailure(null)
-          mutation.mutate(session.sessionId)
-        }}
-        size="lg"
-        type="button"
-      >
-        {t('startRecording')}
-      </Button>
-      {failure === null ? null : (
-        <p className="mt-4 text-sm text-error" role="alert">
-          {failureMessage(failure)}
-        </p>
-      )}
+    <section aria-labelledby="recording-theme" className="flex min-h-0 flex-1 flex-col">
+      <div className="mx-auto flex min-h-0 max-w-2xl flex-1 flex-col items-center justify-center gap-8 text-center">
+        <div>
+          <p className="text-text-muted">{t('recordingEyebrow')}</p>
+          <h1 className={`${THEME_CLASSES} mt-2`} id="recording-theme">
+            {session.themeTitle}
+          </h1>
+        </div>
+        <div>
+          {failure === null ? null : (
+            <p className="mt-4 text-sm text-error" role="alert">
+              {failureMessage(failure)}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mx-auto w-full max-w-3xl">
+        <SessionRecorder
+          isDisabled={mutation.isPending}
+          isRecording={false}
+          onLimitReached={() => undefined}
+          onToggleRecording={() => {
+            setFailure(null)
+            mutation.mutate(session.sessionId)
+          }}
+        />
+      </div>
     </section>
   )
 }

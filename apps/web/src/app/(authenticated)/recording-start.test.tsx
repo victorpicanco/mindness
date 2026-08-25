@@ -11,6 +11,9 @@ import {
 } from '@/stores/practice-session/provider'
 
 import { RecordingStart, type RecordingStartProps } from './recording-start'
+import type { AudioLevelSource } from './use-audio-levels'
+import { BAR_INTERVAL_MS } from './use-audio-levels'
+import { MAX_RECORDING_SECONDS } from './use-recording-clock'
 
 const NOW = new Date('2026-08-24T12:00:00.000Z')
 const SESSION_ID = '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
@@ -33,6 +36,13 @@ function createRouter() {
     refresh: () => refreshes.push('refresh'),
     replace: vi.fn(),
   }
+}
+
+function fakeAudioLevelSource() {
+  const stop = vi.fn()
+  const source: AudioLevelSource = () => Promise.resolve({ read: () => 0.5, stop })
+
+  return { source, stop }
 }
 
 function renderRecordingStart(props: RecordingStartProps = {}) {
@@ -64,6 +74,10 @@ function recordingButton(): HTMLElement {
   return screen.getByRole('button', { name: 'Iniciar gravação' })
 }
 
+function recorder(): HTMLElement {
+  return screen.getByRole('group', { name: 'Gravador de áudio' })
+}
+
 async function advanceBySeconds(seconds: number) {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(seconds * 1_000)
@@ -75,6 +89,14 @@ async function clickRecordingButton() {
     recordingButton().click()
     await vi.advanceTimersByTimeAsync(0)
   })
+}
+
+function grantedMicrophone(source: AudioLevelSource): RecordingStartProps {
+  return {
+    audioLevelSource: source,
+    requestMicrophone: () => Promise.resolve(),
+    startRecording: () => Promise.resolve(),
+  }
 }
 
 describe('RecordingStart', () => {
@@ -90,19 +112,23 @@ describe('RecordingStart', () => {
     vi.useRealTimers()
   })
 
-  it('offers an enabled recording button for the two-minute grace', () => {
-    renderRecordingStart()
+  it('offers an enabled recording bar for the two-minute grace', () => {
+    const { container } = renderRecordingStart()
 
     expect(screen.getByRole('heading', { name: 'Comunicação clara' })).toBeInTheDocument()
     expect(screen.getByRole('timer')).toHaveTextContent('02:00')
+    expect(recorder()).toHaveAttribute('data-recording-state', 'idle')
+    expect(container.querySelectorAll('[data-waveform="bar"]')).toHaveLength(0)
     expect(recordingButton()).toBeEnabled()
   })
 
   it('opens the recording on the server, asks for the microphone and starts recording', async () => {
     const opened: string[] = []
     const microphoneRequests: string[] = []
+    const { source } = fakeAudioLevelSource()
 
     renderRecordingStart({
+      audioLevelSource: source,
       requestMicrophone: () => {
         microphoneRequests.push('microphone')
         return Promise.resolve()
@@ -116,8 +142,51 @@ describe('RecordingStart', () => {
     await clickRecordingButton()
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
+    expect(recorder()).toHaveAttribute('data-recording-state', 'recording')
+    expect(screen.getByRole('button', { name: 'Parar gravação' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
     expect(opened).toEqual([SESSION_ID])
     expect(microphoneRequests).toEqual(['microphone'])
+  })
+
+  it('draws the captured sound and counts the recording time', async () => {
+    const { source } = fakeAudioLevelSource()
+    const { container } = renderRecordingStart(grantedMicrophone(source))
+
+    await clickRecordingButton()
+    await advanceBySeconds(2)
+
+    expect(container.querySelectorAll('[data-waveform="bar"]').length).toBeGreaterThan(0)
+    expect(screen.getByRole('timer')).toHaveTextContent('00:02')
+  })
+
+  it('releases the microphone when the recording is stopped by hand', async () => {
+    const { source, stop } = fakeAudioLevelSource()
+    const { container } = renderRecordingStart(grantedMicrophone(source))
+
+    await clickRecordingButton()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(BAR_INTERVAL_MS * 3)
+    })
+    act(() => {
+      screen.getByRole('button', { name: 'Parar gravação' }).click()
+    })
+
+    expect(stop).toHaveBeenCalledOnce()
+    expect(container.querySelectorAll('[data-waveform="bar"]')).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeDisabled()
+  })
+
+  it('stops the recording by itself at the one minute limit', async () => {
+    const { source, stop } = fakeAudioLevelSource()
+    renderRecordingStart(grantedMicrophone(source))
+
+    await clickRecordingButton()
+    await advanceBySeconds(MAX_RECORDING_SECONDS)
+
+    expect(stop).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeDisabled()
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
   })
 
   it('expires the session when the grace runs out unused', async () => {
@@ -144,5 +213,26 @@ describe('RecordingStart', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível acessar o microfone.')
     expect(screen.getByLabelText('practice status')).toHaveTextContent('awaiting-recording')
     expect(recordingButton()).toBeEnabled()
+  })
+
+  it('holds the recording bar while the server is opening the recording', async () => {
+    let releaseServer: (() => void) | null = null
+    const pending = new Promise<void>((resolve) => {
+      releaseServer = resolve
+    })
+
+    renderRecordingStart({
+      requestMicrophone: () => Promise.resolve(),
+      startRecording: () => pending,
+    })
+
+    await clickRecordingButton()
+
+    expect(recordingButton()).toBeDisabled()
+
+    await act(async () => {
+      releaseServer?.()
+      await vi.advanceTimersByTimeAsync(0)
+    })
   })
 })

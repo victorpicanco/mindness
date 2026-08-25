@@ -43,52 +43,5 @@
       "completed": "Concluída",
       "failed": "Falhou"
     }
-  },
-  "showcase": "Mostruário temporário de componentes",
-  "description": "Uma visão compacta dos componentes atuais da interface em temas claros e escuros.",
-  "buttonsHeading": "Botões",
-  "fieldsHeading": "Campos e seleção",
-  "feedbackHeading": "Superfície e feedback",
-  "buttons": {
-    "small": "Pequeno",
-    "primary": "Primário",
-    "large": "Grande",
-    "secondary": "Secundário",
-    "destructive": "Destrutivo",
-    "loading": "Carregando"
-  },
-  "fields": {
-    "emailLabel": "E-mail",
-    "emailDescription": "Use o endereço associado à sua conta",
-    "emailErrorLabel": "E-mail com erro",
-    "emailError": "Informe um endereço de e-mail válido",
-    "emailPlaceholder": "voce@exemplo.com",
-    "categoryLabel": "Categoria",
-    "categoryDescription": "Escolha um foco para sua próxima prática",
-    "focus": "Foco",
-    "confidence": "Confiança",
-    "clarity": "Clareza"
-  },
-  "feedback": {
-    "title": "Preparando sua prática",
-    "description": "O indicador inclui um rótulo de status visualmente oculto.",
-    "toasts": {
-      "info": {
-        "button": "Informativo",
-        "message": "Este é um toast informativo."
-      },
-      "success": {
-        "button": "Sucesso",
-        "message": "Ação concluída com sucesso."
-      },
-      "warning": {
-        "button": "Aviso",
-        "message": "Atenção: revise esta informação."
-      },
-      "error": {
-        "button": "Erro",
-        "message": "Não foi possível concluir a ação."
-      }
-    }
   }
 }

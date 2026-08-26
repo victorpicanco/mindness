@@ -213,6 +213,32 @@ describe('RecordingStart', () => {
     expect(microphoneRequests).toEqual(['microphone'])
   })
 
+  it('warns before unloading and abandons the active recording on page exit', async () => {
+    const { source } = fakeAudioLevelSource()
+    const abandonedSessions: string[] = []
+    const view = renderRecordingStart({
+      ...grantedMicrophone(source),
+      abandonSessionOnPageHide: (sessionId) => {
+        abandonedSessions.push(sessionId)
+      },
+    })
+
+    await clickRecordingButton()
+
+    const beforeUnload = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(beforeUnload)
+    window.dispatchEvent(new Event('pagehide'))
+
+    expect(beforeUnload.defaultPrevented).toBe(true)
+    expect(abandonedSessions).toEqual([SESSION_ID])
+
+    view.unmount()
+    const afterUnmount = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(afterUnmount)
+
+    expect(afterUnmount.defaultPrevented).toBe(false)
+  })
+
   it('uses the deadline returned when the server opens the recording', async () => {
     const { source } = fakeAudioLevelSource()
     const recordingDeadline = new Date(NOW.getTime() + 15 * 60 * 1_000).toISOString()

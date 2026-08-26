@@ -101,6 +101,31 @@ describe('practice session store', () => {
     expect(() => store.getState().expireSession()).toThrow(InvalidPracticeSessionTransitionError)
   })
 
+  it.each(['recording', 'uploading'] as const)('expires the session from %s', (status) => {
+    const store = createPracticeSessionStore()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+
+    store.getState().startResearching({
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:15:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    })
+    store.getState().openRecordingWindow()
+    store.getState().openRecording({
+      expiresAt: '2026-08-24T12:15:00.000Z',
+      recordingStartedAt: '2026-08-24T12:05:00.000Z',
+    })
+
+    if (status === 'uploading') store.getState().captureAudio(audioBlob)
+
+    store.getState().expireSession()
+
+    expect(store.getState().status).toBe('expired')
+  })
+
   it('starts hydrated with an active session', () => {
     const session = {
       createdAt: '2026-08-24T12:00:00.000Z',
@@ -197,6 +222,37 @@ describe('practice session store', () => {
     expect(store.getState().audioBlob).toBe(audioBlob)
 
     vi.advanceTimersByTime(1)
+    expect(store.getState()).toMatchObject({
+      status: 'expired',
+      audioBlob: null,
+      retentionDeadline: null,
+    })
+  })
+
+  it('never retains captured audio past the session deadline', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'))
+    const store = createPracticeSessionStore()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+
+    store.getState().startResearching({
+      createdAt: '2026-08-23T12:00:00.000Z',
+      expiresAt: '2026-08-23T12:01:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-23T12:00:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    })
+    store.getState().openRecordingWindow()
+    store.getState().openRecording({
+      expiresAt: '2026-08-23T12:01:00.000Z',
+      recordingStartedAt: '2026-08-23T12:00:00.000Z',
+    })
+    store.getState().captureAudio(audioBlob)
+
+    expect(store.getState().retentionDeadline).toBe(Date.now() + 60 * 1_000)
+
+    vi.advanceTimersByTime(60 * 1_000)
     expect(store.getState()).toMatchObject({
       status: 'expired',
       audioBlob: null,

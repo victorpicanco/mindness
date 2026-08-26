@@ -12,13 +12,14 @@ import {
   microphonePermissionDeniedSchema,
   recordingStartedSchema,
 } from '@/lib/api/contracts/sessions'
+import { abandonSessionOnPageHide as abandonSessionOnPageHideRequest } from '@/lib/api/abandon-session'
 import { submitRecording as requestRecordingSubmission } from '@/lib/api/submit-recording'
 import { MicrophoneUnavailableError } from '@/lib/media/microphone-unavailable-error'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
-import { countdownSeconds, TIMER_TICK_MS } from '@/components/practice/countdown'
 import { SessionRecorder } from '@/components/practice/session-recorder'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
+import { useSessionDeadline } from '@/components/practice/use-session-deadline'
 
 export interface AudioRecordingSession {
   readonly stop: () => Promise<Blob>
@@ -38,6 +39,7 @@ export type SubmitRecordingRequest = (input: {
 
 export interface RecordingStartProps {
   readonly audioLevelSource?: AudioLevelSource
+  readonly abandonSessionOnPageHide?: (sessionId: string) => void
   readonly captureRecording?: AudioRecordingSource
   readonly reportMicrophonePermissionDenied?: (sessionId: string) => Promise<void>
   readonly requestMicrophone?: () => Promise<void>
@@ -106,6 +108,7 @@ function deadlineTime(expiresAt: string): string {
 
 export function RecordingStart({
   audioLevelSource,
+  abandonSessionOnPageHide = abandonSessionOnPageHideRequest,
   captureRecording = browserAudioRecordingSource,
   reportMicrophonePermissionDenied = reportDeniedMicrophonePermission,
   requestMicrophone = requestBrowserMicrophone,
@@ -125,8 +128,9 @@ export function RecordingStart({
   const beginProcessing = usePracticeSessionStore((state) => state.beginProcessing)
   const [failure, setFailure] = useState<StartFailure | null>(null)
   const [deadline, setDeadline] = useState('')
-  const expiredRef = useRef(false)
   const captureRef = useRef<AudioRecordingSession | null>(null)
+
+  useSessionDeadline({ onExpired: () => router.refresh() })
 
   const mutation = useMutation({
     mutationFn: async (sessionId: string) => {
@@ -172,24 +176,6 @@ export function RecordingStart({
   })
 
   useEffect(() => {
-    if (session === null || status !== 'awaiting-recording') return
-    const expiresAt = session.expiresAt
-
-    function checkExpiration() {
-      if (countdownSeconds(expiresAt) === 0 && !expiredRef.current) {
-        expiredRef.current = true
-        expireSession()
-        router.refresh()
-      }
-    }
-
-    checkExpiration()
-    const timer = window.setInterval(checkExpiration, TIMER_TICK_MS)
-
-    return () => window.clearInterval(timer)
-  }, [expireSession, router, session, status])
-
-  useEffect(() => {
     let cancelled = false
 
     queueMicrotask(() => {
@@ -200,6 +186,27 @@ export function RecordingStart({
       cancelled = true
     }
   }, [session])
+
+  useEffect(() => {
+    if (session === null || (status !== 'recording' && status !== 'uploading')) return
+    const sessionId = session.sessionId
+
+    function preventPageUnload(event: BeforeUnloadEvent) {
+      event.preventDefault()
+    }
+
+    function abandonPageExit() {
+      abandonSessionOnPageHide(sessionId)
+    }
+
+    window.addEventListener('beforeunload', preventPageUnload)
+    window.addEventListener('pagehide', abandonPageExit)
+
+    return () => {
+      window.removeEventListener('beforeunload', preventPageUnload)
+      window.removeEventListener('pagehide', abandonPageExit)
+    }
+  }, [abandonSessionOnPageHide, session, status])
 
   useEffect(() => {
     if (status !== 'recording') return

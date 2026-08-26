@@ -24,7 +24,7 @@ export interface PracticeSession {
 
 export interface PracticeSessionInitialState {
   readonly session: PracticeSession
-  readonly status: 'researching' | 'awaiting-recording' | 'recording'
+  readonly status: 'researching' | 'awaiting-recording' | 'recording' | 'uploading'
 }
 
 export interface PracticeSessionState {
@@ -79,7 +79,7 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
     }
   }
 
-  return createStore<PracticeSessionState>()((set) => ({
+  return createStore<PracticeSessionState>()((set, get) => ({
     status: initialState?.status ?? 'idle',
     session: initialState?.session ?? null,
     audioBlob: null,
@@ -108,18 +108,31 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
     },
     expireSession: () => {
       set((state) => {
-        assertTransition(state.status, 'expireSession', ['awaiting-recording'])
+        assertTransition(state.status, 'expireSession', [
+          'awaiting-recording',
+          'recording',
+          'uploading',
+        ])
         return { status: 'expired' }
       })
       clearRetentionTimer()
     },
     captureAudio: (audioBlob) => {
-      const retentionDeadline = Date.now() + AUDIO_RETENTION_WINDOW_MS
-
       set((state) => {
         assertTransition(state.status, 'captureAudio', ['recording'])
+        if (state.session === null) return state
+
+        const retentionDeadline = Math.min(
+          Date.now() + AUDIO_RETENTION_WINDOW_MS,
+          new Date(state.session.expiresAt).getTime(),
+        )
+
         return { audioBlob, retentionDeadline, status: 'uploading' }
       })
+
+      const { retentionDeadline } = get()
+      if (retentionDeadline === null) return
+      const retentionWindowMs = Math.max(0, retentionDeadline - Date.now())
 
       clearRetentionTimer()
       retentionTimer = setTimeout(() => {
@@ -131,7 +144,7 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
 
           return { audioBlob: null, retentionDeadline: null, status: 'expired' }
         })
-      }, AUDIO_RETENTION_WINDOW_MS)
+      }, retentionWindowMs)
     },
     discardAudio: () => {
       set((state) => {

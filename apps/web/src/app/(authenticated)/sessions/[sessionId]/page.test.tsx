@@ -93,6 +93,8 @@ describe('SessionPage', () => {
   })
 
   it('rehydrates a started recording instead of the recording window', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-24T12:04:00.000Z'))
     const session = { ...activeSession(), recordingStartedAt: '2026-08-24T12:04:00.000Z' }
     const Page = createSessionPage(createApiFetch(session))
 
@@ -103,6 +105,7 @@ describe('SessionPage', () => {
       'data-recording-state',
       'recording',
     )
+    vi.useRealTimers()
   })
 
   it('rejects a URL that does not identify the active session', async () => {

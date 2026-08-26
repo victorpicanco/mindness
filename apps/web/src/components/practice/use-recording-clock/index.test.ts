@@ -52,6 +52,23 @@ describe('useRecordingClock', () => {
     expect(result.current).toBe(4)
   })
 
+  it('uses the server offset when the browser clock is behind', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-24T11:55:03.000Z'))
+    const { result } = renderHook(() =>
+      useRecordingClock({
+        isActive: true,
+        onLimitReached: vi.fn(),
+        serverTimeOffsetMs: 5 * 60 * 1_000,
+        startedAt: '2026-08-24T12:00:00.000Z',
+      }),
+    )
+
+    await advance(1_000)
+
+    expect(result.current).toBe(4)
+  })
+
   it('stops at the one minute limit and reports it a single time', async () => {
     vi.useFakeTimers()
     const onLimitReached = vi.fn()

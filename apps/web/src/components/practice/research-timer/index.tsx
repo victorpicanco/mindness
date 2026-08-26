@@ -31,8 +31,9 @@ export function ResearchTimer({ logAudioFailure = logCountdownAudioFailure }: Re
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
   const openRecordingWindow = usePracticeSessionStore((state) => state.openRecordingWindow)
+  const serverTimeOffsetMs = usePracticeSessionStore((state) => state.serverTimeOffsetMs)
   const [seconds, setSeconds] = useState(() =>
-    session === null ? 0 : countdownSeconds(session.researchEndsAt),
+    session === null ? 0 : countdownSeconds(session.researchEndsAt, serverTimeOffsetMs),
   )
   const audioRef = useRef<HTMLAudioElement>(null)
   const warningPlayedRef = useRef(false)
@@ -43,7 +44,7 @@ export function ResearchTimer({ logAudioFailure = logCountdownAudioFailure }: Re
     const researchEndsAt = session.researchEndsAt
 
     function updateCountdown() {
-      const nextSeconds = countdownSeconds(researchEndsAt)
+      const nextSeconds = countdownSeconds(researchEndsAt, serverTimeOffsetMs)
 
       setSeconds(nextSeconds)
 
@@ -68,7 +69,7 @@ export function ResearchTimer({ logAudioFailure = logCountdownAudioFailure }: Re
     const timer = window.setInterval(updateCountdown, TIMER_TICK_MS)
 
     return () => window.clearInterval(timer)
-  }, [logAudioFailure, openRecordingWindow, session, status])
+  }, [logAudioFailure, openRecordingWindow, serverTimeOffsetMs, session, status])
 
   if (session === null || status !== 'researching') return null
 

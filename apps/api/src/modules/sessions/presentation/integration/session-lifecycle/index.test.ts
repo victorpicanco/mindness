@@ -51,9 +51,15 @@ describe('session lifecycle integration', () => {
         readonly themeId: string
         readonly themeTitle: string
         readonly remaining: number | null
+        readonly serverNow: string
       }
     }>()
-    expect(body.data).toMatchObject({ themeId: THEME_ID, themeTitle: 'Theme', remaining: 3 })
+    expect(body.data).toMatchObject({
+      themeId: THEME_ID,
+      themeTitle: 'Theme',
+      remaining: 3,
+      serverNow: harness.clock.now().toISOString(),
+    })
 
     await expect(
       harness.prisma.session.findUnique({ where: { id: body.data.sessionId } }),
@@ -109,7 +115,11 @@ describe('session lifecycle integration', () => {
     expect(response.statusCode).toBe(200)
     assertResponseMatchesSchema(harness.app, 'GET', '/sessions/active', response, 200)
     expect(response.json()).toMatchObject({
-      data: { themeId: THEME_ID, themeTitle: 'Theme' },
+      data: {
+        serverNow: harness.clock.now().toISOString(),
+        themeId: THEME_ID,
+        themeTitle: 'Theme',
+      },
     })
   })
 

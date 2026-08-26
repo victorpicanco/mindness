@@ -29,9 +29,11 @@ function practiceSessionInitialState(
 ): PracticeSessionInitialState | undefined {
   if (activeSession === null) return undefined
 
-  const isResearchOver = new Date(activeSession.researchEndsAt).getTime() <= Date.now()
+  const isResearchOver =
+    new Date(activeSession.researchEndsAt).getTime() <= new Date(activeSession.serverNow).getTime()
 
   return {
+    serverTimeOffsetMs: new Date(activeSession.serverNow).getTime() - Date.now(),
     session: {
       createdAt: activeSession.createdAt,
       expiresAt: activeSession.expiresAt,

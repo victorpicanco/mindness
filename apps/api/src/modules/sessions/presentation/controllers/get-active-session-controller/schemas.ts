@@ -22,6 +22,7 @@ export const ActiveSessionResponseSchema = successSchema(
           { additionalProperties: false },
         ),
         createdAt: Type.String({ format: 'date-time' }),
+        serverNow: Type.String({ format: 'date-time' }),
         researchEndsAt: Type.String({ format: 'date-time' }),
         expiresAt: Type.String({ format: 'date-time' }),
         recordingStartedAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),

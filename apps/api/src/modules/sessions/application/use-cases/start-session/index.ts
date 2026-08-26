@@ -83,6 +83,7 @@ export class StartSessionUseCase {
 
     return {
       createdAt: session.createdAt.toISOString(),
+      serverNow: now.toISOString(),
       sessionId,
       themeId: theme.themeId,
       themeTitle: theme.title,

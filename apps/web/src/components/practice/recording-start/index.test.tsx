@@ -67,6 +67,7 @@ function renderRecordingStart(props: RecordingStartProps = {}) {
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
           <PracticeSessionProvider
             initialState={{
+              serverTimeOffsetMs: 0,
               session: {
                 createdAt: NOW.toISOString(),
                 expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),

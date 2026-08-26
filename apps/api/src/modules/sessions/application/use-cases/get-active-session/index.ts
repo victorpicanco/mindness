@@ -33,6 +33,7 @@ export class GetActiveSessionUseCase {
         searchWindowMinutes: session.configuration.searchWindowMinutes,
       },
       createdAt: session.createdAt.toISOString(),
+      serverNow: now.toISOString(),
       researchEndsAt: session.researchEndsAt.toISOString(),
       expiresAt: session.expiresAt.toISOString(),
       recordingStartedAt: session.recordingStartedAt?.toISOString() ?? null,

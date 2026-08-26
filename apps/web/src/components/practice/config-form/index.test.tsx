@@ -28,6 +28,7 @@ const STARTED_SESSION = {
   expiresAt: '2026-08-24T12:05:00.000Z',
   remaining: 3,
   researchEndsAt: '2026-08-24T12:03:00.000Z',
+  serverNow: '2026-08-24T12:00:00.000Z',
   sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91ab',
   themeId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
   themeTitle: 'Comunicação clara',

@@ -23,6 +23,7 @@ export interface PracticeSession {
 }
 
 export interface PracticeSessionInitialState {
+  readonly serverTimeOffsetMs: number
   readonly session: PracticeSession
   readonly status: 'researching' | 'awaiting-recording' | 'recording' | 'uploading' | 'expired'
 }
@@ -32,7 +33,8 @@ export interface PracticeSessionState {
   readonly session: PracticeSession | null
   readonly audioBlob: Blob | null
   readonly retentionDeadline: number | null
-  readonly startResearching: (session: PracticeSession) => void
+  readonly serverTimeOffsetMs: number
+  readonly startResearching: (session: PracticeSession, serverNow: string) => void
   readonly openRecordingWindow: () => void
   readonly openRecording: (input: {
     readonly recordingStartedAt: string
@@ -71,7 +73,6 @@ function assertTransition(
 
 export function createPracticeSessionStore(initialState?: PracticeSessionInitialState) {
   let retentionTimer: ReturnType<typeof setTimeout> | null = null
-
   function clearRetentionTimer() {
     if (retentionTimer !== null) {
       clearTimeout(retentionTimer)
@@ -84,10 +85,15 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
     session: initialState?.session ?? null,
     audioBlob: null,
     retentionDeadline: null,
-    startResearching: (session) => {
+    serverTimeOffsetMs: initialState?.serverTimeOffsetMs ?? 0,
+    startResearching: (session, serverNow) => {
       set((state) => {
         assertTransition(state.status, 'startResearching', ['idle'])
-        return { session, status: 'researching' }
+        return {
+          serverTimeOffsetMs: new Date(serverNow).getTime() - Date.now(),
+          session,
+          status: 'researching',
+        }
       })
     },
     openRecordingWindow: () => {
@@ -123,7 +129,7 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
         if (state.session === null) return state
 
         const retentionDeadline = Math.min(
-          Date.now() + AUDIO_RETENTION_WINDOW_MS,
+          Date.now() + state.serverTimeOffsetMs + AUDIO_RETENTION_WINDOW_MS,
           new Date(state.session.expiresAt).getTime(),
         )
 
@@ -132,7 +138,10 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
 
       const { retentionDeadline } = get()
       if (retentionDeadline === null) return
-      const retentionWindowMs = Math.max(0, retentionDeadline - Date.now())
+      const retentionWindowMs = Math.max(
+        0,
+        retentionDeadline - (Date.now() + get().serverTimeOffsetMs),
+      )
 
       clearRetentionTimer()
       retentionTimer = setTimeout(() => {
@@ -163,7 +172,13 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
     reset: () => {
       set((state) => {
         assertTransition(state.status, 'reset', ALL_STATUSES)
-        return { audioBlob: null, retentionDeadline: null, session: null, status: 'idle' }
+        return {
+          audioBlob: null,
+          retentionDeadline: null,
+          serverTimeOffsetMs: 0,
+          session: null,
+          status: 'idle',
+        }
       })
       clearRetentionTimer()
     },

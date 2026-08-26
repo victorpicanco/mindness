@@ -22,12 +22,13 @@ const sessionHistoryItemSchema = z.object({
 })
 
 export const activeSessionSchema = z
-  .object({
+  .strictObject({
     configuration: sessionConfigurationSchema,
     createdAt: z.iso.datetime(),
     expiresAt: z.iso.datetime(),
     recordingStartedAt: z.iso.datetime().nullable(),
     researchEndsAt: z.iso.datetime(),
+    serverNow: z.iso.datetime(),
     sessionId: z.uuid(),
     themeId: z.uuid(),
     themeTitle: z.string(),
@@ -77,11 +78,12 @@ export const sessionHistoryMetaSchema = z.object({
   timeZone: z.string(),
 })
 
-export const startedSessionSchema = z.object({
+export const startedSessionSchema = z.strictObject({
   createdAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
   remaining: z.number().nonnegative().nullable(),
   researchEndsAt: z.iso.datetime(),
+  serverNow: z.iso.datetime(),
   sessionId: z.uuid(),
   themeId: z.uuid(),
   themeTitle: z.string(),

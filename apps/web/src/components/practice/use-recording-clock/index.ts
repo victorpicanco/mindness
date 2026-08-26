@@ -8,6 +8,7 @@ export interface UseRecordingClockOptions {
   readonly isActive: boolean
   readonly limitSeconds?: number
   readonly onLimitReached: () => void
+  readonly serverTimeOffsetMs?: number
   readonly startedAt?: string
 }
 
@@ -15,6 +16,7 @@ export function useRecordingClock({
   isActive,
   limitSeconds = MAX_RECORDING_SECONDS,
   onLimitReached,
+  serverTimeOffsetMs = 0,
   startedAt,
 }: UseRecordingClockOptions): number {
   const [seconds, setSeconds] = useState(0)
@@ -27,10 +29,13 @@ export function useRecordingClock({
   useEffect(() => {
     if (!isActive) return
 
-    const recordingStartedAt = startedAt === undefined ? Date.now() : new Date(startedAt).getTime()
+    const recordingStartedAt =
+      startedAt === undefined ? Date.now() + serverTimeOffsetMs : new Date(startedAt).getTime()
 
     function tick() {
-      const elapsed = Math.floor((Date.now() - recordingStartedAt) / TIMER_TICK_MS)
+      const elapsed = Math.floor(
+        (Date.now() + serverTimeOffsetMs - recordingStartedAt) / TIMER_TICK_MS,
+      )
 
       setSeconds(Math.min(limitSeconds, elapsed))
 
@@ -46,7 +51,7 @@ export function useRecordingClock({
       window.clearInterval(timer)
       setSeconds(0)
     }
-  }, [isActive, limitSeconds, startedAt])
+  }, [isActive, limitSeconds, serverTimeOffsetMs, startedAt])
 
   return seconds
 }

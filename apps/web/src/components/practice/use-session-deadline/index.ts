@@ -16,13 +16,14 @@ export function useSessionDeadline({ onExpired }: UseSessionDeadlineOptions) {
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
   const expireSession = usePracticeSessionStore((state) => state.expireSession)
+  const serverTimeOffsetMs = usePracticeSessionStore((state) => state.serverTimeOffsetMs)
   const expiresAt = session?.expiresAt
 
   useEffect(() => {
     if (expiresAt === undefined || !EXPIRABLE_STATUSES.has(status)) return
 
     function checkExpiration() {
-      if (expiresAt === undefined || countdownSeconds(expiresAt) !== 0) return
+      if (expiresAt === undefined || countdownSeconds(expiresAt, serverTimeOffsetMs) !== 0) return
 
       expireSession()
       onExpired()
@@ -32,5 +33,5 @@ export function useSessionDeadline({ onExpired }: UseSessionDeadlineOptions) {
     const timer = window.setInterval(checkExpiration, TIMER_TICK_MS)
 
     return () => window.clearInterval(timer)
-  }, [expireSession, expiresAt, onExpired, status])
+  }, [expireSession, expiresAt, onExpired, serverTimeOffsetMs, status])
 }

@@ -145,6 +145,7 @@ export function RecordingStart({
   const captureAudio = usePracticeSessionStore((state) => state.captureAudio)
   const discardAudio = usePracticeSessionStore((state) => state.discardAudio)
   const beginProcessing = usePracticeSessionStore((state) => state.beginProcessing)
+  const serverTimeOffsetMs = usePracticeSessionStore((state) => state.serverTimeOffsetMs)
   const [failure, setFailure] = useState<StartFailure | null>(null)
   const [uploadFailureReason, setUploadFailureReason] = useState<UploadFailure | null>(null)
   const [deadline, setDeadline] = useState('')
@@ -298,6 +299,7 @@ export function RecordingStart({
             onToggleRecording={() => {
               void finishRecording()
             }}
+            serverTimeOffsetMs={serverTimeOffsetMs}
             {...(audioLevelSource === undefined ? {} : { source: audioLevelSource })}
             {...(session.recordingStartedAt === null
               ? {}

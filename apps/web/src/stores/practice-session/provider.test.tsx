@@ -16,6 +16,7 @@ describe('PracticeSessionProvider', () => {
     render(
       <PracticeSessionProvider
         initialState={{
+          serverTimeOffsetMs: 0,
           session: {
             createdAt: '2026-08-24T12:00:00.000Z',
             expiresAt: '2026-08-24T12:05:00.000Z',

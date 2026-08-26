@@ -24,6 +24,7 @@ export interface GetActiveSessionOutput {
     readonly searchWindowMinutes: SearchWindowMinutes
   }
   readonly createdAt: string
+  readonly serverNow: string
   readonly researchEndsAt: string
   readonly expiresAt: string
   readonly recordingStartedAt: string | null

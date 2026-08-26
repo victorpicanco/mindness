@@ -259,6 +259,7 @@ describe('StartSessionUseCase', () => {
     })
     expect(result).toEqual({
       createdAt: '2026-08-19T00:00:00.000Z',
+      serverNow: '2026-08-19T00:00:00.000Z',
       sessionId: 'generated-1',
       themeId: 'theme-2',
       themeTitle: 'Theme',

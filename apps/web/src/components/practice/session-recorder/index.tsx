@@ -14,6 +14,7 @@ export interface SessionRecorderProps {
   readonly onLimitReached: () => void
   readonly onToggleRecording: () => void
   readonly source?: AudioLevelSource
+  readonly serverTimeOffsetMs?: number
   readonly startedAt?: string
 }
 
@@ -25,6 +26,7 @@ export function SessionRecorder({
   onLimitReached,
   onToggleRecording,
   source,
+  serverTimeOffsetMs,
   startedAt,
 }: SessionRecorderProps) {
   const t = useTranslations('home.research')
@@ -36,6 +38,7 @@ export function SessionRecorder({
   const elapsedSeconds = useRecordingClock({
     isActive: isRecording,
     onLimitReached,
+    ...(serverTimeOffsetMs === undefined ? {} : { serverTimeOffsetMs }),
     ...(startedAt === undefined ? {} : { startedAt }),
   })
 

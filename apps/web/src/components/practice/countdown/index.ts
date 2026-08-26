@@ -1,7 +1,9 @@
 export const TIMER_TICK_MS = 1_000
 
-export function countdownSeconds(deadline: string): number {
-  return Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / TIMER_TICK_MS))
+export function countdownSeconds(deadline: string, serverTimeOffsetMs = 0): number {
+  const serverNow = Date.now() + serverTimeOffsetMs
+
+  return Math.max(0, Math.ceil((new Date(deadline).getTime() - serverNow) / TIMER_TICK_MS))
 }
 
 export function formatCountdown(seconds: number): string {

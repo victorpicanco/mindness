@@ -24,6 +24,7 @@ function renderDeadline(
   return render(
     <PracticeSessionProvider
       initialState={{
+        serverTimeOffsetMs: NOW.getTime() - Date.now(),
         session: {
           createdAt: NOW.toISOString(),
           expiresAt: new Date(NOW.getTime() + 1_000).toISOString(),
@@ -65,4 +66,17 @@ describe('useSessionDeadline', () => {
       expect(onExpired).toHaveBeenCalledOnce()
     },
   )
+
+  it('uses the stored server offset when the browser clock is behind', async () => {
+    vi.setSystemTime(new Date(NOW.getTime() - 5 * 60 * 1_000))
+    const onExpired = vi.fn()
+    renderDeadline('recording', onExpired)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000)
+    })
+
+    expect(screen.getByRole('status')).toHaveTextContent('expired')
+    expect(onExpired).toHaveBeenCalledOnce()
+  })
 })

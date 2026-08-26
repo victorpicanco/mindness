@@ -26,6 +26,7 @@ function renderResearchTimer(
     <NextIntlClientProvider locale="pt-BR" messages={messages}>
       <PracticeSessionProvider
         initialState={{
+          serverTimeOffsetMs: NOW.getTime() - Date.now(),
           session: {
             createdAt: NOW.toISOString(),
             expiresAt: new Date(
@@ -102,5 +103,13 @@ describe('ResearchTimer', () => {
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('awaiting-recording')
     expect(screen.queryByRole('timer')).not.toBeInTheDocument()
+  })
+
+  it('uses the stored server offset when the browser clock is behind', () => {
+    vi.setSystemTime(new Date(NOW.getTime() - 5 * 60 * 1_000))
+
+    renderResearchTimer(11)
+
+    expect(screen.getByRole('timer')).toHaveTextContent('00:11')
   })
 })

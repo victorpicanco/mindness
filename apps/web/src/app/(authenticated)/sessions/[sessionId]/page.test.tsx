@@ -22,6 +22,7 @@ function activeSession() {
     expiresAt: '2026-08-24T12:05:00.000Z',
     recordingStartedAt: null,
     researchEndsAt: '2026-08-24T12:03:00.000Z',
+    serverNow: '2026-08-24T12:00:00.000Z',
     sessionId: SESSION_ID,
     themeId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91ab',
     themeTitle: 'Comunicação clara',
@@ -67,6 +68,7 @@ function practiceInitialState(
   session: ActiveSession = activeSession(),
 ): PracticeSessionInitialState {
   return {
+    serverTimeOffsetMs: new Date(session.serverNow).getTime() - Date.now(),
     session: {
       createdAt: session.createdAt,
       expiresAt: session.expiresAt,

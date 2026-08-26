@@ -4,6 +4,7 @@ import { REDIRECT_PARAM_NAME, SIGNED_IN_HOME } from '@/lib/auth/redirect-target'
 import { renewSession, type SessionRenewal } from '@/lib/auth/renew-session'
 import { SESSIONS_ROUTE_PREFIX } from '@/lib/navigation/session-routes'
 import { clearSessionCookies, hasLiveSession, sessionCookiesToSet } from '@/lib/auth/session'
+import { clientEnv } from '@/lib/env/client'
 
 const protectedRoutePrefixes = ['/history', SESSIONS_ROUTE_PREFIX]
 
@@ -28,6 +29,7 @@ const CAPTCHA_ORIGIN = 'https://challenges.cloudflare.com'
 function createContentSecurityPolicy(nonce: string): string {
   const isDevelopment = process.env.NODE_ENV === 'development'
   const developmentSource = isDevelopment ? " 'unsafe-eval'" : ''
+  const storageOrigin = new URL(clientEnv().supabaseUrl).origin
 
   return [
     "default-src 'self'",
@@ -38,7 +40,7 @@ function createContentSecurityPolicy(nonce: string): string {
     "img-src 'self' blob: data:",
     "media-src 'self' data: blob:",
     "font-src 'self'",
-    `connect-src 'self' ${CAPTCHA_ORIGIN}`,
+    `connect-src 'self' ${storageOrigin} ${CAPTCHA_ORIGIN}`,
     `frame-src 'self' ${CAPTCHA_ORIGIN}`,
     "object-src 'none'",
     "base-uri 'self'",

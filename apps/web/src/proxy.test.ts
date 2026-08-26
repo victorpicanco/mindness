@@ -69,6 +69,7 @@ function setCookieFor(response: Response, name: string): string | undefined {
 
 beforeEach(() => {
   vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+  vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co/storage/v1')
   stubApi(() => refreshedTokensResponse())
 })
 
@@ -315,10 +316,19 @@ describe('proxy', () => {
       expect(contentSecurityPolicy).toMatch(
         /script-src [^;]*https:\/\/challenges\.cloudflare\.com/u,
       )
-      expect(contentSecurityPolicy).toContain(
-        "connect-src 'self' https://challenges.cloudflare.com",
+      expect(contentSecurityPolicy).toMatch(
+        /connect-src [^;]*'self'[^;]*https:\/\/challenges\.cloudflare\.com/u,
       )
       expect(contentSecurityPolicy).toContain("frame-src 'self' https://challenges.cloudflare.com")
+    })
+
+    it('allows direct uploads to the Supabase Storage origin', async () => {
+      const response = await proxy(request('/auth/sign-in'))
+      const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
+
+      expect(contentSecurityPolicy).toContain(
+        "connect-src 'self' https://project.supabase.co https://challenges.cloudflare.com",
+      )
     })
 
     it('keeps the security headers on a redirect', async () => {

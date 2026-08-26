@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { TIMER_TICK_MS } from '@/components/practice/countdown'
 
-export const MAX_RECORDING_SECONDS = 60
+export const MAX_RECORDING_SECONDS = 58
 
 export interface UseRecordingClockOptions {
   readonly isActive: boolean

@@ -52,6 +52,10 @@ describe('useRecordingClock', () => {
     expect(onLimitReached).toHaveBeenCalledOnce()
   })
 
+  it('stops before the domain audio duration ceiling', () => {
+    expect(MAX_RECORDING_SECONDS).toBeLessThan(60)
+  })
+
   it('goes back to zero once the recording stops', async () => {
     vi.useFakeTimers()
     const { rerender, result } = renderHook(

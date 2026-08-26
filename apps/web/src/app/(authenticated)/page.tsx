@@ -10,7 +10,7 @@ import type { PracticeQuota } from '@/components/practice/config-form'
 import { PracticeSessionStart } from '@/components/practice/session-start'
 
 type ApiFetch = typeof apiFetch
-type PracticeTranslationKey = 'activeSession' | 'title'
+type PracticeTranslationKey = 'title'
 type PracticeTranslations = (key: PracticeTranslationKey) => string
 
 async function getPracticeTranslations(): Promise<PracticeTranslations> {

@@ -18,7 +18,6 @@ const categories = [
 
 function practiceTranslations(key: string): string {
   const translations: Readonly<Record<string, string>> = {
-    activeSession: 'Sua sessão em andamento',
     categoryLabel: 'Categoria',
     categoryPlaceholder: 'Escolha a categoria',
     difficultyLabel: 'Dificuldade',

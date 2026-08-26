@@ -92,7 +92,7 @@ describe('SessionPage', () => {
     vi.useRealTimers()
   })
 
-  it('rehydrates a started recording instead of the recording window', async () => {
+  it('does not restart a recording that was lost during a reload', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-24T12:04:00.000Z'))
     const session = { ...activeSession(), recordingStartedAt: '2026-08-24T12:04:00.000Z' }
@@ -101,9 +101,9 @@ describe('SessionPage', () => {
     renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
     expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Gravador de áudio' })).toHaveAttribute(
-      'data-recording-state',
-      'recording',
+    expect(screen.queryByRole('group', { name: 'Gravador de áudio' })).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Sua sessão expirou porque a gravação não começou a tempo.',
     )
     vi.useRealTimers()
   })

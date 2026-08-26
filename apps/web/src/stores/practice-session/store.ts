@@ -24,7 +24,7 @@ export interface PracticeSession {
 
 export interface PracticeSessionInitialState {
   readonly session: PracticeSession
-  readonly status: 'researching' | 'awaiting-recording' | 'recording' | 'uploading'
+  readonly status: 'researching' | 'awaiting-recording' | 'recording' | 'uploading' | 'expired'
 }
 
 export interface PracticeSessionState {

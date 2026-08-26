@@ -58,7 +58,7 @@ export function createSessionPage(fetchFromApi: ApiFetch, renderNotFound: NotFou
           },
           status:
             activeSession.recordingStartedAt !== null
-              ? 'recording'
+              ? 'expired'
               : isResearchOver
                 ? 'awaiting-recording'
                 : 'researching',

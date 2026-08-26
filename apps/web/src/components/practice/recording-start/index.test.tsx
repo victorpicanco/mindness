@@ -119,7 +119,7 @@ async function clickRecordingButton() {
 function grantedMicrophone(source: AudioLevelSource): RecordingStartProps {
   return {
     audioLevelSource: source,
-    requestMicrophone: () => Promise.resolve(),
+    requestMicrophone: () => Promise.resolve(undefined),
     startRecording: () =>
       Promise.resolve({
         expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
@@ -192,7 +192,7 @@ describe('RecordingStart', () => {
       audioLevelSource: source,
       requestMicrophone: () => {
         microphoneRequests.push('microphone')
-        return Promise.resolve()
+        return Promise.resolve(undefined)
       },
       startRecording: (sessionId) => {
         opened.push(sessionId)
@@ -211,6 +211,29 @@ describe('RecordingStart', () => {
     expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
     expect(opened).toEqual([SESSION_ID])
     expect(microphoneRequests).toEqual(['microphone'])
+  })
+
+  it('starts the recorder from the microphone acquisition result', async () => {
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { stop } = fakeAudioCapture(audioBlob)
+    let capturedStream: MediaStream | undefined
+
+    renderRecordingStart({
+      captureRecording: (receivedStream) => {
+        capturedStream = receivedStream
+        return Promise.resolve({ stop })
+      },
+      requestMicrophone: () => Promise.resolve(undefined),
+      startRecording: () =>
+        Promise.resolve({
+          expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
+          recordingStartedAt: NOW.toISOString(),
+        }),
+    })
+
+    await clickRecordingButton()
+
+    expect(capturedStream).toBeUndefined()
   })
 
   it('warns before unloading and abandons the active recording on page exit', async () => {
@@ -244,7 +267,7 @@ describe('RecordingStart', () => {
     const recordingDeadline = new Date(NOW.getTime() + 15 * 60 * 1_000).toISOString()
     renderRecordingStart({
       audioLevelSource: source,
-      requestMicrophone: () => Promise.resolve(),
+      requestMicrophone: () => Promise.resolve(undefined),
       startRecording: () =>
         Promise.resolve({ expiresAt: recordingDeadline, recordingStartedAt: NOW.toISOString() }),
     })
@@ -413,7 +436,7 @@ describe('RecordingStart', () => {
     })
 
     renderRecordingStart({
-      requestMicrophone: () => Promise.resolve(),
+      requestMicrophone: () => Promise.resolve(undefined),
       startRecording: () => pending,
     })
 

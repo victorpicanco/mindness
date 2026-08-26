@@ -30,7 +30,9 @@ export interface RecordingStarted {
   readonly recordingStartedAt: string
 }
 
-export type AudioRecordingSource = () => Promise<AudioRecordingSession>
+export type AudioRecordingSource = (
+  stream: MediaStream | undefined,
+) => Promise<AudioRecordingSession>
 
 export type SubmitRecordingRequest = (input: {
   readonly audioBlob: Blob
@@ -42,7 +44,7 @@ export interface RecordingStartProps {
   readonly abandonSessionOnPageHide?: (sessionId: string) => void
   readonly captureRecording?: AudioRecordingSource
   readonly reportMicrophonePermissionDenied?: (sessionId: string) => Promise<void>
-  readonly requestMicrophone?: () => Promise<void>
+  readonly requestMicrophone?: () => Promise<MediaStream | undefined>
   readonly startRecording?: (sessionId: string) => Promise<RecordingStarted>
   readonly submitRecording?: SubmitRecordingRequest
 }
@@ -52,10 +54,8 @@ type StartFailure = 'microphone' | 'permission-denied' | 'request'
 const THEME_CLASSES =
   'font-(family-name:--font-buenard) text-4xl leading-tight tracking-tight text-balance sm:text-5xl'
 
-async function requestBrowserMicrophone(): Promise<void> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
-  for (const track of stream.getTracks()) track.stop()
+async function requestBrowserMicrophone(): Promise<MediaStream> {
+  return navigator.mediaDevices.getUserMedia({ audio: true })
 }
 
 async function requestRecordingStart(sessionId: string): Promise<RecordingStarted> {
@@ -72,8 +72,14 @@ async function reportDeniedMicrophonePermission(sessionId: string): Promise<void
   })
 }
 
-async function browserAudioRecordingSource(): Promise<AudioRecordingSession> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+async function browserAudioRecordingSource(
+  stream: MediaStream | undefined,
+): Promise<AudioRecordingSession> {
+  await Promise.resolve()
+
+  if (stream === undefined) {
+    throw new MicrophoneUnavailableError('The browser did not return a microphone stream')
+  }
   const chunks: Blob[] = []
   const recorder = new MediaRecorder(stream)
 
@@ -134,10 +140,11 @@ export function RecordingStart({
 
   const mutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      const recording = await startRecording(sessionId)
-
       try {
-        await requestMicrophone()
+        const stream = await requestMicrophone()
+        const recording = await startRecording(sessionId)
+
+        return { recording, stream }
       } catch (cause) {
         if (cause instanceof DOMException && cause.name === 'NotAllowedError') {
           await reportMicrophonePermissionDenied(sessionId)
@@ -145,8 +152,6 @@ export function RecordingStart({
 
         throw new MicrophoneUnavailableError(cause)
       }
-
-      return recording
     },
     onError: (error) => {
       const permissionDenied =
@@ -162,9 +167,18 @@ export function RecordingStart({
 
       setFailure(error instanceof MicrophoneUnavailableError ? 'microphone' : 'request')
     },
-    onSuccess: (recording) => {
+    onSuccess: ({ recording, stream }) => {
       setFailure(null)
       openRecording(recording)
+
+      captureRecording(stream)
+        .then((recordingSession) => {
+          captureRef.current = recordingSession
+        })
+        .catch(() => {
+          if (stream === undefined) return
+          for (const track of stream.getTracks()) track.stop()
+        })
     },
   })
 
@@ -207,28 +221,6 @@ export function RecordingStart({
       window.removeEventListener('pagehide', abandonPageExit)
     }
   }, [abandonSessionOnPageHide, session, status])
-
-  useEffect(() => {
-    if (status !== 'recording') return
-
-    let isCancelled = false
-
-    captureRecording()
-      .then((recordingSession) => {
-        if (isCancelled) {
-          void recordingSession.stop()
-          return
-        }
-
-        captureRef.current = recordingSession
-      })
-      .catch(() => undefined)
-
-    return () => {
-      isCancelled = true
-      captureRef.current = null
-    }
-  }, [captureRecording, status])
 
   async function finishRecording() {
     const recordingSession = captureRef.current

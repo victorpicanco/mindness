@@ -36,6 +36,22 @@ describe('useRecordingClock', () => {
     expect(result.current).toBe(3)
   })
 
+  it('anchors elapsed time to the server recording timestamp', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-24T12:00:03.000Z'))
+    const { result } = renderHook(() =>
+      useRecordingClock({
+        isActive: true,
+        onLimitReached: vi.fn(),
+        startedAt: '2026-08-24T12:00:00.000Z',
+      }),
+    )
+
+    await advance(1_000)
+
+    expect(result.current).toBe(4)
+  })
+
   it('stops at the one minute limit and reports it a single time', async () => {
     vi.useFakeTimers()
     const onLimitReached = vi.fn()

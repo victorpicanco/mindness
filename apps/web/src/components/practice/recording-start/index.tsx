@@ -272,6 +272,9 @@ export function RecordingStart({
               void finishRecording()
             }}
             {...(audioLevelSource === undefined ? {} : { source: audioLevelSource })}
+            {...(session.recordingStartedAt === null
+              ? {}
+              : { startedAt: session.recordingStartedAt })}
           />
           <VisuallyHidden aria-live="polite">{t('recordingInProgress')}</VisuallyHidden>
         </div>

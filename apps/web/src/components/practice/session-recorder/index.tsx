@@ -14,6 +14,7 @@ export interface SessionRecorderProps {
   readonly onLimitReached: () => void
   readonly onToggleRecording: () => void
   readonly source?: AudioLevelSource
+  readonly startedAt?: string
 }
 
 // The captured levels stay in this leaf so the fifteen updates per second of the waveform never
@@ -24,6 +25,7 @@ export function SessionRecorder({
   onLimitReached,
   onToggleRecording,
   source,
+  startedAt,
 }: SessionRecorderProps) {
   const t = useTranslations('home.research')
   const { hasFailed, levels } = useAudioLevels({
@@ -31,7 +33,11 @@ export function SessionRecorder({
     isActive: isRecording,
     ...(source === undefined ? {} : { source }),
   })
-  const elapsedSeconds = useRecordingClock({ isActive: isRecording, onLimitReached })
+  const elapsedSeconds = useRecordingClock({
+    isActive: isRecording,
+    onLimitReached,
+    ...(startedAt === undefined ? {} : { startedAt }),
+  })
 
   return (
     <div>

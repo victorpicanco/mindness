@@ -1,12 +1,14 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import { BrandLink } from '@/components/layouts/brand-link'
 import { Header } from '@/components/layouts/header'
+import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
 import { IconButton } from '@/components/ui/icon-button'
 import { Icon } from '@/components/ui/icon'
 import {
@@ -18,14 +20,20 @@ import {
   type SidebarSessionGroup,
 } from '@/components/ui/sidebar'
 import { AUTHENTICATED_NAVIGATION_ITEMS } from '@/lib/navigation/authenticated-navigation'
+import { sessionPath } from '@/lib/navigation/session-routes'
 import type { SessionDayGroup, SessionDayHeading } from '@/lib/sessions/session-day-groups'
+import { abandonSession as abandonSessionRequest } from '@/lib/api/abandon-session'
 
-interface AuthenticatedShellProps {
+export interface AuthenticatedShellProps {
+  readonly abandonSession?: (sessionId: string) => Promise<void>
+  readonly activeSessionId?: string
   readonly children: ReactNode
   readonly header?: ReactNode
   readonly initialIsExpanded: boolean
   readonly preferenceCookieName: string
   readonly sessionGroups?: readonly SessionDayGroup[]
+  readonly onSessionAbandoned?: () => void
+  readonly shouldConfirmSessionNavigation?: boolean
   readonly signOut: SignOutAction
 }
 
@@ -61,19 +69,26 @@ function SignOutControl({ isExpanded, label, signOut }: SignOutControlProps) {
 }
 
 export function AuthenticatedShell({
+  abandonSession = abandonSessionRequest,
+  activeSessionId,
   children,
   header,
   initialIsExpanded,
+  onSessionAbandoned,
   preferenceCookieName,
   sessionGroups = [],
   signOut,
+  shouldConfirmSessionNavigation = false,
 }: AuthenticatedShellProps) {
   const t = useTranslations('common.authenticatedShell')
   const activeHref = usePathname()
+  const router = useRouter()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(initialIsExpanded)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [isActiveSessionDialogOpen, setIsActiveSessionDialogOpen] = useState(false)
   const mobileToggleRef = useRef<HTMLButtonElement>(null)
   const mobileCloseRef = useRef<HTMLButtonElement>(null)
+  const sessionNavigationTriggerRef = useRef<HTMLAnchorElement>(null)
   const controlLabel = isSidebarExpanded ? t('collapseSidebar') : t('expandSidebar')
   const navigationItems: readonly SidebarNavigationItem[] = AUTHENTICATED_NAVIGATION_ITEMS.map(
     (item) => ({ href: item.href, icon: item.icon, label: t(item.labelKey) }),
@@ -128,6 +143,52 @@ export function AuthenticatedShell({
     setIsMobileSidebarOpen(false)
   }
 
+  function closeActiveSessionDialog() {
+    setIsActiveSessionDialogOpen(false)
+    sessionNavigationTriggerRef.current?.focus()
+  }
+
+  function openActiveSessionDialog(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault()
+    sessionNavigationTriggerRef.current = event.currentTarget
+    setIsActiveSessionDialogOpen(true)
+    closeMobileSidebar()
+  }
+
+  function handlePrimaryNavigation(
+    item: { readonly href: string },
+    event: MouseEvent<HTMLAnchorElement>,
+  ) {
+    if (item.href === '/' && activeSessionId !== undefined) openActiveSessionDialog(event)
+  }
+
+  function handleSessionNavigation(
+    item: { readonly sessionId: string },
+    event: MouseEvent<HTMLAnchorElement>,
+  ) {
+    const shouldProtectNavigation =
+      item.sessionId !== activeSessionId && shouldConfirmSessionNavigation
+
+    if (shouldProtectNavigation) openActiveSessionDialog(event)
+  }
+
+  function returnToActiveSession() {
+    if (activeSessionId === undefined) return
+
+    router.push(sessionPath(activeSessionId))
+    setIsActiveSessionDialogOpen(false)
+  }
+
+  async function abandonActiveSession() {
+    if (activeSessionId === undefined) return
+
+    await abandonSession(activeSessionId)
+    onSessionAbandoned?.()
+    setIsActiveSessionDialogOpen(false)
+    router.push('/')
+    router.refresh()
+  }
+
   return (
     <div className="flex h-dvh bg-surface text-text">
       <div
@@ -176,12 +237,14 @@ export function AuthenticatedShell({
             isExpanded={isSidebarExpanded}
             items={navigationItems}
             label={t('primaryNavigationLabel')}
+            onNavigate={handlePrimaryNavigation}
           />
           {isSidebarExpanded ? (
             <SidebarSessionGroups
               activeHref={activeHref}
               groups={sessionSidebarGroups}
               label={t('sessionsLabel')}
+              onNavigate={handleSessionNavigation}
             />
           ) : null}
           <SignOutControl isExpanded={isSidebarExpanded} label={t('signOut')} signOut={signOut} />
@@ -243,17 +306,37 @@ export function AuthenticatedShell({
             isExpanded
             items={navigationItems}
             label={t('primaryNavigationLabel')}
-            onNavigate={closeMobileSidebar}
+            onNavigate={(item, event) => {
+              handlePrimaryNavigation(item, event)
+              closeMobileSidebar()
+            }}
           />
           <SidebarSessionGroups
             activeHref={activeHref}
             groups={sessionSidebarGroups}
             label={t('sessionsLabel')}
-            onNavigate={closeMobileSidebar}
+            onNavigate={(item, event) => {
+              handleSessionNavigation(item, event)
+              closeMobileSidebar()
+            }}
           />
           <SignOutControl isExpanded label={t('signOut')} signOut={signOut} />
         </Sidebar>
       </div>
+
+      <Dialog
+        description={t('activeSessionDialog.description')}
+        onClose={closeActiveSessionDialog}
+        open={isActiveSessionDialogOpen}
+        title={t('activeSessionDialog.title')}
+      >
+        <Button onClick={returnToActiveSession} variant="secondary">
+          {t('activeSessionDialog.return')}
+        </Button>
+        <Button onClick={() => void abandonActiveSession()} variant="destructive">
+          {t('activeSessionDialog.abandon')}
+        </Button>
+      </Dialog>
     </div>
   )
 }

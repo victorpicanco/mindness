@@ -44,6 +44,12 @@
     "untitledSession": "Sessão",
     "newSession": "Nova sessão",
     "progress": "Seu progresso",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "activeSessionDialog": {
+      "title": "Você tem uma sessão em andamento",
+      "description": "Para começar uma nova sessão, a atual será encerrada e não poderá ser retomada.",
+      "return": "Voltar para a sessão",
+      "abandon": "Abandonar e começar outra"
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { PathnameContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
@@ -39,22 +40,41 @@ function renderShell(
     },
   ],
   signOut: () => void = () => undefined,
+  activeSessionId?: string,
+  shouldConfirmSessionNavigation = false,
+  abandonSession: (sessionId: string) => Promise<void> = () => Promise.resolve(),
 ) {
-  return render(
-    <PathnameContext.Provider value={pathname}>
-      <NextIntlClientProvider locale="pt-BR" messages={messages}>
-        <AuthenticatedShell
-          initialIsExpanded={isInitiallyExpanded}
-          preferenceCookieName="mindness-sidebar-expanded"
-          sessionGroups={sessionGroups}
-          signOut={signOut}
-          {...(header === undefined ? {} : { header })}
-        >
-          {children}
-        </AuthenticatedShell>
-      </NextIntlClientProvider>
-    </PathnameContext.Provider>,
+  const router = {
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+    push: vi.fn(),
+    refresh: vi.fn(),
+    replace: vi.fn(),
+  }
+
+  render(
+    <AppRouterContext.Provider value={router}>
+      <PathnameContext.Provider value={pathname}>
+        <NextIntlClientProvider locale="pt-BR" messages={messages}>
+          <AuthenticatedShell
+            abandonSession={abandonSession}
+            {...(activeSessionId === undefined ? {} : { activeSessionId })}
+            initialIsExpanded={isInitiallyExpanded}
+            preferenceCookieName="mindness-sidebar-expanded"
+            sessionGroups={sessionGroups}
+            shouldConfirmSessionNavigation={shouldConfirmSessionNavigation}
+            signOut={signOut}
+            {...(header === undefined ? {} : { header })}
+          >
+            {children}
+          </AuthenticatedShell>
+        </NextIntlClientProvider>
+      </PathnameContext.Provider>
+    </AppRouterContext.Provider>,
   )
+
+  return router
 }
 
 describe('AuthenticatedShell', () => {
@@ -79,6 +99,111 @@ describe('AuthenticatedShell', () => {
     expect(newSessionLink.querySelector('[data-icon="pencil-edit-02"]')).toBeInTheDocument()
     expect(progressLink).toHaveAttribute('href', '/history')
     expect(progressLink.querySelector('[data-icon="chart-increase"]')).toBeInTheDocument()
+  })
+
+  it('navigates to a new session when no session is active', () => {
+    renderShell(<p>Content</p>)
+
+    expect(
+      within(screen.getByRole('complementary')).getByRole('link', { name: 'Nova sessão' }),
+    ).toHaveAttribute('href', '/')
+  })
+
+  it('asks for confirmation before leaving an active session', () => {
+    renderShell(<p>Content</p>, true, '/', undefined, [], () => undefined, 'active-session')
+
+    fireEvent.click(
+      within(screen.getByRole('complementary')).getByRole('link', { name: 'Nova sessão' }),
+    )
+
+    expect(
+      screen.getByRole('dialog', { name: 'Você tem uma sessão em andamento' }),
+    ).toBeInTheDocument()
+  })
+
+  it('returns to the active session from the confirmation dialog', () => {
+    const router = renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      () => undefined,
+      '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+    )
+
+    fireEvent.click(
+      within(screen.getByRole('complementary')).getByRole('link', { name: 'Nova sessão' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar para a sessão' }))
+
+    expect(router.push).toHaveBeenCalledWith('/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa')
+  })
+
+  it('abandons the active session before navigating to a new one', async () => {
+    const abandonSession = vi.fn(() => Promise.resolve())
+    const router = renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      () => undefined,
+      '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+      undefined,
+      abandonSession,
+    )
+
+    fireEvent.click(
+      within(screen.getByRole('complementary')).getByRole('link', { name: 'Nova sessão' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Abandonar e começar outra' }))
+
+    await vi.waitFor(() =>
+      expect(abandonSession).toHaveBeenCalledWith('7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'),
+    )
+
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Você tem uma sessão em andamento' }),
+      ).not.toBeInTheDocument(),
+    )
+    expect(router.push).toHaveBeenCalledWith('/')
+    expect(router.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('protects history navigation while recording', () => {
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      undefined,
+      () => undefined,
+      '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+      true,
+    )
+
+    fireEvent.click(screen.getByRole('link', { name: 'Sessão' }))
+
+    expect(
+      screen.getByRole('dialog', { name: 'Você tem uma sessão em andamento' }),
+    ).toBeInTheDocument()
+  })
+
+  it('closes the confirmation dialog with Escape and returns focus to its trigger', () => {
+    renderShell(<p>Content</p>, true, '/', undefined, [], () => undefined, 'active-session')
+
+    const trigger = within(screen.getByRole('complementary')).getByRole('link', {
+      name: 'Nova sessão',
+    })
+    fireEvent.click(trigger)
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Você tem uma sessão em andamento' }),
+    ).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 
   it('groups the server-synchronized sessions by day, under a translated heading', () => {
@@ -221,17 +346,28 @@ describe('AuthenticatedShell', () => {
 
   it('renders only the mobile navigation trigger when no header content is provided', () => {
     render(
-      <PathnameContext.Provider value="/">
-        <NextIntlClientProvider locale="pt-BR" messages={messages}>
-          <AuthenticatedShell
-            initialIsExpanded
-            preferenceCookieName="mindness-sidebar-expanded"
-            signOut={() => undefined}
-          >
-            <p>Content</p>
-          </AuthenticatedShell>
-        </NextIntlClientProvider>
-      </PathnameContext.Provider>,
+      <AppRouterContext.Provider
+        value={{
+          back: vi.fn(),
+          forward: vi.fn(),
+          prefetch: vi.fn(),
+          push: vi.fn(),
+          refresh: vi.fn(),
+          replace: vi.fn(),
+        }}
+      >
+        <PathnameContext.Provider value="/">
+          <NextIntlClientProvider locale="pt-BR" messages={messages}>
+            <AuthenticatedShell
+              initialIsExpanded
+              preferenceCookieName="mindness-sidebar-expanded"
+              signOut={() => undefined}
+            >
+              <p>Content</p>
+            </AuthenticatedShell>
+          </NextIntlClientProvider>
+        </PathnameContext.Provider>
+      </AppRouterContext.Provider>,
     )
 
     const header = screen.getByRole('banner')

@@ -8,6 +8,8 @@ import type { z } from 'zod'
 
 import { messages } from '@/i18n/messages'
 import type { apiFetch } from '@/lib/api/server-client'
+import { PracticeSessionProvider } from '@/stores/practice-session/provider'
+import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
 
 import { createSessionPage } from './page'
 
@@ -42,16 +44,39 @@ function createRouter() {
   }
 }
 
-function renderPage(page: ReactElement) {
+function renderPage(page: ReactElement, initialState?: PracticeSessionInitialState) {
   return render(
     <AppRouterContext.Provider value={createRouter()}>
       <QueryClientProvider client={new QueryClient()}>
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
-          {page}
+          <PracticeSessionProvider {...(initialState === undefined ? {} : { initialState })}>
+            {page}
+          </PracticeSessionProvider>
         </NextIntlClientProvider>
       </QueryClientProvider>
     </AppRouterContext.Provider>,
   )
+}
+
+type ActiveSession = Omit<ReturnType<typeof activeSession>, 'recordingStartedAt'> & {
+  readonly recordingStartedAt: string | null
+}
+
+function practiceInitialState(
+  status: PracticeSessionInitialState['status'],
+  session: ActiveSession = activeSession(),
+): PracticeSessionInitialState {
+  return {
+    session: {
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      recordingStartedAt: session.recordingStartedAt,
+      researchEndsAt: session.researchEndsAt,
+      sessionId: session.sessionId,
+      themeTitle: session.themeTitle,
+    },
+    status,
+  }
 }
 
 describe('SessionPage', () => {
@@ -62,7 +87,10 @@ describe('SessionPage', () => {
     vi.setSystemTime(new Date('2026-08-24T12:00:00.000Z'))
     const Page = createSessionPage(createApiFetch(activeSession()))
 
-    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
+    renderPage(
+      await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
+      practiceInitialState('researching'),
+    )
 
     expect(screen.getByRole('heading', { name: 'Comunicação clara' })).toBeInTheDocument()
     expect(screen.getByRole('timer')).toHaveTextContent('03:00')
@@ -75,7 +103,10 @@ describe('SessionPage', () => {
     vi.setSystemTime(new Date('2026-08-24T12:04:00.000Z'))
     const Page = createSessionPage(createApiFetch(activeSession()))
 
-    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
+    renderPage(
+      await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
+      practiceInitialState('awaiting-recording'),
+    )
 
     await act(async () => {
       await Promise.resolve()
@@ -98,7 +129,10 @@ describe('SessionPage', () => {
     const session = { ...activeSession(), recordingStartedAt: '2026-08-24T12:04:00.000Z' }
     const Page = createSessionPage(createApiFetch(session))
 
-    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
+    renderPage(
+      await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
+      practiceInitialState('expired', session),
+    )
 
     expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Gravador de áudio' })).not.toBeInTheDocument()

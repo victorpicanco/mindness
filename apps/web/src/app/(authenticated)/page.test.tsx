@@ -8,6 +8,7 @@ import type { z } from 'zod'
 
 import { messages } from '@/i18n/messages'
 import type { apiFetch } from '@/lib/api/server-client'
+import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 
 import { createHomePage } from './page'
 
@@ -58,7 +59,7 @@ function renderPage(page: ReactElement) {
     <AppRouterContext.Provider value={router}>
       <QueryClientProvider client={new QueryClient()}>
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
-          {page}
+          <PracticeSessionProvider>{page}</PracticeSessionProvider>
         </NextIntlClientProvider>
       </QueryClientProvider>
     </AppRouterContext.Provider>,

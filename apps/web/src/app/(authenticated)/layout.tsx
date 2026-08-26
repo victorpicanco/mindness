@@ -2,10 +2,10 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
 
-import { AuthenticatedShell } from '@/components/layouts/authenticated-shell'
 import { RouteLoading } from '@/components/layouts/route-loading'
 import { SessionQuota } from '@/components/layouts/session-quota'
 import {
+  activeSessionSchema,
   quotaSchema,
   sessionHistoryMetaSchema,
   sessionHistorySchema,
@@ -14,6 +14,9 @@ import { apiFetch, apiFetchWithMeta } from '@/lib/api/server-client'
 import { createRequireSession } from '@/lib/auth/require-session'
 import { signOutAction } from '@/lib/auth/sign-out'
 import { groupSessionsByDay } from '@/lib/sessions/session-day-groups'
+import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
+
+import { AuthenticatedSessionShell } from './authenticated-session-shell'
 
 const SIDEBAR_PREFERENCE_COOKIE_NAME = 'mindness-sidebar-expanded'
 
@@ -21,21 +24,50 @@ interface AuthenticatedLayoutProps {
   readonly children: ReactNode
 }
 
+function practiceSessionInitialState(
+  activeSession: ReturnType<typeof activeSessionSchema.parse>,
+): PracticeSessionInitialState | undefined {
+  if (activeSession === null) return undefined
+
+  const isResearchOver = new Date(activeSession.researchEndsAt).getTime() <= Date.now()
+
+  return {
+    session: {
+      createdAt: activeSession.createdAt,
+      expiresAt: activeSession.expiresAt,
+      recordingStartedAt: activeSession.recordingStartedAt,
+      researchEndsAt: activeSession.researchEndsAt,
+      sessionId: activeSession.sessionId,
+      themeTitle: activeSession.themeTitle,
+    },
+    status:
+      activeSession.recordingStartedAt !== null
+        ? 'expired'
+        : isResearchOver
+          ? 'awaiting-recording'
+          : 'researching',
+  }
+}
+
 async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
   const cookieStore = await cookies()
   createRequireSession({ cookieStore, redirect })()
-  const [quota, history] = await Promise.all([
+  const [quota, history, activeSession] = await Promise.all([
     apiFetch('/sessions/quota', { cache: 'no-store', schema: quotaSchema }),
     apiFetchWithMeta('/sessions', {
       cache: 'no-store',
       metaSchema: sessionHistoryMetaSchema,
       schema: sessionHistorySchema,
     }),
+    apiFetch('/sessions/active', { cache: 'no-store', schema: activeSessionSchema }),
   ])
   const isSidebarExpanded = cookieStore.get(SIDEBAR_PREFERENCE_COOKIE_NAME)?.value !== 'false'
+  const initialPracticeSessionState = practiceSessionInitialState(activeSession)
 
   return (
-    <AuthenticatedShell
+    <AuthenticatedSessionShell
+      {...(initialPracticeSessionState === undefined ? {} : { initialPracticeSessionState })}
+      {...(activeSession === null ? {} : { activeSessionId: activeSession.sessionId })}
       initialIsExpanded={isSidebarExpanded}
       preferenceCookieName={SIDEBAR_PREFERENCE_COOKIE_NAME}
       sessionGroups={groupSessionsByDay({
@@ -57,7 +89,7 @@ async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps
           })}
     >
       {children}
-    </AuthenticatedShell>
+    </AuthenticatedSessionShell>
   )
 }
 

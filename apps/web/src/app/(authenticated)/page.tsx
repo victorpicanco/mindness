@@ -5,7 +5,6 @@ import { activeSessionSchema, categoriesSchema, quotaSchema } from '@/lib/api/co
 import { apiFetch } from '@/lib/api/server-client'
 import { signOutAction } from '@/lib/auth/sign-out'
 import { sessionPath } from '@/lib/navigation/session-routes'
-import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 
 import type { PracticeQuota } from '@/components/practice/config-form'
 import { PracticeSessionStart } from '@/components/practice/session-start'
@@ -45,22 +44,16 @@ export function createHomePage(
     const summary = sessionQuotaSummary(quota)
 
     return (
-      <PracticeSessionProvider>
-        <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
-          <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center justify-between gap-6">
-            <div className="flex size-full min-h-0 flex-col items-center justify-center px-6 py-12 sm:px-10">
-              <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
-                {t('title')}
-              </h1>
-              <PracticeSessionStart
-                categories={categories}
-                quota={summary}
-                signOut={signOutAction}
-              />
-            </div>
+      <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
+        <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center justify-between gap-6">
+          <div className="flex size-full min-h-0 flex-col items-center justify-center px-6 py-12 sm:px-10">
+            <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
+              {t('title')}
+            </h1>
+            <PracticeSessionStart categories={categories} quota={summary} signOut={signOutAction} />
           </div>
         </div>
-      </PracticeSessionProvider>
+      </div>
     )
   }
 }

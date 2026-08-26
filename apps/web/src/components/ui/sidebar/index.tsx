@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import Link from 'next/link'
-import type { ComponentPropsWithRef, ReactNode } from 'react'
+import type { ComponentPropsWithRef, MouseEvent, ReactNode } from 'react'
 
 import { Icon } from '@/components/ui/icon'
 
@@ -62,7 +62,8 @@ interface SidebarNavigationProps {
   readonly isExpanded: boolean
   readonly items: readonly SidebarNavigationItem[]
   readonly label: string
-  readonly onNavigate?: (() => void) | undefined
+  readonly onNavigate?:
+    ((item: SidebarNavigationItem, event: MouseEvent<HTMLAnchorElement>) => void) | undefined
 }
 
 function isItemActive(href: string, activeHref: string | null): boolean {
@@ -76,7 +77,8 @@ interface SidebarNavigationLinkProps {
   readonly isActive: boolean
   readonly isExpanded: boolean
   readonly item: SidebarNavigationItem
-  readonly onNavigate?: (() => void) | undefined
+  readonly onNavigate?:
+    ((item: SidebarNavigationItem, event: MouseEvent<HTMLAnchorElement>) => void) | undefined
 }
 
 function SidebarNavigationLink({
@@ -91,7 +93,7 @@ function SidebarNavigationLink({
       aria-label={isExpanded ? undefined : item.label}
       className={navigationLinkStyles({ isActive })}
       href={item.href}
-      onClick={() => onNavigate?.()}
+      onClick={(event) => onNavigate?.(item, event)}
     >
       <span className="grid size-9 place-items-center" data-sidebar-icon>
         <Icon className="text-lg" name={item.icon} />
@@ -132,7 +134,9 @@ interface SidebarSessionGroupsProps {
   readonly activeHref: string | null
   readonly groups: readonly SidebarSessionGroup[]
   readonly label: string
-  readonly onNavigate?: (() => void) | undefined
+  readonly onNavigate?:
+    | ((item: SidebarSessionGroup['items'][number], event: MouseEvent<HTMLAnchorElement>) => void)
+    | undefined
 }
 
 export function SidebarSessionGroups({
@@ -164,7 +168,7 @@ export function SidebarSessionGroups({
                   aria-current={item.href === activeHref ? 'page' : undefined}
                   className={sessionLinkStyles({ isActive: item.href === activeHref })}
                   href={item.href}
-                  onClick={() => onNavigate?.()}
+                  onClick={(event) => onNavigate?.(item, event)}
                 >
                   <span className="truncate">{item.label}</span>
                 </Link>

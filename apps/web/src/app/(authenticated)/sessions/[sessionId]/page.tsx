@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 
 import { activeSessionSchema, sessionHistorySchema } from '@/lib/api/contracts/sessions'
 import { apiFetch } from '@/lib/api/server-client'
-import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 
 import { RecordingStart } from '@/components/practice/recording-start'
 import { ResearchTimer } from '@/components/practice/research-timer'
@@ -43,34 +42,13 @@ export function createSessionPage(fetchFromApi: ApiFetch, renderNotFound: NotFou
       )
     }
 
-    const isResearchOver = new Date(activeSession.researchEndsAt).getTime() <= Date.now()
-
     return (
-      <PracticeSessionProvider
-        initialState={{
-          session: {
-            createdAt: activeSession.createdAt,
-            expiresAt: activeSession.expiresAt,
-            recordingStartedAt: activeSession.recordingStartedAt,
-            researchEndsAt: activeSession.researchEndsAt,
-            sessionId: activeSession.sessionId,
-            themeTitle: activeSession.themeTitle,
-          },
-          status:
-            activeSession.recordingStartedAt !== null
-              ? 'expired'
-              : isResearchOver
-                ? 'awaiting-recording'
-                : 'researching',
-        }}
-      >
-        <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
-          <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
-            <ResearchTimer />
-            <RecordingStart />
-          </div>
+      <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
+        <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
+          <ResearchTimer />
+          <RecordingStart />
         </div>
-      </PracticeSessionProvider>
+      </div>
     )
   }
 }

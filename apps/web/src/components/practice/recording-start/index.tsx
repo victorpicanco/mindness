@@ -24,6 +24,11 @@ export interface AudioRecordingSession {
   readonly stop: () => Promise<Blob>
 }
 
+export interface RecordingStarted {
+  readonly expiresAt: string
+  readonly recordingStartedAt: string
+}
+
 export type AudioRecordingSource = () => Promise<AudioRecordingSession>
 
 export type SubmitRecordingRequest = (input: {
@@ -36,7 +41,7 @@ export interface RecordingStartProps {
   readonly captureRecording?: AudioRecordingSource
   readonly reportMicrophonePermissionDenied?: (sessionId: string) => Promise<void>
   readonly requestMicrophone?: () => Promise<void>
-  readonly startRecording?: (sessionId: string) => Promise<void>
+  readonly startRecording?: (sessionId: string) => Promise<RecordingStarted>
   readonly submitRecording?: SubmitRecordingRequest
 }
 
@@ -51,8 +56,8 @@ async function requestBrowserMicrophone(): Promise<void> {
   for (const track of stream.getTracks()) track.stop()
 }
 
-async function requestRecordingStart(sessionId: string): Promise<void> {
-  await bffFetch(`/sessions/${sessionId}/recording`, {
+async function requestRecordingStart(sessionId: string): Promise<RecordingStarted> {
+  return bffFetch(`/sessions/${sessionId}/recording`, {
     method: 'POST',
     schema: recordingStartedSchema,
   })
@@ -113,18 +118,19 @@ export function RecordingStart({
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
   const storedAudioBlob = usePracticeSessionStore((state) => state.audioBlob)
-  const beginRecording = usePracticeSessionStore((state) => state.beginRecording)
+  const openRecording = usePracticeSessionStore((state) => state.openRecording)
   const expireSession = usePracticeSessionStore((state) => state.expireSession)
   const captureAudio = usePracticeSessionStore((state) => state.captureAudio)
   const discardAudio = usePracticeSessionStore((state) => state.discardAudio)
   const beginProcessing = usePracticeSessionStore((state) => state.beginProcessing)
   const [failure, setFailure] = useState<StartFailure | null>(null)
+  const [deadline, setDeadline] = useState('')
   const expiredRef = useRef(false)
   const captureRef = useRef<AudioRecordingSession | null>(null)
 
   const mutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      await startRecording(sessionId)
+      const recording = await startRecording(sessionId)
 
       try {
         await requestMicrophone()
@@ -135,6 +141,8 @@ export function RecordingStart({
 
         throw new MicrophoneUnavailableError(cause)
       }
+
+      return recording
     },
     onError: (error) => {
       const permissionDenied =
@@ -150,9 +158,9 @@ export function RecordingStart({
 
       setFailure(error instanceof MicrophoneUnavailableError ? 'microphone' : 'request')
     },
-    onSuccess: () => {
+    onSuccess: (recording) => {
       setFailure(null)
-      beginRecording()
+      openRecording(recording)
     },
   })
 
@@ -180,6 +188,18 @@ export function RecordingStart({
 
     return () => window.clearInterval(timer)
   }, [expireSession, router, session, status])
+
+  useEffect(() => {
+    let cancelled = false
+
+    queueMicrotask(() => {
+      if (!cancelled) setDeadline(session === null ? '' : deadlineTime(session.expiresAt))
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [session])
 
   useEffect(() => {
     if (status !== 'recording') return
@@ -314,7 +334,7 @@ export function RecordingStart({
       </div>
       <div className="mx-auto w-full max-w-3xl">
         <p className="mb-2 text-center text-xs text-text-muted">
-          {t('recordUntil', { time: deadlineTime(session.expiresAt) })}
+          {t('recordUntil', { time: deadline })}
         </p>
         <SessionRecorder
           isDisabled={mutation.isPending}

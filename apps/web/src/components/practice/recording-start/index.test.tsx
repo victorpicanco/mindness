@@ -15,6 +15,7 @@ import {
 import {
   RecordingStart,
   type AudioRecordingSession,
+  type RecordingStarted,
   type RecordingStartProps,
 } from '@/components/practice/recording-start'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
@@ -28,11 +29,13 @@ const GRACE_SECONDS = 120
 function PracticeSessionProbe() {
   const status = usePracticeSessionStore((state) => state.status)
   const audioBlob = usePracticeSessionStore((state) => state.audioBlob)
+  const session = usePracticeSessionStore((state) => state.session)
 
   return (
     <>
       <output aria-label="practice status">{status}</output>
       <output aria-label="captured audio">{audioBlob === null ? 'none' : 'retained'}</output>
+      <output aria-label="session deadline">{session?.expiresAt ?? 'none'}</output>
     </>
   )
 }
@@ -65,7 +68,9 @@ function renderRecordingStart(props: RecordingStartProps = {}) {
           <PracticeSessionProvider
             initialState={{
               session: {
+                createdAt: NOW.toISOString(),
                 expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
+                recordingStartedAt: null,
                 researchEndsAt: NOW.toISOString(),
                 sessionId: SESSION_ID,
                 themeTitle: 'Comunicação clara',
@@ -115,7 +120,11 @@ function grantedMicrophone(source: AudioLevelSource): RecordingStartProps {
   return {
     audioLevelSource: source,
     requestMicrophone: () => Promise.resolve(),
-    startRecording: () => Promise.resolve(),
+    startRecording: () =>
+      Promise.resolve({
+        expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
+        recordingStartedAt: NOW.toISOString(),
+      }),
   }
 }
 
@@ -154,13 +163,17 @@ describe('RecordingStart', () => {
     vi.useRealTimers()
   })
 
-  it('offers an enabled recording bar for the two-minute grace', () => {
+  it('offers an enabled recording bar for the two-minute grace', async () => {
     const { container } = renderRecordingStart()
     const deadline = new Intl.DateTimeFormat('pt-BR', {
       hour: '2-digit',
       hour12: false,
       minute: '2-digit',
     }).format(new Date(NOW.getTime() + GRACE_SECONDS * 1_000))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
 
     expect(screen.getByRole('heading', { name: 'Comunicação clara' })).toBeInTheDocument()
     expect(screen.queryByRole('timer')).not.toBeInTheDocument()
@@ -183,7 +196,10 @@ describe('RecordingStart', () => {
       },
       startRecording: (sessionId) => {
         opened.push(sessionId)
-        return Promise.resolve()
+        return Promise.resolve({
+          expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
+          recordingStartedAt: NOW.toISOString(),
+        })
       },
     })
 
@@ -195,6 +211,21 @@ describe('RecordingStart', () => {
     expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
     expect(opened).toEqual([SESSION_ID])
     expect(microphoneRequests).toEqual(['microphone'])
+  })
+
+  it('uses the deadline returned when the server opens the recording', async () => {
+    const { source } = fakeAudioLevelSource()
+    const recordingDeadline = new Date(NOW.getTime() + 15 * 60 * 1_000).toISOString()
+    renderRecordingStart({
+      audioLevelSource: source,
+      requestMicrophone: () => Promise.resolve(),
+      startRecording: () =>
+        Promise.resolve({ expiresAt: recordingDeadline, recordingStartedAt: NOW.toISOString() }),
+    })
+
+    await clickRecordingButton()
+
+    expect(screen.getByLabelText('session deadline')).toHaveTextContent(recordingDeadline)
   })
 
   it('draws the captured sound and counts the recording time', async () => {
@@ -271,7 +302,11 @@ describe('RecordingStart', () => {
         return Promise.resolve()
       },
       requestMicrophone: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')),
-      startRecording: () => Promise.resolve(),
+      startRecording: () =>
+        Promise.resolve({
+          expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
+          recordingStartedAt: NOW.toISOString(),
+        }),
     })
 
     await clickRecordingButton()
@@ -346,8 +381,8 @@ describe('RecordingStart', () => {
   })
 
   it('holds the recording bar while the server is opening the recording', async () => {
-    let releaseServer: (() => void) | null = null
-    const pending = new Promise<void>((resolve) => {
+    let releaseServer: ((recording: RecordingStarted) => void) | null = null
+    const pending = new Promise<RecordingStarted>((resolve) => {
       releaseServer = resolve
     })
 
@@ -361,7 +396,10 @@ describe('RecordingStart', () => {
     expect(recordingButton()).toBeDisabled()
 
     await act(async () => {
-      releaseServer?.()
+      releaseServer?.({
+        expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
+        recordingStartedAt: NOW.toISOString(),
+      })
       await vi.advanceTimersByTimeAsync(0)
     })
   })

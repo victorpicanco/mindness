@@ -16,6 +16,7 @@ export type StartSessionBody = Static<typeof StartSessionBodySchema>
 export const StartSessionResponseSchema = successSchema(
   Type.Object(
     {
+      createdAt: Type.String({ format: 'date-time' }),
       sessionId: Type.String({ format: 'uuid' }),
       themeId: Type.String({ format: 'uuid' }),
       themeTitle: Type.String(),

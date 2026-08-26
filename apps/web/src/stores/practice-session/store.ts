@@ -14,7 +14,9 @@ export type PracticeSessionStatus =
   | 'expired'
 
 export interface PracticeSession {
+  readonly createdAt: string
   readonly expiresAt: string
+  readonly recordingStartedAt: string | null
   readonly researchEndsAt: string
   readonly sessionId: string
   readonly themeTitle: string
@@ -22,7 +24,7 @@ export interface PracticeSession {
 
 export interface PracticeSessionInitialState {
   readonly session: PracticeSession
-  readonly status: 'researching' | 'awaiting-recording'
+  readonly status: 'researching' | 'awaiting-recording' | 'recording'
 }
 
 export interface PracticeSessionState {
@@ -32,7 +34,10 @@ export interface PracticeSessionState {
   readonly retentionDeadline: number | null
   readonly startResearching: (session: PracticeSession) => void
   readonly openRecordingWindow: () => void
-  readonly beginRecording: () => void
+  readonly openRecording: (input: {
+    readonly recordingStartedAt: string
+    readonly expiresAt: string
+  }) => void
   readonly expireSession: () => void
   readonly captureAudio: (audioBlob: Blob) => void
   readonly discardAudio: () => void
@@ -91,10 +96,14 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
         return { status: 'awaiting-recording' }
       })
     },
-    beginRecording: () => {
+    openRecording: ({ recordingStartedAt, expiresAt }) => {
       set((state) => {
-        assertTransition(state.status, 'beginRecording', ['awaiting-recording'])
-        return { status: 'recording' }
+        assertTransition(state.status, 'openRecording', ['awaiting-recording'])
+        if (state.session === null) return state
+        return {
+          session: { ...state.session, expiresAt, recordingStartedAt },
+          status: 'recording',
+        }
       })
     },
     expireSession: () => {

@@ -2,11 +2,11 @@ import type { PracticeSessionStatus } from './store'
 
 export type PracticeSessionAction =
   | 'beginProcessing'
-  | 'beginRecording'
   | 'captureAudio'
   | 'discardAudio'
   | 'expireSession'
   | 'openRecordingWindow'
+  | 'openRecording'
   | 'reset'
   | 'startResearching'
 

@@ -27,9 +27,11 @@ function renderResearchTimer(
       <PracticeSessionProvider
         initialState={{
           session: {
+            createdAt: NOW.toISOString(),
             expiresAt: new Date(
               NOW.getTime() + (researchEndsInSeconds + 120) * 1_000,
             ).toISOString(),
+            recordingStartedAt: null,
             researchEndsAt: new Date(NOW.getTime() + researchEndsInSeconds * 1_000).toISOString(),
             sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
             themeTitle: 'Comunicação clara',

@@ -49,12 +49,19 @@ export function createSessionPage(fetchFromApi: ApiFetch, renderNotFound: NotFou
       <PracticeSessionProvider
         initialState={{
           session: {
+            createdAt: activeSession.createdAt,
             expiresAt: activeSession.expiresAt,
+            recordingStartedAt: activeSession.recordingStartedAt,
             researchEndsAt: activeSession.researchEndsAt,
             sessionId: activeSession.sessionId,
             themeTitle: activeSession.themeTitle,
           },
-          status: isResearchOver ? 'awaiting-recording' : 'researching',
+          status:
+            activeSession.recordingStartedAt !== null
+              ? 'recording'
+              : isResearchOver
+                ? 'awaiting-recording'
+                : 'researching',
         }}
       >
         <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   activeSessionSchema,
   quotaSchema,
+  recordingStartedSchema,
   sessionHistorySchema,
 } from '@/lib/api/contracts/sessions'
 
@@ -24,6 +25,15 @@ describe('session API contracts', () => {
     const missingTimestamp = { ...activeSession, recordingStartedAt: undefined }
 
     expect(() => activeSessionSchema.parse(missingTimestamp)).toThrow()
+  })
+
+  it('preserves the deadline returned when a recording starts', () => {
+    const response = {
+      expiresAt: '2026-08-24T12:15:00.000Z',
+      recordingStartedAt: '2026-08-24T12:04:00.000Z',
+    }
+
+    expect(recordingStartedSchema.parse(response)).toEqual(response)
   })
 
   it('accepts both enforced and unlimited quota responses', () => {

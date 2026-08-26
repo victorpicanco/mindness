@@ -40,6 +40,7 @@ export interface StartSessionInput {
 }
 
 export interface StartedSession {
+  readonly createdAt: string
   readonly expiresAt: string
   readonly researchEndsAt: string
   readonly sessionId: string
@@ -100,7 +101,7 @@ export function PracticeConfigForm({
   const mutation = useMutation({
     mutationFn: startSession,
     onSuccess: (session) => {
-      startResearching(session)
+      startResearching({ ...session, recordingStartedAt: null })
       onSessionStarted?.(session.sessionId)
     },
   })

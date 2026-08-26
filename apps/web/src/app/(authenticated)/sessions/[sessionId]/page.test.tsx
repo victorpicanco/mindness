@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactElement } from 'react'
@@ -77,6 +77,10 @@ describe('SessionPage', () => {
 
     renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
+    await act(async () => {
+      await Promise.resolve()
+    })
+
     const deadline = new Intl.DateTimeFormat('pt-BR', {
       hour: '2-digit',
       hour12: false,
@@ -86,6 +90,19 @@ describe('SessionPage', () => {
     expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeEnabled()
     expect(screen.getByText(`Inicie sua gravação até ${deadline}`)).toBeInTheDocument()
     vi.useRealTimers()
+  })
+
+  it('rehydrates a started recording instead of the recording window', async () => {
+    const session = { ...activeSession(), recordingStartedAt: '2026-08-24T12:04:00.000Z' }
+    const Page = createSessionPage(createApiFetch(session))
+
+    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
+
+    expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Gravador de áudio' })).toHaveAttribute(
+      'data-recording-state',
+      'recording',
+    )
   })
 
   it('rejects a URL that does not identify the active session', async () => {

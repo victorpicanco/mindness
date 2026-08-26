@@ -63,6 +63,7 @@ export const confirmAudioUploadSchema = z.null()
 export const microphonePermissionDeniedSchema = z.null()
 
 export const recordingStartedSchema = z.object({
+  expiresAt: z.iso.datetime(),
   recordingStartedAt: z.iso.datetime(),
 })
 
@@ -75,6 +76,7 @@ export const sessionHistoryMetaSchema = z.object({
 })
 
 export const startedSessionSchema = z.object({
+  createdAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
   researchEndsAt: z.iso.datetime(),
   sessionId: z.uuid(),

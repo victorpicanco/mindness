@@ -37,6 +37,9 @@
     "uploadingLabel": "Enviando gravação",
     "uploading": "Enviando sua gravação…",
     "audioUploadFailed": "Não foi possível enviar o áudio. Tente novamente.",
+    "audioSizeRejected": "O áudio ficou grande demais para enviar. Grave novamente em uma conexão mais estável.",
+    "audioValidationRejected": "Não foi possível validar este áudio. Grave novamente e tente enviar.",
+    "sessionNotInProgress": "Esta sessão não está mais disponível para envio. Inicie uma nova sessão.",
     "retryUpload": "Tentar novamente",
     "discardRecording": "Descartar gravação"
   },

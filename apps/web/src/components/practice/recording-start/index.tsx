@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { bffFetch } from '@/lib/api/bff-client'
+import { apiErrorDetails } from '@/lib/api/api-error'
 import {
   microphonePermissionDeniedSchema,
   recordingStartedSchema,
@@ -50,6 +51,18 @@ export interface RecordingStartProps {
 }
 
 type StartFailure = 'microphone' | 'permission-denied' | 'request'
+
+type UploadFailure = 'audio-size' | 'audio-validation' | 'audio-upload' | 'session-closed'
+
+function uploadFailure(error: unknown): UploadFailure {
+  const { code } = apiErrorDetails(error)
+
+  if (code === 'sessions.AUDIO_SIZE_REJECTED') return 'audio-size'
+  if (code === 'sessions.AUDIO_VALIDATION_REJECTED') return 'audio-validation'
+  if (code === 'sessions.SESSION_NOT_IN_PROGRESS') return 'session-closed'
+
+  return 'audio-upload'
+}
 
 const THEME_CLASSES =
   'font-(family-name:--font-buenard) text-4xl leading-tight tracking-tight text-balance sm:text-5xl'
@@ -133,6 +146,7 @@ export function RecordingStart({
   const discardAudio = usePracticeSessionStore((state) => state.discardAudio)
   const beginProcessing = usePracticeSessionStore((state) => state.beginProcessing)
   const [failure, setFailure] = useState<StartFailure | null>(null)
+  const [uploadFailureReason, setUploadFailureReason] = useState<UploadFailure | null>(null)
   const [deadline, setDeadline] = useState('')
   const captureRef = useRef<AudioRecordingSession | null>(null)
 
@@ -184,7 +198,13 @@ export function RecordingStart({
 
   const submitMutation = useMutation({
     mutationFn: submitRecording,
+    onError: (error) => {
+      const failureReason = uploadFailure(error)
+      setUploadFailureReason(failureReason)
+      if (failureReason === 'session-closed') expireSession()
+    },
     onSuccess: () => {
+      setUploadFailureReason(null)
       beginProcessing()
     },
   })
@@ -243,6 +263,13 @@ export function RecordingStart({
     submitMutation.reset()
   }
 
+  function uploadFailureMessage(reason: UploadFailure): string {
+    if (reason === 'audio-size') return t('audioSizeRejected')
+    if (reason === 'audio-validation') return t('audioValidationRejected')
+    if (reason === 'session-closed') return t('sessionNotInProgress')
+    return t('audioUploadFailed')
+  }
+
   if (session === null) return null
 
   if (status === 'expired') {
@@ -289,15 +316,17 @@ export function RecordingStart({
         className="m-auto flex flex-col items-center gap-4 text-center"
       >
         <h1 className={THEME_CLASSES}>{session.themeTitle}</h1>
-        {submitMutation.isError ? (
+        {submitMutation.isError && uploadFailureReason !== null ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-sm text-error" role="alert">
-              {t('audioUploadFailed')}
+              {uploadFailureMessage(uploadFailureReason)}
             </p>
             <div className="flex gap-3">
-              <Button onClick={retryUpload} type="button">
-                {t('retryUpload')}
-              </Button>
+              {uploadFailureReason === 'audio-upload' ? (
+                <Button onClick={retryUpload} type="button">
+                  {t('retryUpload')}
+                </Button>
+              ) : null}
               <Button onClick={discardRecording} type="button" variant="secondary">
                 {t('discardRecording')}
               </Button>

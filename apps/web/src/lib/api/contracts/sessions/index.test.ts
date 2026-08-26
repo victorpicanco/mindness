@@ -4,6 +4,7 @@ import {
   activeSessionSchema,
   quotaSchema,
   recordingStartedSchema,
+  startedSessionSchema,
   sessionHistorySchema,
 } from '@/lib/api/contracts/sessions'
 
@@ -34,6 +35,20 @@ describe('session API contracts', () => {
     }
 
     expect(recordingStartedSchema.parse(response)).toEqual(response)
+  })
+
+  it('preserves the theme and quota remaining from a started session', () => {
+    const response = {
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:15:00.000Z',
+      remaining: 2,
+      researchEndsAt: '2026-08-24T12:03:00.000Z',
+      sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+      themeId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91ab',
+      themeTitle: 'Comunicação clara',
+    }
+
+    expect(startedSessionSchema.parse(response)).toEqual(response)
   })
 
   it('accepts both enforced and unlimited quota responses', () => {

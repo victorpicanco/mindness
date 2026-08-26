@@ -42,8 +42,10 @@ export interface StartSessionInput {
 export interface StartedSession {
   readonly createdAt: string
   readonly expiresAt: string
+  readonly remaining: number | null
   readonly researchEndsAt: string
   readonly sessionId: string
+  readonly themeId: string
   readonly themeTitle: string
 }
 

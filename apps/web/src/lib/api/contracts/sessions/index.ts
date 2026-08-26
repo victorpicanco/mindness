@@ -80,8 +80,10 @@ export const sessionHistoryMetaSchema = z.object({
 export const startedSessionSchema = z.object({
   createdAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
+  remaining: z.number().nonnegative().nullable(),
   researchEndsAt: z.iso.datetime(),
   sessionId: z.uuid(),
+  themeId: z.uuid(),
   themeTitle: z.string(),
 })
 

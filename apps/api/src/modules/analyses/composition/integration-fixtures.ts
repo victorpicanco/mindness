@@ -4,6 +4,7 @@ import type {
   AccountPlan,
 } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type {
+  AnalysisFailure,
   SessionsPort,
   SessionProcessingContext,
 } from '@/modules/analyses/domain/ports/sessions-port/index.js'
@@ -37,6 +38,7 @@ export function createFakeAccountsPort(): FakeAccountsPort {
 }
 
 export interface FakeSessionsPort extends SessionsPort {
+  setAnalysisFailure(sessionId: string, failure: AnalysisFailure): void
   setContext(context: SessionProcessingContext): void
   setReadable(sessionId: string, accountId: string): void
   reset(): void
@@ -44,6 +46,7 @@ export interface FakeSessionsPort extends SessionsPort {
 
 export function createFakeSessionsPort(): FakeSessionsPort {
   const contexts = new Map<string, SessionProcessingContext>()
+  const failures = new Map<string, AnalysisFailure>()
   const readableBySessionAndAccount = new Set<string>()
   return {
     findProcessingContext: (sessionId) => Promise.resolve(contexts.get(sessionId) ?? null),
@@ -54,13 +57,18 @@ export function createFakeSessionsPort(): FakeSessionsPort {
           .slice(0, limit)
           .map((context) => context.sessionId),
       ),
-    isReadableByAccount: (sessionId, accountId) =>
-      Promise.resolve(readableBySessionAndAccount.has(`${sessionId}:${accountId}`)),
+    checkAnalysisAccess: (sessionId, accountId) =>
+      Promise.resolve({
+        readable: readableBySessionAndAccount.has(`${sessionId}:${accountId}`),
+        failure: failures.get(sessionId) ?? null,
+      }),
     setContext: (context) => contexts.set(context.sessionId, context),
+    setAnalysisFailure: (sessionId, failure) => failures.set(sessionId, failure),
     setReadable: (sessionId, accountId) =>
       readableBySessionAndAccount.add(`${sessionId}:${accountId}`),
     reset: () => {
       contexts.clear()
+      failures.clear()
       readableBySessionAndAccount.clear()
     },
   }

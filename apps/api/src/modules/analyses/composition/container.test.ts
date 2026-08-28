@@ -25,7 +25,7 @@ describe('createAnalysesContainer', () => {
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),
-        isReadableByAccount: () => Promise.resolve(false),
+        checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
         listStuckProcessing: () => Promise.resolve([]),
       },
       themesFacade: {
@@ -44,7 +44,7 @@ describe('createAnalysesContainer', () => {
         },
         sessions: {
           findProcessingContext: () => Promise.resolve(null),
-          isReadableByAccount: () => Promise.resolve(false),
+          checkAnalysisAccess: () => Promise.resolve({ failure: null, readable: false }),
           listStuckProcessing: () => Promise.resolve([]),
         },
         audioReader: { read: () => Promise.resolve(Buffer.from('audio')) },
@@ -120,7 +120,7 @@ function baseDeps() {
     sessionsFacade: {
       findProcessingContext: () => Promise.resolve(null),
       downloadAudio: () => Promise.resolve(Buffer.from('audio')),
-      isReadableByAccount: () => Promise.resolve(false),
+      checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
       listStuckProcessing: () => Promise.resolve([]),
     },
     themesFacade: {

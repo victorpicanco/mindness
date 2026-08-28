@@ -1,6 +1,8 @@
 import { AnalysisViewed } from '@/modules/analyses/domain/events/analysis-viewed/index.js'
 import { AnalysisAuthenticationRejectedError } from '@/modules/analyses/domain/errors/analysis-authentication-rejected-error/index.js'
+import { AnalysisFailedError } from '@/modules/analyses/domain/errors/analysis-failed-error/index.js'
 import { AnalysisNotFoundError } from '@/modules/analyses/domain/errors/analysis-not-found-error/index.js'
+import { AnalysisTimedOutError } from '@/modules/analyses/domain/errors/analysis-timed-out-error/index.js'
 import { GuidanceSelector } from '@/modules/analyses/domain/services/guidance-selector/index.js'
 
 import type {
@@ -13,14 +15,18 @@ export class GetSessionAnalysisUseCase {
   constructor(private readonly dependencies: GetSessionAnalysisDependencies) {}
 
   async execute(input: GetSessionAnalysisInput): Promise<GetSessionAnalysisOutput> {
-    const readable = await this.dependencies.sessions.isReadableByAccount(
+    const access = await this.dependencies.sessions.checkAnalysisAccess(
       input.sessionId,
       input.accountId,
     )
-    if (!readable) throw new AnalysisNotFoundError(input.sessionId)
+    if (!access.readable) throw new AnalysisNotFoundError(input.sessionId)
 
     const analysis = await this.dependencies.analyses.findBySessionId(input.sessionId)
-    if (analysis === null) throw new AnalysisNotFoundError(input.sessionId)
+    if (analysis === null) {
+      if (access.failure === 'analysis_failed') throw new AnalysisFailedError()
+      if (access.failure === 'analysis_timeout') throw new AnalysisTimedOutError()
+      throw new AnalysisNotFoundError(input.sessionId)
+    }
 
     const transcription = await this.dependencies.transcriptions.findBySessionId(input.sessionId)
     if (transcription === null) {

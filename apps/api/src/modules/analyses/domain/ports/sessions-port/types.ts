@@ -5,3 +5,10 @@ export interface SessionProcessingContext {
   readonly audioPath: string
   readonly recordedAt: Date
 }
+
+export type AnalysisFailure = 'analysis_failed' | 'analysis_timeout'
+
+export interface AnalysisAccess {
+  readonly readable: boolean
+  readonly failure: AnalysisFailure | null
+}

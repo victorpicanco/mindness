@@ -10,9 +10,13 @@ export class CheckSessionReadabilityUseCase {
   async execute(input: CheckSessionReadabilityInput): Promise<CheckSessionReadabilityOutput> {
     const session = await this.dependencies.sessions.findById(input.sessionId)
 
+    if (session === null || session.accountId !== input.accountId || session.state === 'deleted') {
+      return { readable: false, failureReason: null }
+    }
+
     return {
-      readable:
-        session !== null && session.accountId === input.accountId && session.state !== 'deleted',
+      readable: true,
+      failureReason: session.state === 'failed' ? session.failureReason : null,
     }
   }
 }

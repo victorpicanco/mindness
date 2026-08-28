@@ -3,7 +3,10 @@ import type { Transcription } from '@/modules/analyses/domain/entities/transcrip
 import type { AccountPlan } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
 import type { EvaluationResult } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
-import type { SessionProcessingContext } from '@/modules/analyses/domain/ports/sessions-port/index.js'
+import type {
+  AnalysisAccess,
+  SessionProcessingContext,
+} from '@/modules/analyses/domain/ports/sessions-port/index.js'
 import type { TranscriptionResult } from '@/modules/analyses/domain/ports/transcription-port/index.js'
 import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluation-failed-error/index.js'
 import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
@@ -74,8 +77,8 @@ class InMemorySessionsPort {
     return Promise.resolve([])
   }
 
-  isReadableByAccount(): Promise<boolean> {
-    return Promise.resolve(false)
+  checkAnalysisAccess(): Promise<AnalysisAccess> {
+    return Promise.resolve({ failure: null, readable: false })
   }
 }
 

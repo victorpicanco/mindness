@@ -273,6 +273,30 @@ describe('analysis reading integration', () => {
     expect(response.json()).toMatchObject({ error: { code: 'analyses.ANALYSIS_NOT_FOUND' } })
   })
 
+  it.each([
+    ['analysis_failed', 'analyses.ANALYSIS_FAILED', 8],
+    ['analysis_timeout', 'analyses.ANALYSIS_TIMEOUT', 9],
+  ] as const)(
+    'returns the terminal %s outcome for polling clients',
+    async (failure, code, seed) => {
+      const sessionId = uuid(seed)
+      harness.sessions.setReadable(sessionId, ACCOUNT_A)
+      harness.sessions.setAnalysisFailure(sessionId, failure)
+
+      const response = await getAnalysis(sessionId, 'account-a')
+
+      expect(response.statusCode).toBe(422)
+      assertResponseMatchesSchema(
+        harness.app,
+        'GET',
+        '/sessions/{sessionId}/analysis',
+        response,
+        422,
+      )
+      expect(response.json()).toMatchObject({ error: { code } })
+    },
+  )
+
   it('treats an unreadable session as not found, indistinguishable from a missing one, and publishes nothing', async () => {
     const sessionId = uuid(7)
     harness.sessions.setReadable(sessionId, ACCOUNT_A)

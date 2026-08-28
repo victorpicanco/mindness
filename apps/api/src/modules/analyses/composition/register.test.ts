@@ -38,7 +38,7 @@ describe('registerAnalysesModule', () => {
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
         downloadAudio: () => Promise.resolve(Buffer.from('audio')),
-        isReadableByAccount: () => Promise.resolve(false),
+        checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
         listStuckProcessing: () => Promise.resolve([]),
       },
       themesFacade: {

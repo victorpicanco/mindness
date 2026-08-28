@@ -25,6 +25,13 @@ enum SessionExpiredReason {
   @@map("session_expired_reason")
 }
 
+enum SessionFailureReason {
+  analysis_failed
+  analysis_timeout
+
+  @@map("session_failure_reason")
+}
+
 model Session {
   id                 String                @id @db.Uuid
   accountId          String                @map("account_id") @db.Uuid
@@ -35,6 +42,7 @@ model Session {
   quotaReservationId String                @map("quota_reservation_id") @db.Uuid
   state              SessionState
   expiredReason      SessionExpiredReason? @map("expired_reason")
+  failureReason      SessionFailureReason? @map("failure_reason")
   createdAt          DateTime              @map("created_at") @db.Timestamptz(6)
   expiresAt          DateTime              @map("expires_at") @db.Timestamptz(6)
   expiredAt          DateTime?             @map("expired_at") @db.Timestamptz(6)

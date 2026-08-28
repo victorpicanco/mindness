@@ -29,7 +29,7 @@ export interface GetSessionAnalysisOutput {
 export interface GetSessionAnalysisDependencies {
   readonly analyses: Pick<AnalysesRepository, 'findBySessionId' | 'markFirstView'>
   readonly transcriptions: Pick<TranscriptionsRepository, 'findBySessionId'>
-  readonly sessions: Pick<SessionsPort, 'isReadableByAccount'>
+  readonly sessions: Pick<SessionsPort, 'checkAnalysisAccess'>
   readonly accounts: Pick<AccountsPort, 'findPlan'>
   readonly clock: Clock
   readonly idGenerator: IdGenerator

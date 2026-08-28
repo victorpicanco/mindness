@@ -21,6 +21,7 @@ describe('OnAnalysisFailedFailSession', () => {
     await handler.handle(event)
 
     expect(session.state).toBe('failed')
+    expect(session.failureReason).toBe('analysis_failed')
     expect(repository.saved).toBe(1)
     expect(quota.released).toEqual(['session-id'])
   })

@@ -84,6 +84,7 @@ describe('analysis outcome integration', () => {
     await expect(
       harness.prisma.session.findUnique({ where: { id: sessionId } }),
     ).resolves.toMatchObject({
+      failureReason: 'analysis_timeout',
       state: 'failed',
     })
     expect(harness.quota.releaseCalls).toEqual([{ sessionId }])

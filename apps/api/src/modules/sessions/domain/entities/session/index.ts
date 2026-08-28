@@ -7,6 +7,7 @@ import { RecordingWindowNotOpenError } from '@/modules/sessions/domain/errors/re
 import type {
   ReconstituteSessionParams,
   SessionExpiredReason,
+  SessionFailureReason,
   SessionState,
   StartSessionParams,
 } from './types.js'
@@ -36,6 +37,7 @@ export class Session {
     private recordedAtEpoch: number | null,
     private _totalScore: number | null,
     private completedAtEpoch: number | null,
+    private _failureReason: SessionFailureReason | null,
     private failedAtEpoch: number | null,
     private deletedAtEpoch: number | null,
   ) {}
@@ -88,6 +90,10 @@ export class Session {
     return this.failedAtEpoch === null ? null : new Date(this.failedAtEpoch)
   }
 
+  get failureReason(): SessionFailureReason | null {
+    return this._failureReason
+  }
+
   get deletedAt(): Date | null {
     return this.deletedAtEpoch === null ? null : new Date(this.deletedAtEpoch)
   }
@@ -105,6 +111,7 @@ export class Session {
       createdAtEpoch,
       researchEndsAtEpoch(createdAtEpoch, params.configuration) +
         RECORDING_START_GRACE_MILLISECONDS,
+      null,
       null,
       null,
       null,
@@ -134,6 +141,7 @@ export class Session {
       params.recordedAt?.getTime() ?? null,
       params.totalScore ?? null,
       params.completedAt?.getTime() ?? null,
+      params.failureReason ?? null,
       params.failedAt?.getTime() ?? null,
       params.deletedAt?.getTime() ?? null,
     )
@@ -194,12 +202,13 @@ export class Session {
     this.completedAtEpoch = at.getTime()
   }
 
-  fail(at: Date): void {
+  fail(reason: SessionFailureReason, at: Date): void {
     if (this._state !== 'processing') {
       throw new SessionNotInProgressError(this._state)
     }
 
     this._state = 'failed'
+    this._failureReason = reason
     this.failedAtEpoch = at.getTime()
   }
 
@@ -216,6 +225,7 @@ export class Session {
 export type {
   ReconstituteSessionParams,
   SessionExpiredReason,
+  SessionFailureReason,
   SessionState,
   StartSessionParams,
 } from './types.js'

@@ -30,6 +30,7 @@ function createSession(
     totalScore: state === 'completed' ? 80 : null,
     completedAt: state === 'completed' ? new Date('2026-08-22T10:05:00.000Z') : null,
     failedAt: state === 'failed' ? new Date('2026-08-22T10:05:00.000Z') : null,
+    failureReason: state === 'failed' ? 'analysis_failed' : null,
     deletedAt: state === 'deleted' ? new Date('2026-08-22T11:00:00.000Z') : null,
   })
 }
@@ -42,17 +43,26 @@ function createUseCase(session: Session | null): CheckSessionReadabilityUseCase 
 }
 
 describe('CheckSessionReadabilityUseCase', () => {
-  it.each(['in_progress', 'expired', 'processing', 'completed', 'failed'] as const)(
-    'returns readable for an owned %s session',
+  it.each(['in_progress', 'expired', 'processing', 'completed'] as const)(
+    'returns readable and no failure reason for an owned %s session',
     async (state) => {
       await expect(
         createUseCase(createSession({ state })).execute({
           accountId: 'account-1',
           sessionId: 'session-1',
         }),
-      ).resolves.toEqual({ readable: true })
+      ).resolves.toEqual({ failureReason: null, readable: true })
     },
   )
+
+  it('reports the terminal failure reason of an owned failed session', async () => {
+    await expect(
+      createUseCase(createSession({ state: 'failed' })).execute({
+        accountId: 'account-1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toEqual({ failureReason: 'analysis_failed', readable: true })
+  })
 
   it.each([
     ['a missing session', null],
@@ -61,6 +71,6 @@ describe('CheckSessionReadabilityUseCase', () => {
   ])('returns unreadable for %s', async (_caseName, session) => {
     await expect(
       createUseCase(session).execute({ accountId: 'account-1', sessionId: 'session-1' }),
-    ).resolves.toEqual({ readable: false })
+    ).resolves.toEqual({ failureReason: null, readable: false })
   })
 })

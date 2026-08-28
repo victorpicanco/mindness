@@ -18,7 +18,7 @@ export class OnAnalysisFailedFailSession {
     const session = await this.sessions.findById(event.payload.sessionId)
     if (session === null || session.state !== 'processing') return
 
-    session.fail(event.occurredAt)
+    session.fail('analysis_failed', event.occurredAt)
     await this.quota.releaseReservation({ sessionId: session.id })
     await this.sessions.save(session)
   }

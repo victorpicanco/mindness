@@ -1,6 +1,7 @@
 import type {
   SessionDifficulty,
   SessionExpiredReason,
+  SessionFailureReason,
   SessionState,
 } from '@/generated/prisma/enums.js'
 
@@ -24,6 +25,7 @@ export interface SessionRow {
   readonly quotaReservationId: string
   readonly state: SessionState
   readonly expiredReason: SessionExpiredReason | null
+  readonly failureReason?: SessionFailureReason | null
   readonly createdAt: Date
   readonly expiresAt: Date
   readonly expiredAt: Date | null
@@ -46,6 +48,7 @@ export interface SessionScalars {
   readonly quotaReservationId: string
   readonly state: SessionState
   readonly expiredReason: SessionExpiredReason | null
+  readonly failureReason: SessionFailureReason | null
   readonly createdAt: Date
   readonly expiresAt: Date
   readonly expiredAt: Date | null

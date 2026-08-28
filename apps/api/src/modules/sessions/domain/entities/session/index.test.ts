@@ -174,12 +174,13 @@ describe('Session', () => {
     expect(session.completedAt).toEqual(COMPLETED_AT)
   })
 
-  it('fails a processing session and records when it failed', () => {
+  it('fails a processing session and records why and when it failed', () => {
     const session = reconstituteWithState('processing')
 
-    session.fail(COMPLETED_AT)
+    session.fail('analysis_failed', COMPLETED_AT)
 
     expect(session.state).toBe('failed')
+    expect(session.failureReason).toBe('analysis_failed')
     expect(session.failedAt).toEqual(COMPLETED_AT)
     expect(session.completedAt).toBeNull()
   })
@@ -190,7 +191,9 @@ describe('Session', () => {
       const session = reconstituteWithState(state)
 
       expect(() => session.complete(86, COMPLETED_AT)).toThrow(SessionNotInProgressError)
-      expect(() => session.fail(COMPLETED_AT)).toThrow(SessionNotInProgressError)
+      expect(() => session.fail('analysis_timeout', COMPLETED_AT)).toThrow(
+        SessionNotInProgressError,
+      )
     },
   )
 

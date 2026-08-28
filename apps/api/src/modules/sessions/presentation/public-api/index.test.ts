@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { SessionsPublicApiImpl } from './index.js'
 
 describe('SessionsPublicApiImpl', () => {
-  it('delegates the session readability check and returns its boolean output', async () => {
+  it('delegates the readability check and returns readability with the failure reason', async () => {
     const readabilityInputs: { sessionId: string; accountId: string }[] = []
     const api = new SessionsPublicApiImpl({
       findProcessingContext: { execute: () => Promise.resolve(null) },
@@ -12,12 +12,15 @@ describe('SessionsPublicApiImpl', () => {
       checkReadability: {
         execute: (input) => {
           readabilityInputs.push(input)
-          return Promise.resolve({ readable: true })
+          return Promise.resolve({ failureReason: 'analysis_timeout', readable: true })
         },
       },
     })
 
-    await expect(api.isReadableByAccount('session-id', 'account-id')).resolves.toBe(true)
+    await expect(api.checkReadability('session-id', 'account-id')).resolves.toEqual({
+      failureReason: 'analysis_timeout',
+      readable: true,
+    })
     expect(readabilityInputs).toEqual([{ sessionId: 'session-id', accountId: 'account-id' }])
   })
 
@@ -40,7 +43,9 @@ describe('SessionsPublicApiImpl', () => {
           return Promise.resolve(['session-id'])
         },
       },
-      checkReadability: { execute: () => Promise.resolve({ readable: false }) },
+      checkReadability: {
+        execute: () => Promise.resolve({ failureReason: null, readable: false }),
+      },
     })
     await expect(api.findProcessingContext('session-id')).resolves.toEqual(context)
     await expect(api.downloadAudio('session-id')).resolves.toEqual(Buffer.from('audio'))

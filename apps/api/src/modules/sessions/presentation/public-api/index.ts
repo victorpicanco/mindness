@@ -16,7 +16,7 @@ export interface SessionsPublicApi {
   findProcessingContext(sessionId: string): Promise<SessionProcessingContext | null>
   downloadAudio(sessionId: string): Promise<Buffer>
   listStuckProcessing(before: Date, limit: number): Promise<readonly string[]>
-  isReadableByAccount(sessionId: string, accountId: string): Promise<boolean>
+  checkReadability(sessionId: string, accountId: string): Promise<CheckSessionReadabilityOutput>
 }
 interface SessionsPublicApiDependencies {
   readonly findProcessingContext: {
@@ -45,9 +45,8 @@ export class SessionsPublicApiImpl implements SessionsPublicApi {
     return this.dependencies.listStuckProcessing.execute({ before, limit })
   }
 
-  async isReadableByAccount(sessionId: string, accountId: string): Promise<boolean> {
-    const output = await this.dependencies.checkReadability.execute({ sessionId, accountId })
-    return output.readable
+  checkReadability(sessionId: string, accountId: string): Promise<CheckSessionReadabilityOutput> {
+    return this.dependencies.checkReadability.execute({ sessionId, accountId })
   }
 }
-export type { SessionProcessingContext }
+export type { CheckSessionReadabilityOutput, SessionProcessingContext }

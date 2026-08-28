@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { AnalysisAuthenticationRejectedError } from '@/modules/analyses/domain/errors/analysis-authentication-rejected-error/index.js'
+import { AnalysisFailedError } from '@/modules/analyses/domain/errors/analysis-failed-error/index.js'
 import { AnalysisNotFoundError } from '@/modules/analyses/domain/errors/analysis-not-found-error/index.js'
+import { AnalysisTimedOutError } from '@/modules/analyses/domain/errors/analysis-timed-out-error/index.js'
+import type { AnalysisFailure } from '@/modules/analyses/domain/ports/sessions-port/index.js'
 import { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
 import { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import { RhythmMetrics } from '@/modules/analyses/domain/value-objects/rhythm-metrics/index.js'
@@ -63,6 +66,21 @@ describe('GetSessionAnalysisUseCase', () => {
     ).rejects.toMatchObject({ context: { reason: 'transcription_missing' } })
   })
 
+  it.each([
+    ['analysis_failed', AnalysisFailedError],
+    ['analysis_timeout', AnalysisTimedOutError],
+  ] as const)(
+    'reports the terminal %s outcome when no analysis exists',
+    async (failure, ErrorType) => {
+      const harness = createHarness({ analysis: null, failure })
+      const useCase = new GetSessionAnalysisUseCase(harness.dependencies)
+
+      await expect(
+        useCase.execute({ sessionId: 'session-id', accountId: 'account-id' }),
+      ).rejects.toBeInstanceOf(ErrorType)
+    },
+  )
+
   it('publishes analysis_viewed only for the first view', async () => {
     const harness = createHarness({ firstView: true })
     const useCase = new GetSessionAnalysisUseCase(harness.dependencies)
@@ -100,6 +118,7 @@ function createHarness(
   input: {
     readonly analysis?: Analysis | null
     readonly firstView?: boolean
+    readonly failure?: AnalysisFailure | null
     readonly plan?: 'free' | null
     readonly readable?: boolean
     readonly transcription?: Transcription | null
@@ -125,7 +144,10 @@ function createHarness(
         },
       },
       transcriptions: { findBySessionId: () => Promise.resolve(transcription) },
-      sessions: { isReadableByAccount: () => Promise.resolve(input.readable ?? true) },
+      sessions: {
+        checkAnalysisAccess: () =>
+          Promise.resolve({ failure: input.failure ?? null, readable: input.readable ?? true }),
+      },
       accounts: { findPlan: () => Promise.resolve(input.plan === undefined ? 'free' : input.plan) },
       clock: new ControllableClock(NOW),
       idGenerator: { generate: () => 'event-id' },

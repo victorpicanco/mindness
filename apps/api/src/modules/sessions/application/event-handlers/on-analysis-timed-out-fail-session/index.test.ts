@@ -48,6 +48,7 @@ describe('OnAnalysisTimedOutFailSession', () => {
     await handler.handle(event)
 
     expect(session.state).toBe('failed')
+    expect(session.failureReason).toBe('analysis_timeout')
     expect(quota.released).toEqual(['session-id'])
   })
 })

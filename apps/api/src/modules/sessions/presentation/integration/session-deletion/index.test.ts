@@ -104,7 +104,7 @@ describe('session deletion integration', () => {
 
     await expect(
       harness.container.useCases.checkReadability.execute({ sessionId, accountId: ACCOUNT_A }),
-    ).resolves.toEqual({ readable: false })
+    ).resolves.toEqual({ failureReason: null, readable: false })
 
     expect(harness.quota.releaseCalls).toEqual([])
 

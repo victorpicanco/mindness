@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
+
 import { SessionsPortAdapter } from './index.js'
+
 describe('SessionsPortAdapter', () => {
   it('translates the sessions public context and preserves null', async () => {
     const adapter = new SessionsPortAdapter({
       findProcessingContext: () => Promise.resolve(null),
       listStuckProcessing: () => Promise.resolve([]),
-      isReadableByAccount: () => Promise.resolve(false),
+      checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
     })
     await expect(adapter.findProcessingContext('session-id')).resolves.toBeNull()
   })
@@ -17,28 +19,31 @@ describe('SessionsPortAdapter', () => {
       findProcessingContext: () => Promise.resolve(null),
       listStuckProcessing: (queriedBefore, limit) => {
         calls.push({ before: queriedBefore, limit })
-        return Promise.resolve(['session-1'])
+        return Promise.resolve(['session-id'])
       },
-      isReadableByAccount: () => Promise.resolve(false),
+      checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
     })
 
-    await expect(adapter.listStuckProcessing(before, 25)).resolves.toEqual(['session-1'])
+    await expect(adapter.listStuckProcessing(before, 25)).resolves.toEqual(['session-id'])
     expect(calls).toEqual([{ before, limit: 25 }])
   })
 
-  it('delegates session readability to the sessions public API', async () => {
+  it('translates the readability check into the analysis access of the port', async () => {
     const calls: { sessionId: string; accountId: string }[] = []
     const sessions = {
       findProcessingContext: () => Promise.resolve(null),
       listStuckProcessing: () => Promise.resolve([]),
-      isReadableByAccount: (sessionId: string, accountId: string) => {
+      checkReadability: (sessionId: string, accountId: string) => {
         calls.push({ sessionId, accountId })
-        return Promise.resolve(true)
+        return Promise.resolve({ failureReason: 'analysis_timeout' as const, readable: true })
       },
     }
     const adapter = new SessionsPortAdapter(sessions)
 
-    await expect(adapter.isReadableByAccount('session-id', 'account-id')).resolves.toBe(true)
+    await expect(adapter.checkAnalysisAccess('session-id', 'account-id')).resolves.toEqual({
+      failure: 'analysis_timeout',
+      readable: true,
+    })
     expect(calls).toEqual([{ sessionId: 'session-id', accountId: 'account-id' }])
   })
 })

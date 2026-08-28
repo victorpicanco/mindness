@@ -16,6 +16,7 @@ const ERROR_RESPONSES = {
   400: ErrorResponseSchema,
   401: ErrorResponseSchema,
   404: ErrorResponseSchema,
+  422: ErrorResponseSchema,
   500: ErrorResponseSchema,
 }
 

@@ -2,7 +2,8 @@
   "errors": {
     "network": "Não foi possível conectar ao servidor. Verifique sua conexão.",
     "unknown": "Não foi possível concluir a ação. Tente novamente.",
-    "validationFailed": "Confira os dados informados e tente novamente."
+    "validationFailed": "Confira os dados informados e tente novamente.",
+    "sessionNotDeletable": "Não é possível excluir uma sessão em processamento. Tente de novo quando a análise terminar."
   },
   "toasts": {
     "label": "Notificações do sistema"
@@ -49,6 +50,16 @@
       "description": "Para começar uma nova sessão, a atual será encerrada e não poderá ser retomada.",
       "return": "Voltar para a sessão",
       "abandon": "Abandonar e começar outra"
+    },
+    "sessionActions": {
+      "label": "Ações de {session}",
+      "delete": "Excluir"
+    },
+    "deleteSessionDialog": {
+      "title": "Excluir esta sessão?",
+      "description": "A sessão “{session}” e a análise dela serão apagadas para sempre, e a sessão não volta para a sua cota.",
+      "cancel": "Cancelar",
+      "confirm": "Excluir sessão"
     }
   }
 }

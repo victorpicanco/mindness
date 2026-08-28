@@ -17,13 +17,19 @@ interface AuthenticatedSessionShellProps extends AuthenticatedShellProps {
 
 type AuthenticatedSessionShellViewProps = AuthenticatedSessionShellProps & {
   readonly abandonSession: (sessionId: string) => Promise<void>
+  readonly deleteSession: (sessionId: string) => Promise<void>
 }
 
 type SessionNavigationShellProps = AuthenticatedShellProps & {
   readonly abandonSession?: ((sessionId: string) => Promise<void>) | undefined
+  readonly deleteSession?: ((sessionId: string) => Promise<void>) | undefined
 }
 
-function SessionNavigationShell({ abandonSession, ...props }: SessionNavigationShellProps) {
+function SessionNavigationShell({
+  abandonSession,
+  deleteSession,
+  ...props
+}: SessionNavigationShellProps) {
   const status = usePracticeSessionStore((state) => state.status)
   const reset = usePracticeSessionStore((state) => state.reset)
   const shouldConfirmSessionNavigation = status === 'recording' || status === 'uploading'
@@ -34,10 +40,14 @@ function SessionNavigationShell({ abandonSession, ...props }: SessionNavigationS
     shouldConfirmSessionNavigation,
   }
 
-  return abandonSession === undefined ? (
+  return abandonSession === undefined || deleteSession === undefined ? (
     <AuthenticatedShell {...shellProps} />
   ) : (
-    <AuthenticatedShellView {...shellProps} abandonSession={abandonSession} />
+    <AuthenticatedShellView
+      {...shellProps}
+      abandonSession={abandonSession}
+      deleteSession={deleteSession}
+    />
   )
 }
 
@@ -54,12 +64,17 @@ export function AuthenticatedSessionShell({
 
 export function AuthenticatedSessionShellView({
   abandonSession,
+  deleteSession,
   initialPracticeSessionState,
   ...props
 }: AuthenticatedSessionShellViewProps) {
   return (
     <PracticeSessionProvider initialState={initialPracticeSessionState}>
-      <SessionNavigationShell {...props} abandonSession={abandonSession} />
+      <SessionNavigationShell
+        {...props}
+        abandonSession={abandonSession}
+        deleteSession={deleteSession}
+      />
     </PracticeSessionProvider>
   )
 }

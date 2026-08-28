@@ -38,6 +38,7 @@ describe('AuthenticatedSessionShell', () => {
             <AuthenticatedSessionShellView
               abandonSession={abandonSession}
               activeSessionId={SESSION_ID}
+              deleteSession={() => Promise.resolve()}
               initialIsExpanded
               initialPracticeSessionState={{
                 serverTimeOffsetMs: 0,

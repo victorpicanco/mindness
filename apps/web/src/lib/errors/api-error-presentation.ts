@@ -17,6 +17,7 @@ export type ApiErrorMessageKey =
   | 'auth.errors.sessionExpired'
   | 'auth.errors.signUpNotAllowed'
   | 'common.errors.network'
+  | 'common.errors.sessionNotDeletable'
   | 'common.errors.unknown'
   | 'common.errors.validationFailed'
   | 'home.practice.errors.practiceNotAllowed'
@@ -102,6 +103,10 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   'sessions.PRACTICE_NOT_ALLOWED': {
     messageKey: 'home.practice.errors.practiceNotAllowed',
     presentation: 'inline',
+  },
+  'sessions.SESSION_NOT_DELETABLE': {
+    messageKey: 'common.errors.sessionNotDeletable',
+    presentation: 'toast',
   },
   'sessions.SESSION_NOT_IN_PROGRESS': {
     messageKey: 'home.research.sessionNotInProgress',

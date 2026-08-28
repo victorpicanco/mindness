@@ -5,7 +5,7 @@ import type { ComponentPropsWithRef, MouseEvent, ReactNode } from 'react'
 import { Icon } from '@/components/ui/icon'
 import { cn } from '@/lib/ui/class-names'
 
-import type { SidebarNavigationItem, SidebarSessionGroup } from './types'
+import type { SidebarNavigationItem, SidebarSessionGroup, SidebarSessionItem } from './types'
 
 const sidebarStyles = cva('flex-col overflow-hidden border-divider p-3', {
   variants: {
@@ -33,7 +33,7 @@ const navigationLinkStyles = cva(
 )
 
 const sessionLinkStyles = cva(
-  'flex h-9 items-center rounded-lg px-3 text-[0.875rem] font-normal text-text-muted transition-colors hover:bg-input hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text',
+  'flex h-9 items-center rounded-lg px-3 text-[0.875rem] font-normal text-text-muted transition-colors group-hover:bg-input group-hover:text-text hover:bg-input hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text',
   {
     variants: {
       isActive: {
@@ -43,6 +43,15 @@ const sessionLinkStyles = cva(
     },
   },
 )
+
+const sessionLabelStyles = cva('min-w-0 flex-1', {
+  variants: {
+    hasAction: {
+      true: 'overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,#000_calc(100%-2.25rem),transparent)]',
+      false: 'truncate',
+    },
+  },
+})
 
 type SidebarProps = ComponentPropsWithRef<'aside'> & VariantProps<typeof sidebarStyles>
 
@@ -141,6 +150,7 @@ interface SidebarSessionGroupsProps {
   readonly onNavigate?:
     | ((item: SidebarSessionGroup['items'][number], event: MouseEvent<HTMLAnchorElement>) => void)
     | undefined
+  readonly renderItemAction?: ((item: SidebarSessionItem) => ReactNode) | undefined
 }
 
 export function SidebarSessionGroups({
@@ -148,6 +158,7 @@ export function SidebarSessionGroups({
   groups,
   label,
   onNavigate,
+  renderItemAction,
 }: SidebarSessionGroupsProps) {
   if (groups.length === 0) return null
 
@@ -167,15 +178,25 @@ export function SidebarSessionGroups({
 
           <ul aria-labelledby={`sidebar-session-group-${group.key}`} className="flex flex-col">
             {group.items.map((item) => (
-              <li key={item.sessionId}>
+              <li className="group relative" key={item.sessionId}>
                 <Link
                   aria-current={item.href === activeHref ? 'page' : undefined}
                   className={sessionLinkStyles({ isActive: item.href === activeHref })}
                   href={item.href}
                   onClick={(event) => onNavigate?.(item, event)}
                 >
-                  <span className="truncate">{item.label}</span>
+                  <span
+                    className={sessionLabelStyles({ hasAction: renderItemAction !== undefined })}
+                  >
+                    {item.label}
+                  </span>
                 </Link>
+
+                {renderItemAction === undefined ? null : (
+                  <span className="absolute inset-y-0 right-1.5 flex items-center">
+                    {renderItemAction(item)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

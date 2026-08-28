@@ -128,4 +128,11 @@ describe('describeApiError', () => {
       presentation: 'toast',
     })
   })
+
+  it('raises a session that is still processing as a toast on the deletion attempt', () => {
+    expect(describeApiError('sessions.SESSION_NOT_DELETABLE')).toEqual({
+      messageKey: 'common.errors.sessionNotDeletable',
+      presentation: 'toast',
+    })
+  })
 })

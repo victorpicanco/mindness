@@ -46,6 +46,7 @@ function renderShell(
   activeSessionId?: string,
   shouldConfirmSessionNavigation = false,
   abandonSession: (sessionId: string) => Promise<void> = () => Promise.resolve(),
+  deleteSession: (sessionId: string) => Promise<void> = () => Promise.resolve(),
 ) {
   const router = {
     back: vi.fn(),
@@ -62,6 +63,7 @@ function renderShell(
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
           <AuthenticatedShellView
             abandonSession={abandonSession}
+            deleteSession={deleteSession}
             {...(activeSessionId === undefined ? {} : { activeSessionId })}
             initialIsExpanded={isInitiallyExpanded}
             preferenceCookieName="mindness-sidebar-expanded"
@@ -78,6 +80,15 @@ function renderShell(
   )
 
   return router
+}
+
+function openSessionDeletion() {
+  const sessions = within(screen.getByRole('complementary')).getByRole('navigation', {
+    name: 'Sessões',
+  })
+
+  fireEvent.click(within(sessions).getByRole('button', { name: 'Ações de Notícias do dia' }))
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }))
 }
 
 describe('AuthenticatedShell', () => {
@@ -251,6 +262,134 @@ describe('AuthenticatedShell', () => {
     expect(trigger).toHaveFocus()
   })
 
+  it('opens the actions of a session from its own row in the sidebar', () => {
+    renderShell(<p>Content</p>)
+
+    const sessions = within(screen.getByRole('complementary')).getByRole('navigation', {
+      name: 'Sessões',
+    })
+    const trigger = within(sessions).getByRole('button', { name: 'Ações de Notícias do dia' })
+
+    fireEvent.click(trigger)
+
+    expect(screen.getByRole('menuitem', { name: 'Excluir' })).toBeInTheDocument()
+  })
+
+  it('asks for confirmation before deleting a session', () => {
+    const deleteSession = vi.fn(() => Promise.resolve())
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      undefined,
+      () => undefined,
+      undefined,
+      false,
+      undefined,
+      deleteSession,
+    )
+
+    openSessionDeletion()
+
+    expect(screen.getByRole('dialog', { name: 'Excluir esta sessão?' })).toHaveTextContent(
+      'Notícias do dia',
+    )
+    expect(deleteSession).not.toHaveBeenCalled()
+  })
+
+  it('deletes the confirmed session and refreshes the sidebar list', async () => {
+    const deleteSession = vi.fn(() => Promise.resolve())
+    const router = renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      undefined,
+      () => undefined,
+      undefined,
+      false,
+      undefined,
+      deleteSession,
+    )
+
+    openSessionDeletion()
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir sessão' }))
+
+    await vi.waitFor(() =>
+      expect(deleteSession).toHaveBeenCalledWith('7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'),
+    )
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Excluir esta sessão?' }),
+      ).not.toBeInTheDocument(),
+    )
+
+    expect(router.refresh).toHaveBeenCalledOnce()
+    expect(router.push).not.toHaveBeenCalled()
+  })
+
+  it('leaves the analysis of the session it just deleted', async () => {
+    const deleteSession = vi.fn(() => Promise.resolve())
+    const router = renderShell(
+      <p>Content</p>,
+      true,
+      '/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+      undefined,
+      undefined,
+      () => undefined,
+      undefined,
+      false,
+      undefined,
+      deleteSession,
+    )
+
+    openSessionDeletion()
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir sessão' }))
+
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith('/'))
+
+    expect(router.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('reports a session that is still processing and keeps the dialog open', async () => {
+    const { toast } = await import('sonner')
+    const deleteSession = vi.fn(() =>
+      Promise.reject(
+        new ApiClientError({
+          code: 'sessions.SESSION_NOT_DELETABLE',
+          issues: null,
+          message: 'Session cannot be deleted',
+          requestId: null,
+        }),
+      ),
+    )
+    const router = renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      undefined,
+      () => undefined,
+      undefined,
+      false,
+      undefined,
+      deleteSession,
+    )
+
+    openSessionDeletion()
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir sessão' }))
+
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Não é possível excluir uma sessão em processamento. Tente de novo quando a análise terminar.',
+      ),
+    )
+
+    expect(screen.getByRole('dialog', { name: 'Excluir esta sessão?' })).toBeInTheDocument()
+    expect(router.refresh).not.toHaveBeenCalled()
+  })
+
   it('groups the server-synchronized sessions by day, under a translated heading', () => {
     renderShell(<p>Content</p>)
 
@@ -407,6 +546,7 @@ describe('AuthenticatedShell', () => {
           <NextIntlClientProvider locale="pt-BR" messages={messages}>
             <AuthenticatedShellView
               abandonSession={() => Promise.resolve()}
+              deleteSession={() => Promise.resolve()}
               initialIsExpanded
               preferenceCookieName="mindness-sidebar-expanded"
               signOut={() => undefined}

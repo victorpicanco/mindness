@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { Sidebar, SidebarHeader, SidebarNavigation, SidebarSessionGroups } from './index'
-import type { SidebarNavigationItem, SidebarSessionGroup } from './types'
+import type { SidebarNavigationItem, SidebarSessionGroup, SidebarSessionItem } from './types'
 
 const groups: readonly SidebarSessionGroup[] = [
   {
@@ -20,13 +21,18 @@ const groups: readonly SidebarSessionGroup[] = [
   },
 ]
 
-function renderSessionGroups(activeHref: string | null = null, onNavigate?: () => void) {
+function renderSessionGroups(
+  activeHref: string | null = null,
+  onNavigate?: () => void,
+  renderItemAction?: (item: SidebarSessionItem) => ReactNode,
+) {
   return render(
     <SidebarSessionGroups
       activeHref={activeHref}
       groups={groups}
       label="Sessões"
       onNavigate={onNavigate}
+      renderItemAction={renderItemAction}
     />,
   )
 }
@@ -217,6 +223,43 @@ describe('SidebarSessionGroups', () => {
 
     expect(link).toHaveAttribute('href', '/sessions/session-1')
     expect(within(link).getByText('Notícias do dia')).toHaveClass('truncate')
+  })
+
+  it('renders the action of each session beside its link, never inside it', () => {
+    renderSessionGroups(null, undefined, (item) => (
+      <button type="button">{`Ações de ${item.label}`}</button>
+    ))
+
+    const action = screen.getByRole('button', { name: 'Ações de Notícias do dia' })
+    const link = screen.getByRole('link', { name: 'Notícias do dia' })
+
+    expect(screen.getAllByRole('button')).toHaveLength(3)
+    expect(link).not.toContainElement(action)
+    expect(action.parentElement).toHaveClass('absolute', 'right-1.5')
+  })
+
+  it('keeps the row highlighted while the pointer is over the action beside it', () => {
+    renderSessionGroups(null, undefined, () => <button type="button">Ações</button>)
+
+    const link = screen.getByRole('link', { name: 'Notícias do dia' })
+
+    expect(link.parentElement).toHaveClass('group')
+    expect(link).toHaveClass('group-hover:bg-input', 'group-hover:text-text')
+  })
+
+  it('fades a long title under the action instead of cutting it with an ellipsis', () => {
+    renderSessionGroups(null, undefined, () => <button type="button">Ações</button>)
+
+    const label = within(screen.getByRole('link', { name: 'Notícias do dia' })).getByText(
+      'Notícias do dia',
+    )
+
+    expect(label).not.toHaveClass('truncate')
+    expect(label).toHaveClass(
+      'overflow-hidden',
+      'whitespace-nowrap',
+      '[mask-image:linear-gradient(to_right,#000_calc(100%-2.25rem),transparent)]',
+    )
   })
 
   it('highlights only the session of the active path', () => {

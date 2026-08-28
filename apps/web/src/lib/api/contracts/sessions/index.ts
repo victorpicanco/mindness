@@ -65,6 +65,8 @@ export const confirmAudioUploadSchema = z.null()
 
 export const abandonSessionSchema = z.null()
 
+export const deleteSessionSchema = z.null()
+
 export const microphonePermissionDeniedSchema = z.null()
 
 export const recordingStartedSchema = z.object({

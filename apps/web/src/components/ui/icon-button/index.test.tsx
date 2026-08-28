@@ -63,6 +63,15 @@ describe('IconButton', () => {
     )
   })
 
+  it('renders a compact icon button that fits inside a list row', () => {
+    render(<IconButton icon="more-vertical" label="Ações da sessão" size="sm" />)
+
+    expect(screen.getByRole('button', { name: 'Ações da sessão' })).toHaveClass(
+      'size-7',
+      'text-base',
+    )
+  })
+
   it('renders a solid icon button in the requested size', () => {
     render(<IconButton icon="mic-01" label="Iniciar gravação" size="lg" variant="solid" />)
 

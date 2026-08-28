@@ -12,6 +12,7 @@ const iconButtonStyles = cva(
         solid: 'rounded-full bg-text text-surface hover:opacity-85',
       },
       size: {
+        sm: 'size-7 text-base',
         md: 'size-10 text-xl',
         lg: 'size-12 text-2xl',
       },

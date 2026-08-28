@@ -31,6 +31,10 @@ function IconDrawing({ name }: { readonly name: IconName }) {
           <path d="M12 8v4l3 2" />
         </>
       )
+    case 'delete-02':
+      return (
+        <path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0 .8 12.1A2 2 0 0 0 8.8 21h6.4a2 2 0 0 0 2-1.9L18 7M10 11v6m4-6v6" />
+      )
     case 'logout-01':
       return <path d="M10 5H6v14h4m4-11 4 4-4 4m4-4H9" />
     case 'menu-01':
@@ -40,6 +44,14 @@ function IconDrawing({ name }: { readonly name: IconName }) {
         <>
           <rect height="11" rx="3" width="6" x="9" y="3" />
           <path d="M6 11a6 6 0 0 0 12 0M12 17v4m-3 0h6" />
+        </>
+      )
+    case 'more-vertical':
+      return (
+        <>
+          <circle cx="12" cy="5" fill="currentColor" r="1.4" stroke="none" />
+          <circle cx="12" cy="12" fill="currentColor" r="1.4" stroke="none" />
+          <circle cx="12" cy="19" fill="currentColor" r="1.4" stroke="none" />
         </>
       )
     case 'pause':

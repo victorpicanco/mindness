@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { IconButton } from '@/components/ui/icon-button'
 import { Icon } from '@/components/ui/icon'
+import { Menu } from '@/components/ui/menu'
 import {
   Sidebar,
   SidebarHeader,
@@ -18,11 +19,13 @@ import {
   SidebarSessionGroups,
   type SidebarNavigationItem,
   type SidebarSessionGroup,
+  type SidebarSessionItem,
 } from '@/components/ui/sidebar'
 import { AUTHENTICATED_NAVIGATION_ITEMS } from '@/lib/navigation/authenticated-navigation'
 import { sessionPath } from '@/lib/navigation/session-routes'
 import type { SessionDayGroup, SessionDayHeading } from '@/lib/sessions/session-day-groups'
 import { abandonSession as abandonSessionRequest } from '@/lib/api/abandon-session'
+import { deleteSession as deleteSessionRequest } from '@/lib/api/delete-session'
 import { apiErrorDetails } from '@/lib/api/api-error'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
 import { cn } from '@/lib/ui/class-names'
@@ -41,6 +44,7 @@ export interface AuthenticatedShellProps {
 
 type AuthenticatedShellViewProps = AuthenticatedShellProps & {
   readonly abandonSession: (sessionId: string) => Promise<void>
+  readonly deleteSession: (sessionId: string) => Promise<void>
 }
 
 const ONE_YEAR_IN_SECONDS = 31_536_000
@@ -90,6 +94,7 @@ interface SidebarBodyProps {
     item: SidebarSessionGroup['items'][number],
     event: MouseEvent<HTMLAnchorElement>,
   ) => void
+  readonly renderSessionAction: (item: SidebarSessionItem) => ReactNode
   readonly sessionGroups: readonly SidebarSessionGroup[]
   readonly showSessionGroups: boolean
   readonly signOut: SignOutAction
@@ -104,6 +109,7 @@ function SidebarBody({
   navigationItems,
   onPrimaryNavigate,
   onSessionNavigate,
+  renderSessionAction,
   sessionGroups,
   showSessionGroups,
   signOut,
@@ -123,6 +129,7 @@ function SidebarBody({
           groups={sessionGroups}
           label={labels.sessions}
           onNavigate={onSessionNavigate}
+          renderItemAction={renderSessionAction}
         />
       ) : null}
       <SignOutControl isExpanded={isExpanded} label={labels.signOut} signOut={signOut} />
@@ -131,13 +138,20 @@ function SidebarBody({
 }
 
 export function AuthenticatedShell({ ...props }: AuthenticatedShellProps) {
-  return <AuthenticatedShellView {...props} abandonSession={abandonSessionRequest} />
+  return (
+    <AuthenticatedShellView
+      {...props}
+      abandonSession={abandonSessionRequest}
+      deleteSession={deleteSessionRequest}
+    />
+  )
 }
 
 export function AuthenticatedShellView({
   abandonSession,
   activeSessionId,
   children,
+  deleteSession,
   header,
   initialIsExpanded,
   onSessionAbandoned,
@@ -153,6 +167,10 @@ export function AuthenticatedShellView({
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(initialIsExpanded)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isActiveSessionDialogOpen, setIsActiveSessionDialogOpen] = useState(false)
+  const [sessionPendingDeletion, setSessionPendingDeletion] = useState<SidebarSessionItem | null>(
+    null,
+  )
+  const [isDeletingSession, setIsDeletingSession] = useState(false)
   const mobileToggleRef = useRef<HTMLButtonElement>(null)
   const mobileCloseRef = useRef<HTMLButtonElement>(null)
   const sessionNavigationTriggerRef = useRef<HTMLAnchorElement>(null)
@@ -269,6 +287,47 @@ export function AuthenticatedShellView({
     router.refresh()
   }
 
+  function renderSessionAction(item: SidebarSessionItem) {
+    return (
+      <Menu
+        actions={[
+          {
+            icon: 'delete-02',
+            isDestructive: true,
+            label: t('sessionActions.delete'),
+            onSelect: () => setSessionPendingDeletion(item),
+          },
+        ]}
+        triggerIcon="more-vertical"
+        triggerLabel={t('sessionActions.label', { session: item.label })}
+      />
+    )
+  }
+
+  async function confirmSessionDeletion() {
+    if (sessionPendingDeletion === null) return
+
+    const { href, sessionId } = sessionPendingDeletion
+
+    setIsDeletingSession(true)
+
+    try {
+      await deleteSession(sessionId)
+    } catch (error: unknown) {
+      showApiErrorToast(apiErrorDetails(error), translate)
+
+      return
+    } finally {
+      setIsDeletingSession(false)
+    }
+
+    setSessionPendingDeletion(null)
+
+    if (activeHref === href) router.push('/')
+    // The sidebar list is rendered from the layout's fetch, which only a refresh redoes.
+    router.refresh()
+  }
+
   return (
     <div className="flex h-dvh bg-surface text-text">
       <div
@@ -319,6 +378,7 @@ export function AuthenticatedShellView({
             navigationItems={navigationItems}
             onPrimaryNavigate={handlePrimaryNavigation}
             onSessionNavigate={handleSessionNavigation}
+            renderSessionAction={renderSessionAction}
             sessionGroups={sessionSidebarGroups}
             showSessionGroups={isSidebarExpanded}
             signOut={signOut}
@@ -394,6 +454,7 @@ export function AuthenticatedShellView({
               handleSessionNavigation(item, event)
               closeMobileSidebar()
             }}
+            renderSessionAction={renderSessionAction}
             sessionGroups={sessionSidebarGroups}
             showSessionGroups
             signOut={signOut}
@@ -412,6 +473,26 @@ export function AuthenticatedShellView({
         </Button>
         <Button onClick={() => void abandonActiveSession()} variant="destructive">
           {t('activeSessionDialog.abandon')}
+        </Button>
+      </Dialog>
+
+      <Dialog
+        description={t('deleteSessionDialog.description', {
+          session: sessionPendingDeletion?.label ?? '',
+        })}
+        onClose={() => setSessionPendingDeletion(null)}
+        open={sessionPendingDeletion !== null}
+        title={t('deleteSessionDialog.title')}
+      >
+        <Button onClick={() => setSessionPendingDeletion(null)} variant="secondary">
+          {t('deleteSessionDialog.cancel')}
+        </Button>
+        <Button
+          isLoading={isDeletingSession}
+          onClick={() => void confirmSessionDeletion()}
+          variant="destructive"
+        >
+          {t('deleteSessionDialog.confirm')}
         </Button>
       </Dialog>
     </div>

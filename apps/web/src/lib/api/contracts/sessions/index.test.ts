@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   activeSessionSchema,
+  deleteSessionSchema,
   quotaSchema,
   recordingStartedSchema,
   startedSessionSchema,
@@ -90,5 +91,10 @@ describe('session API contracts', () => {
         },
       ]),
     ).toHaveLength(1)
+  })
+
+  it('accepts the empty body a deleted session responds with', () => {
+    expect(deleteSessionSchema.parse(null)).toBeNull()
+    expect(() => deleteSessionSchema.parse({})).toThrow()
   })
 })

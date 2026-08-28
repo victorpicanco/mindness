@@ -26,6 +26,11 @@ function renderDeadline(
       initialState={{
         serverTimeOffsetMs: NOW.getTime() - Date.now(),
         session: {
+          configuration: {
+            categorySlug: 'news',
+            difficulty: 'balanced',
+            searchWindowMinutes: 3,
+          } as const,
           createdAt: NOW.toISOString(),
           expiresAt: new Date(NOW.getTime() + 1_000).toISOString(),
           recordingStartedAt: status === 'awaiting-recording' ? null : NOW.toISOString(),

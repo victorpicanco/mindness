@@ -103,10 +103,13 @@ export function PracticeConfigForm({
 
   const mutation = useMutation({
     mutationFn: startSession,
-    onSuccess: (session) => {
+    onSuccess: (session, startedConfiguration) => {
       const { serverNow, ...practiceSession } = session
 
-      startResearching({ ...practiceSession, recordingStartedAt: null }, serverNow)
+      startResearching(
+        { ...practiceSession, configuration: startedConfiguration, recordingStartedAt: null },
+        serverNow,
+      )
       onSessionStarted?.(session.sessionId)
     },
   })

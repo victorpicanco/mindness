@@ -71,20 +71,22 @@ export function ResearchTimer({ logAudioFailure = logCountdownAudioFailure }: Re
     return () => window.clearInterval(timer)
   }, [logAudioFailure, openRecordingWindow, serverTimeOffsetMs, session, status])
 
-  if (session === null || status !== 'researching') return null
+  if (session === null) return null
 
   return (
-    <section aria-labelledby="research-theme" className="m-auto text-center">
-      <p className="text-text-muted">{t('eyebrow')}</p>
+    <section aria-labelledby="research-theme" className="mt-2">
       <h1
-        className="font-(family-name:--font-buenard) mt-2 text-3xl leading-tight tracking-tight sm:text-4xl"
+        className="font-(family-name:--font-buenard) text-2xl leading-tight tracking-tight sm:text-3xl"
         id="research-theme"
       >
         {session.themeTitle}
       </h1>
-      <p aria-live="polite" className="mt-8 text-5xl tabular-nums" role="timer">
-        {formatCountdown(seconds)}
-      </p>
+      <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface px-4 py-3">
+        <span className="text-sm text-text-muted">{t('eyebrow')}</span>
+        <p aria-live="polite" className="text-2xl font-medium tabular-nums" role="timer">
+          {formatCountdown(seconds)}
+        </p>
+      </div>
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- The warning is a non-speech tone with no content to caption. */}
       <audio aria-hidden="true" preload="auto" ref={audioRef} src={WARNING_AUDIO_SOURCE} />
     </section>

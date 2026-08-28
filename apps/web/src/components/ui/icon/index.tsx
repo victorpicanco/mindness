@@ -42,8 +42,17 @@ function IconDrawing({ name }: { readonly name: IconName }) {
           <path d="M6 11a6 6 0 0 0 12 0M12 17v4m-3 0h6" />
         </>
       )
+    case 'pause':
+      return (
+        <>
+          <rect fill="currentColor" height="12" rx="1" stroke="none" width="4" x="7" y="6" />
+          <rect fill="currentColor" height="12" rx="1" stroke="none" width="4" x="13" y="6" />
+        </>
+      )
     case 'pencil-edit-02':
       return <path d="m14 5 5 5M4 20l4.5-1 10-10a2 2 0 0 0-5-5l-10 10L4 20Z" />
+    case 'play':
+      return <path d="M8.5 5.6 19 12 8.5 18.4V5.6Z" fill="currentColor" stroke="none" />
     case 'sidebar-left':
       return (
         <>

@@ -8,9 +8,7 @@ import {
 import { ApiClientError } from '@/lib/api/client-error'
 import { apiFetch } from '@/lib/api/server-client'
 
-import { ProcessingStatus } from '@/components/practice/processing-status'
-import { RecordingStart } from '@/components/practice/recording-start'
-import { ResearchTimer } from '@/components/practice/research-timer'
+import { SessionConversation } from '@/components/practice/session-conversation'
 import { SessionSummary } from '@/components/practice/session-summary'
 
 import { Analysis } from './analysis'
@@ -58,8 +56,8 @@ export function createSessionPage(fetchFromApi: ApiFetch, renderNotFound: NotFou
         const analysis = await readAnalysis(fetchFromApi, sessionId, renderNotFound)
 
         return (
-          <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
-            <Analysis analysis={analysis} />
+          <div className="flex min-h-0 flex-1 flex-col bg-surface">
+            <Analysis analysis={analysis} {...(session === undefined ? {} : { session })} />
           </div>
         )
       }
@@ -80,12 +78,8 @@ export function createSessionPage(fetchFromApi: ApiFetch, renderNotFound: NotFou
     }
 
     return (
-      <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
-        <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
-          <ResearchTimer />
-          <RecordingStart />
-          <ProcessingStatus />
-        </div>
+      <div className="flex min-h-0 flex-1 flex-col bg-surface">
+        <SessionConversation />
       </div>
     )
   }

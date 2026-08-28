@@ -8,6 +8,8 @@ const sessionConfigurationSchema = z.object({
   searchWindowMinutes: z.union([z.literal(3), z.literal(4), z.literal(5)]),
 })
 
+export type SessionConfiguration = z.output<typeof sessionConfigurationSchema>
+
 const sessionHistoryItemSchema = z.object({
   bestOfDay: z.boolean(),
   categorySlug: z.string(),

@@ -12,6 +12,10 @@ import { bffFetch } from '@/lib/api/bff-client'
 import { sessionAnalysisAvailabilitySchema } from '@/lib/api/contracts/sessions'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
+import { ShinyText } from '@/components/ui/shiny-text'
+
+import { SessionMessage } from '@/components/practice/session-message'
+
 const DEFAULT_POLL_INTERVAL_MS = 2_000
 
 type TerminalFailureMessage = 'failed' | 'timeout'
@@ -38,11 +42,13 @@ function terminalFailure(error: unknown): TerminalFailureMessage | null {
 
 interface ProcessingStatusProps {
   readonly fetchAnalysis?: FetchSessionAnalysis
+  readonly holdUntilResponse?: boolean
   readonly pollIntervalMs?: number
 }
 
 export function ProcessingStatus({
   fetchAnalysis = fetchSessionAnalysis,
+  holdUntilResponse = false,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
 }: ProcessingStatusProps) {
   const [failure, setFailure] = useState<TerminalFailureMessage | null>(null)
@@ -50,6 +56,7 @@ export function ProcessingStatus({
   const status = usePracticeSessionStore((state) => state.status)
 
   if (failure !== null) return <ProcessingFailure message={failure} />
+  if (status === 'done' && holdUntilResponse) return <AnalysisWaiting />
   if (status !== 'processing' || session === null) return null
 
   return (
@@ -62,21 +69,32 @@ export function ProcessingStatus({
   )
 }
 
-function ProcessingFailure({ message }: { readonly message: TerminalFailureMessage }) {
+function AnalysisWaiting() {
   const t = useTranslations('home.processing')
 
   return (
-    <section className="m-auto flex max-w-md flex-col items-center gap-5 text-center">
-      <p className="text-text-muted" role="alert">
-        {t(message)}
-      </p>
-      <Link
-        className="inline-flex min-h-10 items-center justify-center rounded-full bg-text px-4 text-sm font-medium text-surface hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
-        href="/history"
-      >
-        {t('historyLink')}
-      </Link>
-    </section>
+    <p className="text-xs" role="status">
+      <ShinyText text={t('waiting')} />
+    </p>
+  )
+}
+
+function ProcessingFailure({ message }: { readonly message: TerminalFailureMessage }) {
+  const t = useTranslations('home.processing')
+  const conversationT = useTranslations('home.conversation')
+
+  return (
+    <SessionMessage label={conversationT('assistantMessageLabel')} sender="assistant">
+      <section className="flex max-w-md flex-col items-start gap-4">
+        <p role="alert">{t(message)}</p>
+        <Link
+          className="inline-flex min-h-10 items-center justify-center rounded-full bg-text px-4 text-sm font-medium text-surface hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
+          href="/history"
+        >
+          {t('historyLink')}
+        </Link>
+      </section>
+    </SessionMessage>
   )
 }
 
@@ -93,8 +111,8 @@ function AnalysisPoll({
   pollIntervalMs,
   sessionId,
 }: AnalysisPollProps) {
-  const t = useTranslations('home.processing')
   const router = useRouter()
+  const completeAnalysis = usePracticeSessionStore((state) => state.completeAnalysis)
   const reset = usePracticeSessionStore((state) => state.reset)
   const settledRef = useRef(false)
   const query = useQuery({
@@ -121,15 +139,9 @@ function AnalysisPoll({
     if (query.data === undefined) return
 
     settledRef.current = true
-    reset()
+    completeAnalysis()
     router.refresh()
-  }, [onTerminalFailure, query.data, query.error, reset, router])
+  }, [completeAnalysis, onTerminalFailure, query.data, query.error, reset, router])
 
-  return (
-    <section className="m-auto flex flex-col items-center gap-3 text-center">
-      <p className="text-text-muted" role="status">
-        {t('waiting')}
-      </p>
-    </section>
-  )
+  return <AnalysisWaiting />
 }

@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { ShinyText } from '@/components/ui/shiny-text'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { bffFetch } from '@/lib/api/bff-client'
 import { apiErrorDetails } from '@/lib/api/api-error'
@@ -64,9 +65,6 @@ function uploadFailure(error: unknown): UploadFailure {
   return 'audio-upload'
 }
 
-const THEME_CLASSES =
-  'font-(family-name:--font-buenard) text-4xl leading-tight tracking-tight text-balance sm:text-5xl'
-
 async function requestBrowserMicrophone(): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia({ audio: true })
 }
@@ -117,14 +115,6 @@ async function browserAudioRecordingSource(
   }
 }
 
-function deadlineTime(expiresAt: string): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit',
-  }).format(new Date(expiresAt))
-}
-
 export function RecordingStart({
   audioLevelSource,
   abandonSessionOnPageHide = abandonSessionOnPageHideRequest,
@@ -148,7 +138,6 @@ export function RecordingStart({
   const serverTimeOffsetMs = usePracticeSessionStore((state) => state.serverTimeOffsetMs)
   const [failure, setFailure] = useState<StartFailure | null>(null)
   const [uploadFailureReason, setUploadFailureReason] = useState<UploadFailure | null>(null)
-  const [deadline, setDeadline] = useState('')
   const captureRef = useRef<AudioRecordingSession | null>(null)
 
   useSessionDeadline({ onExpired: () => router.refresh() })
@@ -212,18 +201,6 @@ export function RecordingStart({
   })
 
   useEffect(() => {
-    let cancelled = false
-
-    queueMicrotask(() => {
-      if (!cancelled) setDeadline(session === null ? '' : deadlineTime(session.expiresAt))
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [session])
-
-  useEffect(() => {
     if (session === null || (status !== 'recording' && status !== 'uploading')) return
     const sessionId = session.sessionId
 
@@ -276,51 +253,50 @@ export function RecordingStart({
 
   if (status === 'expired') {
     return (
-      <section className="m-auto text-center" role="alert">
-        <p className="text-text-muted">
-          {failure === 'permission-denied' ? t('microphonePermissionDenied') : t('expired')}
-        </p>
-      </section>
+      <div>
+        {failure === 'permission-denied' ? (
+          <p className="mb-3 text-center text-sm text-error" role="alert">
+            {t('microphonePermissionDenied')}
+          </p>
+        ) : null}
+        <SessionRecorder
+          isDisabled
+          isRecording={false}
+          onLimitReached={() => undefined}
+          onToggleRecording={() => undefined}
+        />
+      </div>
     )
   }
 
   if (status === 'recording') {
     return (
-      <section aria-label={t('recordingActiveLabel')} className="flex min-h-0 flex-1 flex-col">
-        <div className="mx-auto flex min-h-0 max-w-2xl flex-1 items-center justify-center">
-          <h1 className={`${THEME_CLASSES} text-center`}>{session.themeTitle}</h1>
-        </div>
-        <div className="mx-auto w-full max-w-3xl">
-          <SessionRecorder
-            isDisabled={false}
-            isRecording
-            onLimitReached={() => {
-              void finishRecording()
-            }}
-            onToggleRecording={() => {
-              void finishRecording()
-            }}
-            serverTimeOffsetMs={serverTimeOffsetMs}
-            {...(audioLevelSource === undefined ? {} : { source: audioLevelSource })}
-            {...(session.recordingStartedAt === null
-              ? {}
-              : { startedAt: session.recordingStartedAt })}
-          />
-          <VisuallyHidden aria-live="polite">{t('recordingInProgress')}</VisuallyHidden>
-        </div>
-      </section>
+      <div aria-label={t('recordingActiveLabel')}>
+        <SessionRecorder
+          isDisabled={false}
+          isRecording
+          onLimitReached={() => {
+            void finishRecording()
+          }}
+          onToggleRecording={() => {
+            void finishRecording()
+          }}
+          serverTimeOffsetMs={serverTimeOffsetMs}
+          {...(audioLevelSource === undefined ? {} : { source: audioLevelSource })}
+          {...(session.recordingStartedAt === null
+            ? {}
+            : { startedAt: session.recordingStartedAt })}
+        />
+        <VisuallyHidden aria-live="polite">{t('recordingInProgress')}</VisuallyHidden>
+      </div>
     )
   }
 
   if (status === 'uploading') {
     return (
-      <section
-        aria-label={t('uploadingLabel')}
-        className="m-auto flex flex-col items-center gap-4 text-center"
-      >
-        <h1 className={THEME_CLASSES}>{session.themeTitle}</h1>
+      <section aria-label={t('uploadingLabel')} className="text-center">
         {submitMutation.isError && uploadFailureReason !== null ? (
-          <div className="flex flex-col items-center gap-3">
+          <div className="mb-3 flex flex-col items-center gap-3">
             <p className="text-sm text-error" role="alert">
               {uploadFailureMessage(uploadFailureReason)}
             </p>
@@ -335,12 +311,36 @@ export function RecordingStart({
               </Button>
             </div>
           </div>
-        ) : (
-          <p className="text-text-muted" role="status">
-            {t('uploading')}
-          </p>
-        )}
+        ) : null}
+        <SessionRecorder
+          isDisabled
+          isRecording={false}
+          onLimitReached={() => undefined}
+          onToggleRecording={() => undefined}
+        />
       </section>
+    )
+  }
+
+  if (status === 'processing' || status === 'done') {
+    return (
+      <SessionRecorder
+        isDisabled
+        isRecording={false}
+        onLimitReached={() => undefined}
+        onToggleRecording={() => undefined}
+      />
+    )
+  }
+
+  if (status === 'researching' || status === 'countdown-warning') {
+    return (
+      <SessionRecorder
+        isDisabled
+        isRecording={false}
+        onLimitReached={() => undefined}
+        onToggleRecording={() => undefined}
+      />
     )
   }
 
@@ -352,34 +352,26 @@ export function RecordingStart({
   }
 
   return (
-    <section aria-labelledby="recording-theme" className="flex min-h-0 flex-1 flex-col">
-      <div className="mx-auto flex min-h-0 max-w-2xl flex-1 flex-col items-center justify-center gap-8 text-center">
-        <div>
-          <p className="text-text-muted">{t('recordingEyebrow')}</p>
-          <h1 className={`${THEME_CLASSES} mt-2`} id="recording-theme">
-            {session.themeTitle}
-          </h1>
-        </div>
-        {failure === null ? null : (
-          <p className="text-sm text-error" role="alert">
-            {failureMessage(failure)}
-          </p>
-        )}
-      </div>
-      <div className="mx-auto w-full max-w-3xl">
-        <p className="mb-2 text-center text-xs text-text-muted">
-          {t('recordUntil', { time: deadline })}
+    <section>
+      {failure === null ? null : (
+        <p className="mb-3 text-center text-sm text-error" role="alert">
+          {failureMessage(failure)}
         </p>
-        <SessionRecorder
-          isDisabled={mutation.isPending}
-          isRecording={false}
-          onLimitReached={() => undefined}
-          onToggleRecording={() => {
-            setFailure(null)
-            mutation.mutate(session.sessionId)
-          }}
-        />
-      </div>
+      )}
+      {mutation.isPending ? (
+        <p className="mb-1.5 text-xs" role="status">
+          <ShinyText text={t('preparingMicrophone')} />
+        </p>
+      ) : null}
+      <SessionRecorder
+        isDisabled={mutation.isPending}
+        isRecording={false}
+        onLimitReached={() => undefined}
+        onToggleRecording={() => {
+          setFailure(null)
+          mutation.mutate(session.sessionId)
+        }}
+      />
     </section>
   )
 }

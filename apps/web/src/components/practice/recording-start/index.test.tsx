@@ -71,6 +71,11 @@ function renderRecordingStart(props: RecordingStartProps = {}) {
             initialState={{
               serverTimeOffsetMs: 0,
               session: {
+                configuration: {
+                  categorySlug: 'news',
+                  difficulty: 'balanced',
+                  searchWindowMinutes: 3,
+                } as const,
                 createdAt: NOW.toISOString(),
                 expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
                 recordingStartedAt: null,
@@ -182,19 +187,12 @@ describe('RecordingStart', () => {
 
   it('offers an enabled recording bar for the two-minute grace', async () => {
     const { container } = renderRecordingStart()
-    const deadline = new Intl.DateTimeFormat('pt-BR', {
-      hour: '2-digit',
-      hour12: false,
-      minute: '2-digit',
-    }).format(new Date(NOW.getTime() + GRACE_SECONDS * 1_000))
 
     await act(async () => {
       await Promise.resolve()
     })
 
-    expect(screen.getByRole('heading', { name: 'Comunicação clara' })).toBeInTheDocument()
     expect(screen.queryByRole('timer')).not.toBeInTheDocument()
-    expect(screen.getByText(`Inicie sua gravação até ${deadline}`)).toBeInTheDocument()
     expect(recorder()).toHaveAttribute('data-recording-state', 'idle')
     expect(container.querySelectorAll('[data-waveform="bar"]')).toHaveLength(0)
     expect(recordingButton()).toBeEnabled()
@@ -353,10 +351,7 @@ describe('RecordingStart', () => {
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('expired')
     expect(refreshes).toEqual(['refresh'])
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Sua sessão expirou porque a gravação não começou a tempo.',
-    )
-    expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
+    expect(recordingButton()).toBeDisabled()
   })
 
   it('reports the denied microphone permission, shows the instruction and expires the session', async () => {
@@ -382,7 +377,7 @@ describe('RecordingStart', () => {
       'Autorize o microfone para gravar sua apresentação.',
     )
     expect(screen.getByLabelText('practice status')).toHaveTextContent('expired')
-    expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
+    expect(recordingButton()).toBeDisabled()
   })
 
   it('moves the session to processing once the upload is confirmed', async () => {
@@ -528,8 +523,8 @@ describe('RecordingStart', () => {
       await vi.advanceTimersByTimeAsync(0)
     })
 
-    expect(screen.queryByRole('group', { name: 'Gravador de áudio' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Iniciar gravação' })).not.toBeInTheDocument()
+    expect(recorder()).toHaveAttribute('data-recording-state', 'idle')
+    expect(recordingButton()).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Parar gravação' })).not.toBeInTheDocument()
   })
 
@@ -547,6 +542,7 @@ describe('RecordingStart', () => {
     await clickRecordingButton()
 
     expect(recordingButton()).toBeDisabled()
+    expect(screen.getByText('Preparando microfone…')).toBeInTheDocument()
 
     await act(async () => {
       releaseServer?.({

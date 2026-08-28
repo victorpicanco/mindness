@@ -35,6 +35,7 @@ function practiceSessionInitialState(
   return {
     serverTimeOffsetMs: new Date(activeSession.serverNow).getTime() - Date.now(),
     session: {
+      configuration: activeSession.configuration,
       createdAt: activeSession.createdAt,
       expiresAt: activeSession.expiresAt,
       recordingStartedAt: activeSession.recordingStartedAt,

@@ -18,6 +18,11 @@ describe('PracticeSessionProvider', () => {
         initialState={{
           serverTimeOffsetMs: 0,
           session: {
+            configuration: {
+              categorySlug: 'news',
+              difficulty: 'balanced',
+              searchWindowMinutes: 3,
+            } as const,
             createdAt: '2026-08-24T12:00:00.000Z',
             expiresAt: '2026-08-24T12:05:00.000Z',
             recordingStartedAt: null,

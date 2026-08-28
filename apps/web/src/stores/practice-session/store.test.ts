@@ -3,6 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { InvalidPracticeSessionTransitionError } from './errors'
 import { createPracticeSessionStore } from './store'
 
+const SESSION_CONFIGURATION = {
+  categorySlug: 'news',
+  difficulty: 'balanced',
+  searchWindowMinutes: 3,
+} as const
+
 describe('practice session store', () => {
   afterEach(() => {
     vi.useRealTimers()
@@ -12,6 +18,7 @@ describe('practice session store', () => {
     const store = createPracticeSessionStore()
     const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
     const session = {
+      configuration: SESSION_CONFIGURATION,
       createdAt: '2026-08-24T12:00:00.000Z',
       expiresAt: '2026-08-24T12:07:00.000Z',
       recordingStartedAt: null,
@@ -60,6 +67,7 @@ describe('practice session store', () => {
 
     store.getState().startResearching(
       {
+        configuration: SESSION_CONFIGURATION,
         createdAt: '2026-08-24T12:00:00.000Z',
         expiresAt: '2026-08-24T12:07:00.000Z',
         recordingStartedAt: null,
@@ -90,6 +98,7 @@ describe('practice session store', () => {
 
     store.getState().startResearching(
       {
+        configuration: SESSION_CONFIGURATION,
         createdAt: '2026-08-24T12:00:00.000Z',
         expiresAt: '2026-08-24T12:07:00.000Z',
         recordingStartedAt: null,
@@ -111,6 +120,7 @@ describe('practice session store', () => {
   it('expires the session when the recording window closes unused', () => {
     const store = createPracticeSessionStore()
     const session = {
+      configuration: SESSION_CONFIGURATION,
       createdAt: '2026-08-24T12:00:00.000Z',
       expiresAt: '2026-08-24T12:07:00.000Z',
       recordingStartedAt: null,
@@ -133,6 +143,7 @@ describe('practice session store', () => {
 
     store.getState().startResearching(
       {
+        configuration: SESSION_CONFIGURATION,
         createdAt: '2026-08-24T12:00:00.000Z',
         expiresAt: '2026-08-24T12:15:00.000Z',
         recordingStartedAt: null,
@@ -157,6 +168,7 @@ describe('practice session store', () => {
 
   it('starts hydrated with an active session', () => {
     const session = {
+      configuration: SESSION_CONFIGURATION,
       createdAt: '2026-08-24T12:00:00.000Z',
       expiresAt: '2026-08-24T12:05:00.000Z',
       recordingStartedAt: null,
@@ -177,6 +189,7 @@ describe('practice session store', () => {
   it('opens recording with the server recording timestamp and deadline', () => {
     const store = createPracticeSessionStore()
     const session = {
+      configuration: SESSION_CONFIGURATION,
       createdAt: '2026-08-24T12:00:00.000Z',
       expiresAt: '2026-08-24T12:06:00.000Z',
       recordingStartedAt: null,
@@ -206,6 +219,7 @@ describe('practice session store', () => {
     const store = createPracticeSessionStore()
     const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
     const session = {
+      configuration: SESSION_CONFIGURATION,
       createdAt: '2026-08-24T12:00:00.000Z',
       expiresAt: '2026-08-24T12:07:00.000Z',
       recordingStartedAt: null,
@@ -228,6 +242,75 @@ describe('practice session store', () => {
     expect(store.getState().status).toBe('processing')
   })
 
+  it('keeps the finished conversation when the analysis arrives', () => {
+    const store = createPracticeSessionStore()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const session = {
+      configuration: SESSION_CONFIGURATION,
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    } as const
+
+    expect(() => store.getState().completeAnalysis()).toThrow(InvalidPracticeSessionTransitionError)
+
+    store.getState().startResearching(session, '2026-08-24T12:00:00.000Z')
+    store.getState().openRecordingWindow()
+    store.getState().openRecording({
+      expiresAt: '2026-08-24T12:15:00.000Z',
+      recordingStartedAt: '2026-08-24T12:05:00.000Z',
+    })
+    store.getState().captureAudio(audioBlob)
+    store.getState().beginProcessing()
+    store.getState().completeAnalysis()
+
+    expect(store.getState()).toMatchObject({
+      audioBlob,
+      session: {
+        ...session,
+        expiresAt: '2026-08-24T12:15:00.000Z',
+        recordingStartedAt: '2026-08-24T12:05:00.000Z',
+      },
+      status: 'done',
+    })
+  })
+
+  it('starts a new session over a finished one', () => {
+    const store = createPracticeSessionStore()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const session = {
+      configuration: SESSION_CONFIGURATION,
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    } as const
+    const nextSession = { ...session, sessionId: 'session-2', themeTitle: 'Speaking with rhythm' }
+
+    store.getState().startResearching(session, '2026-08-24T12:00:00.000Z')
+    store.getState().openRecordingWindow()
+    store.getState().openRecording({
+      expiresAt: '2026-08-24T12:15:00.000Z',
+      recordingStartedAt: '2026-08-24T12:05:00.000Z',
+    })
+    store.getState().captureAudio(audioBlob)
+    store.getState().beginProcessing()
+    store.getState().completeAnalysis()
+
+    store.getState().startResearching(nextSession, '2026-08-24T12:20:00.000Z')
+
+    expect(store.getState()).toMatchObject({
+      audioBlob: null,
+      session: nextSession,
+      status: 'researching',
+    })
+  })
+
   it('discards unsent audio when the local retention window expires', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'))
@@ -236,6 +319,7 @@ describe('practice session store', () => {
 
     store.getState().startResearching(
       {
+        configuration: SESSION_CONFIGURATION,
         createdAt: '2026-08-23T12:00:00.000Z',
         expiresAt: '2026-08-23T12:07:00.000Z',
         recordingStartedAt: null,
@@ -273,6 +357,7 @@ describe('practice session store', () => {
 
     store.getState().startResearching(
       {
+        configuration: SESSION_CONFIGURATION,
         createdAt: '2026-08-23T12:00:00.000Z',
         expiresAt: '2026-08-23T12:01:00.000Z',
         recordingStartedAt: null,

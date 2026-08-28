@@ -24,7 +24,11 @@ describe('AudioPlayer', () => {
 
     render(
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
-        <AudioPlayer requestPlaybackUrl={requestPlaybackUrl} sessionId={SESSION_ID} />
+        <AudioPlayer
+          label="Sua mensagem"
+          requestPlaybackUrl={requestPlaybackUrl}
+          sessionId={SESSION_ID}
+        />
       </NextIntlClientProvider>,
     )
 

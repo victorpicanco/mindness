@@ -48,6 +48,11 @@ function renderProcessingStatus(fetchAnalysis: FetchSessionAnalysis) {
             initialState={{
               serverTimeOffsetMs: 0,
               session: {
+                configuration: {
+                  categorySlug: 'news',
+                  difficulty: 'balanced',
+                  searchWindowMinutes: 3,
+                } as const,
                 createdAt: '2026-08-27T12:00:00.000Z',
                 expiresAt: '2026-08-27T12:15:00.000Z',
                 recordingStartedAt: '2026-08-27T12:03:00.000Z',
@@ -87,7 +92,7 @@ describe('ProcessingStatus', () => {
     vi.useRealTimers()
   })
 
-  it('polls until the analysis exists, then resets the session and opens the analysis', async () => {
+  it('polls until the analysis exists, then keeps the conversation and opens the analysis', async () => {
     let calls = 0
     const fetchAnalysis: FetchSessionAnalysis = vi.fn(() => {
       calls += 1
@@ -102,10 +107,22 @@ describe('ProcessingStatus', () => {
 
     expect(fetchAnalysis).toHaveBeenCalledTimes(2)
     await vi.waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1))
-    expect(screen.getByLabelText('practice status')).toHaveTextContent('idle')
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('done')
 
     await act(() => vi.advanceTimersByTimeAsync(5_000))
     expect(fetchAnalysis).toHaveBeenCalledTimes(2)
+  })
+
+  it('announces the wait as a plain status line, outside any message surface', async () => {
+    const fetchAnalysis: FetchSessionAnalysis = vi.fn(() => new Promise<never>(() => undefined))
+    renderProcessingStatus(fetchAnalysis)
+
+    await act(() => vi.advanceTimersByTimeAsync(0))
+
+    const waiting = screen.getByRole('status')
+
+    expect(waiting).toHaveTextContent('Estamos analisando sua apresentação…')
+    expect(waiting.closest('article')).toBeNull()
   })
 
   it('never pushes a duplicate entry for the route it already renders on', async () => {

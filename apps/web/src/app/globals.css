@@ -128,3 +128,36 @@
     animation: none;
   }
 }
+
+.mindness-shiny-text {
+  display: inline-block;
+  color: var(--color-text-muted);
+  animation: mindness-shimmer 1.8s ease-in-out infinite;
+}
+
+.mindness-split-word {
+  will-change: filter, opacity, transform;
+}
+
+@keyframes mindness-shimmer {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mindness-shiny-text {
+    animation: none;
+  }
+
+  .mindness-split-word {
+    filter: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

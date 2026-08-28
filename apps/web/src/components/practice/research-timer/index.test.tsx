@@ -28,6 +28,11 @@ function renderResearchTimer(
         initialState={{
           serverTimeOffsetMs: NOW.getTime() - Date.now(),
           session: {
+            configuration: {
+              categorySlug: 'news',
+              difficulty: 'balanced',
+              searchWindowMinutes: 3,
+            } as const,
             createdAt: NOW.toISOString(),
             expiresAt: new Date(
               NOW.getTime() + (researchEndsInSeconds + 120) * 1_000,
@@ -102,7 +107,7 @@ describe('ResearchTimer', () => {
     await advanceOneSecond()
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('awaiting-recording')
-    expect(screen.queryByRole('timer')).not.toBeInTheDocument()
+    expect(screen.getByRole('timer')).toHaveTextContent('00:00')
   })
 
   it('uses the stored server offset when the browser clock is behind', () => {

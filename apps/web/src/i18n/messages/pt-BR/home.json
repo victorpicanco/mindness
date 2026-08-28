@@ -26,22 +26,46 @@
     "eyebrow": "Pesquise sobre o tema",
     "microphoneError": "Não foi possível acessar o microfone.",
     "microphonePermissionDenied": "Autorize o microfone para gravar sua apresentação.",
-    "recordingEyebrow": "Seu tempo de pesquisa terminou",
+    "preparingMicrophone": "Preparando microfone…",
     "recordingActiveLabel": "Gravação em andamento",
     "recordingInProgress": "Gravando",
     "recordingInputLabel": "Gravador de áudio",
-    "recordUntil": "Inicie sua gravação até {time}",
     "startRecording": "Iniciar gravação",
     "stopRecording": "Parar gravação",
-    "expired": "Sua sessão expirou porque a gravação não começou a tempo.",
     "uploadingLabel": "Enviando gravação",
-    "uploading": "Enviando sua gravação…",
     "audioUploadFailed": "Não foi possível enviar o áudio. Tente novamente.",
     "audioSizeRejected": "O áudio ficou grande demais para enviar. Grave novamente em uma conexão mais estável.",
     "audioValidationRejected": "Não foi possível validar este áudio. Grave novamente e tente enviar.",
     "sessionNotInProgress": "Esta sessão não está mais disponível para envio. Inicie uma nova sessão.",
     "retryUpload": "Tentar novamente",
     "discardRecording": "Descartar gravação"
+  },
+  "conversation": {
+    "label": "Conversa da sessão",
+    "userMessageLabel": "Sua mensagem",
+    "assistantMessageLabel": "Mensagem da Mindness",
+    "configuration": "Quero iniciar uma sessão com {minutes} minutos de pesquisa, dificuldade {difficulty} e categoria “{category}”.",
+    "difficulties": {
+      "easy": "fácil",
+      "balanced": "equilibrada",
+      "hard": "difícil"
+    },
+    "themeIntroduction": "Prepare uma apresentação sobre este tema:",
+    "researchInstructions": "Pesquise os pontos principais e organize uma apresentação objetiva.",
+    "researchFinished": "Seu tempo de pesquisa terminou.",
+    "recordUntil": "Inicie sua gravação até {time}",
+    "expired": "Sua sessão expirou porque a gravação não começou a tempo.",
+    "audioUploading": "Enviando áudio…",
+    "completedConfiguration": "Quero praticar na categoria “{category}”, com dificuldade {difficulty}.",
+    "completedTheme": "O tema da sessão foi “{theme}”."
+  },
+  "audio": {
+    "groupLabel": "Áudio enviado",
+    "recordingLabel": "Gravação da sessão",
+    "play": "Reproduzir gravação",
+    "pause": "Pausar gravação",
+    "loading": "Carregando gravação…",
+    "playbackFailed": "Não foi possível reproduzir a gravação. Tente novamente."
   },
   "processing": {
     "waiting": "Estamos analisando sua apresentação…",
@@ -60,11 +84,6 @@
       "mastery": "Domínio"
     },
     "guidanceTitle": "Orientações",
-    "recordingTitle": "Sua gravação",
-    "recordingLabel": "Gravação da sessão",
-    "playRecording": "Reproduzir gravação",
-    "loadingRecording": "Carregando gravação…",
-    "playbackFailed": "Não foi possível reproduzir a gravação. Tente novamente.",
     "transcriptTitle": "Transcrição"
   },
   "session": {

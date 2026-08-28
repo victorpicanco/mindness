@@ -1,5 +1,7 @@
 import { createStore } from 'zustand/vanilla'
 
+import type { SessionConfiguration } from '@/lib/api/contracts/sessions'
+
 import { InvalidPracticeSessionTransitionError, type PracticeSessionAction } from './errors'
 
 export type PracticeSessionStatus =
@@ -14,6 +16,7 @@ export type PracticeSessionStatus =
   | 'expired'
 
 export interface PracticeSession {
+  readonly configuration: SessionConfiguration
   readonly createdAt: string
   readonly expiresAt: string
   readonly recordingStartedAt: string | null
@@ -44,6 +47,7 @@ export interface PracticeSessionState {
   readonly captureAudio: (audioBlob: Blob) => void
   readonly discardAudio: () => void
   readonly beginProcessing: () => void
+  readonly completeAnalysis: () => void
   readonly reset: () => void
 }
 
@@ -88,8 +92,10 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
     serverTimeOffsetMs: initialState?.serverTimeOffsetMs ?? 0,
     startResearching: (session, serverNow) => {
       set((state) => {
-        assertTransition(state.status, 'startResearching', ['idle'])
+        assertTransition(state.status, 'startResearching', ['idle', 'done'])
         return {
+          audioBlob: null,
+          retentionDeadline: null,
           serverTimeOffsetMs: new Date(serverNow).getTime() - Date.now(),
           session,
           status: 'researching',
@@ -168,6 +174,12 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
         return { status: 'processing' }
       })
       clearRetentionTimer()
+    },
+    completeAnalysis: () => {
+      set((state) => {
+        assertTransition(state.status, 'completeAnalysis', ['processing'])
+        return { status: 'done' }
+      })
     },
     reset: () => {
       set((state) => {

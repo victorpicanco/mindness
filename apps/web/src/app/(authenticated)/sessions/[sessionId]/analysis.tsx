@@ -4,68 +4,67 @@ import { useTranslations } from 'next-intl'
 import type { z } from 'zod'
 
 import type { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
+import type { SessionHistoryItem } from '@/lib/api/contracts/sessions'
+import { usePracticeSessionStore } from '@/stores/practice-session/provider'
+
+import { AnalysisMessage } from '@/components/practice/analysis-message'
+import { SessionConversation } from '@/components/practice/session-conversation'
+import { SessionMessage } from '@/components/practice/session-message'
 
 import { AudioPlayer } from './audio-player'
 
 type SessionAnalysis = z.output<typeof sessionAnalysisSchema>
 
-const SCORE_KEYS = ['total', 'clarity', 'rhythm', 'fluency', 'mastery'] as const
+interface AnalysisProps {
+  readonly analysis: SessionAnalysis
+  readonly session?: SessionHistoryItem
+}
 
-export function Analysis({ analysis }: { readonly analysis: SessionAnalysis }) {
-  const t = useTranslations('home.analysis')
+export function Analysis({ analysis, session }: AnalysisProps) {
+  const practiceSession = usePracticeSessionStore((state) => state.session)
+  const status = usePracticeSessionStore((state) => state.status)
+
+  if (status === 'done' && practiceSession?.sessionId === analysis.sessionId) {
+    return <SessionConversation analysis={analysis} />
+  }
+
+  return <PastSessionAnalysis analysis={analysis} {...(session === undefined ? {} : { session })} />
+}
+
+function PastSessionAnalysis({ analysis, session }: AnalysisProps) {
+  const conversationT = useTranslations('home.conversation')
 
   return (
-    <article aria-labelledby="analysis-title" className="mx-auto w-full max-w-3xl">
-      <h1
-        className="font-(family-name:--font-buenard) text-3xl leading-tight tracking-tight sm:text-4xl"
-        id="analysis-title"
-      >
-        {t('title')}
-      </h1>
+    <section
+      aria-label={conversationT('label')}
+      className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-8"
+    >
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+        {session === undefined ? null : (
+          <>
+            <SessionMessage label={conversationT('userMessageLabel')} sender="user">
+              <p>
+                {conversationT('completedConfiguration', {
+                  category: session.categorySlug,
+                  difficulty: conversationT(`difficulties.${session.difficulty}`),
+                })}
+              </p>
+            </SessionMessage>
 
-      <section aria-labelledby="scores-title" className="mt-8">
-        <h2 className="text-xl font-medium" id="scores-title">
-          {t('scoresTitle')}
-        </h2>
-        <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
-          {SCORE_KEYS.map((key) => (
-            <div className="rounded-lg border border-border p-4" key={key}>
-              <dt className="text-sm text-text-muted">{t(`scoreLabels.${key}`)}</dt>
-              <dd className="mt-1 text-2xl tabular-nums">{analysis.scores[key]}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+            <SessionMessage label={conversationT('assistantMessageLabel')} sender="assistant">
+              <p>
+                {conversationT('completedTheme', {
+                  theme: session.themeTitle ?? session.categorySlug,
+                })}
+              </p>
+            </SessionMessage>
+          </>
+        )}
 
-      <section aria-labelledby="guidance-title" className="mt-8">
-        <h2 className="text-xl font-medium" id="guidance-title">
-          {t('guidanceTitle')}
-        </h2>
-        <ul className="mt-4 space-y-4">
-          {analysis.guidance.map((guidance) => (
-            <li className="rounded-lg border border-border p-4" key={guidance.pillar}>
-              <h3 className="font-medium">{t(`scoreLabels.${guidance.pillar}`)}</h3>
-              <p className="mt-2 whitespace-pre-wrap text-text-muted">{guidance.text}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+        <AudioPlayer label={conversationT('userMessageLabel')} sessionId={analysis.sessionId} />
 
-      <section aria-labelledby="recording-title" className="mt-8">
-        <h2 className="text-xl font-medium" id="recording-title">
-          {t('recordingTitle')}
-        </h2>
-        <div className="mt-4">
-          <AudioPlayer sessionId={analysis.sessionId} />
-        </div>
-      </section>
-
-      <section aria-labelledby="transcript-title" className="mt-8">
-        <h2 className="text-xl font-medium" id="transcript-title">
-          {t('transcriptTitle')}
-        </h2>
-        <p className="mt-4 whitespace-pre-wrap text-text-muted">{analysis.transcript}</p>
-      </section>
-    </article>
+        <AnalysisMessage analysis={analysis} />
+      </div>
+    </section>
   )
 }

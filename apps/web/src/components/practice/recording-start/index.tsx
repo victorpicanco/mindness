@@ -198,6 +198,7 @@ export function RecordingStart({
   })
 
   const submitMutation = useMutation({
+    meta: { errorPresentation: 'toast' },
     mutationFn: submitRecording,
     onError: (error) => {
       const failureReason = uploadFailure(error)

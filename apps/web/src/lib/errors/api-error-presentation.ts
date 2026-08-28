@@ -19,6 +19,9 @@ export type ApiErrorMessageKey =
   | 'common.errors.network'
   | 'common.errors.unknown'
   | 'common.errors.validationFailed'
+  | 'home.research.audioSizeRejected'
+  | 'home.research.audioUploadFailed'
+  | 'home.research.audioValidationRejected'
 
 export type ApiErrorDescription = {
   readonly messageKey: ApiErrorMessageKey
@@ -75,6 +78,18 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
     messageKey: 'auth.errors.reauthenticationRequired',
     presentation: 'toast',
   },
+  'sessions.AUDIO_SIZE_REJECTED': {
+    messageKey: 'home.research.audioSizeRejected',
+    presentation: 'toast',
+  },
+  'sessions.AUDIO_UPLOAD_FAILED': {
+    messageKey: 'home.research.audioUploadFailed',
+    presentation: 'toast',
+  },
+  'sessions.AUDIO_VALIDATION_REJECTED': {
+    messageKey: 'home.research.audioValidationRejected',
+    presentation: 'toast',
+  },
   'shared.INTERNAL_ERROR': UNKNOWN_API_ERROR,
   'shared.VALIDATION_FAILED': {
     messageKey: 'common.errors.validationFailed',
@@ -92,6 +107,10 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   },
   'web.AUTHENTICATION_EXPIRED': {
     messageKey: 'auth.errors.sessionExpired',
+    presentation: 'toast',
+  },
+  'web.AUDIO_UPLOAD_FAILED': {
+    messageKey: 'home.research.audioUploadFailed',
     presentation: 'toast',
   },
   'web.UNEXPECTED_ERROR': UNKNOWN_API_ERROR,

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
 import { AudioUploadFailedError } from '@/lib/api/audio-upload-failed-error'
+import { ApiClientError } from '@/lib/api/client-error'
 import type { SubmitRecordingInput } from '@/lib/api/submit-recording'
 import {
   PracticeSessionProvider,
@@ -17,6 +18,7 @@ import {
   type AudioRecordingSession,
   type RecordingStarted,
   type RecordingStartProps,
+  type SubmitRecordingRequest,
 } from '@/components/practice/recording-start'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 import { BAR_INTERVAL_MS } from '@/components/practice/use-audio-levels'
@@ -63,8 +65,8 @@ function fakeAudioLevelSource() {
 function renderRecordingStart(props: RecordingStartProps = {}) {
   return render(
     <AppRouterContext.Provider value={createRouter()}>
-      <QueryClientProvider client={new QueryClient()}>
-        <NextIntlClientProvider locale="pt-BR" messages={messages}>
+      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <QueryClientProvider client={new QueryClient()}>
           <PracticeSessionProvider
             initialState={{
               serverTimeOffsetMs: 0,
@@ -82,8 +84,8 @@ function renderRecordingStart(props: RecordingStartProps = {}) {
             <RecordingStart {...props} />
             <PracticeSessionProbe />
           </PracticeSessionProvider>
-        </NextIntlClientProvider>
-      </QueryClientProvider>
+        </QueryClientProvider>
+      </NextIntlClientProvider>
     </AppRouterContext.Provider>,
   )
 }
@@ -134,6 +136,20 @@ function fakeAudioCapture(audioBlob: Blob) {
   const captureRecording = (): Promise<AudioRecordingSession> => Promise.resolve({ stop })
 
   return { captureRecording, stop }
+}
+
+function rejectedAudioSubmission(code: string, requestId: string): SubmitRecordingRequest {
+  const error = new ApiClientError({
+    code,
+    issues: null,
+    message: 'The API rejected the audio upload.',
+    requestId,
+  })
+
+  return () =>
+    Promise.resolve().then(() => {
+      throw error
+    })
 }
 
 function pendingSubmission(): {
@@ -409,6 +425,93 @@ describe('RecordingStart', () => {
     )
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Descartar gravação' })).toBeInTheDocument()
+  })
+
+  it('shows the rejected audio size from the API and allows a new recording', async () => {
+    const { source } = fakeAudioLevelSource()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { captureRecording } = fakeAudioCapture(audioBlob)
+
+    renderRecordingStart({
+      ...grantedMicrophone(source),
+      captureRecording,
+      submitRecording: rejectedAudioSubmission(
+        'sessions.AUDIO_SIZE_REJECTED',
+        'audio-size-rejected',
+      ),
+    })
+
+    await clickRecordingButton()
+    await advanceBySeconds(MAX_RECORDING_SECONDS)
+    await settleMutation()
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'O áudio ficou grande demais para enviar. Grave novamente em uma conexão mais estável.',
+    )
+
+    act(() => {
+      screen.getByRole('button', { name: 'Descartar gravação' }).click()
+    })
+
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
+  })
+
+  it('shows the rejected audio validation from the API and allows a new recording', async () => {
+    const { source } = fakeAudioLevelSource()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { captureRecording } = fakeAudioCapture(audioBlob)
+
+    renderRecordingStart({
+      ...grantedMicrophone(source),
+      captureRecording,
+      submitRecording: rejectedAudioSubmission(
+        'sessions.AUDIO_VALIDATION_REJECTED',
+        'audio-validation-rejected',
+      ),
+    })
+
+    await clickRecordingButton()
+    await advanceBySeconds(MAX_RECORDING_SECONDS)
+    await settleMutation()
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível validar este áudio. Grave novamente e tente enviar.',
+    )
+
+    act(() => {
+      screen.getByRole('button', { name: 'Descartar gravação' }).click()
+    })
+
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
+  })
+
+  it('shows the failed audio upload from the API and allows a new recording', async () => {
+    const { source } = fakeAudioLevelSource()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const { captureRecording } = fakeAudioCapture(audioBlob)
+
+    renderRecordingStart({
+      ...grantedMicrophone(source),
+      captureRecording,
+      submitRecording: rejectedAudioSubmission(
+        'sessions.AUDIO_UPLOAD_FAILED',
+        'audio-upload-failed',
+      ),
+    })
+
+    await clickRecordingButton()
+    await advanceBySeconds(MAX_RECORDING_SECONDS)
+    await settleMutation()
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível enviar o áudio. Tente novamente.',
+    )
+
+    act(() => {
+      screen.getByRole('button', { name: 'Descartar gravação' }).click()
+    })
+
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
   })
 
   it('does not allow starting a second recording while the current one is uploading', async () => {

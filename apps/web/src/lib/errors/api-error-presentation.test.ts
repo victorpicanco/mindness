@@ -94,6 +94,14 @@ describe('describeApiError', () => {
     })
   })
 
+  it.each([
+    ['sessions.AUDIO_SIZE_REJECTED', 'home.research.audioSizeRejected'],
+    ['sessions.AUDIO_VALIDATION_REJECTED', 'home.research.audioValidationRejected'],
+    ['sessions.AUDIO_UPLOAD_FAILED', 'home.research.audioUploadFailed'],
+  ] as const)('raises %s as its matching audio upload toast', (code, messageKey) => {
+    expect(describeApiError(code)).toEqual({ messageKey, presentation: 'toast' })
+  })
+
   it('describes a missing API base URL as an unexpected failure', () => {
     expect(describeApiError('web.ENVIRONMENT_INVALID')).toEqual({
       messageKey: 'common.errors.unknown',

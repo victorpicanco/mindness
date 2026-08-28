@@ -19,9 +19,14 @@ export type ApiErrorMessageKey =
   | 'common.errors.network'
   | 'common.errors.unknown'
   | 'common.errors.validationFailed'
+  | 'home.practice.errors.practiceNotAllowed'
+  | 'home.practice.errors.quotaExhausted'
+  | 'home.practice.errors.themeUnavailable'
   | 'home.research.audioSizeRejected'
   | 'home.research.audioUploadFailed'
   | 'home.research.audioValidationRejected'
+  | 'home.research.microphoneError'
+  | 'home.research.sessionNotInProgress'
 
 export type ApiErrorDescription = {
   readonly messageKey: ApiErrorMessageKey
@@ -78,17 +83,33 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
     messageKey: 'auth.errors.reauthenticationRequired',
     presentation: 'toast',
   },
+  'quota.QUOTA_EXHAUSTED': {
+    messageKey: 'home.practice.errors.quotaExhausted',
+    presentation: 'inline',
+  },
   'sessions.AUDIO_SIZE_REJECTED': {
     messageKey: 'home.research.audioSizeRejected',
-    presentation: 'toast',
+    presentation: 'inline',
   },
   'sessions.AUDIO_UPLOAD_FAILED': {
     messageKey: 'home.research.audioUploadFailed',
-    presentation: 'toast',
+    presentation: 'inline',
   },
   'sessions.AUDIO_VALIDATION_REJECTED': {
     messageKey: 'home.research.audioValidationRejected',
-    presentation: 'toast',
+    presentation: 'inline',
+  },
+  'sessions.PRACTICE_NOT_ALLOWED': {
+    messageKey: 'home.practice.errors.practiceNotAllowed',
+    presentation: 'inline',
+  },
+  'sessions.SESSION_NOT_IN_PROGRESS': {
+    messageKey: 'home.research.sessionNotInProgress',
+    presentation: 'inline',
+  },
+  'sessions.THEME_UNAVAILABLE': {
+    messageKey: 'home.practice.errors.themeUnavailable',
+    presentation: 'inline',
   },
   'shared.INTERNAL_ERROR': UNKNOWN_API_ERROR,
   'shared.VALIDATION_FAILED': {
@@ -111,7 +132,11 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   },
   'web.AUDIO_UPLOAD_FAILED': {
     messageKey: 'home.research.audioUploadFailed',
-    presentation: 'toast',
+    presentation: 'inline',
+  },
+  'web.MICROPHONE_UNAVAILABLE': {
+    messageKey: 'home.research.microphoneError',
+    presentation: 'inline',
   },
   'web.UNEXPECTED_ERROR': UNKNOWN_API_ERROR,
 }

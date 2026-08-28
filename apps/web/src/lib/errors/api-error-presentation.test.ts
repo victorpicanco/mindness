@@ -94,12 +94,25 @@ describe('describeApiError', () => {
     })
   })
 
+  // The recording screen renders each of these next to its own retry and discard controls, so the
+  // toast handler stays out of them.
   it.each([
     ['sessions.AUDIO_SIZE_REJECTED', 'home.research.audioSizeRejected'],
     ['sessions.AUDIO_VALIDATION_REJECTED', 'home.research.audioValidationRejected'],
     ['sessions.AUDIO_UPLOAD_FAILED', 'home.research.audioUploadFailed'],
-  ] as const)('raises %s as its matching audio upload toast', (code, messageKey) => {
-    expect(describeApiError(code)).toEqual({ messageKey, presentation: 'toast' })
+    ['web.AUDIO_UPLOAD_FAILED', 'home.research.audioUploadFailed'],
+    ['sessions.SESSION_NOT_IN_PROGRESS', 'home.research.sessionNotInProgress'],
+    ['web.MICROPHONE_UNAVAILABLE', 'home.research.microphoneError'],
+  ] as const)('keeps %s on the recording screen', (code, messageKey) => {
+    expect(describeApiError(code)).toEqual({ messageKey, presentation: 'inline' })
+  })
+
+  it.each([
+    ['quota.QUOTA_EXHAUSTED', 'home.practice.errors.quotaExhausted'],
+    ['sessions.THEME_UNAVAILABLE', 'home.practice.errors.themeUnavailable'],
+    ['sessions.PRACTICE_NOT_ALLOWED', 'home.practice.errors.practiceNotAllowed'],
+  ] as const)('keeps the blocking %s on the practice form', (code, messageKey) => {
+    expect(describeApiError(code)).toEqual({ messageKey, presentation: 'inline' })
   })
 
   it('describes a missing API base URL as an unexpected failure', () => {

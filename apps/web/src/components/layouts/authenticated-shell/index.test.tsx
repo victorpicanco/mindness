@@ -6,9 +6,12 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
+import { ApiClientError } from '@/lib/api/client-error'
 import type { SessionDayGroup } from '@/lib/sessions/session-day-groups'
 
 import { AuthenticatedShellView } from './index'
+
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
 function renderShell(
   children: ReactNode,
@@ -170,6 +173,47 @@ describe('AuthenticatedShell', () => {
     )
     expect(router.push).toHaveBeenCalledWith('/')
     expect(router.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('reports a failed abandon and keeps the active session dialog open', async () => {
+    const { toast } = await import('sonner')
+    const abandonSession = vi.fn(() =>
+      Promise.reject(
+        new ApiClientError({
+          code: 'web.API_REQUEST_FAILED',
+          issues: null,
+          message: 'Unable to reach the API.',
+          requestId: null,
+        }),
+      ),
+    )
+    const router = renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      () => undefined,
+      '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
+      undefined,
+      abandonSession,
+    )
+
+    fireEvent.click(
+      within(screen.getByRole('complementary')).getByRole('link', { name: 'Nova sessão' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Abandonar e começar outra' }))
+
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Não foi possível conectar ao servidor. Verifique sua conexão.',
+      ),
+    )
+
+    expect(
+      screen.getByRole('dialog', { name: 'Você tem uma sessão em andamento' }),
+    ).toBeInTheDocument()
+    expect(router.push).not.toHaveBeenCalledWith('/')
   })
 
   it('protects history navigation while recording', () => {

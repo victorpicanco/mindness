@@ -33,7 +33,7 @@ export type SubmitRecordingRequest = (input: {
   readonly sessionId: string
 }) => Promise<void>
 
-export type StartFailure = 'microphone' | 'permission-denied' | 'request'
+export type StartFailure = 'microphone' | 'permission-denied'
 
 export type UploadFailure = 'audio-size' | 'audio-validation' | 'audio-upload' | 'session-closed'
 
@@ -158,20 +158,19 @@ export function useRecordingCapture({
         throw cause
       }
     },
+    // Only a microphone that the visitor has to fix stays on the screen; a failed server call is
+    // retried by pressing record again, so the root toast handler owns it.
     onError: (error) => {
-      const permissionDenied =
-        error instanceof MicrophoneUnavailableError &&
-        error.cause instanceof DOMException &&
-        error.cause.name === 'NotAllowedError'
+      if (!(error instanceof MicrophoneUnavailableError)) return
 
-      if (permissionDenied) {
+      if (error.cause instanceof DOMException && error.cause.name === 'NotAllowedError') {
         setStartFailure('permission-denied')
         expireSession()
 
         return
       }
 
-      setStartFailure(error instanceof MicrophoneUnavailableError ? 'microphone' : 'request')
+      setStartFailure('microphone')
     },
     // The pending capture is stored, not its result: stopping before the recorder is ready has to
     // wait for it instead of silently dropping the recording.
@@ -190,7 +189,7 @@ export function useRecordingCapture({
   })
 
   const submitMutation = useMutation({
-    meta: { errorPresentation: 'toast' },
+    meta: { errorPresentation: 'inline' },
     mutationFn: submitRecording,
     onError: (error) => {
       const reason = uploadFailureOf(error)

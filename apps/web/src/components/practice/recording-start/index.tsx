@@ -28,15 +28,12 @@ export function RecordingStart() {
 
 export function RecordingStartView({ audioLevelSource, capture }: RecordingStartViewProps) {
   const t = useTranslations('home.research')
-  const translate = useTranslations()
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
   const serverTimeOffsetMs = usePracticeSessionStore((state) => state.serverTimeOffsetMs)
 
   function startFailureMessage(reason: StartFailure): string {
-    if (reason === 'permission-denied') return t('microphonePermissionDenied')
-
-    return reason === 'microphone' ? t('microphoneError') : translate('common.errors.unknown')
+    return reason === 'permission-denied' ? t('microphonePermissionDenied') : t('microphoneError')
   }
 
   function uploadFailureMessage(reason: UploadFailure): string {

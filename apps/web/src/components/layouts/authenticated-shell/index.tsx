@@ -23,6 +23,8 @@ import { AUTHENTICATED_NAVIGATION_ITEMS } from '@/lib/navigation/authenticated-n
 import { sessionPath } from '@/lib/navigation/session-routes'
 import type { SessionDayGroup, SessionDayHeading } from '@/lib/sessions/session-day-groups'
 import { abandonSession as abandonSessionRequest } from '@/lib/api/abandon-session'
+import { apiErrorDetails } from '@/lib/api/api-error'
+import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
 import { cn } from '@/lib/ui/class-names'
 
 export interface AuthenticatedShellProps {
@@ -145,6 +147,7 @@ export function AuthenticatedShellView({
   shouldConfirmSessionNavigation = false,
 }: AuthenticatedShellViewProps) {
   const t = useTranslations('common.authenticatedShell')
+  const translate = useTranslations()
   const activeHref = usePathname()
   const router = useRouter()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(initialIsExpanded)
@@ -251,7 +254,14 @@ export function AuthenticatedShellView({
   async function abandonActiveSession() {
     if (activeSessionId === undefined) return
 
-    await abandonSession(activeSessionId)
+    try {
+      await abandonSession(activeSessionId)
+    } catch (error: unknown) {
+      showApiErrorToast(apiErrorDetails(error), translate)
+
+      return
+    }
+
     onSessionAbandoned?.()
     setIsActiveSessionDialogOpen(false)
     router.push('/')

@@ -49,7 +49,6 @@ describe('useAudioLevels', () => {
     const { result } = renderHook(() => useAudioLevels({ historySize: 4, isActive: false, source }))
 
     expect(result.current.levels).toEqual([])
-    expect(result.current.hasFailed).toBe(false)
   })
 
   it('appends one level per interval holding the loudest frame of that interval', async () => {
@@ -101,12 +100,12 @@ describe('useAudioLevels', () => {
     expect(stop).toHaveBeenCalledOnce()
   })
 
-  it('reports a failure when the source cannot be opened', async () => {
-    const source = () => Promise.reject(new FakeMicrophoneError())
+  it('stays empty without throwing when the source cannot be opened', async () => {
+    const source = vi.fn(() => Promise.reject(new FakeMicrophoneError()))
     const { result } = renderHook(() => useAudioLevels({ historySize: 4, isActive: true, source }))
 
     await waitFor(() => {
-      expect(result.current.hasFailed).toBe(true)
+      expect(source).toHaveBeenCalledOnce()
     })
     expect(result.current.levels).toEqual([])
   })

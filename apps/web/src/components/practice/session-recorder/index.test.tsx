@@ -121,12 +121,13 @@ describe('SessionRecorder', () => {
     expect(onToggleRecording).toHaveBeenCalledOnce()
   })
 
-  it('warns when the microphone cannot be opened', async () => {
+  it('keeps recording without an error when the waveform source cannot be opened', async () => {
     const source: AudioLevelSource = () => Promise.reject(new FakeMicrophoneError())
     renderRecorder({ isRecording: true, source })
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível acessar o microfone.')
+      expect(screen.getByRole('button', { name: 'Parar gravação' })).toBeInTheDocument()
     })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

@@ -1,41 +1,20 @@
 'use client'
 
-import { isServer, MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { isServer, QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 
-import { apiErrorDetails } from '@/lib/api/api-error'
-import { showApiErrorToast, type ApiErrorTranslator } from '@/lib/errors/show-api-error-toast'
+import { createQueryClient } from '@/lib/api/query-client'
+import type { ApiErrorTranslator } from '@/lib/errors/show-api-error-toast'
 
 let browserQueryClient: QueryClient | undefined
 
-function shouldShowMutationError(meta: unknown): boolean {
-  return (
-    typeof meta === 'object' &&
-    meta !== null &&
-    'errorPresentation' in meta &&
-    meta.errorPresentation === 'toast'
-  )
-}
-
-function makeQueryClient(translate: ApiErrorTranslator): QueryClient {
-  return new QueryClient({
-    mutationCache: new MutationCache({
-      onError: (error, _variables, _context, mutation) => {
-        if (!shouldShowMutationError(mutation.meta)) return
-
-        showApiErrorToast(apiErrorDetails(error), translate)
-      },
-    }),
-  })
-}
-
 function getQueryClient(translate: ApiErrorTranslator): QueryClient {
   if (isServer) {
-    return makeQueryClient(translate)
+    return createQueryClient(translate)
   }
 
-  browserQueryClient ??= makeQueryClient(translate)
+  browserQueryClient ??= createQueryClient(translate)
   return browserQueryClient
 }
 

@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '@/i18n/messages'
 import { ApiClientError } from '@/lib/api/client-error'
 
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+
 import { AudioMessage, type ResolveAudioSource } from './index'
 
 function renderMessage(resolveSource?: ResolveAudioSource) {
@@ -22,6 +24,7 @@ function renderMessage(resolveSource?: ResolveAudioSource) {
 describe('AudioMessage', () => {
   afterEach(() => {
     cleanup()
+    vi.clearAllMocks()
     vi.restoreAllMocks()
   })
 
@@ -55,7 +58,8 @@ describe('AudioMessage', () => {
     expect(pause).toHaveBeenCalledOnce()
   })
 
-  it('reports a source that cannot be played and drops the broken src', async () => {
+  it('toasts a source that cannot be played and drops the broken src', async () => {
+    const { toast } = await import('sonner')
     const resolveSource = vi.fn(() =>
       Promise.reject(
         new ApiClientError({
@@ -70,9 +74,12 @@ describe('AudioMessage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Reproduzir gravação' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Não foi possível reproduzir a gravação. Tente novamente.',
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Não foi possível reproduzir a gravação. Tente novamente.',
+      ),
     )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Gravação da sessão')).not.toHaveAttribute('src')
   })
 

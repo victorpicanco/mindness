@@ -1,12 +1,15 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime'
-import { NextIntlClientProvider } from 'next-intl'
+import { NextIntlClientProvider, useTranslations } from 'next-intl'
+import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
 import { AudioUploadFailedError } from '@/lib/api/audio-upload-failed-error'
 import { ApiClientError } from '@/lib/api/client-error'
+import { createQueryClient } from '@/lib/api/query-client'
 import type { SubmitRecordingInput } from '@/lib/api/submit-recording'
 import {
   PracticeSessionProvider,
@@ -24,6 +27,15 @@ import { useRecordingCapture } from '@/components/practice/use-recording-capture
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 import { BAR_INTERVAL_MS } from '@/components/practice/use-audio-levels'
 import { MAX_RECORDING_SECONDS } from '@/components/practice/use-recording-clock'
+
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+
+function ApiProviders({ children }: { readonly children: ReactNode }) {
+  const translate = useTranslations()
+  const [queryClient] = useState(() => createQueryClient(translate))
+
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+}
 
 const NOW = new Date('2026-08-24T12:00:00.000Z')
 const SESSION_ID = '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
@@ -82,7 +94,7 @@ function renderRecordingStart(props: RecordingStartHarnessProps = {}) {
   return render(
     <AppRouterContext.Provider value={createRouter()}>
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
-        <QueryClientProvider client={new QueryClient()}>
+        <ApiProviders>
           <PracticeSessionProvider
             initialState={{
               serverTimeOffsetMs: 0,
@@ -105,7 +117,7 @@ function renderRecordingStart(props: RecordingStartHarnessProps = {}) {
             <RecordingStartHarness {...props} />
             <PracticeSessionProbe />
           </PracticeSessionProvider>
-        </QueryClientProvider>
+        </ApiProviders>
       </NextIntlClientProvider>
     </AppRouterContext.Provider>,
   )
@@ -198,6 +210,7 @@ describe('RecordingStart', () => {
 
   afterEach(() => {
     cleanup()
+    vi.clearAllMocks()
     vi.restoreAllMocks()
     vi.useRealTimers()
   })
@@ -398,7 +411,8 @@ describe('RecordingStart', () => {
     expect(recordingButton()).toBeDisabled()
   })
 
-  it('releases the microphone and blames the request when the server refuses to open the recording', async () => {
+  it('toasts the failed request when the server refuses to open the recording', async () => {
+    const { toast } = await import('sonner')
     const stopTrack = vi.fn()
     vi.stubGlobal(
       'MediaStream',
@@ -418,8 +432,11 @@ describe('RecordingStart', () => {
     await clickRecordingButton()
 
     expect(stopTrack).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Não foi possível concluir a ação. Tente novamente.',
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Não foi possível concluir a ação. Tente novamente.',
+      ),
     )
   })
 
@@ -486,6 +503,7 @@ describe('RecordingStart', () => {
   })
 
   it('keeps the captured audio and offers retry or discard when the upload fails', async () => {
+    const { toast } = await import('sonner')
     const { source } = fakeAudioLevelSource()
     const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
     const { captureRecording } = fakeAudioCapture(audioBlob)
@@ -507,6 +525,7 @@ describe('RecordingStart', () => {
     )
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Descartar gravação' })).toBeInTheDocument()
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
   it('shows the rejected audio size from the API and allows a new recording', async () => {

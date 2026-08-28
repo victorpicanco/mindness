@@ -30,7 +30,7 @@ export function SessionRecorder({
   startedAt,
 }: SessionRecorderProps) {
   const t = useTranslations('home.research')
-  const { hasFailed, levels } = useAudioLevels({
+  const { levels } = useAudioLevels({
     historySize: WAVEFORM_SLOT_COUNT,
     isActive: isRecording,
     source,
@@ -43,22 +43,15 @@ export function SessionRecorder({
   })
 
   return (
-    <div>
-      <AudioRecorderBar
-        elapsedLabel={formatCountdown(elapsedSeconds)}
-        groupLabel={t('recordingInputLabel')}
-        isDisabled={isDisabled}
-        isRecording={isRecording}
-        levels={levels}
-        onToggleRecording={onToggleRecording}
-        recordLabel={t('startRecording')}
-        stopLabel={t('stopRecording')}
-      />
-      {hasFailed ? (
-        <p className="mt-4 text-center text-sm text-error" role="alert">
-          {t('microphoneError')}
-        </p>
-      ) : null}
-    </div>
+    <AudioRecorderBar
+      elapsedLabel={formatCountdown(elapsedSeconds)}
+      groupLabel={t('recordingInputLabel')}
+      isDisabled={isDisabled}
+      isRecording={isRecording}
+      levels={levels}
+      onToggleRecording={onToggleRecording}
+      recordLabel={t('startRecording')}
+      stopLabel={t('stopRecording')}
+    />
   )
 }

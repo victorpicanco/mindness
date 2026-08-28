@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
 import { apiErrorDetails } from '@/lib/api/api-error'
+import { describeApiError } from '@/lib/errors/api-error-presentation'
 import { sessionPath } from '@/lib/navigation/session-routes'
 import { bffFetch } from '@/lib/api/bff-client'
 import { startedSessionSchema } from '@/lib/api/contracts/sessions'
@@ -18,7 +19,6 @@ const DIFFICULTIES = ['easy', 'balanced', 'hard'] as const
 const SEARCH_WINDOWS = [3, 4, 5] as const
 
 const QUOTA_EXHAUSTED_CODE = 'quota.QUOTA_EXHAUSTED'
-const THEME_UNAVAILABLE_CODE = 'sessions.THEME_UNAVAILABLE'
 const PRACTICE_NOT_ALLOWED_CODE = 'sessions.PRACTICE_NOT_ALLOWED'
 
 type SessionDifficulty = (typeof DIFFICULTIES)[number]
@@ -63,6 +63,14 @@ async function requestSessionStart(input: StartSessionInput): Promise<StartedSes
     method: 'POST',
     schema: startedSessionSchema,
   })
+}
+
+function inlineFailureCode(error: unknown): string | null {
+  if (error === null) return null
+
+  const { code } = apiErrorDetails(error)
+
+  return describeApiError(code).presentation === 'inline' ? code : null
 }
 
 function toDifficulty(value: string): SessionDifficulty | null {
@@ -135,24 +143,24 @@ export function PracticeConfigForm({
     mutation.mutate(configuration)
   }
 
-  const failureCode = mutation.isError ? apiErrorDetails(mutation.error).code : null
+  // Only a failure the visitor has to act on stays on the screen; everything else is a retry away
+  // and reaches them through the root toast handler.
+  const failureCode = inlineFailureCode(mutation.isError ? mutation.error : null)
   const isConsentPending = failureCode === PRACTICE_NOT_ALLOWED_CODE
 
   function failureMessage(code: string): string {
-    if (code === QUOTA_EXHAUSTED_CODE && quota !== null) {
-      return t('errors.quotaExhausted', {
-        allowance: quota.allowance,
-        date: format.dateTime(new Date(quota.renewsAt), {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        }),
-      })
-    }
-    if (code === THEME_UNAVAILABLE_CODE) return t('errors.themeUnavailable')
-    if (code === PRACTICE_NOT_ALLOWED_CODE) return t('errors.practiceNotAllowed')
+    if (code !== QUOTA_EXHAUSTED_CODE) return translate(describeApiError(code).messageKey)
 
-    return translate('common.errors.unknown')
+    return quota === null
+      ? translate('common.errors.unknown')
+      : t('errors.quotaExhausted', {
+          allowance: quota.allowance,
+          date: format.dateTime(new Date(quota.renewsAt), {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          }),
+        })
   }
 
   return (

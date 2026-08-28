@@ -1,11 +1,23 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { NextIntlClientProvider } from 'next-intl'
+import { NextIntlClientProvider, useTranslations } from 'next-intl'
+import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
 import { DEFAULT_TIME_ZONE } from '@/i18n/request'
+
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+
+function ApiProviders({ children }: { readonly children: ReactNode }) {
+  const translate = useTranslations()
+  const [queryClient] = useState(() => createQueryClient(translate))
+
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+}
 import { ApiClientError } from '@/lib/api/client-error'
+import { createQueryClient } from '@/lib/api/query-client'
 import {
   PracticeSessionProvider,
   usePracticeSessionStore,
@@ -55,8 +67,8 @@ function renderPracticeConfigForm(
   signOut: () => void = () => undefined,
 ) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <NextIntlClientProvider locale="pt-BR" messages={messages} timeZone={DEFAULT_TIME_ZONE}>
+    <NextIntlClientProvider locale="pt-BR" messages={messages} timeZone={DEFAULT_TIME_ZONE}>
+      <ApiProviders>
         <PracticeSessionProvider>
           <PracticeConfigForm
             categories={CATEGORIES}
@@ -67,8 +79,8 @@ function renderPracticeConfigForm(
           />
           <PracticeSessionProbe />
         </PracticeSessionProvider>
-      </NextIntlClientProvider>
-    </QueryClientProvider>,
+      </ApiProviders>
+    </NextIntlClientProvider>,
   )
 }
 
@@ -100,7 +112,10 @@ function renewalDate(renewsAt: string): string {
 }
 
 describe('PracticeConfigForm', () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
 
   it('moves the practice session store to researching with the started session', async () => {
     const requests: StartSessionInput[] = []
@@ -155,6 +170,32 @@ describe('PracticeConfigForm', () => {
     expect(screen.getByRole('button', { name: 'Sair e entrar de novo' })).toBeInTheDocument()
     expect(screen.getByText('idle')).toBeInTheDocument()
     expect(screen.getByText('none')).toBeInTheDocument()
+  })
+
+  it('toasts a failure that the form has no instruction for', async () => {
+    const { toast } = await import('sonner')
+
+    renderPracticeConfigForm(rejectingRequest('sessions.SOME_NEW_FAILURE'))
+    submitConfiguration()
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Não foi possível concluir a ação. Tente novamente.',
+      ),
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByText('idle')).toBeInTheDocument()
+  })
+
+  it('keeps a blocking failure inline instead of toasting it', async () => {
+    const { toast } = await import('sonner')
+
+    renderPracticeConfigForm(rejectingRequest('sessions.THEME_UNAVAILABLE'))
+    submitConfiguration()
+
+    await screen.findByRole('alert')
+
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
   it('submits the consent retry control to the sign-out action it was given', async () => {

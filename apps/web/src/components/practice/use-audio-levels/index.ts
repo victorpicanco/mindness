@@ -17,7 +17,6 @@ interface AudioLevelReader {
 export type AudioLevelSource = () => Promise<AudioLevelReader>
 
 interface AudioLevels {
-  readonly hasFailed: boolean
   readonly levels: readonly number[]
 }
 
@@ -72,7 +71,6 @@ export function useAudioLevels({
   source = browserAudioLevelSource,
 }: UseAudioLevelsOptions): AudioLevels {
   const [levels, setLevels] = useState<readonly number[]>([])
-  const [hasFailed, setHasFailed] = useState(false)
 
   useEffect(() => {
     if (!isActive) return
@@ -116,9 +114,9 @@ export function useAudioLevels({
         reader = opened
         frame = window.requestAnimationFrame(sample)
       })
-      .catch(() => {
-        setHasFailed(true)
-      })
+      // The waveform is decoration over a recording the MediaRecorder owns; a source that never
+      // opens leaves the bars empty instead of claiming the microphone failed.
+      .catch(() => undefined)
 
     return () => {
       isCancelled = true
@@ -126,9 +124,8 @@ export function useAudioLevels({
       reader?.stop()
       reader = null
       setLevels([])
-      setHasFailed(false)
     }
   }, [historySize, isActive, source])
 
-  return { hasFailed, levels }
+  return { levels }
 }

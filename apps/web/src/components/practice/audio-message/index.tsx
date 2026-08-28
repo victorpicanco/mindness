@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 import { AudioPlaybackBar, playbackLevels } from '@/components/practice/audio-playback-bar'
 import { formatCountdown } from '@/components/practice/countdown'
@@ -23,7 +24,6 @@ export function AudioMessage({ label, resolveSource, seed }: AudioMessageProps) 
   const t = useTranslations('home.audio')
   const audioRef = useRef<HTMLAudioElement>(null)
   const requestPendingRef = useRef(false)
-  const [failure, setFailure] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -41,7 +41,6 @@ export function AudioMessage({ label, resolveSource, seed }: AudioMessageProps) 
     }
 
     requestPendingRef.current = true
-    setFailure(false)
 
     try {
       if (!audio.hasAttribute('src')) {
@@ -52,7 +51,7 @@ export function AudioMessage({ label, resolveSource, seed }: AudioMessageProps) 
       await audio.play()
     } catch {
       audio.removeAttribute('src')
-      setFailure(true)
+      toast.error(t('playbackFailed'))
     } finally {
       requestPendingRef.current = false
       setIsLoading(false)
@@ -100,11 +99,6 @@ export function AudioMessage({ label, resolveSource, seed }: AudioMessageProps) 
       {isLoading ? (
         <p className="text-sm" role="status">
           <ShinyText text={t('loading')} />
-        </p>
-      ) : null}
-      {failure ? (
-        <p className="text-sm text-error" role="alert">
-          {t('playbackFailed')}
         </p>
       ) : null}
     </article>

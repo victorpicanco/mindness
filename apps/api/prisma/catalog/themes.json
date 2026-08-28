@@ -1,156 +1,780 @@
 {
   "categories": [
     {
-      "slug": "mindfulness",
-      "name": "Mindfulness",
+      "slug": "figuras-historicas",
+      "name": "Figuras históricas",
       "themes": [
         {
-          "title": "Follow one full breath",
+          "title": "Leonardo da Vinci",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Feel the air at the nostrils",
+          "title": "Albert Einstein",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Let the exhale lengthen naturally",
+          "title": "Marie Curie",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Rest attention on the rising chest",
+          "title": "Santos Dumont",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Count five calm breaths",
+          "title": "Nelson Mandela",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Notice the pause after breathing out",
+          "title": "Cleópatra",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Return gently to the next inhale",
+          "title": "Isaac Newton",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Observe the breath without changing it",
+          "title": "Frida Kahlo",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Feel the belly soften with each breath",
+          "title": "Mahatma Gandhi",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Name each breath as in and out",
+          "title": "Galileu Galilei",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
         {
-          "title": "Scan from forehead to jaw",
+          "title": "Ada Lovelace e o primeiro algoritmo",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Notice the weight of your shoulders",
+          "title": "Alan Turing e a quebra do código Enigma",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Feel both hands resting",
+          "title": "Nikola Tesla e a guerra das correntes",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Bring attention to the center of the chest",
+          "title": "Zumbi dos Palmares e o quilombo que resistiu um século",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Sense your back meeting the chair",
+          "title": "Charles Darwin e a viagem do Beagle",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Explore sensations in the abdomen",
+          "title": "Chiquinha Gonzaga e a música popular brasileira",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Notice contact beneath your feet",
+          "title": "Rosa Parks e o boicote aos ônibus de Montgomery",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Trace the body from hips to knees",
+          "title": "Dom Pedro II e o Segundo Reinado",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Relax the muscles around the eyes",
+          "title": "Winston Churchill nos anos da Segunda Guerra",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Observe the whole body breathing",
+          "title": "Maria Antonieta e a queda da monarquia francesa",
           "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Watch a thought arrive and leave",
+          "title": "Napoleão Bonaparte: reformador ou tirano",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Label a thought as planning",
+          "title": "Cristóvão Colombo e a disputa sobre seu legado",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Label a thought as remembering",
+          "title": "Getúlio Vargas entre o Estado Novo e o trabalhismo",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Make room for an uncomfortable thought",
+          "title": "Maquiavel e a separação entre política e moral",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Return from worry to the present moment",
+          "title": "Robespierre e o Terror na Revolução Francesa",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Notice the space between thoughts",
+          "title": "Oppenheimer e a responsabilidade do cientista",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Let a judgment pass without answering it",
+          "title": "Che Guevara: símbolo e crítica",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Recognize a thought is not a command",
+          "title": "Constantino e a conversão do Império Romano",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Observe the urge to solve everything now",
+          "title": "Simón Bolívar e o sonho da América unida",
           "difficulty": "hard",
           "publicationStatus": "published"
         },
         {
-          "title": "Choose one kind response to a difficult thought",
+          "title": "Catarina, a Grande, e o despotismo esclarecido",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        }
+      ]
+    },
+    {
+      "slug": "ciencia",
+      "name": "Ciência",
+      "themes": [
+        {
+          "title": "O sistema solar",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona a fotossíntese",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Os estados da matéria",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O ciclo da água",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o céu é azul",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona uma vacina",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "As fases da Lua",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A cadeia alimentar",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é a gravidade",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como se forma um arco-íris",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A teoria da evolução por seleção natural",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A tabela periódica dos elementos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o DNA guarda informação",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que são buracos negros",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A tectônica de placas e os terremotos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como as bactérias criaram resistência a antibióticos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O papel do microbioma intestinal",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A descoberta da penicilina",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona o sistema imunológico",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O experimento da dupla fenda",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A teoria da relatividade de Einstein",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O princípio da incerteza de Heisenberg",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A segunda lei da termodinâmica e a seta do tempo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que a mecânica quântica diz sobre a realidade",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A crise de reprodutibilidade na ciência",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "CRISPR e os limites da edição genética",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O problema difícil da consciência",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Matéria escura e energia escura",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O paradoxo de Fermi",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Modelos climáticos e a incerteza científica",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        }
+      ]
+    },
+    {
+      "slug": "tecnologia",
+      "name": "Tecnologia",
+      "themes": [
+        {
+          "title": "Como funciona a internet",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona o Wi-Fi",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é computação em nuvem",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona o GPS",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A história do telefone celular",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que faz um sistema operacional",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona uma impressora 3D",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é software livre",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funcionam as baterias de íon-lítio",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona um mecanismo de busca",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a criptografia protege suas mensagens",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é blockchain",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funcionam os algoritmos de recomendação",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A transição para as energias renováveis",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Carros autônomos e o estado da tecnologia",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona o reconhecimento facial",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A corrida espacial privada",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que são computadores quânticos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O Pix e a mudança nos pagamentos no Brasil",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Robótica e automação nas fábricas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funcionam os modelos de linguagem",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O dilema da moderação de conteúdo nas redes",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Privacidade e vigilância na era dos dados",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O custo ambiental dos data centers",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Viés algorítmico e discriminação automatizada",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A regulação da inteligência artificial",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Guerra cibernética e infraestrutura crítica",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Obsolescência programada e o lixo eletrônico",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Neutralidade da rede",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Deepfakes e a crise da evidência",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        }
+      ]
+    },
+    {
+      "slug": "arte-e-cultura",
+      "name": "Arte e cultura",
+      "themes": [
+        {
+          "title": "Quem foi Vincent van Gogh",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A Mona Lisa",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O Carnaval brasileiro",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A história do cinema",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Quem foi Beethoven",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é a Bossa Nova",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "As pirâmides do Egito",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Shakespeare e suas peças",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A história das histórias em quadrinhos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O grafite como arte urbana",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O Impressionismo e a ruptura com a academia",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A Semana de Arte Moderna de 1922",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O Renascimento italiano",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A Bauhaus e o design moderno",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O jazz e suas origens em Nova Orleans",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A arquitetura de Oscar Niemeyer",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O cinema neorrealista italiano",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A literatura de Machado de Assis",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O barroco mineiro e Aleijadinho",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A cultura pop coreana e o K-pop",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que faz uma obra ser considerada arte",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A restituição de obras saqueadas aos países de origem",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Arte gerada por inteligência artificial e a questão da autoria",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Apropriação cultural: limites e debates",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O mercado de arte e a especulação financeira",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Duchamp e a arte conceitual",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Censura e liberdade artística",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O cânone literário e quem fica de fora",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A morte do autor e a interpretação da obra",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Museus e o dever de contar histórias difíceis",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        }
+      ]
+    },
+    {
+      "slug": "sociedade-e-economia",
+      "name": "Sociedade e economia",
+      "themes": [
+        {
+          "title": "Para que serve o dinheiro",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é inflação",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona uma eleição no Brasil",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que faz o SUS",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é o PIB",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funcionam os impostos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é o salário mínimo",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funcionam os juros",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é a ONU",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Para que serve uma constituição",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona o sistema de aposentadoria",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A desigualdade de renda no Brasil",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funcionam os programas de transferência de renda",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os bancos centrais controlam a inflação",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O envelhecimento da população e seus efeitos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que é economia circular",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Migração e refúgio no mundo contemporâneo",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona o comércio internacional",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A economia dos aplicativos e o trabalho por demanda",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O acesso à universidade e a política de cotas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Renda básica universal: argumentos a favor e contra",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Capitalismo e crise climática",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O impacto da automação sobre o emprego",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Democracia e desinformação",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A concentração de poder das big techs",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Reparação histórica pela escravidão",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Segurança pública e políticas de encarceramento",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A guerra às drogas e suas alternativas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O futuro do Estado de bem-estar social",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Liberdade de expressão e seus limites",
           "difficulty": "hard",
           "publicationStatus": "published"
         }

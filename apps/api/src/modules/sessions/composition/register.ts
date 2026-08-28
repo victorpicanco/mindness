@@ -93,7 +93,13 @@ function parseSessionEvent(
   const sessionId = readSessionId(event, eventName)
   if (sessionId === null) return null
 
-  return { ...event, eventName, payload: { sessionId } }
+  return {
+    eventId: event.eventId,
+    eventName,
+    occurredAt: event.occurredAt,
+    version: event.version,
+    payload: { sessionId },
+  }
 }
 
 function parseAnalysisCompleted(event: IntegrationEvent): AnalysisCompletedEvent | null {
@@ -108,8 +114,10 @@ function parseAnalysisCompleted(event: IntegrationEvent): AnalysisCompletedEvent
   if (!('total' in scores) || typeof scores.total !== 'number') return null
 
   return {
-    ...event,
+    eventId: event.eventId,
     eventName: 'analysis_completed',
+    occurredAt: event.occurredAt,
+    version: event.version,
     payload: { sessionId, scores: { total: scores.total } },
   }
 }

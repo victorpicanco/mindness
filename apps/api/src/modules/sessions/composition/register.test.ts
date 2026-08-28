@@ -62,22 +62,62 @@ describe('registerSessionsModule', () => {
     expect(findById).toHaveBeenCalledOnce()
     await app.close()
   })
+
+  it('preserves occurredAt when the published event exposes it as a prototype getter', async () => {
+    const handlers = new Map<string, EventHandler>()
+    const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })
+    const deps = createDependencies([], handlers, createSessionRow('processing'))
+    const upsert = vi.spyOn(deps.prisma.session, 'upsert')
+    const occurredAt = new Date('2026-08-28T01:32:28.785Z')
+
+    await registerSessionsModule(app, deps)
+    await handlers.get('analysis_failed')?.(publishedEvent('analysis_failed', occurredAt))
+
+    expect(upsert).toHaveBeenCalledOnce()
+    expect(upsert.mock.calls[0]?.[0].update).toMatchObject({
+      failedAt: occurredAt,
+      failureReason: 'analysis_failed',
+      state: 'failed',
+    })
+    await app.close()
+  })
 })
+
+class PublishedAnalysisEvent implements IntegrationEvent {
+  readonly eventId = 'evt-1'
+  readonly version = 1
+  readonly payload = { sessionId: 'session-1' }
+
+  constructor(
+    readonly eventName: string,
+    private readonly occurredAtEpoch: number,
+  ) {}
+
+  get occurredAt(): Date {
+    return new Date(this.occurredAtEpoch)
+  }
+}
+
+function publishedEvent(eventName: string, occurredAt: Date): IntegrationEvent {
+  return new PublishedAnalysisEvent(eventName, occurredAt.getTime())
+}
 
 function createDependencies(
   subscriptions: string[],
   handlers = new Map<string, EventHandler>(),
+  storedSession: SessionRow | null = null,
 ): SessionsModuleDeps {
   return {
     prisma: {
       session: {
-        findUnique: () => Promise.resolve(null),
+        findUnique: () => Promise.resolve(storedSession),
         findFirst: () => Promise.resolve(null),
         findMany: () => Promise.resolve([]),
         upsert: () => Promise.resolve(createSessionRow()),
         updateMany: () => Promise.resolve({ count: 1 }),
       },
-      $transaction: async (operation) => operation(createDependencies(subscriptions).prisma),
+      $transaction: async (operation) =>
+        operation(createDependencies(subscriptions, handlers, storedSession).prisma),
     },
     clock: { now: () => new Date() },
     idGenerator: { generate: () => 'id' },
@@ -117,16 +157,16 @@ function createDependencies(
   }
 }
 
-function createSessionRow(): SessionRow {
+function createSessionRow(state: SessionRow['state'] = 'in_progress'): SessionRow {
   return {
-    id: 'session-id',
+    id: 'session-1',
     accountId: 'account-id',
     themeId: 'theme-id',
     difficulty: 'balanced',
     categorySlug: 'general',
     searchWindowMinutes: 4,
     quotaReservationId: 'reservation-id',
-    state: 'in_progress',
+    state,
     expiredReason: null,
     createdAt: new Date(),
     expiresAt: new Date(),

@@ -49,6 +49,24 @@
     "timeout": "A análise não foi concluída. Sua cota foi devolvida. Inicie uma nova sessão.",
     "historyLink": "Ver histórico"
   },
+  "analysis": {
+    "title": "Sua análise",
+    "scoresTitle": "Pontuações",
+    "scoreLabels": {
+      "total": "Pontuação total",
+      "clarity": "Clareza",
+      "rhythm": "Ritmo",
+      "fluency": "Fluência",
+      "mastery": "Domínio"
+    },
+    "guidanceTitle": "Orientações",
+    "recordingTitle": "Sua gravação",
+    "recordingLabel": "Gravação da sessão",
+    "playRecording": "Reproduzir gravação",
+    "loadingRecording": "Carregando gravação…",
+    "playbackFailed": "Não foi possível reproduzir a gravação. Tente novamente.",
+    "transcriptTitle": "Transcrição"
+  },
   "session": {
     "totalScore": "Pontuação total",
     "states": {

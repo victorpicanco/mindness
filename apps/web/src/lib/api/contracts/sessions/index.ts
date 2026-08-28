@@ -93,4 +93,32 @@ export const sessionAnalysisAvailabilitySchema = z.object({
   sessionId: z.uuid(),
 })
 
+const analysisPillarSchema = z.enum(['clarity', 'rhythm', 'fluency', 'mastery'])
+
+export const sessionAnalysisSchema = z.strictObject({
+  analyzedAt: z.iso.datetime(),
+  guidance: z
+    .array(
+      z.strictObject({
+        pillar: analysisPillarSchema,
+        text: z.string(),
+      }),
+    )
+    .min(1),
+  scores: z.strictObject({
+    clarity: z.number().int().min(0).max(100),
+    fluency: z.number().int().min(0).max(100),
+    mastery: z.number().int().min(0).max(100),
+    rhythm: z.number().int().min(0).max(100),
+    total: z.number().int().min(0).max(100),
+  }),
+  sessionId: z.uuid(),
+  transcript: z.string(),
+})
+
+export const audioPlaybackCredentialSchema = z.strictObject({
+  expiresAt: z.iso.datetime(),
+  signedUrl: z.url(),
+})
+
 export type SessionHistoryItem = z.output<typeof sessionHistoryItemSchema>

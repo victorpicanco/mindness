@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { z } from 'zod'
 
 import { messages } from '@/i18n/messages'
+import { ApiClientError } from '@/lib/api/client-error'
 import type { apiFetch } from '@/lib/api/server-client'
 import { PracticeSessionProvider } from '@/stores/practice-session/provider'
 import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
@@ -30,8 +31,49 @@ function activeSession() {
 }
 
 function createApiFetch(activeSession: unknown, sessions: unknown = []): typeof apiFetch {
-  return <TSchema extends z.ZodType>(path: string, options: { readonly schema: TSchema }) =>
-    Promise.resolve(options.schema.parse(path === '/sessions/active' ? activeSession : sessions))
+  return <TSchema extends z.ZodType>(path: string, options: { readonly schema: TSchema }) => {
+    if (path === '/sessions/active') {
+      return Promise.resolve(options.schema.parse(activeSession))
+    }
+    if (path === '/sessions') return Promise.resolve(options.schema.parse(sessions))
+
+    return Promise.reject(
+      new ApiClientError({
+        code: 'analyses.ANALYSIS_NOT_FOUND',
+        issues: null,
+        message: 'Analysis not found',
+        requestId: 'request-id',
+      }),
+    )
+  }
+}
+
+function completedSession() {
+  return {
+    bestOfDay: true,
+    categorySlug: 'focus',
+    difficulty: 'balanced' as const,
+    localDate: '24/08/2026',
+    localTime: '09:00',
+    sessionId: SESSION_ID,
+    startedAt: '2026-08-24T12:00:00.000Z',
+    state: 'completed' as const,
+    themeTitle: 'Notícias do dia',
+    totalScore: 73,
+  }
+}
+
+function analysis() {
+  return {
+    analyzedAt: '2026-08-24T12:10:00.000Z',
+    guidance: [
+      { pillar: 'clarity', text: 'Organize a ideia central antes de apresentar os detalhes.' },
+      { pillar: 'fluency', text: 'Reduza as pausas entre frases relacionadas.' },
+    ],
+    scores: { clarity: 70, fluency: 60, mastery: 85, rhythm: 75, total: 73 },
+    sessionId: SESSION_ID,
+    transcript: '<strong>Texto puro</strong> **sem Markdown renderizado**',
+  }
 }
 
 function createRouter() {
@@ -158,7 +200,7 @@ describe('SessionPage', () => {
     expect(notFound).toHaveBeenCalledOnce()
   })
 
-  it('represents a synchronized non-active session from the sidebar aggregate', async () => {
+  it('represents a synchronized non-active session without an analysis from the sidebar aggregate', async () => {
     const Page = createSessionPage(
       createApiFetch(null, [
         {
@@ -169,9 +211,9 @@ describe('SessionPage', () => {
           localTime: '09:00',
           sessionId: SESSION_ID,
           startedAt: '2026-08-24T12:00:00.000Z',
-          state: 'completed',
+          state: 'expired',
           themeTitle: 'Notícias do dia',
-          totalScore: 87,
+          totalScore: null,
         },
       ]),
     )
@@ -179,7 +221,66 @@ describe('SessionPage', () => {
     renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
     expect(screen.getByRole('heading', { name: 'focus' })).toBeInTheDocument()
-    expect(screen.getByText('Concluída')).toBeInTheDocument()
-    expect(screen.getByText('87')).toBeInTheDocument()
+    expect(screen.getByText('Expirada')).toBeInTheDocument()
+  })
+
+  it('renders scores, guidance and transcript as plain text for a completed session', async () => {
+    const fetchFromApi: typeof apiFetch = (path, options) => {
+      const response =
+        path === '/sessions/active'
+          ? null
+          : path === '/sessions'
+            ? [completedSession()]
+            : analysis()
+
+      return Promise.resolve(options.schema.parse(response))
+    }
+    const Page = createSessionPage(fetchFromApi)
+
+    const { container } = renderPage(
+      await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
+    )
+
+    expect(screen.getByRole('heading', { name: 'Sua análise' })).toBeInTheDocument()
+    expect(screen.getByText('73')).toBeInTheDocument()
+    expect(screen.getByText('70')).toBeInTheDocument()
+    expect(screen.getByText('75')).toBeInTheDocument()
+    expect(screen.getByText('60')).toBeInTheDocument()
+    expect(screen.getByText('85')).toBeInTheDocument()
+    expect(
+      screen.getByText('Organize a ideia central antes de apresentar os detalhes.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Reduza as pausas entre frases relacionadas.')).toBeInTheDocument()
+    expect(
+      screen.getByText('<strong>Texto puro</strong> **sem Markdown renderizado**'),
+    ).toBeInTheDocument()
+    expect(container.querySelector('strong')).not.toBeInTheDocument()
+  })
+
+  it('turns an analysis hidden by the backend into the route not-found boundary', async () => {
+    const notFound = vi.fn(() => {
+      throw new DOMException('Not found', 'NotFoundError')
+    })
+    const fetchFromApi: typeof apiFetch = (path, options) => {
+      if (path === '/sessions/active') return Promise.resolve(options.schema.parse(null))
+      if (path === '/sessions') {
+        return Promise.resolve(options.schema.parse([completedSession()]))
+      }
+
+      return Promise.reject(
+        new ApiClientError({
+          code: 'analyses.ANALYSIS_NOT_FOUND',
+          issues: null,
+          message: 'Analysis not found',
+          requestId: 'request-id',
+        }),
+      )
+    }
+    const Page = createSessionPage(fetchFromApi, notFound)
+
+    await expect(
+      Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
+    ).rejects.toMatchObject({ name: 'NotFoundError' })
+    expect(notFound).toHaveBeenCalledOnce()
   })
 })

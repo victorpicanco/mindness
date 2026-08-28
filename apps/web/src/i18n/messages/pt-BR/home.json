@@ -95,5 +95,19 @@
       "completed": "Concluída",
       "failed": "Falhou"
     }
+  },
+  "history": {
+    "title": "Seu progresso",
+    "emptyTitle": "Seu progresso começa aqui",
+    "emptyDescription": "Inicie uma sessão para praticar sua apresentação e acompanhar seu progresso.",
+    "bestOfDay": "Melhor do dia",
+    "loadMore": "Carregar mais",
+    "states": {
+      "in_progress": "Em andamento",
+      "expired": "Expirada",
+      "processing": "Em processamento",
+      "completed": "Concluída",
+      "failed": "Falhou"
+    }
   }
 }

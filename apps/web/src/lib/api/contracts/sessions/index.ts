@@ -89,4 +89,8 @@ export const startedSessionSchema = z.strictObject({
   themeTitle: z.string(),
 })
 
+export const sessionAnalysisAvailabilitySchema = z.object({
+  sessionId: z.uuid(),
+})
+
 export type SessionHistoryItem = z.output<typeof sessionHistoryItemSchema>

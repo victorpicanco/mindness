@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { activeSessionSchema, sessionHistorySchema } from '@/lib/api/contracts/sessions'
 import { apiFetch } from '@/lib/api/server-client'
 
+import { ProcessingStatus } from '@/components/practice/processing-status'
 import { RecordingStart } from '@/components/practice/recording-start'
 import { ResearchTimer } from '@/components/practice/research-timer'
 import { SessionSummary } from '@/components/practice/session-summary'
@@ -47,6 +48,7 @@ export function createSessionPage(fetchFromApi: ApiFetch, renderNotFound: NotFou
         <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
           <ResearchTimer />
           <RecordingStart />
+          <ProcessingStatus />
         </div>
       </div>
     )

@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { apiFetch } from '@/lib/api/server-client'
+import { provisionAccount } from '@/lib/auth/provision-account'
+import { SIGNED_IN_HOME } from '@/lib/auth/redirect-target'
 import { writeSessionCookies } from '@/lib/auth/session'
 
 const sessionSchema = z.object({
@@ -41,10 +43,14 @@ export function createEmailConfirmationRouteHandler({ cookieStore, fetcher }: De
         schema: sessionSchema,
       })
       writeSessionCookies(cookieStore, session)
-      return redirect(
-        request,
-        type === 'recovery' ? '/auth/update-password' : '/auth/confirmed?status=success',
-      )
+      if (type === 'recovery') return redirect(request, '/auth/update-password')
+
+      const provisionError = await provisionAccount({ cookieStore, fetcher })
+      if (provisionError !== null) {
+        return redirect(request, `/auth/sign-in?error=${encodeURIComponent(provisionError.code)}`)
+      }
+
+      return redirect(request, SIGNED_IN_HOME)
     } catch {
       return redirect(
         request,

@@ -126,7 +126,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     }),
     authenticate: new AuthenticateUseCase({ accounts, authIdentityProvider }),
     checkPracticeEligibility: new CheckPracticeEligibilityUseCase(accounts),
-    confirmEmail: new ConfirmEmailUseCase({ authIdentityProvider }),
+    confirmEmail: new ConfirmEmailUseCase({ accounts, authIdentityProvider, unitOfWork }),
     completeGoogleSignIn: new CompleteGoogleSignInUseCase(shared),
     createAccount: new CreateAccountUseCase(shared),
     deleteAccount: new DeleteAccountUseCase({

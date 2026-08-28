@@ -56,7 +56,7 @@ type ApiFetchWithMetaOptions<
   TMetaSchema extends z.ZodType,
 > = ApiFetchOptions<TSchema> & { readonly metaSchema: TMetaSchema }
 
-export interface ApiResponse<TData, TMeta> {
+interface ApiResponse<TData, TMeta> {
   readonly data: TData
   readonly meta: TMeta
 }

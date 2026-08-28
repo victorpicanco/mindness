@@ -7,15 +7,69 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { z } from 'zod'
 
 import { messages } from '@/i18n/messages'
+import { DEFAULT_TIME_ZONE } from '@/i18n/request'
 import { ApiClientError } from '@/lib/api/client-error'
-import type { apiFetch } from '@/lib/api/server-client'
 import {
   PracticeSessionProvider,
   usePracticeSessionStore,
 } from '@/stores/practice-session/provider'
 import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
 
-import { createSessionPage } from './page'
+type ApiFetch = <TSchema extends z.ZodType>(
+  path: string,
+  options: { readonly schema: TSchema },
+) => Promise<z.output<TSchema>>
+
+let respondToApi: ApiFetch = () =>
+  Promise.reject(new DOMException('The API stub was not configured.'))
+let renderNotFound: () => never = () => {
+  throw new DOMException('Not found', 'NotFoundError')
+}
+
+vi.mock('@/lib/api/server-client', () => ({
+  apiFetch: <TSchema extends z.ZodType>(path: string, options: { readonly schema: TSchema }) =>
+    respondToApi(path, options),
+  apiFetchWithMeta: async <TSchema extends z.ZodType>(
+    path: string,
+    options: { readonly schema: TSchema },
+  ) => ({
+    data: await respondToApi(path, options),
+    meta: { timeZone: DEFAULT_TIME_ZONE },
+  }),
+}))
+
+vi.mock('next-intl/server', () => ({
+  getRequestConfig: (factory: () => unknown) => factory,
+  getTranslations: () =>
+    Promise.resolve((key: string) => {
+      const values: Readonly<Record<string, string>> = {
+        'states.completed': 'Concluída',
+        'states.expired': 'Expirada',
+        'states.failed': 'Falhou',
+        'states.in_progress': 'Em andamento',
+        'states.processing': 'Processando',
+        totalScore: 'Pontuação total',
+      }
+
+      return values[key] ?? key
+    }),
+}))
+
+vi.mock('next/navigation', () => ({
+  notFound: () => renderNotFound(),
+  useRouter: () => ({
+    back: () => undefined,
+    forward: () => undefined,
+    prefetch: () => undefined,
+    push: () => undefined,
+    refresh: () => undefined,
+    replace: () => undefined,
+  }),
+}))
+
+async function loadSessionPage() {
+  return (await import('./page')).default
+}
 
 const SESSION_ID = '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
 
@@ -37,7 +91,7 @@ function activeSession() {
   }
 }
 
-function createApiFetch(activeSession: unknown, sessions: unknown = []): typeof apiFetch {
+function createApiFetch(activeSession: unknown, sessions: unknown = []): ApiFetch {
   return <TSchema extends z.ZodType>(path: string, options: { readonly schema: TSchema }) => {
     if (path === '/sessions/active') {
       return Promise.resolve(options.schema.parse(activeSession))
@@ -114,7 +168,7 @@ function renderPage(
   return render(
     <AppRouterContext.Provider value={createRouter()}>
       <QueryClientProvider client={new QueryClient()}>
-        <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <NextIntlClientProvider locale="pt-BR" messages={messages} timeZone={DEFAULT_TIME_ZONE}>
           <PracticeSessionProvider {...(initialState === undefined ? {} : { initialState })}>
             {wrap(page)}
           </PracticeSessionProvider>
@@ -147,13 +201,20 @@ function practiceInitialState(
   }
 }
 
+function revealedText(): string[] {
+  return [...document.body.querySelectorAll('[data-split-text="words"]')].map(
+    (paragraph) => paragraph.textContent ?? '',
+  )
+}
+
 describe('SessionPage', () => {
   afterEach(cleanup)
 
   it('rehydrates the research countdown of the session identified by the dynamic URL', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-24T12:00:00.000Z'))
-    const Page = createSessionPage(createApiFetch(activeSession()))
+    respondToApi = createApiFetch(activeSession())
+    const Page = await loadSessionPage()
 
     renderPage(
       await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
@@ -183,7 +244,8 @@ describe('SessionPage', () => {
   it('rehydrates into the recording window when the research time is already over', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-24T12:04:00.000Z'))
-    const Page = createSessionPage(createApiFetch(activeSession()))
+    respondToApi = createApiFetch(activeSession())
+    const Page = await loadSessionPage()
 
     renderPage(
       await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
@@ -210,7 +272,8 @@ describe('SessionPage', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-24T12:04:00.000Z'))
     const session = { ...activeSession(), recordingStartedAt: '2026-08-24T12:04:00.000Z' }
-    const Page = createSessionPage(createApiFetch(session))
+    respondToApi = createApiFetch(session)
+    const Page = await loadSessionPage()
 
     renderPage(
       await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
@@ -232,7 +295,9 @@ describe('SessionPage', () => {
     const notFound = vi.fn(() => {
       throw new DOMException('Not found', 'NotFoundError')
     })
-    const Page = createSessionPage(createApiFetch(null), notFound)
+    respondToApi = createApiFetch(null)
+    renderNotFound = notFound
+    const Page = await loadSessionPage()
 
     await expect(
       Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
@@ -243,22 +308,21 @@ describe('SessionPage', () => {
   })
 
   it('represents a synchronized non-active session without an analysis from the sidebar aggregate', async () => {
-    const Page = createSessionPage(
-      createApiFetch(null, [
-        {
-          bestOfDay: true,
-          categorySlug: 'focus',
-          difficulty: 'balanced',
-          localDate: '24/08/2026',
-          localTime: '09:00',
-          sessionId: SESSION_ID,
-          startedAt: '2026-08-24T12:00:00.000Z',
-          state: 'expired',
-          themeTitle: 'Notícias do dia',
-          totalScore: null,
-        },
-      ]),
-    )
+    respondToApi = createApiFetch(null, [
+      {
+        bestOfDay: true,
+        categorySlug: 'focus',
+        difficulty: 'balanced',
+        localDate: '24/08/2026',
+        localTime: '09:00',
+        sessionId: SESSION_ID,
+        startedAt: '2026-08-24T12:00:00.000Z',
+        state: 'expired',
+        themeTitle: 'Notícias do dia',
+        totalScore: null,
+      },
+    ])
+    const Page = await loadSessionPage()
 
     renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
@@ -267,7 +331,7 @@ describe('SessionPage', () => {
   })
 
   it('renders scores, guidance and transcript as plain text for a completed session', async () => {
-    const fetchFromApi: typeof apiFetch = (path, options) => {
+    const fetchFromApi: ApiFetch = (path, options) => {
       const response =
         path === '/sessions/active'
           ? null
@@ -277,7 +341,8 @@ describe('SessionPage', () => {
 
       return Promise.resolve(options.schema.parse(response))
     }
-    const Page = createSessionPage(fetchFromApi)
+    respondToApi = fetchFromApi
+    const Page = await loadSessionPage()
 
     const { container } = renderPage(
       await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
@@ -297,20 +362,20 @@ describe('SessionPage', () => {
     expect(screen.getByText('75')).toBeInTheDocument()
     expect(screen.getByText('60')).toBeInTheDocument()
     expect(screen.getByText('85')).toBeInTheDocument()
-    expect(
-      screen.getByText('Organize a ideia central antes de apresentar os detalhes.'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Reduza as pausas entre frases relacionadas.')).toBeInTheDocument()
-    expect(
-      screen.getByText('<strong>Texto puro</strong> **sem Markdown renderizado**'),
-    ).toBeInTheDocument()
+    expect(revealedText()).toEqual(
+      expect.arrayContaining([
+        'Organize a ideia central antes de apresentar os detalhes.',
+        'Reduza as pausas entre frases relacionadas.',
+        '<strong>Texto puro</strong> **sem Markdown renderizado**',
+      ]),
+    )
     expect(container.querySelector('strong')).not.toBeInTheDocument()
   })
 
   it('keeps the finished conversation in place when the analysis of the session it holds arrives', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-24T12:04:00.000Z'))
-    const fetchFromApi: typeof apiFetch = (path, options) => {
+    const fetchFromApi: ApiFetch = (path, options) => {
       const response =
         path === '/sessions/active'
           ? null
@@ -320,7 +385,8 @@ describe('SessionPage', () => {
 
       return Promise.resolve(options.schema.parse(response))
     }
-    const Page = createSessionPage(fetchFromApi)
+    respondToApi = fetchFromApi
+    const Page = await loadSessionPage()
 
     renderPage(
       await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),
@@ -349,7 +415,7 @@ describe('SessionPage', () => {
     const notFound = vi.fn(() => {
       throw new DOMException('Not found', 'NotFoundError')
     })
-    const fetchFromApi: typeof apiFetch = (path, options) => {
+    const fetchFromApi: ApiFetch = (path, options) => {
       if (path === '/sessions/active') return Promise.resolve(options.schema.parse(null))
       if (path === '/sessions') {
         return Promise.resolve(options.schema.parse([completedSession()]))
@@ -364,7 +430,9 @@ describe('SessionPage', () => {
         }),
       )
     }
-    const Page = createSessionPage(fetchFromApi, notFound)
+    respondToApi = fetchFromApi
+    renderNotFound = notFound
+    const Page = await loadSessionPage()
 
     await expect(
       Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }),

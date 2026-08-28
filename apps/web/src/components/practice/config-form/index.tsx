@@ -1,13 +1,15 @@
 'use client'
 
 import { useMutation } from '@tanstack/react-query'
-import { useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
 import { apiErrorDetails } from '@/lib/api/api-error'
+import { sessionPath } from '@/lib/navigation/session-routes'
 import { bffFetch } from '@/lib/api/bff-client'
 import { startedSessionSchema } from '@/lib/api/contracts/sessions'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
@@ -19,8 +21,8 @@ const QUOTA_EXHAUSTED_CODE = 'quota.QUOTA_EXHAUSTED'
 const THEME_UNAVAILABLE_CODE = 'sessions.THEME_UNAVAILABLE'
 const PRACTICE_NOT_ALLOWED_CODE = 'sessions.PRACTICE_NOT_ALLOWED'
 
-export type SessionDifficulty = (typeof DIFFICULTIES)[number]
-export type SearchWindowMinutes = (typeof SEARCH_WINDOWS)[number]
+type SessionDifficulty = (typeof DIFFICULTIES)[number]
+type SearchWindowMinutes = (typeof SEARCH_WINDOWS)[number]
 
 export interface PracticeCategory {
   readonly categoryId: string
@@ -39,7 +41,7 @@ export interface StartSessionInput {
   readonly searchWindowMinutes: SearchWindowMinutes
 }
 
-export interface StartedSession {
+interface StartedSession {
   readonly createdAt: string
   readonly expiresAt: string
   readonly remaining: number | null
@@ -71,20 +73,25 @@ function toSearchWindowMinutes(value: string): SearchWindowMinutes | null {
   return SEARCH_WINDOWS.find((minutes) => String(minutes) === value) ?? null
 }
 
-function renewalDate(renewsAt: string): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(renewsAt))
-}
-
 interface PracticeConfigFormProps {
   readonly categories: readonly PracticeCategory[]
   readonly onSessionStarted?: (sessionId: string) => void
   readonly quota: PracticeQuota | null
   readonly signOut: SignOutAction
   readonly startSession?: StartSessionRequest
+}
+
+export function PracticeConfigFormWithNavigation(
+  props: Pick<PracticeConfigFormProps, 'categories' | 'quota' | 'signOut'>,
+) {
+  const router = useRouter()
+
+  return (
+    <PracticeConfigForm
+      {...props}
+      onSessionStarted={(sessionId) => router.push(sessionPath(sessionId))}
+    />
+  )
 }
 
 export function PracticeConfigForm({
@@ -96,6 +103,7 @@ export function PracticeConfigForm({
 }: PracticeConfigFormProps) {
   const t = useTranslations('home.practice')
   const translate = useTranslations()
+  const format = useFormatter()
   const startResearching = usePracticeSessionStore((state) => state.startResearching)
   const [difficulty, setDifficulty] = useState<SessionDifficulty | null>(null)
   const [categorySlug, setCategorySlug] = useState('')
@@ -134,7 +142,11 @@ export function PracticeConfigForm({
     if (code === QUOTA_EXHAUSTED_CODE && quota !== null) {
       return t('errors.quotaExhausted', {
         allowance: quota.allowance,
-        date: renewalDate(quota.renewsAt),
+        date: format.dateTime(new Date(quota.renewsAt), {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        }),
       })
     }
     if (code === THEME_UNAVAILABLE_CODE) return t('errors.themeUnavailable')

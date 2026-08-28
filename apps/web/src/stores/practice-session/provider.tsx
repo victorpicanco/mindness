@@ -15,7 +15,7 @@ const PracticeSessionContext = createContext<PracticeSessionStoreApi | null>(nul
 
 interface PracticeSessionProviderProps {
   readonly children: ReactNode
-  readonly initialState?: PracticeSessionInitialState
+  readonly initialState?: PracticeSessionInitialState | undefined
 }
 
 export function PracticeSessionProvider({ children, initialState }: PracticeSessionProviderProps) {

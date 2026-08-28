@@ -2,6 +2,7 @@
 
 import {
   AuthenticatedShell,
+  AuthenticatedShellView,
   type AuthenticatedShellProps,
 } from '@/components/layouts/authenticated-shell'
 import {
@@ -11,20 +12,32 @@ import {
 import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
 
 interface AuthenticatedSessionShellProps extends AuthenticatedShellProps {
-  readonly initialPracticeSessionState?: PracticeSessionInitialState
+  readonly initialPracticeSessionState?: PracticeSessionInitialState | undefined
 }
 
-function SessionNavigationShell(props: AuthenticatedShellProps) {
+type AuthenticatedSessionShellViewProps = AuthenticatedSessionShellProps & {
+  readonly abandonSession: (sessionId: string) => Promise<void>
+}
+
+type SessionNavigationShellProps = AuthenticatedShellProps & {
+  readonly abandonSession?: ((sessionId: string) => Promise<void>) | undefined
+}
+
+function SessionNavigationShell({ abandonSession, ...props }: SessionNavigationShellProps) {
   const status = usePracticeSessionStore((state) => state.status)
   const reset = usePracticeSessionStore((state) => state.reset)
   const shouldConfirmSessionNavigation = status === 'recording' || status === 'uploading'
 
-  return (
-    <AuthenticatedShell
-      {...props}
-      onSessionAbandoned={reset}
-      shouldConfirmSessionNavigation={shouldConfirmSessionNavigation}
-    />
+  const shellProps = {
+    ...props,
+    onSessionAbandoned: reset,
+    shouldConfirmSessionNavigation,
+  }
+
+  return abandonSession === undefined ? (
+    <AuthenticatedShell {...shellProps} />
+  ) : (
+    <AuthenticatedShellView {...shellProps} abandonSession={abandonSession} />
   )
 }
 
@@ -33,12 +46,20 @@ export function AuthenticatedSessionShell({
   ...props
 }: AuthenticatedSessionShellProps) {
   return (
-    <PracticeSessionProvider
-      {...(initialPracticeSessionState === undefined
-        ? {}
-        : { initialState: initialPracticeSessionState })}
-    >
+    <PracticeSessionProvider initialState={initialPracticeSessionState}>
       <SessionNavigationShell {...props} />
+    </PracticeSessionProvider>
+  )
+}
+
+export function AuthenticatedSessionShellView({
+  abandonSession,
+  initialPracticeSessionState,
+  ...props
+}: AuthenticatedSessionShellViewProps) {
+  return (
+    <PracticeSessionProvider initialState={initialPracticeSessionState}>
+      <SessionNavigationShell {...props} abandonSession={abandonSession} />
     </PracticeSessionProvider>
   )
 }

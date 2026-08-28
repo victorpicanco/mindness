@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 
 import { AuthPageShell } from '@/components/auth/page-shell'
+import { buttonStyles } from '@/components/ui/button'
 
 type ConfirmationStatus = 'success' | 'invalid'
 
@@ -15,7 +16,7 @@ export function ConfirmedScreen({ status }: { readonly status: ConfirmationStatu
       title={t(isConfirmed ? 'title' : 'invalidTitle')}
     >
       <Link
-        className="inline-flex min-h-14 items-center justify-center rounded-full bg-text px-6 py-4 text-base font-medium text-surface transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
+        className={buttonStyles({ size: 'lg' })}
         href={isConfirmed ? '/auth/sign-in' : '/auth/resend-confirmation'}
       >
         {t(isConfirmed ? 'signInLink' : 'resendLink')}

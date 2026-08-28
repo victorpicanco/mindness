@@ -1,34 +1,48 @@
-import { cloneElement, type AriaAttributes, type ReactElement, useId } from 'react'
+'use client'
 
-type FieldControlProps = Pick<AriaAttributes, 'aria-describedby' | 'aria-invalid'> & {
-  id?: string
+import { createContext, useContext, useId, type ReactNode } from 'react'
+
+interface FieldControl {
+  readonly 'aria-describedby': string | undefined
+  readonly 'aria-invalid': true | undefined
+  readonly id: string
 }
 
-type FieldProps = {
-  children: ReactElement<FieldControlProps>
-  description?: string
-  error?: string
-  label: string
+const FieldContext = createContext<FieldControl | null>(null)
+
+// The control asks the field for its wiring instead of the field reaching into its child, so a
+// control wrapped in any amount of markup still carries the label, the description and the error.
+export function useFieldControl(): Partial<FieldControl> {
+  return useContext(FieldContext) ?? {}
+}
+
+interface FieldProps {
+  readonly children: ReactNode
+  readonly description?: string | undefined
+  readonly error?: string | undefined
+  readonly label: string
 }
 
 export function Field({ children, description, error, label }: FieldProps) {
   const inputId = useId()
   const descriptionId = description === undefined ? undefined : `${inputId}-description`
   const errorId = error === undefined ? undefined : `${inputId}-error`
-  const describedBy = [descriptionId, errorId]
-    .filter((value): value is string => value !== undefined)
-    .join(' ')
+  const describedBy = [descriptionId, errorId].filter((value) => value !== undefined).join(' ')
 
   return (
     <div className="grid gap-1.5">
       <label className="font-sans text-sm font-medium text-text" htmlFor={inputId}>
         {label}
       </label>
-      {cloneElement(children, {
-        'aria-describedby': describedBy === '' ? undefined : describedBy,
-        'aria-invalid': error !== undefined || undefined,
-        id: inputId,
-      })}
+      <FieldContext.Provider
+        value={{
+          'aria-describedby': describedBy === '' ? undefined : describedBy,
+          'aria-invalid': error === undefined ? undefined : true,
+          id: inputId,
+        }}
+      >
+        {children}
+      </FieldContext.Provider>
       {description === undefined ? null : (
         <p className="font-sans text-sm text-text-muted" id={descriptionId}>
           {description}

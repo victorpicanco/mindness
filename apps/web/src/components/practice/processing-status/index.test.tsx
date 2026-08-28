@@ -12,7 +12,7 @@ import {
   usePracticeSessionStore,
 } from '@/stores/practice-session/provider'
 
-import { ProcessingStatus, type FetchSessionAnalysis } from './index'
+import { ProcessingStatusView, type FetchSessionAnalysis } from './index'
 
 const SESSION_ID = '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
 
@@ -64,7 +64,7 @@ function renderProcessingStatus(fetchAnalysis: FetchSessionAnalysis) {
             }}
           >
             <BeginProcessing>
-              <ProcessingStatus fetchAnalysis={fetchAnalysis} pollIntervalMs={1_000} />
+              <ProcessingStatusView fetchAnalysis={fetchAnalysis} pollIntervalMs={1_000} />
               <PracticeStatus />
             </BeginProcessing>
           </PracticeSessionProvider>

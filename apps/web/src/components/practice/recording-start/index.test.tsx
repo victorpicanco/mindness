@@ -13,13 +13,14 @@ import {
   usePracticeSessionStore,
 } from '@/stores/practice-session/provider'
 
-import {
-  RecordingStart,
-  type AudioRecordingSession,
-  type RecordingStarted,
-  type RecordingStartProps,
-  type SubmitRecordingRequest,
-} from '@/components/practice/recording-start'
+import { RecordingStartView } from '@/components/practice/recording-start'
+import type {
+  AudioRecordingSession,
+  RecordingCaptureDependencies,
+  RecordingStarted,
+  SubmitRecordingRequest,
+} from '@/components/practice/use-recording-capture'
+import { useRecordingCapture } from '@/components/practice/use-recording-capture'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 import { BAR_INTERVAL_MS } from '@/components/practice/use-audio-levels'
 import { MAX_RECORDING_SECONDS } from '@/components/practice/use-recording-clock'
@@ -62,7 +63,22 @@ function fakeAudioLevelSource() {
   return { source, stop }
 }
 
-function renderRecordingStart(props: RecordingStartProps = {}) {
+type RecordingStartHarnessProps = RecordingCaptureDependencies & {
+  readonly audioLevelSource?: AudioLevelSource
+}
+
+function RecordingStartHarness({ audioLevelSource, ...dependencies }: RecordingStartHarnessProps) {
+  const capture = useRecordingCapture(dependencies)
+
+  return (
+    <RecordingStartView
+      capture={capture}
+      {...(audioLevelSource === undefined ? {} : { audioLevelSource })}
+    />
+  )
+}
+
+function renderRecordingStart(props: RecordingStartHarnessProps = {}) {
   return render(
     <AppRouterContext.Provider value={createRouter()}>
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
@@ -86,7 +102,7 @@ function renderRecordingStart(props: RecordingStartProps = {}) {
               status: 'awaiting-recording',
             }}
           >
-            <RecordingStart {...props} />
+            <RecordingStartHarness {...props} />
             <PracticeSessionProbe />
           </PracticeSessionProvider>
         </QueryClientProvider>
@@ -124,9 +140,10 @@ async function clickRecordingButton() {
   })
 }
 
-function grantedMicrophone(source: AudioLevelSource): RecordingStartProps {
+function grantedMicrophone(source: AudioLevelSource): RecordingStartHarnessProps {
   return {
     audioLevelSource: source,
+    captureRecording: () => Promise.resolve({ stop: () => Promise.resolve(new Blob()) }),
     requestMicrophone: () => Promise.resolve(undefined),
     startRecording: () =>
       Promise.resolve({
@@ -205,6 +222,7 @@ describe('RecordingStart', () => {
 
     renderRecordingStart({
       audioLevelSource: source,
+      captureRecording: () => Promise.resolve({ stop: () => Promise.resolve(new Blob()) }),
       requestMicrophone: () => {
         microphoneRequests.push('microphone')
         return Promise.resolve(undefined)
@@ -378,6 +396,75 @@ describe('RecordingStart', () => {
     )
     expect(screen.getByLabelText('practice status')).toHaveTextContent('expired')
     expect(recordingButton()).toBeDisabled()
+  })
+
+  it('releases the microphone and blames the request when the server refuses to open the recording', async () => {
+    const stopTrack = vi.fn()
+    vi.stubGlobal(
+      'MediaStream',
+      class {
+        getTracks() {
+          return [{ stop: stopTrack }]
+        }
+      },
+    )
+    const stream = new MediaStream()
+
+    renderRecordingStart({
+      requestMicrophone: () => Promise.resolve(stream),
+      startRecording: () => Promise.reject(new DOMException('the API is unreachable')),
+    })
+
+    await clickRecordingButton()
+
+    expect(stopTrack).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível concluir a ação. Tente novamente.',
+    )
+  })
+
+  it('expires the session and reports the microphone when recorder capture cannot start', async () => {
+    renderRecordingStart({
+      captureRecording: () => Promise.reject(new DOMException('Recorder unavailable')),
+      requestMicrophone: () => Promise.resolve(undefined),
+      startRecording: () =>
+        Promise.resolve({
+          expiresAt: new Date(NOW.getTime() + GRACE_SECONDS * 1_000).toISOString(),
+          recordingStartedAt: NOW.toISOString(),
+        }),
+    })
+
+    await clickRecordingButton()
+    await settleMutation()
+
+    expect(screen.getByLabelText('practice status')).toHaveTextContent('expired')
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível acessar o microfone.')
+  })
+
+  it('uploads the audio when the recording is stopped before the recorder is ready', async () => {
+    const { source } = fakeAudioLevelSource()
+    const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
+    const stop = vi.fn(() => Promise.resolve(audioBlob))
+    let startCapture = (): void => undefined
+    const captureRecording = (): Promise<AudioRecordingSession> =>
+      new Promise((resolve) => {
+        startCapture = () => resolve({ stop })
+      })
+    const { submitRecording, submitted } = pendingSubmission()
+
+    renderRecordingStart({ ...grantedMicrophone(source), captureRecording, submitRecording })
+
+    await clickRecordingButton()
+    await act(async () => {
+      screen.getByRole('button', { name: 'Parar gravação' }).click()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    startCapture()
+    await settleMutation()
+
+    expect(stop).toHaveBeenCalledTimes(1)
+    expect(submitted).toEqual([{ audioBlob, sessionId: SESSION_ID }])
   })
 
   it('moves the session to processing once the upload is confirmed', async () => {

@@ -23,18 +23,22 @@ import { AUTHENTICATED_NAVIGATION_ITEMS } from '@/lib/navigation/authenticated-n
 import { sessionPath } from '@/lib/navigation/session-routes'
 import type { SessionDayGroup, SessionDayHeading } from '@/lib/sessions/session-day-groups'
 import { abandonSession as abandonSessionRequest } from '@/lib/api/abandon-session'
+import { cn } from '@/lib/ui/class-names'
 
 export interface AuthenticatedShellProps {
-  readonly abandonSession?: (sessionId: string) => Promise<void>
-  readonly activeSessionId?: string
+  readonly activeSessionId?: string | undefined
   readonly children: ReactNode
-  readonly header?: ReactNode
+  readonly header?: ReactNode | undefined
   readonly initialIsExpanded: boolean
   readonly preferenceCookieName: string
-  readonly sessionGroups?: readonly SessionDayGroup[]
-  readonly onSessionAbandoned?: () => void
-  readonly shouldConfirmSessionNavigation?: boolean
+  readonly sessionGroups?: readonly SessionDayGroup[] | undefined
+  readonly onSessionAbandoned?: (() => void) | undefined
+  readonly shouldConfirmSessionNavigation?: boolean | undefined
   readonly signOut: SignOutAction
+}
+
+type AuthenticatedShellViewProps = AuthenticatedShellProps & {
+  readonly abandonSession: (sessionId: string) => Promise<void>
 }
 
 const ONE_YEAR_IN_SECONDS = 31_536_000
@@ -54,7 +58,10 @@ function SignOutControl({ isExpanded, label, signOut }: SignOutControlProps) {
     <form action={signOut} className="mt-auto pt-4">
       <button
         aria-label={isExpanded ? undefined : label}
-        className={`relative z-10 h-10 w-full cursor-pointer items-center overflow-hidden rounded-xl text-text-muted transition-colors hover:bg-input hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text ${isExpanded ? 'grid grid-cols-[2.25rem_minmax(0,1fr)]' : 'grid place-items-center'}`}
+        className={cn(
+          'relative z-10 h-10 w-full cursor-pointer items-center overflow-hidden rounded-xl text-text-muted transition-colors hover:bg-input hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text',
+          isExpanded ? 'grid grid-cols-[2.25rem_minmax(0,1fr)]' : 'grid place-items-center',
+        )}
         type="submit"
       >
         <span className="grid size-9 place-items-center">
@@ -68,8 +75,65 @@ function SignOutControl({ isExpanded, label, signOut }: SignOutControlProps) {
   )
 }
 
-export function AuthenticatedShell({
-  abandonSession = abandonSessionRequest,
+interface SidebarBodyProps {
+  readonly activeHref: string | null
+  readonly isExpanded: boolean
+  readonly labels: Readonly<Record<'primaryNavigation' | 'sessions' | 'signOut', string>>
+  readonly navigationItems: readonly SidebarNavigationItem[]
+  readonly onPrimaryNavigate: (
+    item: SidebarNavigationItem,
+    event: MouseEvent<HTMLAnchorElement>,
+  ) => void
+  readonly onSessionNavigate: (
+    item: SidebarSessionGroup['items'][number],
+    event: MouseEvent<HTMLAnchorElement>,
+  ) => void
+  readonly sessionGroups: readonly SidebarSessionGroup[]
+  readonly showSessionGroups: boolean
+  readonly signOut: SignOutAction
+}
+
+// The rail and the drawer are two presentations of the same navigation, so everything below their
+// headers is rendered from here instead of being written twice.
+function SidebarBody({
+  activeHref,
+  isExpanded,
+  labels,
+  navigationItems,
+  onPrimaryNavigate,
+  onSessionNavigate,
+  sessionGroups,
+  showSessionGroups,
+  signOut,
+}: SidebarBodyProps) {
+  return (
+    <>
+      <SidebarNavigation
+        activeHref={activeHref}
+        isExpanded={isExpanded}
+        items={navigationItems}
+        label={labels.primaryNavigation}
+        onNavigate={onPrimaryNavigate}
+      />
+      {showSessionGroups ? (
+        <SidebarSessionGroups
+          activeHref={activeHref}
+          groups={sessionGroups}
+          label={labels.sessions}
+          onNavigate={onSessionNavigate}
+        />
+      ) : null}
+      <SignOutControl isExpanded={isExpanded} label={labels.signOut} signOut={signOut} />
+    </>
+  )
+}
+
+export function AuthenticatedShell({ ...props }: AuthenticatedShellProps) {
+  return <AuthenticatedShellView {...props} abandonSession={abandonSessionRequest} />
+}
+
+export function AuthenticatedShellView({
+  abandonSession,
   activeSessionId,
   children,
   header,
@@ -79,7 +143,7 @@ export function AuthenticatedShell({
   sessionGroups = [],
   signOut,
   shouldConfirmSessionNavigation = false,
-}: AuthenticatedShellProps) {
+}: AuthenticatedShellViewProps) {
   const t = useTranslations('common.authenticatedShell')
   const activeHref = usePathname()
   const router = useRouter()
@@ -90,6 +154,11 @@ export function AuthenticatedShell({
   const mobileCloseRef = useRef<HTMLButtonElement>(null)
   const sessionNavigationTriggerRef = useRef<HTMLAnchorElement>(null)
   const controlLabel = isSidebarExpanded ? t('collapseSidebar') : t('expandSidebar')
+  const sidebarLabels = {
+    primaryNavigation: t('primaryNavigationLabel'),
+    sessions: t('sessionsLabel'),
+    signOut: t('signOut'),
+  }
   const navigationItems: readonly SidebarNavigationItem[] = AUTHENTICATED_NAVIGATION_ITEMS.map(
     (item) => ({ href: item.href, icon: item.icon, label: t(item.labelKey) }),
   )
@@ -186,6 +255,7 @@ export function AuthenticatedShell({
     onSessionAbandoned?.()
     setIsActiveSessionDialogOpen(false)
     router.push('/')
+    // The shell's session list and quota are fetched by the layout, which push alone would reuse.
     router.refresh()
   }
 
@@ -232,22 +302,17 @@ export function AuthenticatedShell({
             </>
           )}
 
-          <SidebarNavigation
+          <SidebarBody
             activeHref={activeHref}
             isExpanded={isSidebarExpanded}
-            items={navigationItems}
-            label={t('primaryNavigationLabel')}
-            onNavigate={handlePrimaryNavigation}
+            labels={sidebarLabels}
+            navigationItems={navigationItems}
+            onPrimaryNavigate={handlePrimaryNavigation}
+            onSessionNavigate={handleSessionNavigation}
+            sessionGroups={sessionSidebarGroups}
+            showSessionGroups={isSidebarExpanded}
+            signOut={signOut}
           />
-          {isSidebarExpanded ? (
-            <SidebarSessionGroups
-              activeHref={activeHref}
-              groups={sessionSidebarGroups}
-              label={t('sessionsLabel')}
-              onNavigate={handleSessionNavigation}
-            />
-          ) : null}
-          <SignOutControl isExpanded={isSidebarExpanded} label={t('signOut')} signOut={signOut} />
         </Sidebar>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -262,7 +327,7 @@ export function AuthenticatedShell({
                 ref={mobileToggleRef}
               />
             }
-            {...(header === undefined ? {} : { rightItem: header })}
+            rightItem={header}
           />
 
           <main className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</main>
@@ -272,7 +337,12 @@ export function AuthenticatedShell({
       <div aria-hidden={!isMobileSidebarOpen} className="contents" inert={!isMobileSidebarOpen}>
         <button
           aria-label={t('closeNavigation')}
-          className={`fixed inset-0 z-40 cursor-pointer bg-text/30 backdrop-blur-[1px] transition-opacity duration-200 ease-out motion-reduce:backdrop-filter-none motion-reduce:transition-none md:hidden ${isMobileSidebarOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+          className={cn(
+            'fixed inset-0 z-40 cursor-pointer bg-text/30 backdrop-blur-[1px] transition-opacity duration-200 ease-out motion-reduce:backdrop-filter-none motion-reduce:transition-none md:hidden',
+            isMobileSidebarOpen
+              ? 'pointer-events-auto opacity-100'
+              : 'pointer-events-none opacity-0',
+          )}
           onClick={closeMobileSidebar}
           type="button"
         />
@@ -301,26 +371,23 @@ export function AuthenticatedShell({
             />
           </SidebarHeader>
 
-          <SidebarNavigation
+          <SidebarBody
             activeHref={activeHref}
             isExpanded
-            items={navigationItems}
-            label={t('primaryNavigationLabel')}
-            onNavigate={(item, event) => {
+            labels={sidebarLabels}
+            navigationItems={navigationItems}
+            onPrimaryNavigate={(item, event) => {
               handlePrimaryNavigation(item, event)
               closeMobileSidebar()
             }}
-          />
-          <SidebarSessionGroups
-            activeHref={activeHref}
-            groups={sessionSidebarGroups}
-            label={t('sessionsLabel')}
-            onNavigate={(item, event) => {
+            onSessionNavigate={(item, event) => {
               handleSessionNavigation(item, event)
               closeMobileSidebar()
             }}
+            sessionGroups={sessionSidebarGroups}
+            showSessionGroups
+            signOut={signOut}
           />
-          <SignOutControl isExpanded label={t('signOut')} signOut={signOut} />
         </Sidebar>
       </div>
 

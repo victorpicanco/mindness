@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
 import { Suspense, type ReactNode } from 'react'
 
+import { rootClientMessages } from '@/i18n/client-messages'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { ToastProvider } from '@/components/providers/toast-provider'
 
@@ -63,7 +64,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </Suspense>
       </head>
       <body>
-        <NextIntlClientProvider>
+        <NextIntlClientProvider messages={rootClientMessages}>
           <Providers>
             <ThemeProvider>
               {children}

@@ -8,7 +8,7 @@ import {
   usePracticeSessionStore,
 } from '@/stores/practice-session/provider'
 
-import { ResearchTimer } from '@/components/practice/research-timer'
+import { ResearchTimerView } from '@/components/practice/research-timer'
 
 const NOW = new Date('2026-08-24T12:00:00.000Z')
 
@@ -45,7 +45,7 @@ function renderResearchTimer(
           status: 'researching',
         }}
       >
-        <ResearchTimer logAudioFailure={logAudioFailure} />
+        <ResearchTimerView logAudioFailure={logAudioFailure ?? (() => undefined)} />
         <PracticeSessionProbe />
       </PracticeSessionProvider>
     </NextIntlClientProvider>,

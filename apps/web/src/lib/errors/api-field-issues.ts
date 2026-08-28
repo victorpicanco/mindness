@@ -2,9 +2,9 @@ import type { ApiFieldIssue } from '@/lib/api/api-error'
 
 import type { ApiErrorMessageKey } from './api-error-presentation'
 
-export type ApiFieldName = 'captchaToken' | 'email' | 'password'
+type ApiFieldName = 'captchaToken' | 'email' | 'password'
 
-export type ApiFieldMessages = Partial<Readonly<Record<ApiFieldName, ApiErrorMessageKey>>>
+type ApiFieldMessages = Partial<Readonly<Record<ApiFieldName, ApiErrorMessageKey>>>
 
 const MESSAGE_KEY_BY_FIELD: Readonly<Record<ApiFieldName, ApiErrorMessageKey>> = {
   captchaToken: 'auth.errors.captchaRequired',

@@ -1,8 +1,9 @@
 import { IconButton } from '@/components/ui/icon-button'
+import { cn } from '@/lib/ui/class-names'
 
 import { waveformBarHeight } from '@/components/practice/waveform-track'
 
-export const PLAYBACK_SLOT_COUNT = 40
+const PLAYBACK_SLOT_COUNT = 40
 
 const MIN_PLAYBACK_LEVEL = 0.2
 const FNV_OFFSET_BASIS = 2166136261
@@ -29,7 +30,7 @@ export function playbackLevels(
   })
 }
 
-export interface AudioPlaybackBarProps {
+interface AudioPlaybackBarProps {
   readonly groupLabel: string
   readonly isDisabled?: boolean
   readonly isPlaying: boolean
@@ -74,7 +75,10 @@ export function AudioPlaybackBar({
       >
         {levels.map((level, index) => (
           <span
-            className={`w-[3px] shrink-0 rounded-full ${index < playedSlots ? 'bg-text' : 'bg-border'}`}
+            className={cn(
+              'w-0.75 shrink-0 rounded-full',
+              index < playedSlots ? 'bg-text' : 'bg-border',
+            )}
             data-played={index < playedSlots ? 'true' : 'false'}
             data-waveform="bar"
             key={`bar-${String(index)}`}

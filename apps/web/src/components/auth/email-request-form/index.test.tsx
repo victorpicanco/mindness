@@ -68,20 +68,20 @@ afterEach(() => {
 })
 
 describe('EmailRequestForm', () => {
-  it('holds an invalid email before calling the action', async () => {
+  it('shows the invalid email returned by the action', async () => {
     const calls: FormData[] = []
 
     renderForm((_state, formData) => {
       calls.push(formData)
 
-      return Promise.resolve(initialAuthActionState)
+      return Promise.resolve({ status: 'validation-error', messageKey: 'errors.invalidEmail' })
     })
     await verifyCaptcha()
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'not-an-email' } })
     submit()
 
     expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument()
-    expect(calls).toEqual([])
+    expect(calls).toHaveLength(1)
   })
 
   it('raises a throttled request as a toast instead of a generic inline failure', async () => {
@@ -120,7 +120,7 @@ describe('EmailRequestForm', () => {
     )
   })
 
-  it('waits for the security verification instead of rejecting the submission', async () => {
+  it('submits the current security verification value without polling', async () => {
     const calls: FormData[] = []
 
     renderForm((_state, formData) => {
@@ -133,43 +133,9 @@ describe('EmailRequestForm', () => {
     })
     submit()
 
-    expect(calls).toEqual([])
-
-    await verifyCaptcha('late-token')
-
     await waitFor(() => {
       expect(calls).toHaveLength(1)
     })
-    expect(calls[0]?.get('captchaToken')).toBe('late-token')
-  })
-
-  it('gives up waiting for a verification that never arrives', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    const calls: FormData[] = []
-
-    try {
-      renderForm((_state, formData) => {
-        calls.push(formData)
-
-        return Promise.resolve(initialAuthActionState)
-      })
-      fireEvent.change(screen.getByLabelText('E-mail'), {
-        target: { value: 'person@example.com' },
-      })
-      submit()
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(20_000)
-      })
-
-      expect(
-        screen.getByText(
-          'A verificação de segurança não carregou. Recarregue a página e tente novamente.',
-        ),
-      ).toBeInTheDocument()
-      expect(calls).toEqual([])
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(calls[0]?.get('captchaToken')).toBe('')
   })
 })

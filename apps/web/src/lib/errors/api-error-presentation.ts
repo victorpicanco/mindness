@@ -1,4 +1,4 @@
-export type ApiErrorPresentation = 'inline' | 'silent' | 'toast'
+type ApiErrorPresentation = 'inline' | 'silent' | 'toast'
 
 export type ApiErrorMessageKey =
   | 'auth.errors.accountAlreadyExists'

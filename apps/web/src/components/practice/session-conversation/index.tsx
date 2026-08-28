@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useState } from 'react'
 import type { z } from 'zod'
@@ -22,18 +22,13 @@ interface SessionConversationProps {
   readonly analysis?: SessionAnalysis
 }
 
-function deadlineTime(expiresAt: string): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit',
-  }).format(new Date(expiresAt))
-}
-
 export function SessionConversation({ analysis }: SessionConversationProps) {
   const t = useTranslations('home.conversation')
+  const format = useFormatter()
   const activeSession = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
+  // The store is reset the moment the analysis lands, so the conversation keeps the session it
+  // opened with: without this the whole transcript would unmount right as the reply arrives.
   const [session] = useState(activeSession)
   const shouldReduceMotion = useReducedMotion()
 
@@ -90,7 +85,13 @@ export function SessionConversation({ analysis }: SessionConversationProps) {
                     <div aria-live="polite">
                       <p className="font-medium">{t('researchFinished')}</p>
                       <p className="mt-1 text-sm text-text-muted">
-                        {t('recordUntil', { time: deadlineTime(session.expiresAt) })}
+                        {t('recordUntil', {
+                          time: format.dateTime(new Date(session.expiresAt), {
+                            hour: '2-digit',
+                            hour12: false,
+                            minute: '2-digit',
+                          }),
+                        })}
                       </p>
                     </div>
                   )}

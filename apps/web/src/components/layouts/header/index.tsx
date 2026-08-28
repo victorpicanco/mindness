@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 
 interface HeaderProps {
-  readonly leftItem?: ReactNode
-  readonly rightItem?: ReactNode
+  readonly leftItem?: ReactNode | undefined
+  readonly rightItem?: ReactNode | undefined
 }
 
 export function Header({ leftItem, rightItem }: HeaderProps) {

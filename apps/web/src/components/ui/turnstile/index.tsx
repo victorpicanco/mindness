@@ -12,7 +12,7 @@ export const TURNSTILE_TOKEN_FIELD_NAME = 'captchaToken'
 type TurnstileProps = {
   readonly onError?: (code: string) => void
   readonly onTokenChange?: (token: string) => void
-  readonly resetSignal?: number
+  readonly resetSignal?: object | number | string | undefined
   readonly siteKey: string
 }
 

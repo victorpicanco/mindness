@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 
 import type { AuthActionState } from '@/lib/auth/action-state'
 
-import { createSignInAction } from './sign-in-action-factory'
+import { createSignInAction } from '@/lib/auth/server-actions'
 
 export async function signInAction(
   previousState: AuthActionState,

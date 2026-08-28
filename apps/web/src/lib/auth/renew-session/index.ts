@@ -35,7 +35,7 @@ export type SessionRenewal =
   | { readonly status: 'renewed'; readonly tokens: SessionTokens }
   | { readonly status: 'ended' }
 
-export type SessionRefreshAttempt =
+type SessionRefreshAttempt =
   | { readonly status: 'renewed'; readonly tokens: SessionTokens }
   | { readonly status: 'rejected' }
   | { readonly status: 'unavailable' }

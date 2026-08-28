@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createSignUpAction } from './sign-up-action-factory'
+import { createSignUpAction } from '@/lib/auth/server-actions'
 import { initialAuthActionState } from '@/lib/auth/action-state'
 
 class InMemoryCookieStore {
@@ -128,6 +128,7 @@ describe('signUpAction', () => {
       createFormData({
         email: 'person@example.com',
         password: 'Valid_password1!',
+        passwordConfirmation: 'Valid_password1!',
         captchaToken: 'captcha-token',
       }),
     )
@@ -160,6 +161,7 @@ describe('signUpAction', () => {
       createFormData({
         email: 'person@example.com',
         password: 'Valid_password1!',
+        passwordConfirmation: 'Valid_password1!',
         captchaToken: 'captcha-token',
       }),
     )

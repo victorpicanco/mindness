@@ -1,15 +1,17 @@
+'use client'
+
 import { useEffect, useRef, useState } from 'react'
 
 import { TIMER_TICK_MS } from '@/components/practice/countdown'
 
 export const MAX_RECORDING_SECONDS = 58
 
-export interface UseRecordingClockOptions {
+interface UseRecordingClockOptions {
   readonly isActive: boolean
-  readonly limitSeconds?: number
+  readonly limitSeconds?: number | undefined
   readonly onLimitReached: () => void
-  readonly serverTimeOffsetMs?: number
-  readonly startedAt?: string
+  readonly serverTimeOffsetMs?: number | undefined
+  readonly startedAt?: string | undefined
 }
 
 export function useRecordingClock({

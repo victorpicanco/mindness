@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes } from 'react'
 
 import { Spinner } from '@/components/ui/spinner'
 
-const buttonStyles = cva(
+export const buttonStyles = cva(
   'inline-flex cursor-pointer items-center justify-center gap-2 rounded-full font-sans font-medium transition-[background-color,border-color,box-shadow,transform] duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text disabled:cursor-not-allowed disabled:opacity-70',
   {
     variants: {

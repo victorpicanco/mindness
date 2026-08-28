@@ -9,13 +9,13 @@ import { useRecordingClock } from '@/components/practice/use-recording-clock'
 import { WAVEFORM_SLOT_COUNT } from '@/components/practice/waveform-track'
 
 export interface SessionRecorderProps {
-  readonly isDisabled?: boolean
+  readonly isDisabled?: boolean | undefined
   readonly isRecording: boolean
   readonly onLimitReached: () => void
   readonly onToggleRecording: () => void
-  readonly source?: AudioLevelSource
-  readonly serverTimeOffsetMs?: number
-  readonly startedAt?: string
+  readonly source?: AudioLevelSource | undefined
+  readonly serverTimeOffsetMs?: number | undefined
+  readonly startedAt?: string | undefined
 }
 
 // The captured levels stay in this leaf so the fifteen updates per second of the waveform never
@@ -33,13 +33,13 @@ export function SessionRecorder({
   const { hasFailed, levels } = useAudioLevels({
     historySize: WAVEFORM_SLOT_COUNT,
     isActive: isRecording,
-    ...(source === undefined ? {} : { source }),
+    source,
   })
   const elapsedSeconds = useRecordingClock({
     isActive: isRecording,
     onLimitReached,
-    ...(serverTimeOffsetMs === undefined ? {} : { serverTimeOffsetMs }),
-    ...(startedAt === undefined ? {} : { startedAt }),
+    serverTimeOffsetMs,
+    startedAt,
   })
 
   return (

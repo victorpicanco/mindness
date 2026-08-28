@@ -7,18 +7,12 @@ import { toast } from 'sonner'
 
 import { AuthCaptchaField } from '@/components/auth/captcha-field'
 import { AuthFormAlert } from '@/components/auth/form-alert'
-import {
-  useAuthForm,
-  type AuthFieldErrors,
-  type AuthFormAction,
-} from '@/components/auth/use-auth-form'
-import { Button } from '@/components/ui/button'
+import { useAuthForm, type AuthFormAction } from '@/components/auth/use-auth-form'
+import { Button, buttonStyles } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { REDIRECT_FIELD_NAME } from '@/lib/auth/redirect-target'
-import { isValidEmail } from '@/lib/auth/credentials'
-import { formFieldValue } from '@/lib/auth/form-validation'
 import type { ApiErrorDescription } from '@/lib/errors/api-error-presentation'
 import { clientEnv } from '@/lib/env/client'
 
@@ -26,8 +20,8 @@ const EMAIL_NOT_CONFIRMED_CODE = 'accounts.EMAIL_NOT_CONFIRMED'
 
 type SignInFormProps = {
   readonly action: AuthFormAction
-  readonly initialError?: ApiErrorDescription
-  readonly redirectTo?: string
+  readonly initialError?: ApiErrorDescription | undefined
+  readonly redirectTo?: string | undefined
 }
 
 function googleAuthorizationUrl(): string {
@@ -36,25 +30,11 @@ function googleAuthorizationUrl(): string {
   return apiBaseUrl === undefined ? '/auth/google' : `${apiBaseUrl}/auth/google`
 }
 
-function validate(formData: FormData): AuthFieldErrors {
-  const errors: { -readonly [Key in keyof AuthFieldErrors]: AuthFieldErrors[Key] } = {}
-
-  if (!isValidEmail(formFieldValue(formData, 'email'))) {
-    errors.email = 'auth.errors.invalidEmail'
-  }
-
-  if (formFieldValue(formData, 'password') === '') {
-    errors.password = 'auth.errors.passwordRequired'
-  }
-
-  return errors
-}
-
 export function SignInForm({ action, initialError, redirectTo }: SignInFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
   const siteKey = clientEnv().turnstileSiteKey
-  const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined, validate })
+  const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined })
   const announcedInitialError = useRef(false)
 
   useEffect(() => {
@@ -78,13 +58,13 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
     form.state.status === 'api-error' && form.state.error.code === EMAIL_NOT_CONFIRMED_CODE
 
   return (
-    <form className="grid gap-8" noValidate onSubmit={form.onSubmit}>
+    <form action={form.formAction} className="grid gap-8" noValidate>
       {redirectTo === undefined ? null : (
         <input name={REDIRECT_FIELD_NAME} type="hidden" value={redirectTo} />
       )}
       <div className="grid gap-4">
         <a
-          className="inline-flex min-h-14 items-center justify-center rounded-full border border-border px-6 py-4 text-base font-medium text-text transition-colors hover:border-text-muted hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
+          className={buttonStyles({ size: 'lg', variant: 'secondary' })}
           href={googleAuthorizationUrl()}
         >
           {t('signIn.google')}
@@ -98,9 +78,9 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
       </div>
       <div className="grid gap-4">
         <Field
-          {...(form.fieldErrors.email === undefined
-            ? {}
-            : { error: translate(form.fieldErrors.email) })}
+          error={
+            form.fieldErrors.email === undefined ? undefined : translate(form.fieldErrors.email)
+          }
           label={t('signIn.emailLabel')}
         >
           <Input
@@ -112,9 +92,11 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
         </Field>
         <div className="grid gap-1">
           <Field
-            {...(form.fieldErrors.password === undefined
-              ? {}
-              : { error: translate(form.fieldErrors.password) })}
+            error={
+              form.fieldErrors.password === undefined
+                ? undefined
+                : translate(form.fieldErrors.password)
+            }
             label={t('signIn.passwordLabel')}
           >
             <PasswordInput
@@ -133,20 +115,10 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
           </Link>
         </div>
       </div>
-      {siteKey === undefined ? null : (
-        <AuthCaptchaField
-          {...(form.fieldErrors.captchaToken === undefined
-            ? {}
-            : { errorMessageKey: form.fieldErrors.captchaToken })}
-          onError={form.onCaptchaError}
-          onTokenChange={form.onCaptchaTokenChange}
-          resetSignal={form.captchaResetSignal}
-          siteKey={siteKey}
-        />
-      )}
+      <AuthCaptchaField form={form} siteKey={siteKey} />
       <div className="grid gap-4">
         <AuthFormAlert
-          {...(alertMessageKey === undefined ? {} : { messageKey: alertMessageKey })}
+          message={alertMessageKey === undefined ? undefined : translate(alertMessageKey)}
         />
         {needsEmailConfirmation ? (
           <Link

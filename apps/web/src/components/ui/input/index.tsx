@@ -1,15 +1,13 @@
-import { forwardRef, type ComponentPropsWithoutRef } from 'react'
+'use client'
 
-export type InputProps = ComponentPropsWithoutRef<'input'>
+import type { ComponentPropsWithRef } from 'react'
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, ...props },
-  ref,
-) {
-  const classes =
-    className === undefined
-      ? 'w-full rounded-full border border-transparent bg-input px-6 py-4 font-sans text-base text-text outline-none placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-text'
-      : `w-full rounded-full border border-transparent bg-input px-6 py-4 font-sans text-base text-text outline-none placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-text ${className}`
+import { useFieldControl } from '@/components/ui/field'
+import { cn } from '@/lib/ui/class-names'
 
-  return <input className={classes} ref={ref} {...props} />
-})
+const inputStyles =
+  'w-full rounded-full border border-transparent bg-input px-6 py-4 font-sans text-base text-text outline-none placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-text'
+
+export function Input({ className, ...props }: ComponentPropsWithRef<'input'>) {
+  return <input {...useFieldControl()} {...props} className={cn(inputStyles, className)} />
+}

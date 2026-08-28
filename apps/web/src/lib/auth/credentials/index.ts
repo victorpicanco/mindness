@@ -10,7 +10,7 @@ export const captchaTokenSchema = z.string().min(1)
 // created before the current policy must still be usable to sign in.
 export const signInPasswordSchema = z.string().min(8).max(64)
 
-export type AuthCredentials = {
+type AuthCredentials = {
   readonly captchaToken: string
   readonly email: string
   readonly password: string

@@ -10,7 +10,7 @@ const serverEnvSchema = z.object({
   API_BASE_URL: z.url({ protocol: /^https?$/ }),
 })
 
-export type ServerEnv = z.output<typeof serverEnvSchema>
+type ServerEnv = z.output<typeof serverEnvSchema>
 
 type EnvSource = Readonly<Partial<Record<string, string>>>
 

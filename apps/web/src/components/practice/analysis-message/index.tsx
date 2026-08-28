@@ -1,16 +1,18 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { useId } from 'react'
 import type { z } from 'zod'
 
 import type { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
 
 import { SessionMessage } from '@/components/practice/session-message'
+import { ScoreRadial } from '@/components/ui/score-radial'
 import { SplitText } from '@/components/ui/split-text'
 
 type SessionAnalysis = z.output<typeof sessionAnalysisSchema>
 
-const SCORE_KEYS = ['total', 'clarity', 'rhythm', 'fluency', 'mastery'] as const
+const PILLAR_KEYS = ['clarity', 'rhythm', 'fluency', 'mastery'] as const
 
 interface AnalysisMessageProps {
   readonly analysis: SessionAnalysis
@@ -19,49 +21,63 @@ interface AnalysisMessageProps {
 export function AnalysisMessage({ analysis }: AnalysisMessageProps) {
   const t = useTranslations('home.analysis')
   const conversationT = useTranslations('home.conversation')
+  const titleId = useId()
+  const scoresId = useId()
+  const guidanceId = useId()
+  const transcriptId = useId()
 
   return (
     <SessionMessage label={conversationT('assistantMessageLabel')} sender="assistant">
-      <div aria-labelledby="analysis-title">
-        <h1
+      <div aria-labelledby={titleId}>
+        <h2
           className="font-(family-name:--font-buenard) text-3xl leading-tight tracking-tight sm:text-4xl"
-          id="analysis-title"
+          id={titleId}
         >
           {t('title')}
-        </h1>
+        </h2>
 
-        <section aria-labelledby="scores-title" className="mt-8">
-          <h2 className="text-xl font-medium" id="scores-title">
+        <section aria-labelledby={scoresId} className="mt-8">
+          <h3 className="text-xl font-medium" id={scoresId}>
             {t('scoresTitle')}
-          </h2>
-          <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">
-            {SCORE_KEYS.map((key) => (
-              <div key={key}>
-                <dt className="text-xs text-text-muted">{t(`scoreLabels.${key}`)}</dt>
-                <dd className="mt-1 text-2xl tabular-nums">{analysis.scores[key]}</dd>
-              </div>
-            ))}
+          </h3>
+          <dl className="mt-6 flex flex-col items-center gap-10 sm:flex-row sm:gap-12">
+            <div className="flex flex-col-reverse items-center gap-3">
+              <dt className="text-sm text-text-muted">{t('scoreLabels.total')}</dt>
+              <dd>
+                <ScoreRadial size="lg" value={analysis.scores.total} />
+              </dd>
+            </div>
+            <div className="grid w-full grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
+              {PILLAR_KEYS.map((key) => (
+                <div className="flex flex-col-reverse items-center gap-2.5" key={key}>
+                  <dt className="text-xs text-text-muted">{t(`scoreLabels.${key}`)}</dt>
+                  <dd>
+                    <ScoreRadial value={analysis.scores[key]} />
+                  </dd>
+                </div>
+              ))}
+            </div>
           </dl>
         </section>
 
-        <section aria-labelledby="guidance-title" className="mt-8">
-          <h2 className="text-xl font-medium" id="guidance-title">
+        <section aria-labelledby={guidanceId} className="mt-8">
+          <h3 className="text-xl font-medium" id={guidanceId}>
             {t('guidanceTitle')}
-          </h2>
+          </h3>
           <ul className="mt-4 space-y-6">
             {analysis.guidance.map((guidance) => (
               <li key={guidance.pillar}>
-                <h3 className="font-medium">{t(`scoreLabels.${guidance.pillar}`)}</h3>
+                <h4 className="font-medium">{t(`scoreLabels.${guidance.pillar}`)}</h4>
                 <SplitText className="mt-1.5 whitespace-pre-wrap leading-7" text={guidance.text} />
               </li>
             ))}
           </ul>
         </section>
 
-        <section aria-labelledby="transcript-title" className="mt-8">
-          <h2 className="text-xl font-medium" id="transcript-title">
+        <section aria-labelledby={transcriptId} className="mt-8">
+          <h3 className="text-xl font-medium" id={transcriptId}>
             {t('transcriptTitle')}
-          </h2>
+          </h3>
           <SplitText
             className="mt-4 whitespace-pre-wrap leading-7 text-text-muted"
             delay={18}

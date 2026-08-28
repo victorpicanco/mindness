@@ -17,7 +17,7 @@ type SessionAnalysis = z.output<typeof sessionAnalysisSchema>
 
 interface AnalysisProps {
   readonly analysis: SessionAnalysis
-  readonly session?: SessionHistoryItem
+  readonly session?: SessionHistoryItem | undefined
 }
 
 export function Analysis({ analysis, session }: AnalysisProps) {
@@ -28,7 +28,7 @@ export function Analysis({ analysis, session }: AnalysisProps) {
     return <SessionConversation analysis={analysis} />
   }
 
-  return <PastSessionAnalysis analysis={analysis} {...(session === undefined ? {} : { session })} />
+  return <PastSessionAnalysis analysis={analysis} session={session} />
 }
 
 function PastSessionAnalysis({ analysis, session }: AnalysisProps) {

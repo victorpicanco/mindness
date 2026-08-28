@@ -6,41 +6,16 @@ import { useEffect, useState } from 'react'
 import { AuthCaptchaField } from '@/components/auth/captcha-field'
 import { AuthFormAlert } from '@/components/auth/form-alert'
 import { PasswordChecklist } from '@/components/auth/password-checklist'
-import {
-  useAuthForm,
-  type AuthFieldErrors,
-  type AuthFormAction,
-} from '@/components/auth/use-auth-form'
+import { useAuthForm, type AuthFormAction } from '@/components/auth/use-auth-form'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { clientEnv } from '@/lib/env/client'
-import { isValidEmail, isValidNewPassword } from '@/lib/auth/credentials'
-import { formFieldValue } from '@/lib/auth/form-validation'
 
 type SignUpFormProps = {
   readonly action: AuthFormAction
   readonly onSuccess?: () => void
-}
-
-function validate(formData: FormData): AuthFieldErrors {
-  const errors: { -readonly [Key in keyof AuthFieldErrors]: AuthFieldErrors[Key] } = {}
-  const password = formFieldValue(formData, 'password')
-
-  if (!isValidEmail(formFieldValue(formData, 'email'))) {
-    errors.email = 'auth.errors.invalidEmail'
-  }
-
-  if (!isValidNewPassword(password)) {
-    errors.password = 'auth.errors.invalidPassword'
-  }
-
-  if (formFieldValue(formData, 'passwordConfirmation') !== password) {
-    errors.passwordConfirmation = 'auth.errors.passwordMismatch'
-  }
-
-  return errors
 }
 
 export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
@@ -48,7 +23,7 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
   const translate = useTranslations()
   const [password, setPassword] = useState('')
   const siteKey = clientEnv().turnstileSiteKey
-  const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined, validate })
+  const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined })
 
   const alertMessageKey =
     siteKey === undefined ? 'auth.errors.captchaUnavailable' : form.inlineMessageKey
@@ -66,12 +41,12 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
   }
 
   return (
-    <form className="grid gap-8" noValidate onSubmit={form.onSubmit}>
+    <form action={form.formAction} className="grid gap-8" noValidate>
       <div className="grid gap-4">
         <Field
-          {...(form.fieldErrors.email === undefined
-            ? {}
-            : { error: translate(form.fieldErrors.email) })}
+          error={
+            form.fieldErrors.email === undefined ? undefined : translate(form.fieldErrors.email)
+          }
           label={t('signUp.emailLabel')}
         >
           <Input
@@ -82,9 +57,11 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
           />
         </Field>
         <Field
-          {...(form.fieldErrors.password === undefined
-            ? {}
-            : { error: translate(form.fieldErrors.password) })}
+          error={
+            form.fieldErrors.password === undefined
+              ? undefined
+              : translate(form.fieldErrors.password)
+          }
           label={t('signUp.passwordLabel')}
         >
           <PasswordInput
@@ -98,21 +75,13 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
             showPasswordLabel={t('password.show')}
           />
         </Field>
-        <PasswordChecklist
-          labels={{
-            minimumLength: t('password.requirements.minimumLength'),
-            lowercaseLetter: t('password.requirements.lowercaseLetter'),
-            uppercaseLetter: t('password.requirements.uppercaseLetter'),
-            digit: t('password.requirements.digit'),
-            symbol: t('password.requirements.symbol'),
-          }}
-          password={password}
-          title={t('password.requirements.title')}
-        />
+        <PasswordChecklist password={password} />
         <Field
-          {...(form.fieldErrors.passwordConfirmation === undefined
-            ? {}
-            : { error: translate(form.fieldErrors.passwordConfirmation) })}
+          error={
+            form.fieldErrors.passwordConfirmation === undefined
+              ? undefined
+              : translate(form.fieldErrors.passwordConfirmation)
+          }
           label={t('signUp.passwordConfirmationLabel')}
         >
           <PasswordInput
@@ -123,19 +92,9 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
             showPasswordLabel={t('password.show')}
           />
         </Field>
-        {siteKey === undefined ? null : (
-          <AuthCaptchaField
-            {...(form.fieldErrors.captchaToken === undefined
-              ? {}
-              : { errorMessageKey: form.fieldErrors.captchaToken })}
-            onError={form.onCaptchaError}
-            onTokenChange={form.onCaptchaTokenChange}
-            resetSignal={form.captchaResetSignal}
-            siteKey={siteKey}
-          />
-        )}
+        <AuthCaptchaField form={form} siteKey={siteKey} />
         <AuthFormAlert
-          {...(alertMessageKey === undefined ? {} : { messageKey: alertMessageKey })}
+          message={alertMessageKey === undefined ? undefined : translate(alertMessageKey)}
         />
         <p className="text-xs text-text-muted">{t('consent.notice')}</p>
         <Button

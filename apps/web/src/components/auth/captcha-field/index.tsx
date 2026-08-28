@@ -1,39 +1,39 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { useState } from 'react'
 
 import { Turnstile } from '@/components/ui/turnstile'
 
-import type { AuthFormMessageKey } from '@/lib/auth/form-validation'
+import type { AuthFormBinding } from '@/components/auth/use-auth-form'
 
 type AuthCaptchaFieldProps = {
-  readonly errorMessageKey?: AuthFormMessageKey
-  readonly onError: () => void
-  readonly onTokenChange: (token: string) => void
-  readonly resetSignal: number
-  readonly siteKey: string
+  readonly form: AuthFormBinding
+  readonly siteKey: string | undefined
 }
 
-export function AuthCaptchaField({
-  errorMessageKey,
-  onError,
-  onTokenChange,
-  resetSignal,
-  siteKey,
-}: AuthCaptchaFieldProps) {
+// Rendered from the binding rather than from five separate props: every auth form wires the widget
+// the same way, and the form is the only thing that knows the token, the reset and the error.
+export function AuthCaptchaField({ form, siteKey }: AuthCaptchaFieldProps) {
   const translate = useTranslations()
+  const [widgetFailed, setWidgetFailed] = useState(false)
+  const errorKey = widgetFailed ? 'auth.errors.captchaUnavailable' : form.fieldErrors.captchaToken
+
+  if (siteKey === undefined) return null
 
   return (
     <div className="grid gap-1.5">
       <Turnstile
-        onError={onError}
-        onTokenChange={onTokenChange}
-        resetSignal={resetSignal}
+        onError={() => setWidgetFailed(true)}
+        onTokenChange={(token) => {
+          if (token !== '') setWidgetFailed(false)
+        }}
+        resetSignal={form.captchaResetSignal}
         siteKey={siteKey}
       />
-      {errorMessageKey === undefined ? null : (
+      {errorKey === undefined ? null : (
         <p className="text-sm text-error" role="alert">
-          {translate(errorMessageKey)}
+          {translate(errorKey)}
         </p>
       )}
     </div>

@@ -1,16 +1,18 @@
 import { cookies } from 'next/headers'
+import { NextIntlClientProvider } from 'next-intl'
+import { getFormatter, getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
 
+import { authenticatedClientMessages } from '@/i18n/client-messages'
 import { RouteLoading } from '@/components/layouts/route-loading'
 import { SessionQuota } from '@/components/layouts/session-quota'
+import type { activeSessionSchema } from '@/lib/api/contracts/sessions'
 import {
-  activeSessionSchema,
-  quotaSchema,
-  sessionHistoryMetaSchema,
-  sessionHistorySchema,
-} from '@/lib/api/contracts/sessions'
-import { apiFetch, apiFetchWithMeta } from '@/lib/api/server-client'
+  getActiveSession,
+  getSessionHistory,
+  getSessionQuota,
+} from '@/lib/api/authenticated-session-data'
 import { createRequireSession } from '@/lib/auth/require-session'
 import { signOutAction } from '@/lib/auth/sign-out'
 import { groupSessionsByDay } from '@/lib/sessions/session-day-groups'
@@ -55,22 +57,40 @@ function practiceSessionInitialState(
 async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
   const cookieStore = await cookies()
   createRequireSession({ cookieStore, redirect })()
-  const [quota, history, activeSession] = await Promise.all([
-    apiFetch('/sessions/quota', { cache: 'no-store', schema: quotaSchema }),
-    apiFetchWithMeta('/sessions', {
-      cache: 'no-store',
-      metaSchema: sessionHistoryMetaSchema,
-      schema: sessionHistorySchema,
-    }),
-    apiFetch('/sessions/active', { cache: 'no-store', schema: activeSessionSchema }),
+  const [quota, history, activeSession, quotaT, format] = await Promise.all([
+    getSessionQuota(),
+    getSessionHistory(),
+    getActiveSession(),
+    getTranslations('common.sessionQuota'),
+    getFormatter(),
   ])
   const isSidebarExpanded = cookieStore.get(SIDEBAR_PREFERENCE_COOKIE_NAME)?.value !== 'false'
   const initialPracticeSessionState = practiceSessionInitialState(activeSession)
+  const header = quota.enforced ? (
+    <SessionQuota
+      label={quotaT('label')}
+      value={
+        quota.remaining === 0
+          ? quotaT('renewsAt', {
+              time: format.dateTime(new Date(quota.renewsAt), {
+                hour: '2-digit',
+                hour12: false,
+                minute: '2-digit',
+              }),
+            })
+          : quotaT('remaining', {
+              allowance: quota.allowance,
+              remaining: quota.remaining,
+            })
+      }
+    />
+  ) : undefined
 
   return (
     <AuthenticatedSessionShell
-      {...(initialPracticeSessionState === undefined ? {} : { initialPracticeSessionState })}
-      {...(activeSession === null ? {} : { activeSessionId: activeSession.sessionId })}
+      activeSessionId={activeSession?.sessionId}
+      header={header}
+      initialPracticeSessionState={initialPracticeSessionState}
       initialIsExpanded={isSidebarExpanded}
       preferenceCookieName={SIDEBAR_PREFERENCE_COOKIE_NAME}
       sessionGroups={groupSessionsByDay({
@@ -79,17 +99,6 @@ async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps
         timeZone: history.meta.timeZone,
       })}
       signOut={signOutAction}
-      {...(!quota.enforced
-        ? {}
-        : {
-            header: (
-              <SessionQuota
-                allowance={quota.allowance}
-                remaining={quota.remaining}
-                renewsAt={quota.renewsAt}
-              />
-            ),
-          })}
     >
       {children}
     </AuthenticatedSessionShell>
@@ -98,8 +107,10 @@ async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps
 
 export default function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   return (
-    <Suspense fallback={<RouteLoading />}>
-      <AuthenticatedLayoutContent>{children}</AuthenticatedLayoutContent>
-    </Suspense>
+    <NextIntlClientProvider messages={authenticatedClientMessages}>
+      <Suspense fallback={<RouteLoading />}>
+        <AuthenticatedLayoutContent>{children}</AuthenticatedLayoutContent>
+      </Suspense>
+    </NextIntlClientProvider>
   )
 }

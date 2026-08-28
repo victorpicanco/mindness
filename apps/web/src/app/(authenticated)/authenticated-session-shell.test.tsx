@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '@/i18n/messages'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
-import { AuthenticatedSessionShell } from './authenticated-session-shell'
+import { AuthenticatedSessionShellView } from './authenticated-session-shell'
 
 const SESSION_ID = '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
 
@@ -35,7 +35,7 @@ describe('AuthenticatedSessionShell', () => {
       <AppRouterContext.Provider value={router}>
         <PathnameContext.Provider value={`/sessions/${SESSION_ID}`}>
           <NextIntlClientProvider locale="pt-BR" messages={messages}>
-            <AuthenticatedSessionShell
+            <AuthenticatedSessionShellView
               abandonSession={abandonSession}
               activeSessionId={SESSION_ID}
               initialIsExpanded
@@ -60,7 +60,7 @@ describe('AuthenticatedSessionShell', () => {
               signOut={() => undefined}
             >
               <PracticeSessionStatus />
-            </AuthenticatedSessionShell>
+            </AuthenticatedSessionShellView>
           </NextIntlClientProvider>
         </PathnameContext.Provider>
       </AppRouterContext.Provider>,

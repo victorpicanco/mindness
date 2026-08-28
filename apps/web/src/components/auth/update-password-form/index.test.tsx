@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -23,8 +23,12 @@ function fillPassword(value: string): void {
   fireEvent.change(screen.getByLabelText('Senha'), { target: { value } })
 }
 
-function submit(): void {
-  fireEvent.click(screen.getByRole('button', { name: 'Salvar nova senha' }))
+async function submit(): Promise<void> {
+  await act(() => {
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar nova senha' }))
+
+    return Promise.resolve()
+  })
 }
 
 beforeEach(async () => {
@@ -35,23 +39,23 @@ beforeEach(async () => {
 afterEach(cleanup)
 
 describe('UpdatePasswordForm', () => {
-  it('holds a password that does not meet the policy before calling the action', () => {
+  it('shows the invalid password returned by the action', async () => {
     const calls: FormData[] = []
 
     renderForm((_state, formData) => {
       calls.push(formData)
 
-      return Promise.resolve(initialAuthActionState)
+      return Promise.resolve({ status: 'validation-error', messageKey: 'errors.invalidPassword' })
     })
     fillPassword('alllowercase1')
-    submit()
+    await submit()
 
     expect(
       screen.getByText(
         'Use uma senha de 8 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
       ),
     ).toBeInTheDocument()
-    expect(calls).toEqual([])
+    expect(calls).toHaveLength(1)
   })
 
   it('shows the same password requirements the sign-up form shows', () => {
@@ -70,7 +74,7 @@ describe('UpdatePasswordForm', () => {
       return Promise.resolve(initialAuthActionState)
     })
     fillPassword('New_password1!')
-    submit()
+    await submit()
 
     await waitFor(() => {
       expect(calls).toHaveLength(1)
@@ -88,7 +92,7 @@ describe('UpdatePasswordForm', () => {
       }),
     )
     fillPassword('New_password1!')
-    submit()
+    await submit()
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(

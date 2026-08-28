@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { AudioPlayer } from './audio-player'
+import { AudioPlayerView } from './audio-player'
 import { messages } from '@/i18n/messages'
 
 const SESSION_ID = '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
@@ -24,7 +24,7 @@ describe('AudioPlayer', () => {
 
     render(
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
-        <AudioPlayer
+        <AudioPlayerView
           label="Sua mensagem"
           requestPlaybackUrl={requestPlaybackUrl}
           sessionId={SESSION_ID}

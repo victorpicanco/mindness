@@ -12,6 +12,7 @@ import { bffFetch } from '@/lib/api/bff-client'
 import { sessionAnalysisAvailabilitySchema } from '@/lib/api/contracts/sessions'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
+import { buttonStyles } from '@/components/ui/button'
 import { ShinyText } from '@/components/ui/shiny-text'
 
 import { SessionMessage } from '@/components/practice/session-message'
@@ -40,17 +41,31 @@ function terminalFailure(error: unknown): TerminalFailureMessage | null {
   return TERMINAL_FAILURE_MESSAGES[apiErrorDetails(error).code] ?? null
 }
 
-interface ProcessingStatusProps {
-  readonly fetchAnalysis?: FetchSessionAnalysis
-  readonly holdUntilResponse?: boolean
-  readonly pollIntervalMs?: number
+type ProcessingStatusProps = {
+  readonly holdUntilResponse?: boolean | undefined
 }
 
-export function ProcessingStatus({
-  fetchAnalysis = fetchSessionAnalysis,
+export function ProcessingStatus({ holdUntilResponse = false }: ProcessingStatusProps) {
+  return (
+    <ProcessingStatusView
+      fetchAnalysis={fetchSessionAnalysis}
+      holdUntilResponse={holdUntilResponse}
+      pollIntervalMs={DEFAULT_POLL_INTERVAL_MS}
+    />
+  )
+}
+
+type ProcessingStatusViewProps = {
+  readonly fetchAnalysis: FetchSessionAnalysis
+  readonly holdUntilResponse?: boolean | undefined
+  readonly pollIntervalMs: number
+}
+
+export function ProcessingStatusView({
+  fetchAnalysis,
   holdUntilResponse = false,
-  pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
-}: ProcessingStatusProps) {
+  pollIntervalMs,
+}: ProcessingStatusViewProps) {
   const [failure, setFailure] = useState<TerminalFailureMessage | null>(null)
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
@@ -87,10 +102,7 @@ function ProcessingFailure({ message }: { readonly message: TerminalFailureMessa
     <SessionMessage label={conversationT('assistantMessageLabel')} sender="assistant">
       <section className="flex max-w-md flex-col items-start gap-4">
         <p role="alert">{t(message)}</p>
-        <Link
-          className="inline-flex min-h-10 items-center justify-center rounded-full bg-text px-4 text-sm font-medium text-surface hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
-          href="/history"
-        >
+        <Link className={buttonStyles()} href="/history">
           {t('historyLink')}
         </Link>
       </section>

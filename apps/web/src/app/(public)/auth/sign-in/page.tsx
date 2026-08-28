@@ -18,8 +18,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   return (
     <SignInScreen
       action={signInAction}
-      {...(initialError === undefined ? {} : { initialError })}
-      {...(redirectTo === undefined ? {} : { redirectTo })}
+      initialError={initialError}
+      redirectTo={redirectTo}
       passwordUpdated={params.status === 'password-updated'}
     />
   )

@@ -23,6 +23,21 @@ describe('Field', () => {
     )
   })
 
+  it('wires a control nested below its direct child', () => {
+    render(
+      <Field error="Enter a valid email address" label="Email">
+        <div>
+          <Input />
+        </div>
+      </Field>,
+    )
+
+    const input = screen.getByLabelText('Email')
+
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input.getAttribute('aria-describedby')).toBe(screen.getByRole('alert').id)
+  })
+
   it('marks the input invalid and exposes its error', () => {
     render(
       <Field error="Enter a valid email address" label="Email">

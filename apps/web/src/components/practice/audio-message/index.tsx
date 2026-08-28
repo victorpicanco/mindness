@@ -9,7 +9,7 @@ import { ShinyText } from '@/components/ui/shiny-text'
 
 export type ResolveAudioSource = () => Promise<string>
 
-export interface AudioMessageProps {
+interface AudioMessageProps {
   readonly label: string
   readonly resolveSource?: ResolveAudioSource
   readonly seed: string

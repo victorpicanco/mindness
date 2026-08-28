@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 
 import { MicrophoneUnavailableError } from '@/lib/media/microphone-unavailable-error'
@@ -7,25 +9,25 @@ export const BAR_INTERVAL_MS = 64
 const FFT_SIZE = 2048
 const BYTE_MIDPOINT = 128
 
-export interface AudioLevelReader {
+interface AudioLevelReader {
   readonly read: () => number
   readonly stop: () => void
 }
 
 export type AudioLevelSource = () => Promise<AudioLevelReader>
 
-export interface AudioLevels {
+interface AudioLevels {
   readonly hasFailed: boolean
   readonly levels: readonly number[]
 }
 
-export interface UseAudioLevelsOptions {
+interface UseAudioLevelsOptions {
   readonly historySize: number
   readonly isActive: boolean
-  readonly source?: AudioLevelSource
+  readonly source?: AudioLevelSource | undefined
 }
 
-export async function browserAudioLevelSource(): Promise<AudioLevelReader> {
+async function browserAudioLevelSource(): Promise<AudioLevelReader> {
   let stream: MediaStream
 
   try {

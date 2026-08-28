@@ -34,7 +34,7 @@ function isApiErrorDetails(value: unknown): value is ApiErrorDetails {
   )
 }
 
-export function unknownApiErrorDetails(): ApiErrorDetails {
+function unknownApiErrorDetails(): ApiErrorDetails {
   return {
     code: 'web.UNEXPECTED_ERROR',
     issues: null,

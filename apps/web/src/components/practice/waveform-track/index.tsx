@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useRef, useState } from 'react'
 
 export const WAVEFORM_SLOT_COUNT = 72
@@ -20,7 +22,7 @@ function barOpacity(distanceFromNewest: number): number {
   return Math.min(1, Math.max(MIN_BAR_OPACITY, distanceFromNewest / FADE_IN_SLOTS))
 }
 
-export interface WaveformTrackProps {
+interface WaveformTrackProps {
   readonly levels: readonly number[]
   readonly slotCount?: number
 }

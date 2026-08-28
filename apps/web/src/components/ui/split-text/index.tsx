@@ -1,68 +1,59 @@
 'use client'
 
-import { useGSAP } from '@gsap/react'
-import { gsap } from 'gsap'
-import { SplitText as GsapSplitText } from 'gsap/SplitText'
-import { useRef } from 'react'
+import { motion } from 'motion/react'
+import { Fragment } from 'react'
 
-gsap.registerPlugin(GsapSplitText, useGSAP)
-
-type SplitTextTag = 'h1' | 'h2' | 'h3' | 'p' | 'span'
+const REVEAL_DURATION_SECONDS = 0.48
+const REVEAL_EASE = [0.22, 1, 0.36, 1] as const
 
 interface SplitTextProps {
   readonly className?: string
   readonly delay?: number
-  readonly id?: string
-  readonly tag?: SplitTextTag
   readonly text: string
 }
 
-export function SplitText({ className, delay = 35, id, tag = 'p', text }: SplitTextProps) {
-  const textRef = useRef<HTMLElement>(null)
+interface TextSegment {
+  readonly order: number
+  readonly value: string
+}
 
-  useGSAP(
-    () => {
-      const element = textRef.current
+// Splitting on a captured separator keeps the original whitespace — the transcript is rendered
+// pre-wrapped, so its line breaks have to survive the word reveal.
+function segmentsOf(text: string): readonly TextSegment[] {
+  let order = 0
 
-      if (element === null || typeof window.matchMedia !== 'function') return
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  return text.split(/(\s+)/u).map((value, index) => ({
+    order: index % 2 === 0 && value !== '' ? order++ : -1,
+    value,
+  }))
+}
 
-      const split = GsapSplitText.create(element, {
-        type: 'words',
-        wordsClass: 'mindness-split-word',
-      })
-
-      gsap.fromTo(
-        split.words,
-        { autoAlpha: 0, filter: 'blur(4px)', y: 10 },
-        {
-          autoAlpha: 1,
-          duration: 0.48,
-          ease: 'power3.out',
-          filter: 'blur(0px)',
-          stagger: delay / 1_000,
-          y: 0,
-        },
-      )
-
-      return () => split.revert()
-    },
-    { dependencies: [delay, text], scope: textRef },
-  )
-
-  const Tag = tag
-
+// The reduced-motion preference is honoured by CSS on `.mindness-split-word`: reading it here
+// would branch the markup between the server (preference still unknown) and the client, and React
+// would flag the hydration mismatch.
+export function SplitText({ className, delay = 35, text }: SplitTextProps) {
   return (
-    <Tag
-      className={className}
-      data-split-text="words"
-      id={id}
-      ref={(element) => {
-        textRef.current = element
-      }}
-      style={{ textWrap: 'pretty' }}
-    >
-      {text}
-    </Tag>
+    <p className={className} data-split-text="words" style={{ textWrap: 'pretty' }}>
+      {segmentsOf(text).map((segment, index) =>
+        segment.order === -1 ? (
+          <Fragment key={index}>{segment.value}</Fragment>
+        ) : (
+          <motion.span
+            animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+            className="mindness-split-word inline-block"
+            data-split-word
+            initial={{ filter: 'blur(4px)', opacity: 0, y: 10 }}
+            key={index}
+            transition={{
+              delay: (segment.order * delay) / 1_000,
+              duration: REVEAL_DURATION_SECONDS,
+              ease: REVEAL_EASE,
+            }}
+          >
+            {segment.value}
+          </motion.span>
+        ),
+      )}
+    </p>
   )
 }

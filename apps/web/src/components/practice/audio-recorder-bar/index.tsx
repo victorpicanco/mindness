@@ -1,8 +1,9 @@
 import { IconButton } from '@/components/ui/icon-button'
+import { cn } from '@/lib/ui/class-names'
 
 import { WaveformTrack } from '@/components/practice/waveform-track'
 
-export interface AudioRecorderBarProps {
+interface AudioRecorderBarProps {
   readonly elapsedLabel: string
   readonly groupLabel: string
   readonly isDisabled?: boolean
@@ -32,7 +33,10 @@ export function AudioRecorderBar({
     >
       <WaveformTrack levels={levels} />
       <span
-        className={`shrink-0 text-sm tabular-nums transition-colors ${isRecording ? 'text-text' : 'text-text-muted'}`}
+        className={cn(
+          'shrink-0 text-sm tabular-nums transition-colors',
+          isRecording ? 'text-text' : 'text-text-muted',
+        )}
         {...(isRecording ? { role: 'timer' } : {})}
       >
         {elapsedLabel}

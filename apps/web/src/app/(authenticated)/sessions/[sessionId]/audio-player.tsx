@@ -19,17 +19,24 @@ function requestPlaybackUrl(sessionId: string): Promise<PlaybackCredential> {
   })
 }
 
-interface AudioPlayerProps {
+type AudioPlayerProps = {
   readonly label: string
-  readonly requestPlaybackUrl?: RequestPlaybackUrl
   readonly sessionId: string
 }
 
-export function AudioPlayer({
+export function AudioPlayer(props: AudioPlayerProps) {
+  return <AudioPlayerView {...props} requestPlaybackUrl={requestPlaybackUrl} />
+}
+
+type AudioPlayerViewProps = AudioPlayerProps & {
+  readonly requestPlaybackUrl: RequestPlaybackUrl
+}
+
+export function AudioPlayerView({
   label,
-  requestPlaybackUrl: requestUrl = requestPlaybackUrl,
+  requestPlaybackUrl: requestUrl,
   sessionId,
-}: AudioPlayerProps) {
+}: AudioPlayerViewProps) {
   return (
     <AudioMessage
       label={label}

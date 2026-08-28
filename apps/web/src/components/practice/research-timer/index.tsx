@@ -1,23 +1,18 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
 import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from '@/components/practice/countdown'
 
 const WARNING_THRESHOLD_SECONDS = 10
-const WARNING_AUDIO_SOURCE =
-  'data:audio/wav;base64,UklGRqQCAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YYACAAAAAEsA5wA2Aa0ASv+s/c78e/2+/7MC5QT8BIoCZ/5w+q74U/r4/qgEswjsCNcECf6S95z04faz/SEGPgzxDIcHL/4f9azwOfP3+xcHdQ/2EIsK2f4k8/Lsbu/P+YgHShLnFNMNAACo8YDplOtG93IHrhSwGE0RnAGx8GjmwOdu9NoGlxY8HOQUowNC8LjjBuRW8cUF/hd7H4QYBgZZ8HzheuAR7jwE3RhaIhkctwj08MDfMN206ksCMxnNJI4fogsK8ojeOtpS5wAAARnIJtAitw6T89vdptcB5Gv9TRhAKMol3xGD9bjdhNXU4J76HBcwKW0oBxXK9x3e3dPg3az3ehWVKakqGxhY+gbfvNI236r0dBNuKXEsBhsc/WngJNLp2KzxGBG+KLottR0AAD3iGdIF18bueA6MJ3wuFSDxAnPkmtKY1Q3spgvhJbQuFyLbBfvmotOs1JPptgjHI14urCOpCMXpLNVH1GrnvQVOIX0tySRIC73sLtdt1KLlzwKFHhYsZSWjDdDvmtkf1UnkAAB+GzAqeSWsD+jyZNxc1mnjZP1NGNQnASVREfH1ed8d2AvjDfsFFRElACSHEtj4yOJa2jTjDfm8EfYhdiJCE4j7POYI3efjcfeGDpMeayB8E/D9w+kZ4CLlRvZ2C/wa5x0uEwAARu1+4+PmlvWhCEMX9xpZEqkBsfAm5yLpaPUXBn8TqBf9EN8C8fP86tXrv/XpA8MPCxQfD5kD8/bt7vHunvYkAiQMMRDHDNIDpfnl8mXyAPjUALYILwz+CYUD+fvO9iL24vkAAIsFGAjTBrMC4P2U+hX6Ovyv/7MCAgRUA18BUP8k/ir+/v7i/z8A'
+const WARNING_AUDIO_SOURCE = '/countdown-warning.wav'
 
 interface CountdownAudioFailure {
   readonly cause: unknown
   readonly event: 'countdown_audio_failed'
-}
-
-export interface ResearchTimerProps {
-  readonly logAudioFailure?: (cause: unknown) => void
 }
 
 function logCountdownAudioFailure(cause: unknown) {
@@ -26,8 +21,17 @@ function logCountdownAudioFailure(cause: unknown) {
   console.error(failure)
 }
 
-export function ResearchTimer({ logAudioFailure = logCountdownAudioFailure }: ResearchTimerProps) {
+export function ResearchTimer() {
+  return <ResearchTimerView logAudioFailure={logCountdownAudioFailure} />
+}
+
+export function ResearchTimerView({
+  logAudioFailure,
+}: {
+  readonly logAudioFailure: (cause: unknown) => void
+}) {
   const t = useTranslations('home.research')
+  const themeId = useId()
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
   const openRecordingWindow = usePracticeSessionStore((state) => state.openRecordingWindow)
@@ -74,10 +78,10 @@ export function ResearchTimer({ logAudioFailure = logCountdownAudioFailure }: Re
   if (session === null) return null
 
   return (
-    <section aria-labelledby="research-theme" className="mt-2">
+    <section aria-labelledby={themeId} className="mt-2">
       <h1
         className="font-(family-name:--font-buenard) text-2xl leading-tight tracking-tight sm:text-3xl"
-        id="research-theme"
+        id={themeId}
       >
         {session.themeTitle}
       </h1>

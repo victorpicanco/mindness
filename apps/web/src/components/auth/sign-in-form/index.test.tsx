@@ -130,12 +130,12 @@ describe('SignInForm', () => {
     expect(submittedFormData[0]?.get('captchaToken')).toBe('captcha-token')
   })
 
-  it('rejects an invalid email without calling the action', async () => {
+  it('shows the invalid email returned by the action', async () => {
     const calls: FormData[] = []
     const signInAction: SignInAction = (_state, formData) => {
       calls.push(formData)
 
-      return Promise.resolve(initialAuthActionState)
+      return Promise.resolve({ status: 'validation-error', messageKey: 'errors.invalidEmail' })
     }
 
     renderSignInForm(signInAction)
@@ -144,15 +144,15 @@ describe('SignInForm', () => {
     submit()
 
     expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument()
-    expect(calls).toEqual([])
+    expect(calls).toHaveLength(1)
   })
 
-  it('rejects a missing password without calling the action', async () => {
+  it('shows the invalid password returned by the action', async () => {
     const calls: FormData[] = []
     const signInAction: SignInAction = (_state, formData) => {
       calls.push(formData)
 
-      return Promise.resolve(initialAuthActionState)
+      return Promise.resolve({ status: 'validation-error', messageKey: 'errors.invalidPassword' })
     }
 
     renderSignInForm(signInAction)
@@ -160,11 +160,15 @@ describe('SignInForm', () => {
     fillCredentials('person@example.com', '')
     submit()
 
-    expect(await screen.findByText('Informe sua senha.')).toBeInTheDocument()
-    expect(calls).toEqual([])
+    expect(
+      await screen.findByText(
+        'Use uma senha de 8 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
+      ),
+    ).toBeInTheDocument()
+    expect(calls).toHaveLength(1)
   })
 
-  it('waits for the security verification instead of rejecting the submission', async () => {
+  it('submits the current security verification value without polling', async () => {
     const calls: FormData[] = []
     const signInAction: SignInAction = (_state, formData) => {
       calls.push(formData)
@@ -176,14 +180,10 @@ describe('SignInForm', () => {
     fillCredentials()
     submit()
 
-    expect(calls).toEqual([])
-
-    await verifyCaptcha('late-token')
-
     await waitFor(() => {
       expect(calls).toHaveLength(1)
     })
-    expect(calls[0]?.get('captchaToken')).toBe('late-token')
+    expect(calls[0]?.get('captchaToken')).toBe('')
   })
 
   it('reports when the security verification becomes unavailable', async () => {

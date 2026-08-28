@@ -63,8 +63,12 @@ function fillCredentials(password = 'Valid_password1!', confirmation = password)
   })
 }
 
-function submit(): void {
-  fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+async function submit(): Promise<void> {
+  await act(() => {
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+
+    return Promise.resolve()
+  })
 }
 
 beforeEach(() => {
@@ -99,7 +103,7 @@ describe('SignUpForm', () => {
 
     await verifyCaptcha()
     fillCredentials()
-    submit()
+    await submit()
 
     await waitFor(() => {
       expect(submittedFormData).toHaveLength(1)
@@ -141,7 +145,7 @@ describe('SignUpForm', () => {
     )
     await verifyCaptcha()
     fillCredentials()
-    submit()
+    await submit()
 
     await waitFor(() => {
       expect(successNotifications).toBe(1)
@@ -152,30 +156,30 @@ describe('SignUpForm', () => {
     expect(submittedFormData[0]?.get('captchaToken')).toBe('captcha-token')
   })
 
-  it('rejects a password confirmation that differs from the password without submitting', async () => {
+  it('shows the password mismatch returned by the action', async () => {
     let submissions = 0
     const signUpAction: SignUpAction = () => {
       submissions += 1
 
-      return Promise.resolve(initialAuthActionState)
+      return Promise.resolve({ status: 'validation-error', messageKey: 'errors.passwordMismatch' })
     }
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
     await verifyCaptcha()
     fillCredentials('Valid_password1!', 'Different_password1!')
-    submit()
+    await submit()
 
     expect(screen.getByRole('alert')).toHaveTextContent('As senhas não coincidem.')
     expect(screen.getByLabelText('Confirme sua senha')).toHaveAttribute('aria-invalid', 'true')
-    expect(submissions).toBe(0)
+    expect(submissions).toBe(1)
   })
 
-  it('announces every invalid field at once without submitting', async () => {
+  it('shows the validation error returned by the action', async () => {
     let submissions = 0
     const signUpAction: SignUpAction = () => {
       submissions += 1
 
-      return Promise.resolve(initialAuthActionState)
+      return Promise.resolve({ status: 'validation-error', messageKey: 'errors.invalidEmail' })
     }
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
@@ -183,17 +187,14 @@ describe('SignUpForm', () => {
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'invalid' } })
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'short' } })
     fireEvent.change(screen.getByLabelText('Confirme sua senha'), { target: { value: 'other' } })
-    submit()
+    await submit()
 
     expect(screen.getByLabelText('E-mail')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByLabelText('Senha')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByLabelText('Confirme sua senha')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByText('Informe um e-mail válido.')).toBeInTheDocument()
-    expect(screen.getByText('As senhas não coincidem.')).toBeInTheDocument()
-    expect(submissions).toBe(0)
+    expect(submissions).toBe(1)
   })
 
-  it('waits for the security verification instead of rejecting the submission', async () => {
+  it('submits the current security verification value without polling', async () => {
     const calls: FormData[] = []
     const signUpAction: SignUpAction = (_state, formData) => {
       calls.push(formData)
@@ -203,16 +204,12 @@ describe('SignUpForm', () => {
 
     renderSignUpForm(<SignUpForm action={signUpAction} />)
     fillCredentials()
-    submit()
-
-    expect(calls).toEqual([])
-
-    await verifyCaptcha('late-token')
+    await submit()
 
     await waitFor(() => {
       expect(calls).toHaveLength(1)
     })
-    expect(calls[0]?.get('captchaToken')).toBe('late-token')
+    expect(calls[0]?.get('captchaToken')).toBe('')
   })
 
   it('reports when the security verification becomes unavailable', async () => {
@@ -246,7 +243,7 @@ describe('SignUpForm', () => {
     renderSignUpForm(<SignUpForm action={signUpAction} />)
     await verifyCaptcha()
     fillCredentials()
-    submit()
+    await submit()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Use uma senha de 8 a 64 caracteres com letras maiúsculas e minúsculas, número e símbolo.',
@@ -263,7 +260,7 @@ describe('SignUpForm', () => {
     renderSignUpForm(<SignUpForm action={signUpAction} />)
     await verifyCaptcha()
     fillCredentials()
-    submit()
+    await submit()
 
     await waitFor(() => {
       expect(resetWidgets).toEqual(['widget-0'])
@@ -284,7 +281,7 @@ describe('SignUpForm', () => {
     renderSignUpForm(<SignUpForm action={signUpAction} />)
     await verifyCaptcha()
     fillCredentials()
-    submit()
+    await submit()
 
     expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument()
   })
@@ -299,7 +296,7 @@ describe('SignUpForm', () => {
     renderSignUpForm(<SignUpForm action={signUpAction} />)
     await verifyCaptcha()
     fillCredentials()
-    submit()
+    await submit()
 
     expect(
       await screen.findByText('Não foi possível concluir a ação. Tente novamente.'),

@@ -1,22 +1,24 @@
+import { cacheLife } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 
-import { activeSessionSchema, categoriesSchema, quotaSchema } from '@/lib/api/contracts/sessions'
+import { categoriesSchema, type quotaSchema } from '@/lib/api/contracts/sessions'
+import { getActiveSession, getSessionQuota } from '@/lib/api/authenticated-session-data'
 import { apiFetch } from '@/lib/api/server-client'
 import { signOutAction } from '@/lib/auth/sign-out'
 import { sessionPath } from '@/lib/navigation/session-routes'
 
 import type { PracticeQuota } from '@/components/practice/config-form'
-import { PracticeSessionStart } from '@/components/practice/session-start'
+import { PracticeConfigFormWithNavigation } from '@/components/practice/config-form'
 
-type ApiFetch = typeof apiFetch
-type PracticeTranslationKey = 'title'
-type PracticeTranslations = (key: PracticeTranslationKey) => string
+// The theme catalogue is the same for every visitor and changes rarely, but the API still scopes it
+// to the caller's token. A private cache is what reads that token without refetching on every
+// render of the home screen.
+async function readThemeCategories() {
+  'use cache: private'
+  cacheLife('hours')
 
-async function getPracticeTranslations(): Promise<PracticeTranslations> {
-  const t = await getTranslations('home.practice')
-
-  return (key) => t(key)
+  return apiFetch('/sessions/theme-categories', { schema: categoriesSchema })
 }
 
 function sessionQuotaSummary(quota: ReturnType<typeof quotaSchema.parse>): PracticeQuota | null {
@@ -28,36 +30,30 @@ function sessionQuotaSummary(quota: ReturnType<typeof quotaSchema.parse>): Pract
   }
 }
 
-export function createHomePage(
-  fetchFromApi: ApiFetch,
-  loadPracticeTranslations: () => Promise<PracticeTranslations> = getPracticeTranslations,
-  openActiveSession: (path: string) => never = redirect,
-) {
-  return async function HomePage() {
-    const [t, quota, categories, activeSession] = await Promise.all([
-      loadPracticeTranslations(),
-      fetchFromApi('/sessions/quota', { cache: 'no-store', schema: quotaSchema }),
-      fetchFromApi('/sessions/theme-categories', { cache: 'no-store', schema: categoriesSchema }),
-      fetchFromApi('/sessions/active', { cache: 'no-store', schema: activeSessionSchema }),
-    ])
-    if (activeSession !== null) openActiveSession(sessionPath(activeSession.sessionId))
-    const summary = sessionQuotaSummary(quota)
+export default async function HomePage() {
+  const [t, quota, categories, activeSession] = await Promise.all([
+    getTranslations('home.practice'),
+    getSessionQuota(),
+    readThemeCategories(),
+    getActiveSession(),
+  ])
 
-    return (
-      <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
-        <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center justify-between gap-6">
-          <div className="flex size-full min-h-0 flex-col items-center justify-center px-6 py-12 sm:px-10">
-            <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
-              {t('title')}
-            </h1>
-            <PracticeSessionStart categories={categories} quota={summary} signOut={signOutAction} />
-          </div>
+  if (activeSession !== null) redirect(sessionPath(activeSession.sessionId))
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
+      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center justify-between gap-6">
+        <div className="flex size-full min-h-0 flex-col items-center justify-center px-6 py-12 sm:px-10">
+          <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
+            {t('title')}
+          </h1>
+          <PracticeConfigFormWithNavigation
+            categories={categories}
+            quota={sessionQuotaSummary(quota)}
+            signOut={signOutAction}
+          />
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 }
-
-const HomePageContent = createHomePage(apiFetch)
-
-export default HomePageContent

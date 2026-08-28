@@ -8,9 +8,9 @@ const clientEnvSchema = z.object({
   turnstileSiteKey: z.string().min(1).optional(),
 })
 
-export type ClientEnv = z.output<typeof clientEnvSchema>
+type ClientEnv = z.output<typeof clientEnvSchema>
 
-export interface ClientEnvSource {
+interface ClientEnvSource {
   readonly apiBaseUrl: string | undefined
   readonly supabaseUrl: string | undefined
   readonly turnstileSiteKey: string | undefined

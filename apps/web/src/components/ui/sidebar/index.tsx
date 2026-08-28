@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { ComponentPropsWithRef, MouseEvent, ReactNode } from 'react'
 
 import { Icon } from '@/components/ui/icon'
+import { cn } from '@/lib/ui/class-names'
 
 import type { SidebarNavigationItem, SidebarSessionGroup } from './types'
 
@@ -100,7 +101,10 @@ function SidebarNavigationLink({
       </span>
       <span
         aria-hidden={!isExpanded}
-        className={`min-w-0 whitespace-nowrap text-[0.9375rem] font-normal transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${isExpanded ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-1 opacity-0'}`}
+        className={cn(
+          'min-w-0 whitespace-nowrap text-[0.9375rem] font-normal transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none',
+          isExpanded ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-1 opacity-0',
+        )}
       >
         {item.label}
       </span>

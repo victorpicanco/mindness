@@ -5,7 +5,7 @@ import { useStore } from 'zustand'
 import { createStore, type StoreApi } from 'zustand/vanilla'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
-export type Theme = 'dark' | 'light'
+type Theme = 'dark' | 'light'
 
 interface ThemeState {
   readonly theme: Theme

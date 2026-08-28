@@ -7,6 +7,12 @@ import { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
 
 import { AnalysisMessage } from './index'
 
+function revealedText(container: HTMLElement): string[] {
+  return [...container.querySelectorAll('[data-split-text="words"]')].map(
+    (paragraph) => paragraph.textContent ?? '',
+  )
+}
+
 const ANALYSIS = sessionAnalysisSchema.parse({
   analyzedAt: '2026-08-24T12:10:00.000Z',
   guidance: [
@@ -34,10 +40,28 @@ describe('AnalysisMessage', () => {
     )
     expect(screen.getByLabelText('Mensagem da Mindness')).toBeInTheDocument()
     expect(screen.getByText('73')).toBeInTheDocument()
-    expect(screen.getByText('Reduza as pausas entre frases relacionadas.')).toBeInTheDocument()
-    expect(
-      screen.getByText('<strong>Texto puro</strong> **sem Markdown renderizado**'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Pontuação total')).toBeInTheDocument()
+    expect(revealedText(container)).toContain('Reduza as pausas entre frases relacionadas.')
+    expect(revealedText(container)).toContain(
+      '<strong>Texto puro</strong> **sem Markdown renderizado**',
+    )
     expect(container.querySelector('strong')).not.toBeInTheDocument()
+  })
+
+  it('plots every score as a radial gauge, with the total leading the pillars', () => {
+    const { container } = render(
+      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <AnalysisMessage analysis={ANALYSIS} />
+      </NextIntlClientProvider>,
+    )
+
+    const gauges = container.querySelectorAll('[data-score-arc="value"]')
+    const [total] = [...container.querySelectorAll('svg')]
+
+    expect(gauges).toHaveLength(5)
+    expect(total).toHaveAttribute('width', '168')
+    for (const score of ['73', '70', '75', '60', '85']) {
+      expect(screen.getByText(score)).toBeInTheDocument()
+    }
   })
 })

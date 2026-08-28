@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createSignInAction } from './sign-in-action-factory'
+import { createSignInAction } from '@/lib/auth/server-actions'
 import { initialAuthActionState } from '@/lib/auth/action-state'
 
 class RedirectSignal extends Error {

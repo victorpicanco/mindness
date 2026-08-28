@@ -4,6 +4,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: () =>
+    Promise.resolve((key: string) => {
+      const values: Readonly<Record<string, string>> = {
+        description: 'O endereço informado não existe.',
+        home: 'Voltar ao início',
+        title: 'Página não encontrada',
+      }
+
+      return values[key] ?? key
+    }),
+}))
+
 import ErrorBoundary from './error'
 import Loading from './loading'
 import NotFound from './not-found'
@@ -35,8 +48,8 @@ describe('route boundaries', () => {
     expect(reset).toHaveBeenCalledOnce()
   })
 
-  it('explains that an unknown route does not exist', () => {
-    renderWithMessages(<NotFound />)
+  it('explains that an unknown route does not exist', async () => {
+    renderWithMessages(await NotFound())
 
     expect(screen.getByRole('heading', { name: 'Página não encontrada' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Voltar ao início' })).toHaveAttribute('href', '/')

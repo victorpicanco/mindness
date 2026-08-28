@@ -7,7 +7,10 @@ export type AuthFormMessageKey =
   | 'auth.errors.passwordRequired'
 
 export type AuthActionMessageKey =
-  'errors.captchaRequired' | 'errors.invalidEmail' | 'errors.invalidPassword'
+  | 'errors.captchaRequired'
+  | 'errors.invalidEmail'
+  | 'errors.invalidPassword'
+  | 'errors.passwordMismatch'
 
 export type AuthFieldName = 'captchaToken' | 'email' | 'password' | 'passwordConfirmation'
 
@@ -15,6 +18,7 @@ const FIELD_BY_ACTION_MESSAGE_KEY: Readonly<Record<AuthActionMessageKey, AuthFie
   'errors.captchaRequired': 'captchaToken',
   'errors.invalidEmail': 'email',
   'errors.invalidPassword': 'password',
+  'errors.passwordMismatch': 'passwordConfirmation',
 }
 
 export function fieldOfActionMessageKey(messageKey: AuthActionMessageKey): AuthFieldName {

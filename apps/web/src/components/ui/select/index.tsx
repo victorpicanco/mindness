@@ -1,19 +1,17 @@
-import { forwardRef, type ComponentPropsWithoutRef } from 'react'
+'use client'
 
-export type SelectProps = ComponentPropsWithoutRef<'select'>
+import type { ComponentPropsWithRef } from 'react'
 
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { className, ...props },
-  ref,
-) {
-  const classes =
-    className === undefined
-      ? 'w-full cursor-pointer appearance-none rounded-full border border-transparent bg-input px-6 py-4 pr-12 font-sans text-base text-text outline-none focus-visible:ring-2 focus-visible:ring-text'
-      : `w-full cursor-pointer appearance-none rounded-full border border-transparent bg-input px-6 py-4 pr-12 font-sans text-base text-text outline-none focus-visible:ring-2 focus-visible:ring-text ${className}`
+import { useFieldControl } from '@/components/ui/field'
+import { cn } from '@/lib/ui/class-names'
 
+const selectStyles =
+  'w-full cursor-pointer appearance-none rounded-full border border-transparent bg-input px-6 py-4 pr-12 font-sans text-base text-text outline-none focus-visible:ring-2 focus-visible:ring-text'
+
+export function Select({ className, ...props }: ComponentPropsWithRef<'select'>) {
   return (
     <span className="relative block w-full">
-      <select className={classes} ref={ref} {...props} />
+      <select {...useFieldControl()} {...props} className={cn(selectStyles, className)} />
       <svg
         aria-hidden="true"
         className="pointer-events-none absolute top-1/2 right-5 size-4 -translate-y-1/2 text-text-muted"
@@ -30,4 +28,4 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
       </svg>
     </span>
   )
-})
+}

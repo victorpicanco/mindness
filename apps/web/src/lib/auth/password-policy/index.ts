@@ -26,8 +26,6 @@ export const passwordRequirements = [
   },
 ] as const
 
-export type PasswordRequirementKey = (typeof passwordRequirements)[number]['key']
-
 function meetsPasswordRequirements(password: string): boolean {
   return passwordRequirements.every((requirement) => requirement.isSatisfied(password))
 }

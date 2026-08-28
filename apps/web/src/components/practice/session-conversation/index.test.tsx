@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
+import { DEFAULT_TIME_ZONE } from '@/i18n/request'
 import { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
 import {
   PracticeSessionProvider,
@@ -68,7 +69,7 @@ function renderConversation(children: ReactNode) {
   render(
     <AppRouterContext.Provider value={createRouter()}>
       <QueryClientProvider client={new QueryClient()}>
-        <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <NextIntlClientProvider locale="pt-BR" messages={messages} timeZone={DEFAULT_TIME_ZONE}>
           <PracticeSessionProvider
             initialState={{ serverTimeOffsetMs: 0, session: SESSION, status: 'uploading' }}
           >
@@ -77,6 +78,12 @@ function renderConversation(children: ReactNode) {
         </NextIntlClientProvider>
       </QueryClientProvider>
     </AppRouterContext.Provider>,
+  )
+}
+
+function revealedText(): string[] {
+  return [...document.body.querySelectorAll('[data-split-text="words"]')].map(
+    (paragraph) => paragraph.textContent ?? '',
   )
 }
 
@@ -136,10 +143,8 @@ describe('SessionConversation', () => {
     expect(screen.getByText('Seu tempo de pesquisa terminou.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reproduzir gravação' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Sua análise' })).toBeInTheDocument()
-    expect(screen.getByText('Transcrição da apresentação.')).toBeInTheDocument()
-    expect(screen.getByText('Organize a ideia central.')).toHaveAttribute(
-      'data-split-text',
-      'words',
+    expect(revealedText()).toEqual(
+      expect.arrayContaining(['Organize a ideia central.', 'Transcrição da apresentação.']),
     )
     expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeDisabled()
   })

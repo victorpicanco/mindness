@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '@/i18n/messages'
 import type { SessionDayGroup } from '@/lib/sessions/session-day-groups'
 
-import { AuthenticatedShell } from './index'
+import { AuthenticatedShellView } from './index'
 
 function renderShell(
   children: ReactNode,
@@ -57,7 +57,7 @@ function renderShell(
     <AppRouterContext.Provider value={router}>
       <PathnameContext.Provider value={pathname}>
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
-          <AuthenticatedShell
+          <AuthenticatedShellView
             abandonSession={abandonSession}
             {...(activeSessionId === undefined ? {} : { activeSessionId })}
             initialIsExpanded={isInitiallyExpanded}
@@ -68,7 +68,7 @@ function renderShell(
             {...(header === undefined ? {} : { header })}
           >
             {children}
-          </AuthenticatedShell>
+          </AuthenticatedShellView>
         </NextIntlClientProvider>
       </PathnameContext.Provider>
     </AppRouterContext.Provider>,
@@ -198,7 +198,7 @@ describe('AuthenticatedShell', () => {
       name: 'Nova sessão',
     })
     fireEvent.click(trigger)
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }))
 
     expect(
       screen.queryByRole('dialog', { name: 'Você tem uma sessão em andamento' }),
@@ -358,13 +358,14 @@ describe('AuthenticatedShell', () => {
       >
         <PathnameContext.Provider value="/">
           <NextIntlClientProvider locale="pt-BR" messages={messages}>
-            <AuthenticatedShell
+            <AuthenticatedShellView
+              abandonSession={() => Promise.resolve()}
               initialIsExpanded
               preferenceCookieName="mindness-sidebar-expanded"
               signOut={() => undefined}
             >
               <p>Content</p>
-            </AuthenticatedShell>
+            </AuthenticatedShellView>
           </NextIntlClientProvider>
         </PathnameContext.Provider>
       </AppRouterContext.Provider>,

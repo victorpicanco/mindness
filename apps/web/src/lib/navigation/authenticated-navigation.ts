@@ -3,7 +3,7 @@ import type { IconName } from '@/lib/ui/icon-name'
 
 type AuthenticatedShellMessages = (typeof messages)['common']['authenticatedShell']
 
-export interface AuthenticatedNavigationItem {
+interface AuthenticatedNavigationItem {
   readonly href: string
   readonly icon: IconName
   readonly labelKey: keyof AuthenticatedShellMessages

@@ -124,7 +124,8 @@ function applyRenewalToResponse(response: NextResponse, renewal: SessionRenewal)
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = btoa(crypto.randomUUID())
   const contentSecurityPolicy = createContentSecurityPolicy(nonce)
-  const renewal = requiresSession(request.nextUrl)
+  const needsSession = requiresSession(request.nextUrl)
+  const renewal = needsSession
     ? await renewSession({ cookieStore: request.cookies })
     : ({ status: 'untouched' } as const)
 
@@ -132,7 +133,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   const isSignedIn = hasLiveSession(request.cookies)
 
-  if (requiresSession(request.nextUrl) && !isSignedIn) {
+  if (needsSession && !isSignedIn) {
     return applyRenewalToResponse(
       setSecurityHeaders(NextResponse.redirect(signInUrl(request)), contentSecurityPolicy),
       renewal,
@@ -166,5 +167,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 // protected render without a proxy pass, and renewing the session is the one
 // thing a Server Component cannot do for itself.
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|wav|mp3|woff2?)$).*)',
+  ],
 }

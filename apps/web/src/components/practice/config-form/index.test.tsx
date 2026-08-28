@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
+import { DEFAULT_TIME_ZONE } from '@/i18n/request'
 import { ApiClientError } from '@/lib/api/client-error'
 import {
   PracticeSessionProvider,
@@ -55,7 +56,7 @@ function renderPracticeConfigForm(
 ) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+      <NextIntlClientProvider locale="pt-BR" messages={messages} timeZone={DEFAULT_TIME_ZONE}>
         <PracticeSessionProvider>
           <PracticeConfigForm
             categories={CATEGORIES}

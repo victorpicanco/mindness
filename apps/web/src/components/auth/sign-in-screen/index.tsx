@@ -8,9 +8,9 @@ import type { ApiErrorDescription } from '@/lib/errors/api-error-presentation'
 
 type SignInScreenProps = {
   readonly action: AuthFormAction
-  readonly initialError?: ApiErrorDescription
-  readonly passwordUpdated?: boolean
-  readonly redirectTo?: string
+  readonly initialError?: ApiErrorDescription | undefined
+  readonly passwordUpdated?: boolean | undefined
+  readonly redirectTo?: string | undefined
 }
 
 export function SignInScreen({
@@ -23,11 +23,7 @@ export function SignInScreen({
 
   return (
     <AuthPageShell description={t('description')} title={t('title')}>
-      <SignInForm
-        action={action}
-        {...(initialError === undefined ? {} : { initialError })}
-        {...(redirectTo === undefined ? {} : { redirectTo })}
-      />
+      <SignInForm action={action} initialError={initialError} redirectTo={redirectTo} />
       {passwordUpdated ? (
         <p className="text-center text-sm text-text-muted" role="status">
           {t('passwordUpdated')}

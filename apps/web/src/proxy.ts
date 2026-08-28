@@ -6,7 +6,7 @@ import { SESSIONS_ROUTE_PREFIX } from '@/lib/navigation/session-routes'
 import { clearSessionCookies, hasLiveSession, sessionCookiesToSet } from '@/lib/auth/session'
 import { clientEnv } from '@/lib/env/client'
 
-const protectedRoutePrefixes = ['/history', SESSIONS_ROUTE_PREFIX]
+const protectedRoutePrefixes = [SESSIONS_ROUTE_PREFIX]
 
 // Routes whose only purpose is to start a session. Reaching them with a live
 // session is always a dead end; /auth/callback and /auth/confirm are

@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { config, proxy } from './proxy'
 
 const FAR_FUTURE_EXPIRY_IN_SECONDS = 4_102_444_800
+const PROTECTED_ROUTE = '/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
+const PROTECTED_ROUTE_SIGN_IN_REDIRECT =
+  '/auth/sign-in?redirect=%2Fsessions%2F7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
 
 function accessTokenExpiringAt(expiresAtInSeconds: number): string {
   const payload = Buffer.from(JSON.stringify({ exp: expiresAtInSeconds }), 'utf8').toString(
@@ -102,32 +105,38 @@ describe('proxy', () => {
       )
     })
 
+    it('does not redirect an unauthenticated request to the removed history route', async () => {
+      const response = await proxy(request('/history'))
+
+      expect(response.headers.get('x-middleware-next')).toBe('1')
+    })
+
     it('allows an authenticated request to a protected route to continue', async () => {
-      const response = await proxy(request('/history', signedIn()))
+      const response = await proxy(request(PROTECTED_ROUTE, signedIn()))
 
       expect(response.headers.get('x-middleware-next')).toBe('1')
     })
 
     it('keeps a visitor whose access token expired but is still renewable', async () => {
-      const response = await proxy(request('/history', staleAccessToken()))
+      const response = await proxy(request(PROTECTED_ROUTE, staleAccessToken()))
 
       expect(response.headers.get('x-middleware-next')).toBe('1')
     })
 
     it('redirects a protected request when nothing is left to renew the session', async () => {
-      const response = await proxy(request('/history', expiredSession()))
+      const response = await proxy(request(PROTECTED_ROUTE, expiredSession()))
 
       expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe('/auth/sign-in?redirect=%2Fhistory')
+      expect(redirectTarget(response)).toBe(PROTECTED_ROUTE_SIGN_IN_REDIRECT)
     })
 
     it('redirects a protected request carrying an unreadable access token', async () => {
       const response = await proxy(
-        request('/history', { cookie: 'mindness_access_token=not-a-jwt' }),
+        request(PROTECTED_ROUTE, { cookie: 'mindness_access_token=not-a-jwt' }),
       )
 
       expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe('/auth/sign-in?redirect=%2Fhistory')
+      expect(redirectTarget(response)).toBe(PROTECTED_ROUTE_SIGN_IN_REDIRECT)
     })
 
     it('redirects an unauthenticated visitor away from the update-password form', async () => {

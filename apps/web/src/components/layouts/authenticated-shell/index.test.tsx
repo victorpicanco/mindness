@@ -94,14 +94,15 @@ describe('AuthenticatedShell', () => {
   it('renders the configured navigation items in the sidebar', () => {
     renderShell(<p>Content</p>)
 
-    const sidebar = screen.getByRole('complementary')
-    const newSessionLink = within(sidebar).getByRole('link', { name: 'Nova sessão' })
-    const progressLink = within(sidebar).getByRole('link', { name: 'Seu progresso' })
+    const navigation = within(screen.getByRole('complementary')).getByRole('navigation', {
+      name: 'Navegação principal',
+    })
+    const links = within(navigation).getAllByRole('link')
 
-    expect(newSessionLink).toHaveAttribute('href', '/')
-    expect(newSessionLink.querySelector('[data-icon="pencil-edit-02"]')).toBeInTheDocument()
-    expect(progressLink).toHaveAttribute('href', '/history')
-    expect(progressLink.querySelector('[data-icon="chart-increase"]')).toBeInTheDocument()
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAccessibleName('Nova sessão')
+    expect(links[0]).toHaveAttribute('href', '/')
+    expect(links[0]?.querySelector('[data-icon="pencil-edit-02"]')).toBeInTheDocument()
   })
 
   it('navigates to a new session when no session is active', () => {
@@ -319,12 +320,19 @@ describe('AuthenticatedShell', () => {
   })
 
   it('highlights the navigation item matching the current route', () => {
-    renderShell(<p>Content</p>, true, '/history')
+    renderShell(<p>Content</p>)
 
-    const sidebar = screen.getByRole('complementary')
+    expect(
+      within(screen.getByRole('complementary')).getByRole('link', { name: 'Nova sessão' }),
+    ).toHaveClass('bg-input')
+  })
 
-    expect(within(sidebar).getByRole('link', { name: 'Seu progresso' })).toHaveClass('bg-input')
-    expect(within(sidebar).getByRole('link', { name: 'Nova sessão' })).not.toHaveClass('bg-input')
+  it('leaves the navigation unhighlighted outside its routes', () => {
+    renderShell(<p>Content</p>, true, '/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa')
+
+    expect(
+      within(screen.getByRole('complementary')).getByRole('link', { name: 'Nova sessão' }),
+    ).not.toHaveClass('bg-input')
   })
 
   it('renders the persisted collapsed preference on the initial render', () => {
@@ -351,11 +359,6 @@ describe('AuthenticatedShell', () => {
     expect(
       within(sidebar)
         .getByRole('link', { name: 'Nova sessão' })
-        .querySelector('[data-sidebar-icon]'),
-    ).toHaveClass('grid', 'size-9', 'place-items-center')
-    expect(
-      within(sidebar)
-        .getByRole('link', { name: 'Seu progresso' })
         .querySelector('[data-sidebar-icon]'),
     ).toHaveClass('grid', 'size-9', 'place-items-center')
     expect(sidebarBackground).toHaveClass('absolute', 'inset-0', 'cursor-col-resize')

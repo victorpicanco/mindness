@@ -33,7 +33,7 @@ function renderSessionGroups(activeHref: string | null = null, onNavigate?: () =
 
 const items: readonly SidebarNavigationItem[] = [
   { href: '/', icon: 'pencil-edit-02', label: 'Nova sessão' },
-  { href: '/history', icon: 'chart-increase', label: 'Seu progresso' },
+  { href: '/sessions', icon: 'chart-increase', label: 'Sessões' },
 ]
 
 function renderNavigation(activeHref: string | null, isExpanded = true, onNavigate?: () => void) {
@@ -107,27 +107,24 @@ describe('SidebarNavigation', () => {
     expect(links[0]).toHaveAccessibleName('Nova sessão')
     expect(links[0]).toHaveAttribute('href', '/')
     expect(links[0]?.querySelector('[data-icon="pencil-edit-02"]')).toBeInTheDocument()
-    expect(links[1]).toHaveAccessibleName('Seu progresso')
-    expect(links[1]).toHaveAttribute('href', '/history')
+    expect(links[1]).toHaveAccessibleName('Sessões')
+    expect(links[1]).toHaveAttribute('href', '/sessions')
     expect(links[1]?.querySelector('[data-icon="chart-increase"]')).toBeInTheDocument()
   })
 
   it('highlights only the item matching the active path', () => {
-    renderNavigation('/history')
+    renderNavigation('/sessions')
 
-    expect(screen.getByRole('link', { name: 'Seu progresso' })).toHaveClass('bg-input')
-    expect(screen.getByRole('link', { name: 'Seu progresso' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    expect(screen.getByRole('link', { name: 'Sessões' })).toHaveClass('bg-input')
+    expect(screen.getByRole('link', { name: 'Sessões' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Nova sessão' })).not.toHaveClass('bg-input')
     expect(screen.getByRole('link', { name: 'Nova sessão' })).not.toHaveAttribute('aria-current')
   })
 
   it('keeps a section active on its nested routes without activating the root item', () => {
-    renderNavigation('/history/2026-08-24')
+    renderNavigation('/sessions/2026-08-24')
 
-    expect(screen.getByRole('link', { name: 'Seu progresso' })).toHaveClass('bg-input')
+    expect(screen.getByRole('link', { name: 'Sessões' })).toHaveClass('bg-input')
     expect(screen.getByRole('link', { name: 'Nova sessão' })).not.toHaveClass('bg-input')
   })
 
@@ -189,7 +186,7 @@ describe('SidebarNavigation', () => {
     const onNavigate = vi.fn()
     renderNavigation('/', true, onNavigate)
 
-    fireEvent.click(screen.getByRole('link', { name: 'Seu progresso' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Sessões' }))
 
     expect(onNavigate).toHaveBeenCalledOnce()
   })

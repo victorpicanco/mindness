@@ -11,5 +11,4 @@ interface AuthenticatedNavigationItem {
 
 export const AUTHENTICATED_NAVIGATION_ITEMS = [
   { href: '/', icon: 'pencil-edit-02', labelKey: 'newSession' },
-  { href: '/history', icon: 'chart-increase', labelKey: 'progress' },
 ] as const satisfies readonly AuthenticatedNavigationItem[]

@@ -71,7 +71,7 @@
     "waiting": "Estamos analisando sua apresentação…",
     "failed": "Não foi possível analisar esta apresentação. Sua cota foi devolvida. Inicie uma nova sessão.",
     "timeout": "A análise não foi concluída. Sua cota foi devolvida. Inicie uma nova sessão.",
-    "historyLink": "Ver histórico"
+    "newSessionLink": "Iniciar nova sessão"
   },
   "analysis": {
     "title": "Sua análise",
@@ -88,20 +88,6 @@
   },
   "session": {
     "totalScore": "Pontuação total",
-    "states": {
-      "in_progress": "Em andamento",
-      "expired": "Expirada",
-      "processing": "Em processamento",
-      "completed": "Concluída",
-      "failed": "Falhou"
-    }
-  },
-  "history": {
-    "title": "Seu progresso",
-    "emptyTitle": "Seu progresso começa aqui",
-    "emptyDescription": "Inicie uma sessão para praticar sua apresentação e acompanhar seu progresso.",
-    "bestOfDay": "Melhor do dia",
-    "loadMore": "Carregar mais",
     "states": {
       "in_progress": "Em andamento",
       "expired": "Expirada",

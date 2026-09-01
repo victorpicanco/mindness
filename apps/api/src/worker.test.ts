@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
 import { BaseError } from '@/shared/errors/base-error/index.js'
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
@@ -210,7 +211,7 @@ describe('registerAnalysisPipelineModules', () => {
     const eventSubscriber = { subscribe: (eventName: string) => subscriptions.push(eventName) }
     const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })
 
-    await registerAnalysisPipelineModules(app, {
+    const { analysesContainer } = await registerAnalysisPipelineModules(app, {
       sessions: {
         prisma: createSessionsPrismaStub(),
         clock: { now: () => new Date() },
@@ -285,6 +286,9 @@ describe('registerAnalysisPipelineModules', () => {
         'analysis_timeout',
         'recording_submitted',
       ].toSorted(),
+    )
+    expect(analysesContainer.useCases.processSessionAudio).toBeInstanceOf(
+      ProcessSessionAudioUseCase,
     )
     await app.ready()
     expect(app.hasRoute({ method: 'GET', url: '/sessions/:sessionId/analysis' })).toBe(true)

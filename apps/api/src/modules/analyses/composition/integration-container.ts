@@ -15,19 +15,26 @@ import {
   createFakeAccountsPort,
   createFakeSessionsPort,
   createFakeThemesPort,
+  createIntegrationAuditoryResult,
+  createIntegrationSynthesisResult,
+  InMemoryAudioPreparationAdapter,
   InMemoryAudioReaderAdapter,
+  InMemoryAuditoryAnalysisAdapter,
   InMemoryEvaluationAdapter,
+  InMemoryFeedbackSynthesisAdapter,
   InMemoryProcessingQueueAdapter,
   InMemoryTranscriptionAdapter,
   type FakeAccountsPort,
   type FakeSessionsPort,
   type FakeThemesPort,
 } from './integration-fixtures.js'
+import type { AnalysisPipelineVersion } from './container.js'
 
 export const ANALYSES_TEST_NOW = new Date('2026-08-16T12:00:00.000Z')
 
 export interface AnalysesIntegrationDeps {
   readonly databaseUrl: string
+  readonly pipelineVersion?: AnalysisPipelineVersion
 }
 
 export interface AnalysesIntegrationContainer {
@@ -40,9 +47,12 @@ export interface AnalysesIntegrationContainer {
   readonly accounts: FakeAccountsPort
   readonly sessions: FakeSessionsPort
   readonly themes: FakeThemesPort
+  readonly audioPreparation: InMemoryAudioPreparationAdapter
   readonly audioReader: InMemoryAudioReaderAdapter
+  readonly auditoryAnalysis: InMemoryAuditoryAnalysisAdapter
   readonly transcription: InMemoryTranscriptionAdapter
   readonly evaluation: InMemoryEvaluationAdapter
+  readonly feedbackSynthesis: InMemoryFeedbackSynthesisAdapter
   readonly processingQueue: InMemoryProcessingQueueAdapter
   readonly logger: IntegrationAnalysisLogger
   readonly logs: readonly string[]
@@ -78,7 +88,10 @@ export async function createAnalysesIntegrationContainer(
   const accounts = createFakeAccountsPort()
   const sessions = createFakeSessionsPort()
   const themes = createFakeThemesPort()
+  const audioPreparation = new InMemoryAudioPreparationAdapter()
   const audioReader = new InMemoryAudioReaderAdapter()
+  const auditoryAnalysis = new InMemoryAuditoryAnalysisAdapter(createIntegrationAuditoryResult())
+  const feedbackSynthesis = new InMemoryFeedbackSynthesisAdapter(createIntegrationSynthesisResult())
   const transcription = new InMemoryTranscriptionAdapter({
     text: 'Transcript',
     words: [{ word: 'Transcript', start: 0, end: 1, confidence: 1 }],
@@ -99,6 +112,7 @@ export async function createAnalysesIntegrationContainer(
   const logger = new IntegrationAnalysisLogger()
   const container = await registerAnalysesModule(app, {
     prisma: analysesPrisma,
+    pipelineVersion: deps.pipelineVersion ?? 'v1',
     clock,
     costRates: {
       transcriptionCostPerMinuteMicros: 1,
@@ -112,10 +126,13 @@ export async function createAnalysesIntegrationContainer(
     adapters: {
       accounts,
       sessions,
+      audioPreparation,
       audioReader,
+      auditoryAnalysis,
       themes,
       transcription,
       evaluation,
+      feedbackSynthesis,
       processingQueue,
     },
   })
@@ -131,9 +148,12 @@ export async function createAnalysesIntegrationContainer(
     accounts,
     sessions,
     themes,
+    audioPreparation,
     audioReader,
+    auditoryAnalysis,
     transcription,
     evaluation,
+    feedbackSynthesis,
     processingQueue,
     logger,
     logs,
@@ -146,6 +166,8 @@ export async function createAnalysesIntegrationContainer(
       themes.reset()
       processingQueue.enqueued.length = 0
       evaluation.reset()
+      auditoryAnalysis.reset()
+      feedbackSynthesis.reset()
       logger.messages.length = 0
     },
     close: async () => {

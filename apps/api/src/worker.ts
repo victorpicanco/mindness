@@ -10,7 +10,7 @@ import { Queue, UnrecoverableError, Worker } from 'bullmq'
 import type { FastifyInstance } from 'fastify'
 import { Redis } from 'ioredis'
 
-import type { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
+import type { AnalysisPipelineUseCase } from '@/modules/analyses/index.js'
 import type { ReconcileOrphanAnalysesUseCase } from '@/modules/analyses/application/use-cases/reconcile-orphan-analyses/index.js'
 import type { SweepExpiredSessionsUseCase } from '@/modules/sessions/application/use-cases/sweep-expired-sessions/index.js'
 import { loadConfig } from '@/config.js'
@@ -74,7 +74,7 @@ export interface AnalysisWorkerHandle {
 }
 
 export interface CreateAnalysisWorkerDeps {
-  readonly processSessionAudio: Pick<ProcessSessionAudioUseCase, 'execute'>
+  readonly processSessionAudio: AnalysisPipelineUseCase
   readonly concurrency: number
   readonly createWorker: (
     processor: AnalysisProcessor,
@@ -252,6 +252,9 @@ export async function startWorker(): Promise<void> {
         location: config.googleCloudLocation,
       }),
       geminiModel: config.geminiModel,
+      geminiAuditoryModel: config.geminiAuditoryModel,
+      geminiSynthesisModel: config.geminiSynthesisModel,
+      pipelineVersion: config.analysisPipelineVersion,
       bullMqQueue,
     },
   })

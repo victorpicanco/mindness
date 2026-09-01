@@ -132,6 +132,9 @@ export async function startServer(): Promise<void> {
         location: config.googleCloudLocation,
       }),
       geminiModel: config.geminiModel,
+      geminiAuditoryModel: config.geminiAuditoryModel,
+      geminiSynthesisModel: config.geminiSynthesisModel,
+      pipelineVersion: config.analysisPipelineVersion,
       bullMqQueue,
     },
   })

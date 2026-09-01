@@ -1,6 +1,10 @@
 export { createAnalysesPrismaClient } from './composition/container.js'
 export { registerAnalysesModule } from './composition/register.js'
-export type { AnalysesModuleDeps } from './composition/container.js'
+export type {
+  AnalysesModuleDeps,
+  AnalysisPipelineUseCase,
+  AnalysisPipelineVersion,
+} from './composition/container.js'
 export {
   AnalysisCompleted,
   type AnalysisCompletedPayload,

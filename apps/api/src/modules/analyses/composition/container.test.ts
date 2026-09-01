@@ -6,6 +6,12 @@ import type {
   AnalysesPrismaTransactionRunner,
 } from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
 
+import type { PreparedAudio } from '@/modules/analyses/domain/ports/audio-preparation-port/index.js'
+import { CANONICAL_AUDIO_CONTENT_TYPE } from '@/modules/analyses/domain/ports/audio-preparation-port/index.js'
+import { CommunicationFeedback } from '@/modules/analyses/domain/value-objects/communication-feedback/index.js'
+import { ProcessMultimodalSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-multimodal-session-audio/index.js'
+import { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
+
 import { createAnalysesContainer } from './container.js'
 
 describe('createAnalysesContainer', () => {
@@ -82,6 +88,85 @@ describe('createAnalysesContainer', () => {
 
     expect(container.useCases.enqueueSessionAnalysis).toBeDefined()
     expect(container.useCases.processSessionAudio).toBeDefined()
+  })
+
+  it('selects the legacy pipeline by default', () => {
+    const container = createAnalysesContainer({
+      ...baseDeps(),
+      deepgramClient: {
+        listen: { v1: { media: { transcribeFile: () => Promise.resolve(undefined) } } },
+      },
+      geminiClient: { models: { generateContent: () => Promise.resolve(undefined) } },
+      geminiModel: 'gemini-2.5-flash',
+      bullMqQueue: { add: () => Promise.resolve(undefined) },
+    })
+
+    expect(container.useCases.processSessionAudio).toBeInstanceOf(ProcessSessionAudioUseCase)
+  })
+
+  it('selects the multimodal pipeline when the configured version is v2', () => {
+    const container = createAnalysesContainer({
+      ...baseDeps(),
+      pipelineVersion: 'v2',
+      deepgramClient: {
+        listen: { v1: { media: { transcribeFile: () => Promise.resolve(undefined) } } },
+      },
+      geminiClient: { models: { generateContent: () => Promise.resolve(undefined) } },
+      geminiAuditoryModel: 'gemini-2.5-flash',
+      geminiSynthesisModel: 'gemini-2.5-pro',
+      bullMqQueue: { add: () => Promise.resolve(undefined) },
+    })
+
+    expect(container.useCases.processSessionAudio).toBeInstanceOf(
+      ProcessMultimodalSessionAudioUseCase,
+    )
+  })
+
+  it('reports the missing auditory model when the multimodal pipeline is selected', () => {
+    try {
+      createAnalysesContainer({
+        ...baseDeps(),
+        pipelineVersion: 'v2',
+        deepgramClient: {
+          listen: { v1: { media: { transcribeFile: () => Promise.resolve(undefined) } } },
+        },
+        geminiClient: { models: { generateContent: () => Promise.resolve(undefined) } },
+        bullMqQueue: { add: () => Promise.resolve(undefined) },
+      })
+      expect.unreachable('createAnalysesContainer should have thrown')
+    } catch (error) {
+      expect(error).toBeInstanceOf(OperationFailedError)
+      expect(error).toMatchObject({ context: { missingDependency: 'geminiAuditoryModel' } })
+    }
+  })
+
+  it('does not require the legacy evaluation model when the multimodal pipeline is selected', () => {
+    const container = createAnalysesContainer({
+      ...baseDeps(),
+      pipelineVersion: 'v2',
+      adapters: {
+        accounts: {
+          findPlan: () => Promise.resolve('free'),
+          resolveAccountId: () => Promise.resolve(null),
+        },
+        sessions: {
+          findProcessingContext: () => Promise.resolve(null),
+          checkAnalysisAccess: () => Promise.resolve({ failure: null, readable: false }),
+          listStuckProcessing: () => Promise.resolve([]),
+        },
+        audioReader: { read: () => Promise.resolve(createAudioContent()) },
+        audioPreparation: { prepare: () => Promise.resolve(createPreparedAudio()) },
+        themes: { findTitle: () => Promise.resolve('Theme') },
+        transcription: { transcribe: () => Promise.resolve(createTranscription()) },
+        auditoryAnalysis: { observe: () => Promise.resolve(createAuditoryResult()) },
+        feedbackSynthesis: { synthesize: () => Promise.resolve(createSynthesisResult()) },
+        processingQueue: { enqueue: () => Promise.resolve() },
+      },
+    })
+
+    expect(container.useCases.processSessionAudio).toBeInstanceOf(
+      ProcessMultimodalSessionAudioUseCase,
+    )
   })
 
   it('reports a missing deepgramClient dependency when adapters overrides are not provided', () => {
@@ -237,4 +322,50 @@ function createLoggerStub() {
 
 function createAudioContent() {
   return { bytes: Buffer.from('audio'), contentType: 'audio/webm', durationSeconds: 30 }
+}
+
+function createPreparedAudio(): PreparedAudio {
+  return {
+    bytes: Buffer.from('flac'),
+    contentType: CANONICAL_AUDIO_CONTENT_TYPE,
+    durationSeconds: 30,
+  }
+}
+
+function createAuditoryResult() {
+  return {
+    observation: {
+      audioUsability: 'usable' as const,
+      limitations: [],
+      literalTranscript: 'Transcript',
+      mainMessage: 'Main message',
+      attemptedStructure: 'Opening and closing',
+      deliverySummary: 'Steady delivery',
+      candidateEvents: [],
+    },
+    inputTokens: 1,
+    outputTokens: 1,
+  }
+}
+
+function createSynthesisResult() {
+  return {
+    feedback: CommunicationFeedback.create({
+      durationSeconds: 30,
+      audioUsability: 'usable',
+      alignmentQuality: 'reliable',
+      limitations: [],
+      literalTranscript: 'Transcript',
+      mainMessage: 'Main message',
+      attemptedStructure: 'Opening and closing',
+      summary: 'The message arrives complete. The delivery stays steady.',
+      strengths: [],
+      moments: [],
+      patterns: [],
+      asrDivergences: [],
+      priorities: [],
+    }),
+    inputTokens: 1,
+    outputTokens: 1,
+  }
 }

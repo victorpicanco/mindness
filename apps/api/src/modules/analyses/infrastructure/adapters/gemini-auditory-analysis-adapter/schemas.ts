@@ -1,3 +1,4 @@
+import { Type as GenAiType } from '@google/genai'
 import { Type } from 'typebox'
 import { Value } from 'typebox/value'
 
@@ -24,6 +25,108 @@ const MAX_EXCERPT_LENGTH = 400
 const MAX_EVIDENCE_LENGTH = 600
 const TIMESTAMP_TOLERANCE_SECONDS = 0.25
 const MARKUP_PATTERN = /<[A-Za-z/]|```|\[[^\]]+\]\([^)]*\)/
+
+export const AUDITORY_RESPONSE_SCHEMA = {
+  type: GenAiType.OBJECT,
+  properties: {
+    audioUsability: {
+      type: GenAiType.STRING,
+      format: 'enum',
+      enum: [...AUDIO_USABILITIES],
+      description:
+        'usable quando a fala é audível do início ao fim; limited quando parte do áudio impede observar; unusable quando não há fala audível suficiente.',
+    },
+    limitations: {
+      type: GenAiType.ARRAY,
+      maxItems: String(MAX_AUDITORY_LIMITATIONS),
+      items: {
+        type: GenAiType.STRING,
+        maxLength: String(MAX_LIMITATION_LENGTH),
+        description: 'O que a gravação impediu de observar, descrito pelo que se ouve.',
+      },
+    },
+    literalTranscript: {
+      type: GenAiType.STRING,
+      maxLength: String(MAX_TRANSCRIPT_LENGTH),
+      description:
+        'Tudo o que foi dito, preservando marcas de oralidade claramente audíveis como hesitações, prolongamentos, repetições e reinícios.',
+    },
+    mainMessage: {
+      type: GenAiType.STRING,
+      maxLength: String(MAX_MESSAGE_LENGTH),
+      description: 'A mensagem principal percebida na fala.',
+    },
+    attemptedStructure: {
+      type: GenAiType.STRING,
+      maxLength: String(MAX_MESSAGE_LENGTH),
+      description: 'A organização que a pessoa tentou dar à fala, na ordem em que apareceu.',
+    },
+    deliverySummary: {
+      type: GenAiType.STRING,
+      maxLength: String(MAX_SUMMARY_LENGTH),
+      description:
+        'Observação qualitativa do ritmo percebido, entonação, ênfase, volume e estabilidade da voz.',
+    },
+    candidateEvents: {
+      type: GenAiType.ARRAY,
+      maxItems: String(MAX_AUDITORY_CANDIDATE_EVENTS),
+      items: {
+        type: GenAiType.OBJECT,
+        properties: {
+          startSeconds: {
+            type: GenAiType.NUMBER,
+            minimum: 0,
+            description: 'Início aproximado do trecho, em segundos desde o começo da gravação.',
+          },
+          endSeconds: {
+            type: GenAiType.NUMBER,
+            minimum: 0,
+            description: 'Fim aproximado do trecho, em segundos, nunca antes do início.',
+          },
+          excerpt: {
+            type: GenAiType.STRING,
+            maxLength: String(MAX_EXCERPT_LENGTH),
+            description: 'O trecho falado tal como soou.',
+          },
+          category: {
+            type: GenAiType.STRING,
+            format: 'enum',
+            enum: [...MOMENT_CATEGORIES],
+            description: 'A categoria audível do evento.',
+          },
+          auditoryEvidence: {
+            type: GenAiType.STRING,
+            maxLength: String(MAX_EVIDENCE_LENGTH),
+            description: 'O que no som sustenta o evento, sem interpretar intenção.',
+          },
+          confidence: {
+            type: GenAiType.STRING,
+            format: 'enum',
+            enum: [...FEEDBACK_CONFIDENCES],
+            description: 'Quanto o som sustenta o evento.',
+          },
+        },
+        required: [
+          'startSeconds',
+          'endSeconds',
+          'excerpt',
+          'category',
+          'auditoryEvidence',
+          'confidence',
+        ],
+      },
+    },
+  },
+  required: [
+    'audioUsability',
+    'limitations',
+    'literalTranscript',
+    'mainMessage',
+    'attemptedStructure',
+    'deliverySummary',
+    'candidateEvents',
+  ],
+} as const
 
 const CandidateEventSchema = Type.Object(
   {

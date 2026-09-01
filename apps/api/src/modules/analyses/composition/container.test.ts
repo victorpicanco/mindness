@@ -224,6 +224,8 @@ function createCostEntryRow() {
     accountId: 'account',
     transcriptionMicrosUsd: 1,
     evaluationMicrosUsd: 1,
+    auditoryMicrosUsd: 0,
+    synthesisMicrosUsd: 0,
     totalMicrosUsd: 2,
     incurredAt: new Date(),
   }

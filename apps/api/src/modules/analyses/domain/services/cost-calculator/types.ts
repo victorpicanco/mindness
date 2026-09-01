@@ -13,3 +13,22 @@ export interface ProcessingCost {
   readonly totalMicrosUsd: number
   readonly outputTokens: number
 }
+
+export interface GeminiPassUsage {
+  readonly inputTokens: number
+  readonly outputTokens: number
+}
+
+export interface CalculateMultimodalProcessingCostInput {
+  readonly durationSeconds: number
+  readonly auditory: GeminiPassUsage
+  readonly synthesis: GeminiPassUsage
+  readonly transcriptionCostPerMinuteMicros: number
+  readonly geminiInputCostPerMtokMicros: number
+  readonly geminiOutputCostPerMtokMicros: number
+}
+
+export interface MultimodalProcessingCost extends ProcessingCost {
+  readonly auditoryMicrosUsd: number
+  readonly synthesisMicrosUsd: number
+}

@@ -257,6 +257,8 @@ function createPersistedAnalysis(input: {
       accountId: input.context.accountId,
       transcriptionMicrosUsd: cost.transcriptionMicrosUsd,
       evaluationMicrosUsd: cost.evaluationMicrosUsd,
+      auditoryMicrosUsd: 0,
+      synthesisMicrosUsd: 0,
       totalMicrosUsd: cost.totalMicrosUsd,
       incurredAt: input.completedAt,
     },

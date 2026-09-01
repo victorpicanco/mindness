@@ -9,7 +9,9 @@ import type {
   SessionProcessingContext,
 } from '@/modules/analyses/domain/ports/sessions-port/index.js'
 import type { ThemesPort } from '@/modules/analyses/domain/ports/themes-port/index.js'
+import { InMemoryAuditoryAnalysisAdapter } from '@/modules/analyses/infrastructure/adapters/in-memory-auditory-analysis-adapter/index.js'
 import { InMemoryAudioReaderAdapter } from '@/modules/analyses/infrastructure/adapters/in-memory-audio-reader-adapter/index.js'
+import { InMemoryFeedbackSynthesisAdapter } from '@/modules/analyses/infrastructure/adapters/in-memory-feedback-synthesis-adapter/index.js'
 import { InMemoryEvaluationAdapter } from '@/modules/analyses/infrastructure/adapters/in-memory-evaluation-adapter/index.js'
 import { InMemoryProcessingQueueAdapter } from '@/modules/analyses/infrastructure/adapters/in-memory-processing-queue-adapter/index.js'
 import { InMemoryTranscriptionAdapter } from '@/modules/analyses/infrastructure/adapters/in-memory-transcription-adapter/index.js'
@@ -96,7 +98,9 @@ export function clearAnalysesData(prisma: PrismaClient): Promise<number> {
 
 export {
   InMemoryAudioReaderAdapter,
+  InMemoryAuditoryAnalysisAdapter,
   InMemoryEvaluationAdapter,
+  InMemoryFeedbackSynthesisAdapter,
   InMemoryProcessingQueueAdapter,
   InMemoryTranscriptionAdapter,
 }

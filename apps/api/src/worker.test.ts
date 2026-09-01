@@ -342,6 +342,10 @@ function createAnalysesPrismaStub(): AnalysesPrismaClient & AnalysesPrismaTransa
       upsert: () => Promise.resolve(createAnalysisRow()),
       updateMany: () => Promise.resolve({ count: 0 }),
     },
+    communicationAnalysis: {
+      findUnique: () => Promise.resolve(null),
+      create: (args) => Promise.resolve(args.data),
+    },
     analysisCostEntry: {
       create: () => Promise.resolve(createCostEntryRow()),
       aggregate: () => Promise.resolve({ _sum: { totalMicrosUsd: null } }),

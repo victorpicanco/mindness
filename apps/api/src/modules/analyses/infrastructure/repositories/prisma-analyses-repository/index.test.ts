@@ -65,6 +65,11 @@ class FakePrismaClient implements AnalysesPrismaClient {
     upsert: (args) => Promise.resolve(args.create),
   }
 
+  readonly communicationAnalysis: AnalysesPrismaClient['communicationAnalysis'] = {
+    findUnique: () => Promise.resolve(null),
+    create: (args) => Promise.resolve(args.data),
+  }
+
   readonly analysisCostEntry: AnalysesPrismaClient['analysisCostEntry'] = {
     create: (args) => Promise.resolve(args.data),
     aggregate: () => Promise.resolve({ _sum: { totalMicrosUsd: null } }),

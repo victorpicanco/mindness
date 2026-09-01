@@ -40,6 +40,16 @@
     "untitledSession": "Sessão",
     "newSession": "Nova sessão",
     "signOut": "Sair",
+    "account": {
+      "label": "Conta",
+      "help": "Ajuda",
+      "helpCenter": "Central de ajuda",
+      "keyboardShortcuts": "Atalhos do teclado",
+      "name": "Mindness",
+      "plan": "Plano gratuito",
+      "releaseNotes": "Novidades",
+      "settings": "Configurações"
+    },
     "activeSessionDialog": {
       "title": "Você tem uma sessão em andamento",
       "description": "Para começar uma nova sessão, a atual será encerrada e não poderá ser retomada.",

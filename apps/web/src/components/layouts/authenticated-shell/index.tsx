@@ -6,11 +6,11 @@ import type { MouseEvent, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import { BrandLink } from '@/components/layouts/brand-link'
+import { AccountMenu } from '@/components/layouts/account-menu'
 import { Header } from '@/components/layouts/header'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { IconButton } from '@/components/ui/icon-button'
-import { Icon } from '@/components/ui/icon'
 import { Menu } from '@/components/ui/menu'
 import {
   Sidebar,
@@ -53,38 +53,22 @@ const DRAWER_SIDEBAR_ID = 'mobile-authenticated-sidebar'
 
 type SignOutAction = () => void | Promise<void>
 
-interface SignOutControlProps {
-  readonly isExpanded: boolean
-  readonly label: string
-  readonly signOut: SignOutAction
-}
-
-function SignOutControl({ isExpanded, label, signOut }: SignOutControlProps) {
-  return (
-    <form action={signOut} className="mt-auto pt-4">
-      <button
-        aria-label={isExpanded ? undefined : label}
-        className={cn(
-          'relative z-10 h-10 w-full cursor-pointer items-center overflow-hidden rounded-xl text-text-muted transition-colors hover:bg-input hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text',
-          isExpanded ? 'grid grid-cols-[2.25rem_minmax(0,1fr)]' : 'grid place-items-center',
-        )}
-        type="submit"
-      >
-        <span className="grid size-9 place-items-center">
-          <Icon className="text-lg" name="logout-01" />
-        </span>
-        {isExpanded ? (
-          <span className="text-left text-[0.9375rem] font-normal">{label}</span>
-        ) : null}
-      </button>
-    </form>
-  )
+interface SidebarLabels {
+  readonly account: string
+  readonly accountHelp: string
+  readonly accountHelpItems: readonly string[]
+  readonly accountName: string
+  readonly accountPlan: string
+  readonly accountSettings: string
+  readonly primaryNavigation: string
+  readonly sessions: string
+  readonly signOut: string
 }
 
 interface SidebarBodyProps {
   readonly activeHref: string | null
   readonly isExpanded: boolean
-  readonly labels: Readonly<Record<'primaryNavigation' | 'sessions' | 'signOut', string>>
+  readonly labels: SidebarLabels
   readonly navigationItems: readonly SidebarNavigationItem[]
   readonly onPrimaryNavigate: (
     item: SidebarNavigationItem,
@@ -132,7 +116,17 @@ function SidebarBody({
           renderItemAction={renderSessionAction}
         />
       ) : null}
-      <SignOutControl isExpanded={isExpanded} label={labels.signOut} signOut={signOut} />
+      <AccountMenu
+        helpItems={labels.accountHelpItems}
+        helpLabel={labels.accountHelp}
+        isExpanded={isExpanded}
+        name={labels.accountName}
+        plan={labels.accountPlan}
+        popupLabel={labels.account}
+        settingsLabel={labels.accountSettings}
+        signOut={signOut}
+        signOutLabel={labels.signOut}
+      />
     </>
   )
 }
@@ -176,6 +170,16 @@ export function AuthenticatedShellView({
   const sessionNavigationTriggerRef = useRef<HTMLAnchorElement>(null)
   const controlLabel = isSidebarExpanded ? t('collapseSidebar') : t('expandSidebar')
   const sidebarLabels = {
+    account: t('account.label'),
+    accountHelp: t('account.help'),
+    accountHelpItems: [
+      t('account.helpCenter'),
+      t('account.releaseNotes'),
+      t('account.keyboardShortcuts'),
+    ],
+    accountName: t('account.name'),
+    accountPlan: t('account.plan'),
+    accountSettings: t('account.settings'),
     primaryNavigation: t('primaryNavigationLabel'),
     sessions: t('sessionsLabel'),
     signOut: t('signOut'),

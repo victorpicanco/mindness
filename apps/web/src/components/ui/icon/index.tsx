@@ -11,6 +11,8 @@ function IconDrawing({ name }: { readonly name: IconName }) {
   switch (name) {
     case 'audio-wave-01':
       return <path d="M3 12h2m2-4v8m3-12v16m4-13v10m3-7v4m2-2h2" />
+    case 'arrow-right-01':
+      return <path d="m9 5 7 7-7 7" />
     case 'cancel-01':
       return <path d="m6 6 12 12M18 6 6 18" />
     case 'chart-increase':
@@ -34,6 +36,13 @@ function IconDrawing({ name }: { readonly name: IconName }) {
     case 'delete-02':
       return (
         <path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0 .8 12.1A2 2 0 0 0 8.8 21h6.4a2 2 0 0 0 2-1.9L18 7M10 11v6m4-6v6" />
+      )
+    case 'help-circle':
+      return (
+        <>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M9.5 9a2.7 2.7 0 1 1 4.6 1.9c-1.1 1-2.1 1.5-2.1 3.1M12 17h.01" />
+        </>
       )
     case 'logout-01':
       return <path d="M10 5H6v14h4m4-11 4 4-4 4m4-4H9" />
@@ -70,6 +79,13 @@ function IconDrawing({ name }: { readonly name: IconName }) {
         <>
           <rect height="16" rx="2" width="18" x="3" y="4" />
           <path d="M9 4v16m5-11-3 3 3 3" />
+        </>
+      )
+    case 'settings-01':
+      return (
+        <>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19 13.5v-3l-2.1-.7-.5-1.2 1-2-2.1-2.1-2 1-1.2-.5L11.5 3h-3l-.7 2.1-1.2.5-2-1L2.5 6.7l1 2-.5 1.2-2 0.6v3l2 .7.5 1.2-1 2 2.1 2.1 2-1 1.2.5.7 2.1h3l.7-2.1 1.2-.5 2 1 2.1-2.1-1-2 .5-1.2 2-.7Z" />
         </>
       )
     case 'stop':

@@ -440,22 +440,54 @@ describe('AuthenticatedShell', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('renders a submit control for signing out in desktop and mobile sidebars', () => {
+  it('renders a submit control for signing out inside the account popup', () => {
     renderShell(<p>Content</p>)
 
     const railSidebar = screen.getByRole('complementary')
-    const railSignOut = within(railSidebar).getByRole('button', { name: 'Sair' })
+    const railAccount = within(railSidebar).getByRole('button', { name: 'Conta' })
+    fireEvent.click(railAccount)
+
+    const railSignOut = within(screen.getByRole('dialog', { name: 'Conta' })).getByRole('button', {
+      name: 'Sair',
+    })
 
     expect(railSignOut).toHaveAttribute('type', 'submit')
     expect(railSignOut.closest('form')).not.toBeNull()
 
+    fireEvent.click(railAccount)
+
     fireEvent.click(within(screen.getByRole('banner')).getByLabelText('Abrir navegação'))
 
     const mobileSidebar = screen.getByRole('dialog', { name: 'Navegação do aplicativo' })
-    const mobileSignOut = within(mobileSidebar).getByRole('button', { name: 'Sair' })
+    fireEvent.click(within(mobileSidebar).getByRole('button', { name: 'Conta' }))
+
+    const mobileSignOut = within(screen.getByRole('dialog', { name: 'Conta' })).getByRole(
+      'button',
+      {
+        name: 'Sair',
+      },
+    )
 
     expect(mobileSignOut).toHaveAttribute('type', 'submit')
     expect(mobileSignOut.closest('form')).not.toBeNull()
+  })
+
+  it('renders the account control in desktop and mobile sidebars', () => {
+    renderShell(<p>Content</p>)
+
+    const railSidebar = screen.getByRole('complementary')
+    const railAccount = within(railSidebar).getByRole('button', { name: 'Conta' })
+
+    expect(railAccount).toHaveTextContent('Mindness')
+    expect(railAccount).toHaveTextContent('Plano gratuito')
+
+    fireEvent.click(within(screen.getByRole('banner')).getByLabelText('Abrir navegação'))
+
+    const mobileSidebar = screen.getByRole('dialog', { name: 'Navegação do aplicativo' })
+    const mobileAccount = within(mobileSidebar).getByRole('button', { name: 'Conta' })
+
+    expect(mobileAccount).toHaveTextContent('Mindness')
+    expect(mobileAccount).toHaveTextContent('Plano gratuito')
   })
 
   it('highlights the navigation item matching the current route', () => {
@@ -610,12 +642,8 @@ describe('AuthenticatedShell', () => {
 
     renderShell(<p>Content</p>, true, '/', undefined, [], signOut)
 
-    // The drawer copy of the control is inert while the mobile sidebar is closed,
-    // so only the rail copy is exposed to the accessibility tree.
-    const signOutControls = screen.getAllByRole('button', { name: 'Sair' })
-
-    expect(signOutControls).toHaveLength(1)
-    for (const control of signOutControls) fireEvent.click(control)
+    fireEvent.click(screen.getByRole('button', { name: 'Conta' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sair' }))
 
     expect(signOut).toHaveBeenCalledOnce()
   })

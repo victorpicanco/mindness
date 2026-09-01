@@ -39,7 +39,6 @@ model Session {
   difficulty         SessionDifficulty
   categorySlug       String                @map("category_slug")
   searchWindowMinutes Int                  @map("search_window_minutes")
-  quotaReservationId String                @map("quota_reservation_id") @db.Uuid
   state              SessionState
   expiredReason      SessionExpiredReason? @map("expired_reason")
   failureReason      SessionFailureReason? @map("failure_reason")

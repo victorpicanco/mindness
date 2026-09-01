@@ -50,7 +50,6 @@ async function seedSession(input: {
       categorySlug: 'history',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: input.sessionId,
     state: input.state,
     createdAt: input.createdAt,
     expiresAt: new Date(input.createdAt.getTime() + 15 * 60 * 1000),
@@ -212,7 +211,6 @@ describe('session history integration', () => {
       harness.prisma.session.findUnique({ where: { id: deletedId } }),
     ).resolves.toMatchObject({ state: 'deleted' })
     expect(harness.eventBus.published).toEqual([])
-    expect(harness.quota.releaseCalls).toEqual([])
   })
 
   it('marks only the highest scoring completed session of the day as best of day, and reclassifies it when the time zone shifts the day boundary', async () => {
@@ -264,7 +262,6 @@ describe('session history integration', () => {
       harness.prisma.session.findMany({ where: { accountId: ACCOUNT_A } }),
     ).resolves.toHaveLength(4)
     expect(harness.eventBus.published).toEqual([])
-    expect(harness.quota.releaseCalls).toEqual([])
   })
 
   it('never exposes account A history to account B and rejects a cross-account cursor', async () => {

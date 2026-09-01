@@ -21,11 +21,6 @@
     "description": "Não foi possível carregar esta página.",
     "retry": "Tentar novamente"
   },
-  "sessionQuota": {
-    "label": "Cota de sessões",
-    "remaining": "{remaining}/{allowance} sessões restantes",
-    "renewsAt": "Renova em {time}"
-  },
   "metadata": {
     "title": "Mindness",
     "description": "Pratique uma comunicação mais consciente."
@@ -57,7 +52,7 @@
     },
     "deleteSessionDialog": {
       "title": "Excluir esta sessão?",
-      "description": "A sessão “{session}” e a análise dela serão apagadas para sempre, e a sessão não volta para a sua cota.",
+      "description": "A sessão “{session}” e a análise dela serão apagadas para sempre.",
       "cancel": "Cancelar",
       "confirm": "Excluir sessão"
     }

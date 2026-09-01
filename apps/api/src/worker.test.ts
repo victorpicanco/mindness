@@ -229,12 +229,6 @@ describe('registerAnalysisPipelineModules', () => {
             listCategories: () => Promise.resolve([]),
             listThemeTitles: () => Promise.resolve([]),
           },
-          quota: {
-            readBalance: () => Promise.resolve({ enforced: false }),
-            reserveForSession: () =>
-              Promise.resolve({ reservationId: 'id', enforced: true, remaining: 0 }),
-            releaseReservation: () => Promise.resolve(),
-          },
           audioStorage: {
             createUploadUrl: () =>
               Promise.resolve({ uploadUrl: 'memory://upload', token: 'token' }),
@@ -324,7 +318,6 @@ function createSessionRow(): SessionRow {
     difficulty: 'balanced',
     categorySlug: 'general',
     searchWindowMinutes: 4,
-    quotaReservationId: 'reservation-id',
     state: 'in_progress',
     expiredReason: null,
     createdAt: new Date(),

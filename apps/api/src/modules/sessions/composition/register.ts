@@ -24,14 +24,8 @@ export async function registerSessionsModule(
   const container = createSessionsContainer(deps)
 
   const completedHandler = new OnAnalysisCompletedCompleteSession(container.repositories.sessions)
-  const failedHandler = new OnAnalysisFailedFailSession(
-    container.repositories.sessions,
-    container.ports.quota,
-  )
-  const timedOutHandler = new OnAnalysisTimedOutFailSession(
-    container.repositories.sessions,
-    container.ports.quota,
-  )
+  const failedHandler = new OnAnalysisFailedFailSession(container.repositories.sessions)
+  const timedOutHandler = new OnAnalysisTimedOutFailSession(container.repositories.sessions)
   const reject = (event: IntegrationEvent): void => {
     app.log.warn(
       { eventId: event.eventId, eventName: event.eventName },

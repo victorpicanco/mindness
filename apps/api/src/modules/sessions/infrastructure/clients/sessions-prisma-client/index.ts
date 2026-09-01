@@ -22,7 +22,6 @@ export interface SessionRow {
   readonly difficulty: SessionDifficulty
   readonly categorySlug: string
   readonly searchWindowMinutes: number
-  readonly quotaReservationId: string
   readonly state: SessionState
   readonly expiredReason: SessionExpiredReason | null
   readonly failureReason?: SessionFailureReason | null
@@ -45,7 +44,6 @@ export interface SessionScalars {
   readonly difficulty: SessionDifficulty
   readonly categorySlug: string
   readonly searchWindowMinutes: number
-  readonly quotaReservationId: string
   readonly state: SessionState
   readonly expiredReason: SessionExpiredReason | null
   readonly failureReason: SessionFailureReason | null

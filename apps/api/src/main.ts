@@ -17,7 +17,6 @@ import {
   registerAnalysesModule,
   type AnalysesModuleDeps,
 } from '@/modules/analyses/index.js'
-import { registerQuotaModule } from '@/modules/quota/index.js'
 import {
   createSessionsFacade,
   registerSessionsModule,
@@ -91,14 +90,6 @@ export async function startServer(): Promise<void> {
     },
   })
 
-  const quotaContainer = registerQuotaModule(app, {
-    prisma,
-    clock,
-    eventPublisher: eventBus,
-    idGenerator,
-    accountsFacade: accountsContainer.facade,
-  })
-
   const themesContainer = registerThemesModule(app, {
     prisma,
     clock,
@@ -118,7 +109,6 @@ export async function startServer(): Promise<void> {
       idGenerator,
       accountsFacade: accountsContainer.facade,
       themesFacade: themesContainer.publicApi,
-      quotaFacade: quotaContainer.publicApi,
       supabase: createClient(config.supabaseUrl, config.supabaseSecretKey),
     },
     analyses: {

@@ -4,7 +4,6 @@ import { Session } from '@/modules/sessions/domain/entities/session/index.js'
 import { RecordingWindowNotOpenError } from '@/modules/sessions/domain/errors/recording-window-not-open-error/index.js'
 import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
 import { SessionNotInProgressError } from '@/modules/sessions/domain/errors/session-not-in-progress-error/index.js'
-import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
@@ -31,14 +30,12 @@ function createSession(createdAt: Date): Session {
     accountId: 'account-1',
     themeId: 'theme-1',
     configuration: createConfiguration(),
-    quotaReservationId: 'reservation-1',
     createdAt,
   })
 }
 
 function createHarness(session: Session | null) {
   const saved: Session[] = []
-  const releasedSessionIds: string[] = []
   const events = new FakeEventBus()
   let transactionRuns = 0
   const sessions: SessionsRepository = {
@@ -54,18 +51,8 @@ function createHarness(session: Session | null) {
       return Promise.resolve()
     },
   }
-  const quota: QuotaPort = {
-    readBalance: () => Promise.resolve({ enforced: false }),
-    reserveForSession: () =>
-      Promise.resolve({ reservationId: 'reservation-2', enforced: true, remaining: 3 }),
-    releaseReservation: ({ sessionId }) => {
-      releasedSessionIds.push(sessionId)
-      return Promise.resolve()
-    },
-  }
   const useCase = new StartRecordingUseCase({
     sessions,
-    quota,
     clock: { now: () => NOW },
     eventPublisher: events,
     idGenerator: { generate: () => 'event-1' },
@@ -77,7 +64,7 @@ function createHarness(session: Session | null) {
     },
   })
 
-  return { events, releasedSessionIds, saved, transactionRuns: () => transactionRuns, useCase }
+  return { events, saved, transactionRuns: () => transactionRuns, useCase }
 }
 
 describe('StartRecordingUseCase', () => {
@@ -94,7 +81,6 @@ describe('StartRecordingUseCase', () => {
     expect(harness.saved[0]?.expiresAt).toEqual(SESSION_DEADLINE)
     expect(harness.saved[0]?.state).toBe('in_progress')
     expect(harness.transactionRuns()).toBe(1)
-    expect(harness.releasedSessionIds).toEqual([])
     expect(harness.events.published).toEqual([])
   })
 
@@ -125,7 +111,6 @@ describe('StartRecordingUseCase', () => {
     expect(harness.saved).toHaveLength(1)
     expect(harness.saved[0]?.state).toBe('expired')
     expect(harness.saved[0]?.expiredReason).toBe('timeout')
-    expect(harness.releasedSessionIds).toEqual(['session-1'])
     expect(harness.events.published[0]).toMatchObject({
       eventName: 'session_expired',
       payload: { sessionId: 'session-1', stoppedAtStage: 'in_progress' },

@@ -283,7 +283,7 @@ export function AuthenticatedShellView({
     onSessionAbandoned?.()
     setIsActiveSessionDialogOpen(false)
     router.push('/')
-    // The shell's session list and quota are fetched by the layout, which push alone would reuse.
+    // The shell's session list is fetched by the layout, which push alone would reuse.
     router.refresh()
   }
 

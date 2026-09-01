@@ -54,7 +54,6 @@ export class GetActiveSessionUseCase {
       if (!outcome.expired) return
 
       await this.dependencies.sessions.save(session)
-      await this.dependencies.quota.releaseReservation({ sessionId: session.id })
       for (const event of outcome.events) {
         await this.dependencies.eventPublisher.publish(event)
       }

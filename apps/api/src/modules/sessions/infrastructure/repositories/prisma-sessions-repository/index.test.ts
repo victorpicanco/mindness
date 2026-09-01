@@ -22,7 +22,6 @@ const row: SessionRow = {
   difficulty: 'balanced',
   categorySlug: 'self-awareness',
   searchWindowMinutes: 4,
-  quotaReservationId: '5ad7c104-4621-4a0f-906b-e5a2ca616601',
   state: 'in_progress',
   expiredReason: null,
   createdAt: new Date('2026-08-19T12:00:00.000Z'),

@@ -20,7 +20,6 @@ import {
   registerAnalysesModule,
   type AnalysesModuleDeps,
 } from '@/modules/analyses/index.js'
-import { createQuotaContainer } from '@/modules/quota/composition/container.js'
 import {
   createSessionsFacade,
   registerSessionsModule,
@@ -219,13 +218,6 @@ export async function startWorker(): Promise<void> {
     eventPublisher: eventBus,
     idGenerator,
   })
-  const quotaContainer = createQuotaContainer({
-    prisma,
-    clock,
-    eventPublisher: eventBus,
-    idGenerator,
-    accountsFacade: accountsContainer.facade,
-  })
   const redisConnection = new Redis(config.redisUrl, { maxRetriesPerRequest: null })
   const bullMqQueue = new Queue(SESSION_ANALYSIS_QUEUE_NAME, { connection: redisConnection })
   const { sessionsContainer, analysesContainer } = await registerAnalysisPipelineModules(app, {
@@ -237,7 +229,6 @@ export async function startWorker(): Promise<void> {
       idGenerator,
       accountsFacade: accountsContainer.facade,
       themesFacade: themesContainer.publicApi,
-      quotaFacade: quotaContainer.publicApi,
       supabase: createClient(config.supabaseUrl, config.supabaseSecretKey),
     },
     analyses: {

@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import {
   activeSessionSchema,
   deleteSessionSchema,
-  quotaSchema,
   recordingStartedSchema,
   startedSessionSchema,
   sessionHistorySchema,
@@ -46,11 +45,10 @@ describe('session API contracts', () => {
     expect(recordingStartedSchema.parse(response)).toEqual(response)
   })
 
-  it('preserves the theme and quota remaining from a started session', () => {
+  it('preserves the theme returned from a started session', () => {
     const response = {
       createdAt: '2026-08-24T12:00:00.000Z',
       expiresAt: '2026-08-24T12:15:00.000Z',
-      remaining: 2,
       researchEndsAt: '2026-08-24T12:03:00.000Z',
       serverNow: '2026-08-24T12:00:00.000Z',
       sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
@@ -60,18 +58,6 @@ describe('session API contracts', () => {
 
     expect(startedSessionSchema.parse(response)).toEqual(response)
     expect(() => startedSessionSchema.parse({ ...response, undeclared: true })).toThrow()
-  })
-
-  it('accepts both enforced and unlimited quota responses', () => {
-    expect(quotaSchema.parse({ enforced: false })).toEqual({ enforced: false })
-    expect(
-      quotaSchema.parse({
-        allowance: 4,
-        enforced: true,
-        remaining: 2,
-        renewsAt: '2026-09-01T12:05:00.000Z',
-      }),
-    ).toMatchObject({ allowance: 4, remaining: 2 })
   })
 
   it('validates the session history aggregate', () => {

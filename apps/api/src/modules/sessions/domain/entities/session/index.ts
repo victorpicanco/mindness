@@ -26,7 +26,6 @@ export class Session {
     readonly accountId: string,
     readonly themeId: string,
     readonly configuration: SessionConfiguration,
-    readonly quotaReservationId: string,
     private _state: SessionState,
     private readonly createdAtEpoch: number,
     private expiresAtEpoch: number,
@@ -106,7 +105,6 @@ export class Session {
       params.accountId,
       params.themeId,
       params.configuration,
-      params.quotaReservationId,
       'in_progress',
       createdAtEpoch,
       researchEndsAtEpoch(createdAtEpoch, params.configuration) +
@@ -130,7 +128,6 @@ export class Session {
       params.accountId,
       params.themeId,
       params.configuration,
-      params.quotaReservationId,
       params.state,
       params.createdAt.getTime(),
       params.expiresAt.getTime(),

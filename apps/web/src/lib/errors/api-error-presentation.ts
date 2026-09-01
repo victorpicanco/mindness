@@ -21,7 +21,6 @@ export type ApiErrorMessageKey =
   | 'common.errors.unknown'
   | 'common.errors.validationFailed'
   | 'home.practice.errors.practiceNotAllowed'
-  | 'home.practice.errors.quotaExhausted'
   | 'home.practice.errors.themeUnavailable'
   | 'home.research.audioSizeRejected'
   | 'home.research.audioUploadFailed'
@@ -83,10 +82,6 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   'accounts.REAUTHENTICATION_REQUIRED': {
     messageKey: 'auth.errors.reauthenticationRequired',
     presentation: 'toast',
-  },
-  'quota.QUOTA_EXHAUSTED': {
-    messageKey: 'home.practice.errors.quotaExhausted',
-    presentation: 'inline',
   },
   'sessions.AUDIO_SIZE_REJECTED': {
     messageKey: 'home.research.audioSizeRejected',

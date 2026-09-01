@@ -140,12 +140,9 @@ describe('ProcessingStatus', () => {
   it.each([
     [
       'analyses.ANALYSIS_FAILED',
-      'Não foi possível analisar esta apresentação. Sua cota foi devolvida. Inicie uma nova sessão.',
+      'Não foi possível analisar esta apresentação. Inicie uma nova sessão.',
     ],
-    [
-      'analyses.ANALYSIS_TIMEOUT',
-      'A análise não foi concluída. Sua cota foi devolvida. Inicie uma nova sessão.',
-    ],
+    ['analyses.ANALYSIS_TIMEOUT', 'A análise não foi concluída. Inicie uma nova sessão.'],
   ])(
     'shows the terminal %s message and releases the store without navigating',
     async (code, message) => {

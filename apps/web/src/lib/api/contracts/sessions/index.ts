@@ -45,16 +45,6 @@ export const categoriesSchema = z.array(
   }),
 )
 
-export const quotaSchema = z.discriminatedUnion('enforced', [
-  z.object({
-    allowance: z.number().nonnegative(),
-    enforced: z.literal(true),
-    remaining: z.number().nonnegative(),
-    renewsAt: z.iso.datetime(),
-  }),
-  z.object({ enforced: z.literal(false) }),
-])
-
 export const audioUploadCredentialSchema = z.object({
   path: z.string(),
   token: z.string(),
@@ -85,7 +75,6 @@ export const sessionHistoryMetaSchema = z.object({
 export const startedSessionSchema = z.strictObject({
   createdAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
-  remaining: z.number().nonnegative().nullable(),
   researchEndsAt: z.iso.datetime(),
   serverNow: z.iso.datetime(),
   sessionId: z.uuid(),

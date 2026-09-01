@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
-import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
@@ -21,14 +20,12 @@ function createSession(createdAt: Date): Session {
       categorySlug: 'communication',
       searchWindowMinutes: 5,
     }),
-    quotaReservationId: 'reservation-1',
     createdAt,
   })
 }
 
 function createHarness(activeSession: Session | null) {
   const saved: Session[] = []
-  const releasedSessionIds: string[] = []
   const events = new FakeEventBus()
   const lookedUpThemeIds: string[] = []
   let transactionRuns = 0
@@ -45,15 +42,6 @@ function createHarness(activeSession: Session | null) {
       return Promise.resolve()
     },
   }
-  const quota: QuotaPort = {
-    readBalance: () => Promise.resolve({ enforced: false }),
-    reserveForSession: () =>
-      Promise.resolve({ reservationId: 'reservation-2', enforced: true, remaining: 3 }),
-    releaseReservation: ({ sessionId }) => {
-      releasedSessionIds.push(sessionId)
-      return Promise.resolve()
-    },
-  }
   const themes: ThemesPort = {
     drawEligibleTheme: () => Promise.resolve(null),
     findThemeById: (themeId) => {
@@ -65,7 +53,6 @@ function createHarness(activeSession: Session | null) {
   }
   const useCase = new GetActiveSessionUseCase({
     sessions,
-    quota,
     themes,
     clock: { now: () => NOW },
     eventPublisher: events,
@@ -81,7 +68,6 @@ function createHarness(activeSession: Session | null) {
   return {
     events,
     lookedUpThemeIds,
-    releasedSessionIds,
     saved,
     transactionRuns: () => transactionRuns,
     useCase,
@@ -116,7 +102,6 @@ describe('GetActiveSessionUseCase', () => {
     await expect(harness.useCase.execute({ accountId: 'account-1' })).resolves.toBeNull()
 
     expect(harness.saved).toHaveLength(1)
-    expect(harness.releasedSessionIds).toEqual(['session-1'])
     expect(harness.transactionRuns()).toBe(1)
     expect(harness.events.published).toContainEqual(
       expect.objectContaining({ eventName: 'session_expired' }),
@@ -129,7 +114,6 @@ describe('GetActiveSessionUseCase', () => {
     await expect(harness.useCase.execute({ accountId: 'account-1' })).resolves.toBeNull()
 
     expect(harness.saved).toHaveLength(0)
-    expect(harness.releasedSessionIds).toHaveLength(0)
     expect(harness.events.published).toHaveLength(0)
     expect(harness.transactionRuns()).toBe(0)
   })

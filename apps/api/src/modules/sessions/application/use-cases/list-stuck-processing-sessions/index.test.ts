@@ -17,7 +17,6 @@ function createProcessingSession(sessionId: string, recordedAt: Date): Session {
       categorySlug: 'communication',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: `reservation-${sessionId}`,
     createdAt: new Date('2026-08-21T11:00:00.000Z'),
   })
   session.acceptAudio(

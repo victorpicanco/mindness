@@ -5,7 +5,6 @@ import { DownloadSessionAudioUseCase } from '@/modules/sessions/application/use-
 import { ExpireSessionUseCase } from '@/modules/sessions/application/use-cases/expire-session/index.js'
 import { FindSessionProcessingContextUseCase } from '@/modules/sessions/application/use-cases/find-session-processing-context/index.js'
 import { GetActiveSessionUseCase } from '@/modules/sessions/application/use-cases/get-active-session/index.js'
-import { GetSessionQuotaBalanceUseCase } from '@/modules/sessions/application/use-cases/get-quota-balance/index.js'
 import { ListStuckProcessingSessionsUseCase } from '@/modules/sessions/application/use-cases/list-stuck-processing-sessions/index.js'
 import { ListSessionHistoryUseCase } from '@/modules/sessions/application/use-cases/list-session-history/index.js'
 import { ListSessionThemeCategoriesUseCase } from '@/modules/sessions/application/use-cases/list-theme-categories/index.js'
@@ -21,7 +20,6 @@ import type { Clock } from '@/modules/sessions/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/sessions/domain/ports/event-publisher/index.js'
 import type { EventSubscriber } from '@/modules/sessions/domain/ports/event-subscriber/index.js'
 import type { IdGenerator } from '@/modules/sessions/domain/ports/id-generator/index.js'
-import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/index.js'
 import { FfmpegAudioValidationAdapter } from '@/modules/sessions/infrastructure/adapters/ffmpeg-audio-validation-adapter/index.js'
 import { PrismaUnitOfWorkAdapter } from '@/modules/sessions/infrastructure/adapters/prisma-unit-of-work-adapter/index.js'
@@ -41,10 +39,6 @@ import {
   type AccountsIdentityReader,
 } from '@/modules/sessions/infrastructure/module-adapters/accounts-port-adapter/index.js'
 import {
-  QuotaPortAdapter,
-  type QuotaReservationManager,
-} from '@/modules/sessions/infrastructure/module-adapters/quota-port-adapter/index.js'
-import {
   ThemesPortAdapter,
   type ThemesEligibilityReader,
 } from '@/modules/sessions/infrastructure/module-adapters/themes-port-adapter/index.js'
@@ -53,7 +47,6 @@ import { AbandonSessionController } from '@/modules/sessions/presentation/contro
 import { ConfirmAudioUploadController } from '@/modules/sessions/presentation/controllers/confirm-audio-upload-controller/index.js'
 import { DeleteSessionController } from '@/modules/sessions/presentation/controllers/delete-session-controller/index.js'
 import { GetActiveSessionController } from '@/modules/sessions/presentation/controllers/get-active-session-controller/index.js'
-import { GetQuotaBalanceController } from '@/modules/sessions/presentation/controllers/get-quota-balance-controller/index.js'
 import { ListSessionHistoryController } from '@/modules/sessions/presentation/controllers/list-session-history-controller/index.js'
 import { ListThemeCategoriesController } from '@/modules/sessions/presentation/controllers/list-theme-categories-controller/index.js'
 import { ReportMicrophonePermissionDeniedController } from '@/modules/sessions/presentation/controllers/report-microphone-permission-denied-controller/index.js'
@@ -69,7 +62,6 @@ const DEFAULT_SWEEP_LIMIT = 100
 export interface SessionsAdapterOverrides {
   readonly accounts?: AccountsPort
   readonly audioStorage?: AudioStoragePort
-  readonly quota?: QuotaPort
   readonly themes?: ThemesPort
 }
 
@@ -81,7 +73,6 @@ export interface SessionsModuleDeps {
   readonly eventSubscriber: EventSubscriber
   readonly accountsFacade?: AccountsIdentityReader
   readonly themesFacade?: ThemesEligibilityReader
-  readonly quotaFacade?: QuotaReservationManager
   readonly supabase?: SupabaseAudioStorageClient
   readonly sweepLimit?: number
   readonly adapters?: SessionsAdapterOverrides
@@ -104,7 +95,6 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     adapters.accounts ?? new AccountsPortAdapter(required(deps.accountsFacade, 'accountsFacade'))
   const themes =
     adapters.themes ?? new ThemesPortAdapter(required(deps.themesFacade, 'themesFacade'))
-  const quota = adapters.quota ?? new QuotaPortAdapter(required(deps.quotaFacade, 'quotaFacade'))
   const audioStorage =
     adapters.audioStorage ?? new SupabaseAudioStorageAdapter(required(deps.supabase, 'supabase'))
   const audioValidation = new FfmpegAudioValidationAdapter()
@@ -117,7 +107,6 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
 
   const expirationDependencies = {
     sessions,
-    quota,
     clock: deps.clock,
     eventPublisher: deps.eventPublisher,
     idGenerator: deps.idGenerator,
@@ -145,7 +134,6 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
     expireSession: new ExpireSessionUseCase(expirationDependencies),
     findProcessingContext: new FindSessionProcessingContextUseCase({ sessions }),
     getActiveSession: new GetActiveSessionUseCase({ ...expirationDependencies, themes }),
-    getQuotaBalance: new GetSessionQuotaBalanceUseCase({ quota }),
     listStuckProcessingSessions: new ListStuckProcessingSessionsUseCase({ sessions }),
     listSessionHistory: new ListSessionHistoryUseCase({ sessions, accounts, themes }),
     listThemeCategories: new ListSessionThemeCategoriesUseCase({ themes }),
@@ -171,7 +159,6 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
   const controllers: SessionsControllers = {
     startSession: new StartSessionController(useCases.startSession),
     getActiveSession: new GetActiveSessionController(useCases.getActiveSession),
-    getQuotaBalance: new GetQuotaBalanceController(useCases.getQuotaBalance),
     listThemeCategories: new ListThemeCategoriesController(useCases.listThemeCategories),
     abandonSession: new AbandonSessionController(useCases.expireSession),
     reportMicrophonePermissionDenied: new ReportMicrophonePermissionDeniedController(
@@ -186,7 +173,7 @@ export function createSessionsContainer(deps: SessionsModuleDeps) {
       useCases.requestAudioPlaybackUrl,
     ),
   }
-  return { controllers, useCases, repositories: { sessions }, ports: { quota } }
+  return { controllers, useCases, repositories: { sessions } }
 }
 
 export type SessionsContainer = ReturnType<typeof createSessionsContainer>

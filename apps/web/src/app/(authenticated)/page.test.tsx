@@ -54,12 +54,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/api/server-client', () => ({
   apiFetch: <TSchema extends z.ZodType>(path: string, options: { readonly schema: TSchema }) => {
     requestedPaths.push(path)
-    const response =
-      path === '/sessions/quota'
-        ? { enforced: false }
-        : path === '/sessions/theme-categories'
-          ? categories
-          : activeSession
+    const response = path === '/sessions/theme-categories' ? categories : activeSession
 
     return Promise.resolve(options.schema.parse(response))
   },
@@ -99,25 +94,20 @@ describe('HomePage', () => {
 
   afterEach(cleanup)
 
-  it('starts quota, categories and active-session requests in one render pass', async () => {
+  it('starts the categories and active-session requests in one render pass', async () => {
     const HomePage = await loadHomePage()
     const rendered = HomePage()
 
-    expect(requestedPaths).toEqual([
-      '/sessions/quota',
-      '/sessions/theme-categories',
-      '/sessions/active',
-    ])
+    expect(requestedPaths).toEqual(['/sessions/theme-categories', '/sessions/active'])
 
     await rendered
   })
 
-  it('shows available categories without repeating the quota shown in the header', async () => {
+  it('shows the available categories', async () => {
     const HomePage = await loadHomePage()
 
     renderPage(await HomePage())
 
-    expect(screen.queryByText(/análises restantes/u)).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Qual será o assunto de hoje?' })).toHaveClass(
       'font-(family-name:--font-buenard)',
     )

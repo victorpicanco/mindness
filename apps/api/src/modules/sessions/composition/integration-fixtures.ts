@@ -3,12 +3,6 @@ import type {
   EligibleThemeCategory,
   ThemesPort,
 } from '@/modules/sessions/domain/ports/themes-port/index.js'
-import type {
-  QuotaPort,
-  QuotaReservation,
-  ReleaseQuotaReservationInput,
-  ReserveQuotaForSessionInput,
-} from '@/modules/sessions/domain/ports/quota-port/index.js'
 import { readFile } from 'node:fs/promises'
 
 import type { PrismaClient } from '@/generated/prisma/client.js'
@@ -18,7 +12,7 @@ import type {
 } from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { SupabaseAudioStorageClient } from '@/modules/sessions/infrastructure/adapters/supabase-audio-storage-adapter/index.js'
 
-import { FakeQuotaExhaustedError, FakeStorageObjectNotFoundError } from './errors.js'
+import { FakeStorageObjectNotFoundError } from './errors.js'
 
 type Difficulty = 'easy' | 'balanced' | 'hard'
 
@@ -42,14 +36,6 @@ export interface FakeThemesPort extends ThemesPort {
     readonly difficulty: Difficulty
     readonly themeId: string
   }): void
-  reset(): void
-}
-
-export interface FakeQuotaPort extends QuotaPort {
-  readonly reserveCalls: readonly ReserveQuotaForSessionInput[]
-  readonly releaseCalls: readonly ReleaseQuotaReservationInput[]
-  configure(input: { readonly enforced: boolean; readonly remaining?: number }): void
-  failNextReservation(): void
   reset(): void
 }
 
@@ -128,67 +114,6 @@ export function createFakeAccountsPort(): FakeAccountsPort {
       accountsByToken.clear()
       profilesByAccountId.clear()
       deniedPracticeAccountIds.clear()
-    },
-  }
-}
-
-export function createFakeQuotaPort(): FakeQuotaPort {
-  const reserveCalls: ReserveQuotaForSessionInput[] = []
-  const releaseCalls: ReleaseQuotaReservationInput[] = []
-  let enforced = true
-  let remaining = 4
-  let failNext = false
-
-  function reserveForSession(input: ReserveQuotaForSessionInput): Promise<QuotaReservation> {
-    reserveCalls.push(input)
-
-    if (failNext) {
-      failNext = false
-      return Promise.reject(new FakeQuotaExhaustedError())
-    }
-
-    if (enforced && remaining === 0) return Promise.reject(new FakeQuotaExhaustedError())
-    if (enforced) remaining -= 1
-
-    return Promise.resolve({
-      reservationId: input.sessionId,
-      enforced,
-      remaining: enforced ? remaining : null,
-    })
-  }
-
-  return {
-    reserveCalls,
-    releaseCalls,
-    readBalance: () =>
-      Promise.resolve(
-        enforced
-          ? {
-              enforced: true,
-              allowance: 4,
-              remaining,
-              renewsAt: new Date('2026-09-01T00:00:00.000Z'),
-            }
-          : { enforced: false },
-      ),
-    reserveForSession,
-    releaseReservation: (input) => {
-      releaseCalls.push(input)
-      return Promise.resolve()
-    },
-    configure: (input) => {
-      enforced = input.enforced
-      remaining = input.enforced ? (input.remaining ?? 4) : 0
-    },
-    failNextReservation: () => {
-      failNext = true
-    },
-    reset: () => {
-      reserveCalls.length = 0
-      releaseCalls.length = 0
-      enforced = true
-      remaining = 4
-      failNext = false
     },
   }
 }

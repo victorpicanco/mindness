@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
 import { SessionNotFoundError } from '@/modules/sessions/domain/errors/session-not-found-error/index.js'
-import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
@@ -21,14 +20,12 @@ function createSession(): Session {
       categorySlug: 'self-awareness',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: 'reservation-1',
     createdAt: new Date('2026-08-18T23:50:00.000Z'),
   })
 }
 
 function createHarness(session: Session | null) {
   const saved: Session[] = []
-  const releasedSessionIds: string[] = []
   const events = new FakeEventBus()
   let nextId = 0
   let transactionRuns = 0
@@ -45,18 +42,8 @@ function createHarness(session: Session | null) {
       return Promise.resolve()
     },
   }
-  const quota: QuotaPort = {
-    readBalance: () => Promise.resolve({ enforced: false }),
-    reserveForSession: () =>
-      Promise.resolve({ reservationId: 'reservation-2', enforced: true, remaining: 3 }),
-    releaseReservation: ({ sessionId }) => {
-      releasedSessionIds.push(sessionId)
-      return Promise.resolve()
-    },
-  }
   const useCase = new ExpireSessionUseCase({
     sessions,
-    quota,
     eventPublisher: events,
     idGenerator: { generate: () => `event-${(nextId += 1)}` },
     unitOfWork: {
@@ -68,7 +55,7 @@ function createHarness(session: Session | null) {
     clock: { now: () => NOW },
   })
 
-  return { events, releasedSessionIds, saved, transactionRuns: () => transactionRuns, useCase }
+  return { events, saved, transactionRuns: () => transactionRuns, useCase }
 }
 
 describe('ExpireSessionUseCase', () => {
@@ -83,7 +70,6 @@ describe('ExpireSessionUseCase', () => {
       expect(session.state).toBe('expired')
       expect(session.expiredReason).toBe(reason)
       expect(harness.saved).toEqual([session])
-      expect(harness.releasedSessionIds).toEqual(['session-1'])
       expect(harness.transactionRuns()).toBe(1)
       expect(harness.events.published).toHaveLength(1)
       expect(harness.events.published[0]).toMatchObject({
@@ -101,8 +87,6 @@ describe('ExpireSessionUseCase', () => {
       sessionId: 'session-1',
       reason: 'microphone_permission_denied',
     })
-
-    expect(harness.releasedSessionIds).toEqual(['session-1'])
     expect(harness.events.published).toHaveLength(2)
     expect(harness.events.published.map((event) => event.eventName)).toEqual([
       'session_expired',
@@ -124,7 +108,6 @@ describe('ExpireSessionUseCase', () => {
     ).resolves.toBeUndefined()
 
     expect(harness.saved).toHaveLength(0)
-    expect(harness.releasedSessionIds).toHaveLength(0)
     expect(harness.events.published).toHaveLength(0)
     expect(harness.transactionRuns()).toBe(1)
   })

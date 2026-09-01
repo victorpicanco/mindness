@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
-import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
@@ -20,7 +19,6 @@ function createSession(sessionId: string, accountId: string, createdAt: Date): S
       categorySlug: 'self-awareness',
       searchWindowMinutes: 3,
     }),
-    quotaReservationId: `reservation-${sessionId}`,
     createdAt,
   })
 }
@@ -28,7 +26,6 @@ function createSession(sessionId: string, accountId: string, createdAt: Date): S
 function createHarness(initialSessions: Session[]) {
   const sessions = [...initialSessions]
   const limits: number[] = []
-  const releasedSessionIds: string[] = []
   const events = new FakeEventBus()
   let nextId = 0
   const repository: SessionsRepository = {
@@ -52,19 +49,9 @@ function createHarness(initialSessions: Session[]) {
     markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }
-  const quota: QuotaPort = {
-    readBalance: () => Promise.resolve({ enforced: false }),
-    reserveForSession: () =>
-      Promise.resolve({ reservationId: 'reservation-next', enforced: true, remaining: 3 }),
-    releaseReservation: ({ sessionId }) => {
-      releasedSessionIds.push(sessionId)
-      return Promise.resolve()
-    },
-  }
   let transactionRuns = 0
   const useCase = new SweepExpiredSessionsUseCase({
     sessions: repository,
-    quota,
     clock: { now: () => NOW },
     eventPublisher: events,
     idGenerator: { generate: () => `event-${(nextId += 1)}` },
@@ -77,7 +64,7 @@ function createHarness(initialSessions: Session[]) {
     defaultLimit: 3,
   })
 
-  return { events, limits, releasedSessionIds, transactionRuns: () => transactionRuns, useCase }
+  return { events, limits, transactionRuns: () => transactionRuns, useCase }
 }
 
 describe('SweepExpiredSessionsUseCase', () => {
@@ -93,7 +80,6 @@ describe('SweepExpiredSessionsUseCase', () => {
 
     expect(harness.limits).toEqual([3])
     expect(harness.transactionRuns()).toBe(3)
-    expect(harness.releasedSessionIds).toEqual(['session-1', 'session-2', 'session-3'])
     expect(harness.events.published).toHaveLength(3)
     expect(harness.events.published.map((event) => event.eventName)).toEqual([
       'session_expired',
@@ -112,6 +98,5 @@ describe('SweepExpiredSessionsUseCase', () => {
     await expect(harness.useCase.execute({ limit: 2 })).resolves.toEqual({ expiredCount: 0 })
 
     expect(harness.limits).toEqual([2, 2])
-    expect(harness.releasedSessionIds).toEqual(['session-1', 'session-2'])
   })
 })

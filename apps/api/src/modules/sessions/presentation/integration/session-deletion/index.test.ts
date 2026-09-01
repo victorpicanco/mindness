@@ -33,7 +33,6 @@ async function seedSession(input: {
       categorySlug: 'session-deletion',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: input.sessionId,
     state: input.state,
     createdAt: SESSIONS_TEST_NOW,
     expiresAt: new Date(SESSIONS_TEST_NOW.getTime() + 15 * 60 * 1000),
@@ -75,7 +74,7 @@ beforeEach(async () => {
 })
 
 describe('session deletion integration', () => {
-  it('deletes a completed session, removes it immediately from view, keeps quota untouched and publishes one event', async () => {
+  it('deletes a completed session, removes it immediately from view and publishes one event', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000091'
     await seedSession({ sessionId, accountId: ACCOUNT_A, state: 'completed' })
 
@@ -105,8 +104,6 @@ describe('session deletion integration', () => {
     await expect(
       harness.container.useCases.checkReadability.execute({ sessionId, accountId: ACCOUNT_A }),
     ).resolves.toEqual({ failureReason: null, readable: false })
-
-    expect(harness.quota.releaseCalls).toEqual([])
 
     expect(harness.eventBus.published).toHaveLength(1)
     expect(harness.eventBus.published[0]).toMatchObject({

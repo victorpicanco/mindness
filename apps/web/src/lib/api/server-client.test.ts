@@ -37,27 +37,27 @@ describe('apiFetch', () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
     const requests: Request[] = []
 
-    const data = await apiFetch('/sessions/quota', {
-      schema: z.object({ remaining: z.number() }),
+    const data = await apiFetch('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
       cookieStore: new InMemoryCookieStore('access-token'),
       fetcher: (input, init) => {
         requests.push(new Request(input, init))
 
-        return Promise.resolve(Response.json({ data: { remaining: 2 } }))
+        return Promise.resolve(Response.json({ data: { sessionId: 'session-1' } }))
       },
     })
 
-    expect(data).toEqual({ remaining: 2 })
+    expect(data).toEqual({ sessionId: 'session-1' })
     expect(requests).toHaveLength(1)
-    expect(requests[0]?.url).toBe('https://api.mindness.test/sessions/quota')
+    expect(requests[0]?.url).toBe('https://api.mindness.test/sessions/active')
     expect(requests[0]?.headers.get('authorization')).toBe('Bearer access-token')
   })
 
   it('surfaces an unconfigured API base URL instead of reporting a network failure', async () => {
     vi.stubEnv('API_BASE_URL', '')
 
-    const request = apiFetch('/sessions/quota', {
-      schema: z.object({ remaining: z.number() }),
+    const request = apiFetch('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
       cookieStore: new InMemoryCookieStore('access-token'),
       fetcher: () => Promise.reject(new TypeError('fetcher must never be reached')),
     })
@@ -68,8 +68,8 @@ describe('apiFetch', () => {
   it('translates network failures into an API client error', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
 
-    const request = apiFetch('/sessions/quota', {
-      schema: z.object({ remaining: z.number() }),
+    const request = apiFetch('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
       cookieStore: new InMemoryCookieStore(undefined),
       fetcher: async () => Promise.reject(new TypeError('network unavailable')),
     })
@@ -83,16 +83,16 @@ describe('apiFetch', () => {
   it('preserves the backend error code and message', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
 
-    const request = apiFetch('/sessions/quota', {
-      schema: z.object({ remaining: z.number() }),
+    const request = apiFetch('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
       cookieStore: new InMemoryCookieStore('access-token'),
       fetcher: () =>
         Promise.resolve(
           Response.json(
             {
               error: {
-                code: 'quota.QUOTA_EXHAUSTED',
-                message: 'The quota is exhausted.',
+                code: 'sessions.SESSION_ALREADY_RUNNING',
+                message: 'A session is already running.',
                 issues: null,
                 requestId: 'request-id',
               },
@@ -103,18 +103,18 @@ describe('apiFetch', () => {
     })
 
     await expect(request).rejects.toMatchObject({
-      code: 'quota.QUOTA_EXHAUSTED',
-      message: 'The quota is exhausted.',
+      code: 'sessions.SESSION_ALREADY_RUNNING',
+      message: 'A session is already running.',
     } satisfies Pick<ApiClientError, 'code' | 'message'>)
   })
 
   it('rejects bodies that do not match the endpoint schema', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
 
-    const request = apiFetch('/sessions/quota', {
-      schema: z.object({ remaining: z.number() }),
+    const request = apiFetch('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
       cookieStore: new InMemoryCookieStore('access-token'),
-      fetcher: () => Promise.resolve(Response.json({ data: { remaining: 'two' } })),
+      fetcher: () => Promise.resolve(Response.json({ data: { sessionId: 42 } })),
     })
 
     await expect(request).rejects.toThrow()
@@ -123,8 +123,8 @@ describe('apiFetch', () => {
   it('translates an invalid API response into a client error', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
 
-    const request = apiFetch('/sessions/quota', {
-      schema: z.object({ remaining: z.number() }),
+    const request = apiFetch('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
       cookieStore: new InMemoryCookieStore(undefined),
       fetcher: () => Promise.resolve(new Response('not json')),
     })
@@ -139,8 +139,8 @@ describe('apiFetch', () => {
     const store = new InMemoryCookieStore('expired-access', 'valid-refresh')
     const requests: Request[] = []
 
-    const request = apiFetch('/sessions/quota', {
-      schema: z.object({ remaining: z.number() }),
+    const request = apiFetch('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
       cookieStore: store,
       fetcher: (input, init) => {
         requests.push(new Request(input, init))
@@ -162,7 +162,7 @@ describe('apiFetch', () => {
     })
 
     await expect(request).rejects.toMatchObject({ code: 'accounts.AUTHENTICATION_REJECTED' })
-    expect(requests.map((item) => item.url)).toEqual(['https://api.mindness.test/sessions/quota'])
+    expect(requests.map((item) => item.url)).toEqual(['https://api.mindness.test/sessions/active'])
   })
 })
 

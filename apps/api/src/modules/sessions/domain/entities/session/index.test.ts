@@ -28,7 +28,6 @@ describe('Session', () => {
       accountId: 'account-id',
       themeId: 'theme-id',
       configuration,
-      quotaReservationId: 'reservation-id',
       createdAt: CREATED_AT,
     })
 
@@ -36,7 +35,6 @@ describe('Session', () => {
     expect(session.accountId).toBe('account-id')
     expect(session.themeId).toBe('theme-id')
     expect(session.configuration).toBe(configuration)
-    expect(session.quotaReservationId).toBe('reservation-id')
     expect(session.createdAt).toEqual(CREATED_AT)
     expect(session.state).toBe('in_progress')
     expect(session.researchEndsAt).toEqual(RESEARCH_ENDS_AT)
@@ -98,7 +96,6 @@ describe('Session', () => {
       accountId: 'account-id',
       themeId: 'theme-id',
       configuration: createConfiguration(),
-      quotaReservationId: 'reservation-id',
       state: 'in_progress',
       createdAt: CREATED_AT,
       expiresAt: RECORDING_DEADLINE,
@@ -147,7 +144,6 @@ describe('Session', () => {
       accountId: 'account-id',
       themeId: 'theme-id',
       configuration: createConfiguration(),
-      quotaReservationId: 'reservation-id',
       state: 'processing',
       createdAt: CREATED_AT,
       expiresAt: DEADLINE,
@@ -257,7 +253,6 @@ describe('Session', () => {
       accountId: 'account-id',
       themeId: 'theme-id',
       configuration: createConfiguration(),
-      quotaReservationId: 'reservation-id',
       state: 'deleted',
       createdAt: CREATED_AT,
       expiresAt: DEADLINE,
@@ -296,7 +291,6 @@ function createSession(): Session {
     accountId: 'account-id',
     themeId: 'theme-id',
     configuration: createConfiguration(),
-    quotaReservationId: 'reservation-id',
     createdAt: CREATED_AT,
   })
 }
@@ -307,7 +301,6 @@ function reconstituteWithState(state: SessionState): Session {
     accountId: 'account-id',
     themeId: 'theme-id',
     configuration: createConfiguration(),
-    quotaReservationId: 'reservation-id',
     state,
     createdAt: CREATED_AT,
     expiresAt: DEADLINE,

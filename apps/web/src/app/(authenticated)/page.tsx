@@ -2,13 +2,12 @@ import { cacheLife } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 
-import { categoriesSchema, type quotaSchema } from '@/lib/api/contracts/sessions'
-import { getActiveSession, getSessionQuota } from '@/lib/api/authenticated-session-data'
+import { categoriesSchema } from '@/lib/api/contracts/sessions'
+import { getActiveSession } from '@/lib/api/authenticated-session-data'
 import { apiFetch } from '@/lib/api/server-client'
 import { signOutAction } from '@/lib/auth/sign-out'
 import { sessionPath } from '@/lib/navigation/session-routes'
 
-import type { PracticeQuota } from '@/components/practice/config-form'
 import { PracticeConfigFormWithNavigation } from '@/components/practice/config-form'
 
 // The theme catalogue is the same for every visitor and changes rarely, but the API still scopes it
@@ -21,19 +20,9 @@ async function readThemeCategories() {
   return apiFetch('/sessions/theme-categories', { schema: categoriesSchema })
 }
 
-function sessionQuotaSummary(quota: ReturnType<typeof quotaSchema.parse>): PracticeQuota | null {
-  if (!quota.enforced) return null
-
-  return {
-    allowance: quota.allowance,
-    renewsAt: quota.renewsAt,
-  }
-}
-
 export default async function HomePage() {
-  const [t, quota, categories, activeSession] = await Promise.all([
+  const [t, categories, activeSession] = await Promise.all([
     getTranslations('home.practice'),
-    getSessionQuota(),
     readThemeCategories(),
     getActiveSession(),
   ])
@@ -47,11 +36,7 @@ export default async function HomePage() {
           <h1 className="font-(family-name:--font-buenard) text-center text-3xl leading-tight tracking-tight sm:text-4xl">
             {t('title')}
           </h1>
-          <PracticeConfigFormWithNavigation
-            categories={categories}
-            quota={sessionQuotaSummary(quota)}
-            signOut={signOutAction}
-          />
+          <PracticeConfigFormWithNavigation categories={categories} signOut={signOutAction} />
         </div>
       </div>
     </div>

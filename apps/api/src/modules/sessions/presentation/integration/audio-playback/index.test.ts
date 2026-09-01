@@ -35,7 +35,6 @@ async function seedCompletedSessionWithAudio(): Promise<void> {
       categorySlug: 'audio-playback',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: SESSION_ID,
     state: 'completed',
     createdAt: SESSIONS_TEST_NOW,
     expiresAt: new Date(SESSIONS_TEST_NOW.getTime() + 15 * 60 * 1000),

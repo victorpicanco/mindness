@@ -50,14 +50,12 @@ describe('session lifecycle integration', () => {
         readonly sessionId: string
         readonly themeId: string
         readonly themeTitle: string
-        readonly remaining: number | null
         readonly serverNow: string
       }
     }>()
     expect(body.data).toMatchObject({
       themeId: THEME_ID,
       themeTitle: 'Theme',
-      remaining: 3,
       serverNow: harness.clock.now().toISOString(),
     })
 
@@ -94,7 +92,6 @@ describe('session lifecycle integration', () => {
     assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 403)
     expect(response.json()).toMatchObject({ error: { code: 'sessions.PRACTICE_NOT_ALLOWED' } })
     await expect(harness.prisma.session.count()).resolves.toBe(0)
-    expect(harness.quota.reserveCalls).toHaveLength(0)
     expect(harness.eventBus.published).toHaveLength(0)
   })
 
@@ -123,7 +120,7 @@ describe('session lifecycle integration', () => {
     })
   })
 
-  it('rejects a second active session without a second reservation or event', async () => {
+  it('rejects a second active session without a second event', async () => {
     const first = await harness.app.inject({
       method: 'POST',
       url: '/sessions',
@@ -144,7 +141,6 @@ describe('session lifecycle integration', () => {
     assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 409)
     expect(response.json()).toMatchObject({ error: { code: 'sessions.SESSION_ALREADY_RUNNING' } })
     await expect(harness.prisma.session.count()).resolves.toBe(1)
-    expect(harness.quota.reserveCalls).toHaveLength(1)
     expect(harness.eventBus.published).toHaveLength(1)
   })
 
@@ -172,7 +168,6 @@ describe('session lifecycle integration', () => {
       state: 'expired',
       expiredReason: 'timeout',
     })
-    expect(harness.quota.releaseCalls).toEqual([{ sessionId: firstId }])
     expect(harness.eventBus.published.map((event) => event.eventName)).toEqual([
       'session_started',
       'session_expired',
@@ -180,7 +175,7 @@ describe('session lifecycle integration', () => {
     ])
   })
 
-  it('reports an unavailable theme without persisting a session or reserving quota', async () => {
+  it('reports an unavailable theme without persisting a session', async () => {
     harness.themes.reset()
 
     const response = await harness.app.inject({
@@ -194,24 +189,7 @@ describe('session lifecycle integration', () => {
     assertResponseMatchesSchema(harness.app, 'POST', '/sessions', response, 422)
     expect(response.json()).toMatchObject({ error: { code: 'sessions.THEME_UNAVAILABLE' } })
     await expect(harness.prisma.session.count()).resolves.toBe(0)
-    expect(harness.quota.reserveCalls).toHaveLength(0)
     expect(harness.eventBus.published).toMatchObject([{ eventName: 'theme_unavailable' }])
-  })
-
-  it('propagates quota exhaustion without persisting a session', async () => {
-    harness.quota.configure({ enforced: true, remaining: 0 })
-
-    const response = await harness.app.inject({
-      method: 'POST',
-      url: '/sessions',
-      headers: { authorization: 'Bearer access-token' },
-      payload: { difficulty: 'balanced', categorySlug: 'focus', searchWindowMinutes: 4 },
-    })
-
-    expect(response.statusCode).toBe(409)
-    expect(response.json()).toMatchObject({ error: { code: 'quota.QUOTA_EXHAUSTED' } })
-    await expect(harness.prisma.session.count()).resolves.toBe(0)
-    expect(harness.eventBus.published).toHaveLength(0)
   })
 
   it('lets only one of two concurrent starts open a session for the account', async () => {

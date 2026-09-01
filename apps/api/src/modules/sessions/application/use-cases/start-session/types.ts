@@ -2,7 +2,6 @@ import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port
 import type { Clock } from '@/modules/sessions/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/sessions/domain/ports/event-publisher/index.js'
 import type { IdGenerator } from '@/modules/sessions/domain/ports/id-generator/index.js'
-import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/index.js'
 import type { UnitOfWork } from '@/modules/sessions/domain/ports/unit-of-work/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
@@ -22,13 +21,11 @@ export interface StartSessionOutput {
   readonly themeTitle: string
   readonly expiresAt: string
   readonly researchEndsAt: string
-  readonly remaining: number | null
 }
 
 export interface StartSessionDependencies {
   readonly sessions: SessionsRepository
   readonly themes: ThemesPort
-  readonly quota: QuotaPort
   readonly accounts: Pick<AccountsPort, 'canStartPractice'>
   readonly clock: Clock
   readonly eventPublisher: EventPublisher

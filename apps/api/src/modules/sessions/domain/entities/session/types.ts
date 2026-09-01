@@ -9,7 +9,6 @@ export interface StartSessionParams {
   readonly accountId: string
   readonly themeId: string
   readonly configuration: SessionConfiguration
-  readonly quotaReservationId: string
   readonly createdAt: Date
 }
 

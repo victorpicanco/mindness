@@ -16,7 +16,6 @@ function createSessionWithAudio(): Session {
       categorySlug: 'communication',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: 'reservation-id',
     createdAt: new Date('2026-08-21T11:00:00.000Z'),
   })
   session.acceptAudio(

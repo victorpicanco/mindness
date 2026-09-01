@@ -103,7 +103,6 @@ describe('recording window integration', () => {
       harness.prisma.session.findUnique({ where: { id: sessionId } }),
     ).resolves.toMatchObject({ state: 'in_progress', recordingStartedAt: null })
     expect(harness.eventBus.published.map((event) => event.eventName)).toEqual(['session_started'])
-    expect(harness.quota.releaseCalls).toHaveLength(0)
   })
 
   it('opens the recording inside the grace and extends the session deadline', async () => {
@@ -134,7 +133,6 @@ describe('recording window integration', () => {
       recordingStartedAt: RESEARCH_ENDS_AT,
     })
     expect(harness.eventBus.published.map((event) => event.eventName)).toEqual(['session_started'])
-    expect(harness.quota.releaseCalls).toHaveLength(0)
   })
 
   it('keeps the audio upload authorized after the grace once the recording is open', async () => {
@@ -171,7 +169,6 @@ describe('recording window integration', () => {
       'session_started',
       'session_expired',
     ])
-    expect(harness.quota.releaseCalls).toEqual([{ sessionId }])
   })
 
   it('hides the recording of another account behind a not found', async () => {

@@ -38,7 +38,7 @@ beforeEach(async () => {
 })
 
 describe('analysis outcome integration', () => {
-  it('fails a timed-out session, releases quota once, and accepts its replacement', async () => {
+  it('fails a timed-out session and accepts its replacement', async () => {
     const started = await harness.app.inject({
       method: 'POST',
       url: '/sessions',
@@ -87,10 +87,8 @@ describe('analysis outcome integration', () => {
       failureReason: 'analysis_timeout',
       state: 'failed',
     })
-    expect(harness.quota.releaseCalls).toEqual([{ sessionId }])
 
     await harness.eventBus.deliver(event)
-    expect(harness.quota.releaseCalls).toEqual([{ sessionId }])
 
     const crossAccount = await harness.app.inject({
       method: 'POST',

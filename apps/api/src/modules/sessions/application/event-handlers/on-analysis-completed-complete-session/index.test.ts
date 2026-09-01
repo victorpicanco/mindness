@@ -9,7 +9,7 @@ import type { IntegrationEvent } from '@/shared/messaging/integration-event/inde
 import { OnAnalysisCompletedCompleteSession, type AnalysisCompletedEvent } from './index.js'
 
 describe('OnAnalysisCompletedCompleteSession', () => {
-  it('completes a processing session without releasing quota', async () => {
+  it('completes a processing session', async () => {
     const session = createProcessingSession()
     const repository = createRepository(session)
     const handler = new OnAnalysisCompletedCompleteSession(repository)
@@ -51,7 +51,6 @@ function createProcessingSession(): Session {
       categorySlug: 'general',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: 'reservation-id',
     createdAt: new Date('2026-08-20T11:00:00.000Z'),
   })
   session.acceptAudio(

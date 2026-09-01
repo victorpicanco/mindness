@@ -48,25 +48,15 @@ export class StartSessionUseCase {
     }
 
     const sessionId = this.dependencies.idGenerator.generate()
-    const reservation = await this.dependencies.quota.reserveForSession({
-      accountId: input.accountId,
-      sessionId,
-    })
     const session = Session.start({
       sessionId,
       accountId: input.accountId,
       themeId: theme.themeId,
       configuration,
-      quotaReservationId: reservation.reservationId,
       createdAt: now,
     })
 
-    try {
-      await this.dependencies.unitOfWork.run(() => this.dependencies.sessions.save(session))
-    } catch (error) {
-      await this.dependencies.quota.releaseReservation({ sessionId })
-      throw error
-    }
+    await this.dependencies.unitOfWork.run(() => this.dependencies.sessions.save(session))
 
     await this.dependencies.eventPublisher.publish(
       SessionStarted.create({
@@ -77,7 +67,6 @@ export class StartSessionUseCase {
         difficulty: configuration.difficulty,
         categorySlug: configuration.categorySlug,
         searchWindowMinutes: configuration.searchWindowMinutes,
-        remaining: reservation.remaining,
       }),
     )
 
@@ -89,7 +78,6 @@ export class StartSessionUseCase {
       themeTitle: theme.title,
       expiresAt: session.expiresAt.toISOString(),
       researchEndsAt: session.researchEndsAt.toISOString(),
-      remaining: reservation.remaining,
     }
   }
 
@@ -107,7 +95,6 @@ export class StartSessionUseCase {
       if (!outcome.expired) return
 
       await this.dependencies.sessions.save(session)
-      await this.dependencies.quota.releaseReservation({ sessionId: session.id })
       for (const event of outcome.events) {
         await this.dependencies.eventPublisher.publish(event)
       }

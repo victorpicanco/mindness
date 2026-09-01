@@ -24,7 +24,6 @@ function createSession(accountId = 'account-1'): Session {
       categorySlug: 'communication',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: 'reservation-1',
     createdAt: CREATED_AT,
   })
 }

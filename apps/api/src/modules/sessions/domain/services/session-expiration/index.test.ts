@@ -82,7 +82,6 @@ describe('SessionExpiration', () => {
         accountId: 'account-id',
         themeId: 'theme-id',
         configuration: createConfiguration(),
-        quotaReservationId: 'reservation-id',
         state,
         createdAt: CREATED_AT,
         expiresAt: new Date('2026-08-18T12:15:00.000Z'),
@@ -119,7 +118,6 @@ function createSession(): Session {
     accountId: 'account-id',
     themeId: 'theme-id',
     configuration: createConfiguration(),
-    quotaReservationId: 'reservation-id',
     createdAt: CREATED_AT,
   })
 }

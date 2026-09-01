@@ -33,7 +33,6 @@ function createRunner(failures: Error[] = []): FakeRunner {
           difficulty: 'balanced',
           categorySlug: 'self-awareness',
           searchWindowMinutes: 4,
-          quotaReservationId: 'reservation-id',
           state: 'in_progress',
           expiredReason: null,
           createdAt: new Date(),

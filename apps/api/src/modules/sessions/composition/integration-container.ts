@@ -11,11 +11,9 @@ import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
 
 import {
   createFakeAccountsPort,
-  createFakeQuotaPort,
   createFakeThemesPort,
   createInMemorySupabaseStorageClient,
   type FakeAccountsPort,
-  type FakeQuotaPort,
   type FakeThemesPort,
   type InMemorySupabaseStorageClient,
 } from './integration-fixtures.js'
@@ -33,7 +31,6 @@ export interface SessionsIntegrationContainer {
   readonly clock: ControllableClock
   readonly accounts: FakeAccountsPort
   readonly themes: FakeThemesPort
-  readonly quota: FakeQuotaPort
   readonly storage: InMemorySupabaseStorageClient
   readonly logs: readonly string[]
   readonly container: Awaited<ReturnType<typeof registerSessionsModule>>
@@ -56,7 +53,6 @@ export async function createSessionsIntegrationContainer(
   const clock = new ControllableClock(SESSIONS_TEST_NOW)
   const accounts = createFakeAccountsPort()
   const themes = createFakeThemesPort()
-  const quota = createFakeQuotaPort()
   const storage = createInMemorySupabaseStorageClient(clock)
   const container = await registerSessionsModule(app, {
     prisma,
@@ -67,7 +63,6 @@ export async function createSessionsIntegrationContainer(
     adapters: {
       accounts,
       themes,
-      quota,
       audioStorage: new SupabaseAudioStorageAdapter(storage),
     },
   })
@@ -80,7 +75,6 @@ export async function createSessionsIntegrationContainer(
     clock,
     accounts,
     themes,
-    quota,
     storage,
     logs,
     container,
@@ -90,7 +84,6 @@ export async function createSessionsIntegrationContainer(
       clock.set(SESSIONS_TEST_NOW)
       accounts.reset()
       themes.reset()
-      quota.reset()
       storage.reset()
     },
     close: async () => {

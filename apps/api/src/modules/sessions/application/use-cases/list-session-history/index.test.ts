@@ -27,7 +27,6 @@ function createSession(params: {
       categorySlug: 'communication',
       searchWindowMinutes: 5,
     }),
-    quotaReservationId: 'reservation-1',
     state: params.state,
     createdAt: params.createdAt,
     expiresAt: new Date(params.createdAt.getTime() + 15 * 60 * 1000),

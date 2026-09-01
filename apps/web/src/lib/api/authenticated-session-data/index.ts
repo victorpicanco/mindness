@@ -2,7 +2,6 @@ import { cache } from 'react'
 
 import {
   activeSessionSchema,
-  quotaSchema,
   sessionHistoryMetaSchema,
   sessionHistorySchema,
 } from '@/lib/api/contracts/sessions'
@@ -18,8 +17,4 @@ export const getSessionHistory = cache(() =>
     metaSchema: sessionHistoryMetaSchema,
     schema: sessionHistorySchema,
   }),
-)
-
-export const getSessionQuota = cache(() =>
-  apiFetch('/sessions/quota', { cache: 'no-store', schema: quotaSchema }),
 )

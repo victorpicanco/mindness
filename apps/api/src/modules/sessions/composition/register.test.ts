@@ -140,12 +140,6 @@ function createDependencies(
         listCategories: () => Promise.resolve([]),
         listThemeTitles: () => Promise.resolve([]),
       },
-      quota: {
-        readBalance: () => Promise.resolve({ enforced: false }),
-        reserveForSession: () =>
-          Promise.resolve({ reservationId: 'id', enforced: true, remaining: 0 }),
-        releaseReservation: () => Promise.resolve(),
-      },
       audioStorage: {
         createUploadUrl: () => Promise.resolve({ uploadUrl: 'memory://upload', token: 'token' }),
         createDownloadUrl: () => Promise.resolve('memory://download'),
@@ -165,7 +159,6 @@ function createSessionRow(state: SessionRow['state'] = 'in_progress'): SessionRo
     difficulty: 'balanced',
     categorySlug: 'general',
     searchWindowMinutes: 4,
-    quotaReservationId: 'reservation-id',
     state,
     expiredReason: null,
     createdAt: new Date(),

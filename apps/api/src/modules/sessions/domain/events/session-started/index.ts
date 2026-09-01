@@ -11,7 +11,6 @@ export interface SessionStartedPayload {
   readonly categorySlug: string
   readonly searchWindowMinutes: number
   readonly surface: 'web'
-  readonly remaining: number | null
 }
 
 export interface CreateSessionStartedParams extends Omit<SessionStartedPayload, 'surface'> {
@@ -44,7 +43,6 @@ export class SessionStarted implements IntegrationEvent<
       categorySlug: params.categorySlug,
       searchWindowMinutes: params.searchWindowMinutes,
       surface: 'web',
-      remaining: params.remaining,
     })
   }
 }

@@ -29,7 +29,6 @@ function createSession(params: {
       categorySlug: 'self-awareness',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: 'reservation-1',
     state,
     createdAt: new Date('2026-08-22T10:00:00.000Z'),
     expiresAt: new Date('2026-08-22T10:15:00.000Z'),

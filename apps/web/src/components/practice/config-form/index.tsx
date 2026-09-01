@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation } from '@tanstack/react-query'
-import { useFormatter, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 
@@ -18,7 +18,6 @@ import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 const DIFFICULTIES = ['easy', 'balanced', 'hard'] as const
 const SEARCH_WINDOWS = [3, 4, 5] as const
 
-const QUOTA_EXHAUSTED_CODE = 'quota.QUOTA_EXHAUSTED'
 const PRACTICE_NOT_ALLOWED_CODE = 'sessions.PRACTICE_NOT_ALLOWED'
 
 type SessionDifficulty = (typeof DIFFICULTIES)[number]
@@ -30,11 +29,6 @@ export interface PracticeCategory {
   readonly slug: string
 }
 
-export interface PracticeQuota {
-  readonly allowance: number
-  readonly renewsAt: string
-}
-
 export interface StartSessionInput {
   readonly categorySlug: string
   readonly difficulty: SessionDifficulty
@@ -44,7 +38,6 @@ export interface StartSessionInput {
 interface StartedSession {
   readonly createdAt: string
   readonly expiresAt: string
-  readonly remaining: number | null
   readonly researchEndsAt: string
   readonly serverNow: string
   readonly sessionId: string
@@ -84,13 +77,12 @@ function toSearchWindowMinutes(value: string): SearchWindowMinutes | null {
 interface PracticeConfigFormProps {
   readonly categories: readonly PracticeCategory[]
   readonly onSessionStarted?: (sessionId: string) => void
-  readonly quota: PracticeQuota | null
   readonly signOut: SignOutAction
   readonly startSession?: StartSessionRequest
 }
 
 export function PracticeConfigFormWithNavigation(
-  props: Pick<PracticeConfigFormProps, 'categories' | 'quota' | 'signOut'>,
+  props: Pick<PracticeConfigFormProps, 'categories' | 'signOut'>,
 ) {
   const router = useRouter()
 
@@ -105,13 +97,11 @@ export function PracticeConfigFormWithNavigation(
 export function PracticeConfigForm({
   categories,
   onSessionStarted,
-  quota,
   signOut,
   startSession = requestSessionStart,
 }: PracticeConfigFormProps) {
   const t = useTranslations('home.practice')
   const translate = useTranslations()
-  const format = useFormatter()
   const startResearching = usePracticeSessionStore((state) => state.startResearching)
   const [difficulty, setDifficulty] = useState<SessionDifficulty | null>(null)
   const [categorySlug, setCategorySlug] = useState('')
@@ -147,21 +137,6 @@ export function PracticeConfigForm({
   // and reaches them through the root toast handler.
   const failureCode = inlineFailureCode(mutation.isError ? mutation.error : null)
   const isConsentPending = failureCode === PRACTICE_NOT_ALLOWED_CODE
-
-  function failureMessage(code: string): string {
-    if (code !== QUOTA_EXHAUSTED_CODE) return translate(describeApiError(code).messageKey)
-
-    return quota === null
-      ? translate('common.errors.unknown')
-      : t('errors.quotaExhausted', {
-          allowance: quota.allowance,
-          date: format.dateTime(new Date(quota.renewsAt), {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-          }),
-        })
-  }
 
   return (
     <div className="mt-8 flex w-full max-w-4xl flex-col gap-4">
@@ -227,7 +202,7 @@ export function PracticeConfigForm({
       </form>
       {failureCode === null ? null : (
         <div className="flex flex-col items-start gap-3 text-sm text-error" role="alert">
-          <p>{failureMessage(failureCode)}</p>
+          <p>{translate(describeApiError(failureCode).messageKey)}</p>
           {isConsentPending ? (
             <form action={signOut}>
               <Button size="sm" type="submit" variant="secondary">

@@ -20,7 +20,6 @@ describe('session domain events', () => {
         difficulty: 'easy',
         categorySlug: 'mindfulness',
         searchWindowMinutes: 3,
-        remaining: 3,
       }),
       'session_started',
       'event-1',
@@ -31,7 +30,6 @@ describe('session domain events', () => {
         categorySlug: 'mindfulness',
         searchWindowMinutes: 3,
         surface: 'web',
-        remaining: 3,
       },
     ],
     [

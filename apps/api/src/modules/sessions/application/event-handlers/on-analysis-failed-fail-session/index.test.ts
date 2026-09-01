@@ -3,18 +3,16 @@ import { describe, expect, it } from 'vitest'
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 import { SessionAudio } from '@/modules/sessions/domain/value-objects/session-audio/index.js'
-import type { QuotaPort } from '@/modules/sessions/domain/ports/quota-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import type { IntegrationEvent } from '@/shared/messaging/integration-event/index.js'
 
 import { OnAnalysisFailedFailSession, type AnalysisFailedEvent } from './index.js'
 
 describe('OnAnalysisFailedFailSession', () => {
-  it('fails a processing session and releases quota once', async () => {
+  it('fails a processing session once', async () => {
     const session = createProcessingSession()
     const repository = createRepository(session)
-    const quota = createQuota()
-    const handler = new OnAnalysisFailedFailSession(repository, quota)
+    const handler = new OnAnalysisFailedFailSession(repository)
     const event = createEvent()
 
     await handler.handle(event)
@@ -23,31 +21,14 @@ describe('OnAnalysisFailedFailSession', () => {
     expect(session.state).toBe('failed')
     expect(session.failureReason).toBe('analysis_failed')
     expect(repository.saved).toBe(1)
-    expect(quota.released).toEqual(['session-id'])
-  })
-
-  it('releases the quota before persisting the failure so a crash between them can be retried', async () => {
-    const session = createProcessingSession()
-    const calls: string[] = []
-    const repository = createRepository(session)
-    const quota = createQuota()
-    const handler = new OnAnalysisFailedFailSession(
-      { ...repository, save: () => Promise.resolve(void calls.push('save')) },
-      { ...quota, releaseReservation: () => Promise.resolve(void calls.push('release')) },
-    )
-
-    await handler.handle(createEvent())
-
-    expect(calls).toEqual(['release', 'save'])
   })
 
   it('ignores a missing session', async () => {
     const repository = createRepository(null)
-    const quota = createQuota()
-    const handler = new OnAnalysisFailedFailSession(repository, quota)
+    const handler = new OnAnalysisFailedFailSession(repository)
 
     await expect(handler.handle(createEvent())).resolves.toBeUndefined()
-    expect(quota.released).toEqual([])
+    expect(repository.saved).toBe(0)
   })
 })
 
@@ -72,7 +53,6 @@ function createProcessingSession(): Session {
       categorySlug: 'general',
       searchWindowMinutes: 4,
     }),
-    quotaReservationId: 'reservation-id',
     createdAt: new Date('2026-08-20T11:00:00.000Z'),
   })
   session.acceptAudio(
@@ -103,20 +83,6 @@ function createRepository(session: Session | null): SessionsRepository & { saved
     markDeleted: () => Promise.resolve(true),
     save: () => {
       saved += 1
-      return Promise.resolve()
-    },
-  }
-}
-
-function createQuota(): QuotaPort & { released: string[] } {
-  const released: string[] = []
-  return {
-    released,
-    readBalance: () => Promise.resolve({ enforced: false }),
-    reserveForSession: ({ sessionId }) =>
-      Promise.resolve({ reservationId: sessionId, enforced: true, remaining: 0 }),
-    releaseReservation: ({ sessionId }) => {
-      released.push(sessionId)
       return Promise.resolve()
     },
   }

@@ -17,7 +17,6 @@
     "searchWindowOption": "{minutes} minutos",
     "signOutToRetry": "Sair e entrar de novo",
     "errors": {
-      "quotaExhausted": "Você usou suas {allowance} análises deste ciclo. Elas renovam em {date}. Assine o Plus para praticar sem limite.",
       "themeUnavailable": "Não há tema disponível nessa combinação. Escolha outra opção.",
       "practiceNotAllowed": "Autorize a gravação e análise de voz para iniciar."
     }
@@ -69,8 +68,8 @@
   },
   "processing": {
     "waiting": "Estamos analisando sua apresentação…",
-    "failed": "Não foi possível analisar esta apresentação. Sua cota foi devolvida. Inicie uma nova sessão.",
-    "timeout": "A análise não foi concluída. Sua cota foi devolvida. Inicie uma nova sessão.",
+    "failed": "Não foi possível analisar esta apresentação. Inicie uma nova sessão.",
+    "timeout": "A análise não foi concluída. Inicie uma nova sessão.",
     "newSessionLink": "Iniciar nova sessão"
   },
   "analysis": {

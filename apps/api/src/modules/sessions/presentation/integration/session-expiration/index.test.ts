@@ -59,7 +59,6 @@ describe('session expiration integration', () => {
     await expect(
       harness.prisma.session.findUnique({ where: { id: sessionId } }),
     ).resolves.toMatchObject({ state: 'expired', expiredReason: 'abandoned' })
-    expect(harness.quota.releaseCalls).toEqual([{ sessionId }])
     expect(harness.eventBus.published.map((event) => event.eventName)).toEqual([
       'session_started',
       'session_expired',
@@ -84,7 +83,6 @@ describe('session expiration integration', () => {
     await expect(
       harness.prisma.session.findUnique({ where: { id: sessionId } }),
     ).resolves.toMatchObject({ state: 'expired', expiredReason: 'microphone_permission_denied' })
-    expect(harness.quota.releaseCalls).toEqual([{ sessionId }])
     expect(harness.eventBus.published.map((event) => event.eventName)).toEqual([
       'session_started',
       'session_expired',
@@ -104,7 +102,6 @@ describe('session expiration integration', () => {
     await expect(
       harness.prisma.session.findUnique({ where: { id: activeSessionId } }),
     ).resolves.toMatchObject({ state: 'in_progress' })
-    expect(harness.quota.releaseCalls).toEqual([{ sessionId: expiredSessionId }])
     expect(
       harness.eventBus.published.filter((event) => event.eventName === 'session_expired'),
     ).toHaveLength(1)

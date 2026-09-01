@@ -25,7 +25,6 @@ import {
 
 import {
   PracticeConfigForm,
-  type PracticeQuota,
   type StartSessionInput,
   type StartSessionRequest,
 } from '@/components/practice/config-form'
@@ -34,12 +33,9 @@ const CATEGORIES = [
   { categoryId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa', name: 'Foco', slug: 'focus' },
 ]
 
-const QUOTA: PracticeQuota = { allowance: 4, renewsAt: '2026-09-01T12:05:00.000Z' }
-
 const STARTED_SESSION = {
   createdAt: '2026-08-24T12:00:00.000Z',
   expiresAt: '2026-08-24T12:05:00.000Z',
-  remaining: 3,
   researchEndsAt: '2026-08-24T12:03:00.000Z',
   serverNow: '2026-08-24T12:00:00.000Z',
   sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91ab',
@@ -72,7 +68,6 @@ function renderPracticeConfigForm(
         <PracticeSessionProvider>
           <PracticeConfigForm
             categories={CATEGORIES}
-            quota={QUOTA}
             signOut={signOut}
             startSession={startSession}
             {...(onSessionStarted === undefined ? {} : { onSessionStarted })}
@@ -103,14 +98,6 @@ function rejectingRequest(code: string): StartSessionRequest {
     )
 }
 
-function renewalDate(renewsAt: string): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(renewsAt))
-}
-
 describe('PracticeConfigForm', () => {
   afterEach(() => {
     cleanup()
@@ -137,17 +124,6 @@ describe('PracticeConfigForm', () => {
       { categorySlug: 'focus', difficulty: 'balanced', searchWindowMinutes: 4 },
     ])
     expect(openedSessions).toEqual([STARTED_SESSION.sessionId])
-  })
-
-  it('offers the plus plan with the renewal date when the quota is exhausted', async () => {
-    renderPracticeConfigForm(rejectingRequest('quota.QUOTA_EXHAUSTED'))
-    submitConfiguration()
-
-    const alert = await screen.findByRole('alert')
-
-    expect(alert).toHaveTextContent(`Elas renovam em ${renewalDate(QUOTA.renewsAt)}.`)
-    expect(alert).toHaveTextContent('Assine o Plus para praticar sem limite.')
-    expect(screen.getByText('idle')).toBeInTheDocument()
   })
 
   it('explains that no theme is available for the chosen configuration', async () => {

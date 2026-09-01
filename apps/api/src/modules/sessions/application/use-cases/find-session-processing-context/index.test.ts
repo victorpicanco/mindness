@@ -24,7 +24,6 @@ function createProcessingSession(): Session {
     accountId: 'account-id',
     themeId: 'theme-id',
     configuration: createConfiguration(),
-    quotaReservationId: 'reservation-id',
     createdAt: CREATED_AT,
   })
   session.acceptAudio(
@@ -74,7 +73,6 @@ describe('FindSessionProcessingContextUseCase', () => {
         accountId: session.accountId,
         themeId: session.themeId,
         configuration: createConfiguration(),
-        quotaReservationId: 'reservation-id',
         state,
         createdAt: CREATED_AT,
         expiresAt: session.expiresAt,

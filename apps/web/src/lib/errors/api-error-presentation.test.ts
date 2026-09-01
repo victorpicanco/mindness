@@ -108,7 +108,6 @@ describe('describeApiError', () => {
   })
 
   it.each([
-    ['quota.QUOTA_EXHAUSTED', 'home.practice.errors.quotaExhausted'],
     ['sessions.THEME_UNAVAILABLE', 'home.practice.errors.themeUnavailable'],
     ['sessions.PRACTICE_NOT_ALLOWED', 'home.practice.errors.practiceNotAllowed'],
   ] as const)('keeps the blocking %s on the practice form', (code, messageKey) => {

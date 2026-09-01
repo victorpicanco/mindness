@@ -31,9 +31,9 @@ describe('bffFetch', () => {
           Response.json(
             {
               error: {
-                code: 'quota.QUOTA_EXHAUSTED',
+                code: 'sessions.SESSION_ALREADY_RUNNING',
                 issues: null,
-                message: 'The quota is exhausted.',
+                message: 'A session is already running.',
                 requestId: 'request-id',
               },
             },
@@ -44,8 +44,8 @@ describe('bffFetch', () => {
     })
 
     await expect(request).rejects.toMatchObject({
-      code: 'quota.QUOTA_EXHAUSTED',
-      message: 'The quota is exhausted.',
+      code: 'sessions.SESSION_ALREADY_RUNNING',
+      message: 'A session is already running.',
       requestId: 'request-id',
     } satisfies Pick<ApiClientError, 'code' | 'message' | 'requestId'>)
   })

@@ -49,18 +49,18 @@ describe('BFF proxy route', () => {
     })
 
     const response = await handler(
-      new Request('https://web.mindness.test/api/bff/sessions/quota?period=current', {
+      new Request('https://web.mindness.test/api/bff/sessions/active?period=current', {
         body: JSON.stringify({ requested: true }),
         headers: { 'content-type': 'application/json' },
         method: 'POST',
       }),
-      context(['sessions', 'quota']),
+      context(['sessions', 'active']),
     )
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ data: { remaining: 2 } })
     expect(requests).toHaveLength(1)
-    expect(requests[0]?.url).toBe('https://api.mindness.test/sessions/quota?period=current')
+    expect(requests[0]?.url).toBe('https://api.mindness.test/sessions/active?period=current')
     expect(requests[0]?.method).toBe('POST')
     expect(requests[0]?.headers.get('authorization')).toBe('Bearer access-token')
     await expect(requests[0]?.text()).resolves.toBe('{"requested":true}')
@@ -92,7 +92,7 @@ describe('BFF proxy route', () => {
         }
 
         return Promise.resolve(
-          requests.filter((item) => item.url.endsWith('/sessions/quota')).length === 1
+          requests.filter((item) => item.url.endsWith('/sessions/active')).length === 1
             ? new Response(null, { status: 401 })
             : Response.json({ data: { remaining: 1 } }),
         )
@@ -100,8 +100,8 @@ describe('BFF proxy route', () => {
     })
 
     const response = await handler(
-      new Request('https://web.mindness.test/api/bff/sessions/quota'),
-      context(['sessions', 'quota']),
+      new Request('https://web.mindness.test/api/bff/sessions/active'),
+      context(['sessions', 'active']),
     )
 
     expect(response.status).toBe(200)
@@ -140,8 +140,8 @@ describe('BFF proxy route', () => {
     })
 
     const response = await handler(
-      new Request('https://web.mindness.test/api/bff/sessions/quota'),
-      context(['sessions', 'quota']),
+      new Request('https://web.mindness.test/api/bff/sessions/active'),
+      context(['sessions', 'active']),
     )
 
     expect(response.status).toBe(401)
@@ -171,8 +171,8 @@ describe('BFF proxy route', () => {
     })
 
     const response = await handler(
-      new Request('https://web.mindness.test/api/bff/sessions/quota'),
-      context(['sessions', 'quota']),
+      new Request('https://web.mindness.test/api/bff/sessions/active'),
+      context(['sessions', 'active']),
     )
 
     expect(response.status).toBe(503)

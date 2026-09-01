@@ -28,43 +28,7 @@ beforeEach(async () => {
   harness.accounts.registerIdentity('access-token', ACCOUNT_ID)
 })
 
-describe('session quota and categories integration', () => {
-  it('returns an enforced quota balance after reservations in flight', async () => {
-    harness.quota.configure({ enforced: true, remaining: 4 })
-    await harness.quota.reserveForSession({ accountId: ACCOUNT_ID, sessionId: 'session-1' })
-
-    const response = await harness.app.inject({
-      method: 'GET',
-      url: '/sessions/quota',
-      headers: { authorization: 'Bearer access-token' },
-    })
-
-    expect(response.statusCode).toBe(200)
-    assertResponseMatchesSchema(harness.app, 'GET', '/sessions/quota', response, 200)
-    expect(response.json()).toStrictEqual({
-      data: {
-        enforced: true,
-        allowance: 4,
-        remaining: 3,
-        renewsAt: '2026-09-01T00:00:00.000Z',
-      },
-    })
-  })
-
-  it('returns an unenforced quota balance for a plus account', async () => {
-    harness.quota.configure({ enforced: false })
-
-    const response = await harness.app.inject({
-      method: 'GET',
-      url: '/sessions/quota',
-      headers: { authorization: 'Bearer access-token' },
-    })
-
-    expect(response.statusCode).toBe(200)
-    assertResponseMatchesSchema(harness.app, 'GET', '/sessions/quota', response, 200)
-    expect(response.json()).toStrictEqual({ data: { enforced: false } })
-  })
-
+describe('theme categories integration', () => {
   it('returns the eligible theme categories', async () => {
     harness.themes.registerEligibleTheme({
       categoryId: CATEGORY_ID,

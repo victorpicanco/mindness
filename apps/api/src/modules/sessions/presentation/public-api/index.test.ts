@@ -7,7 +7,14 @@ describe('SessionsPublicApiImpl', () => {
     const readabilityInputs: { sessionId: string; accountId: string }[] = []
     const api = new SessionsPublicApiImpl({
       findProcessingContext: { execute: () => Promise.resolve(null) },
-      downloadAudio: { execute: () => Promise.resolve(Buffer.from('audio')) },
+      downloadAudio: {
+        execute: () =>
+          Promise.resolve({
+            bytes: Buffer.from('audio'),
+            contentType: 'audio/webm',
+            durationSeconds: 30,
+          }),
+      },
       listStuckProcessing: { execute: () => Promise.resolve([]) },
       checkReadability: {
         execute: (input) => {
@@ -36,7 +43,14 @@ describe('SessionsPublicApiImpl', () => {
     const listStuckProcessingInputs: { before: Date; limit: number }[] = []
     const api = new SessionsPublicApiImpl({
       findProcessingContext: { execute: () => Promise.resolve(context) },
-      downloadAudio: { execute: () => Promise.resolve(Buffer.from('audio')) },
+      downloadAudio: {
+        execute: () =>
+          Promise.resolve({
+            bytes: Buffer.from('audio'),
+            contentType: 'audio/webm',
+            durationSeconds: 30,
+          }),
+      },
       listStuckProcessing: {
         execute: (input) => {
           listStuckProcessingInputs.push(input)
@@ -48,7 +62,11 @@ describe('SessionsPublicApiImpl', () => {
       },
     })
     await expect(api.findProcessingContext('session-id')).resolves.toEqual(context)
-    await expect(api.downloadAudio('session-id')).resolves.toEqual(Buffer.from('audio'))
+    await expect(api.downloadAudio('session-id')).resolves.toEqual({
+      bytes: Buffer.from('audio'),
+      contentType: 'audio/webm',
+      durationSeconds: 30,
+    })
     await expect(api.listStuckProcessing(before, 50)).resolves.toEqual(['session-id'])
     expect(listStuckProcessingInputs).toEqual([{ before, limit: 50 }])
   })

@@ -2,6 +2,7 @@ import type { Analysis } from '@/modules/analyses/domain/entities/analysis/index
 import type { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import type { AccountPlan } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
+import type { AudioContent } from '@/modules/analyses/domain/ports/audio-reader-port/index.js'
 import type { EvaluationResult } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 import type {
   AnalysisAccess,
@@ -83,8 +84,12 @@ class InMemorySessionsPort {
 }
 
 class InMemoryAudioReader {
-  read(): Promise<Buffer> {
-    return Promise.resolve(Buffer.from('audio'))
+  read(): Promise<AudioContent> {
+    return Promise.resolve({
+      bytes: Buffer.from('audio'),
+      contentType: 'audio/webm',
+      durationSeconds: 30,
+    })
   }
 }
 

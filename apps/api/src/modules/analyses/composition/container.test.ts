@@ -24,7 +24,7 @@ describe('createAnalysesContainer', () => {
       },
       sessionsFacade: {
         findProcessingContext: () => Promise.resolve(null),
-        downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+        downloadAudio: () => Promise.resolve(createAudioContent()),
         checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
         listStuckProcessing: () => Promise.resolve([]),
       },
@@ -47,7 +47,7 @@ describe('createAnalysesContainer', () => {
           checkAnalysisAccess: () => Promise.resolve({ failure: null, readable: false }),
           listStuckProcessing: () => Promise.resolve([]),
         },
-        audioReader: { read: () => Promise.resolve(Buffer.from('audio')) },
+        audioReader: { read: () => Promise.resolve(createAudioContent()) },
         themes: { findTitle: () => Promise.resolve('Theme') },
         transcription: { transcribe: () => Promise.resolve(createTranscription()) },
         evaluation: { evaluate: () => Promise.resolve(createEvaluation()) },
@@ -119,7 +119,7 @@ function baseDeps() {
     },
     sessionsFacade: {
       findProcessingContext: () => Promise.resolve(null),
-      downloadAudio: () => Promise.resolve(Buffer.from('audio')),
+      downloadAudio: () => Promise.resolve(createAudioContent()),
       checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
       listStuckProcessing: () => Promise.resolve([]),
     },
@@ -231,4 +231,8 @@ function createCostEntryRow() {
 
 function createLoggerStub() {
   return { warn: () => undefined }
+}
+
+function createAudioContent() {
+  return { bytes: Buffer.from('audio'), contentType: 'audio/webm', durationSeconds: 30 }
 }

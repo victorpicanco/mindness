@@ -63,7 +63,7 @@ export class ProcessSessionAudioUseCase {
       try {
         const audio = await this.dependencies.audioReader.read(context.sessionId)
         transcriptionResult = await this.dependencies.transcription.transcribe({
-          audio,
+          audio: audio.bytes,
           deadlineMs: remainingMs,
           signal: controller.signal,
         })

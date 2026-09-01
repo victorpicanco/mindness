@@ -4,6 +4,11 @@ import type { SessionsRepository } from '@/modules/sessions/domain/repositories/
 export interface DownloadSessionAudioInput {
   readonly sessionId: string
 }
+export interface DownloadSessionAudioOutput {
+  readonly bytes: Buffer
+  readonly contentType: string
+  readonly durationSeconds: number
+}
 export interface DownloadSessionAudioDependencies {
   readonly sessions: Pick<SessionsRepository, 'findById'>
   readonly audioStorage: Pick<AudioStoragePort, 'downloadObject'>

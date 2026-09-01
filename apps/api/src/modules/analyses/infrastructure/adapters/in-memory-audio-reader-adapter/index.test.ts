@@ -5,12 +5,22 @@ import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluati
 import { InMemoryAudioReaderAdapter } from './index.js'
 
 describe('InMemoryAudioReaderAdapter', () => {
-  it('returns the configured audio for a session', async () => {
+  it('returns the configured audio and its validated metadata', async () => {
     const adapter = new InMemoryAudioReaderAdapter()
-    const audio = Buffer.from('audio')
-    adapter.setAudio('session-1', audio)
+    const bytes = Buffer.from('audio')
+    adapter.setAudio('session-1', bytes, 'audio/mp4', 12.5)
 
-    await expect(adapter.read('session-1')).resolves.toEqual(audio)
+    await expect(adapter.read('session-1')).resolves.toEqual({
+      bytes,
+      contentType: 'audio/mp4',
+      durationSeconds: 12.5,
+    })
+  })
+
+  it('reads an unset session as empty audio', async () => {
+    const adapter = new InMemoryAudioReaderAdapter()
+
+    await expect(adapter.read('session-1')).resolves.toMatchObject({ bytes: Buffer.alloc(0) })
   })
 
   it('fails the next audio read', async () => {

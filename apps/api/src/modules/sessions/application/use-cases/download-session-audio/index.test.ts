@@ -32,7 +32,7 @@ function createSessionWithAudio(): Session {
 }
 
 describe('DownloadSessionAudioUseCase', () => {
-  it('downloads the audio using the session storage path', async () => {
+  it('downloads the bytes with the validated audio metadata', async () => {
     const audio = Buffer.from('audio')
     const session = createSessionWithAudio()
     const useCase = new DownloadSessionAudioUseCase({
@@ -42,7 +42,35 @@ describe('DownloadSessionAudioUseCase', () => {
           Promise.resolve(path === 'audio-path' ? audio : Buffer.alloc(0)),
       },
     })
-    await expect(useCase.execute({ sessionId: 'session-id' })).resolves.toBe(audio)
+
+    await expect(useCase.execute({ sessionId: 'session-id' })).resolves.toEqual({
+      bytes: audio,
+      contentType: 'audio/webm',
+      durationSeconds: 30,
+    })
+  })
+
+  it('throws when the session exists without accepted audio', async () => {
+    const session = Session.start({
+      sessionId: 'session-id',
+      accountId: 'account-id',
+      themeId: 'theme-id',
+      configuration: SessionConfiguration.create({
+        difficulty: 'balanced',
+        categorySlug: 'communication',
+        searchWindowMinutes: 4,
+      }),
+      createdAt: new Date('2026-08-21T11:00:00.000Z'),
+    })
+    const useCase = new DownloadSessionAudioUseCase({
+      sessions: { findById: () => Promise.resolve(session) },
+      audioStorage: { downloadObject: () => Promise.resolve(Buffer.alloc(0)) },
+    })
+
+    await expect(useCase.execute({ sessionId: 'session-id' })).rejects.toMatchObject({
+      code: 'sessions.SESSION_NOT_FOUND',
+      httpStatus: 404,
+    })
   })
 
   it('throws when the session has no accepted audio', async () => {
@@ -53,6 +81,7 @@ describe('DownloadSessionAudioUseCase', () => {
 
     await expect(useCase.execute({ sessionId: 'session-id' })).rejects.toMatchObject({
       code: 'sessions.SESSION_NOT_FOUND',
+      httpStatus: 404,
     })
   })
 })

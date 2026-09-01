@@ -199,6 +199,15 @@ export class Session {
     this.completedAtEpoch = at.getTime()
   }
 
+  completeWithoutScore(at: Date): void {
+    if (this._state !== 'processing') {
+      throw new SessionNotInProgressError(this._state)
+    }
+
+    this._state = 'completed'
+    this.completedAtEpoch = at.getTime()
+  }
+
   fail(reason: SessionFailureReason, at: Date): void {
     if (this._state !== 'processing') {
       throw new SessionNotInProgressError(this._state)

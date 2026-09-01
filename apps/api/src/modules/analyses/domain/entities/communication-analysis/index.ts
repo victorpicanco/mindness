@@ -7,6 +7,7 @@ import type {
 } from './types.js'
 
 export const COMMUNICATION_FEEDBACK_VERSION = 2
+export const SPEECH_FEEDBACK_PROMPT_VERSION = 'speech-feedback-v1'
 
 export class CommunicationAnalysis {
   readonly feedbackVersion = COMMUNICATION_FEEDBACK_VERSION

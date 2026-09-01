@@ -131,6 +131,7 @@ export class ProcessSessionAudioUseCase {
           sessionId: context.sessionId,
           accountId: context.accountId,
           plan,
+          analysisVersion: 1,
           scores: {
             clarity: persisted.analysis.clarityScore.value,
             rhythm: persisted.analysis.rhythmScore.value,

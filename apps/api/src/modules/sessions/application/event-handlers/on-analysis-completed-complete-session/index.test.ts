@@ -21,6 +21,18 @@ describe('OnAnalysisCompletedCompleteSession', () => {
     expect(repository.saved).toBe(1)
   })
 
+  it('completes a multimodal session without a score', async () => {
+    const session = createProcessingSession()
+    const repository = createRepository(session)
+    const handler = new OnAnalysisCompletedCompleteSession(repository)
+
+    await handler.handle(createMultimodalEvent())
+
+    expect(session.state).toBe('completed')
+    expect(session.totalScore).toBeNull()
+    expect(repository.saved).toBe(1)
+  })
+
   it('ignores a missing session', async () => {
     const repository = createRepository(null)
     const handler = new OnAnalysisCompletedCompleteSession(repository)
@@ -36,7 +48,18 @@ function createEvent(): AnalysisCompletedEvent {
     eventName: 'analysis_completed',
     occurredAt: new Date('2026-08-20T12:00:00.000Z'),
     version: 1,
-    payload: { sessionId: 'session-id', scores: { total: 87 } },
+    payload: { sessionId: 'session-id', analysisVersion: 1, scores: { total: 87 } },
+  }
+  return event
+}
+
+function createMultimodalEvent(): AnalysisCompletedEvent {
+  const event: IntegrationEvent<'analysis_completed', AnalysisCompletedEvent['payload']> = {
+    eventId: 'event-id',
+    eventName: 'analysis_completed',
+    occurredAt: new Date('2026-08-20T12:00:00.000Z'),
+    version: 1,
+    payload: { sessionId: 'session-id', analysisVersion: 2 },
   }
   return event
 }

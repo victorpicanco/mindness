@@ -12,16 +12,27 @@ export interface AnalysisScores {
   readonly total: number
 }
 
-export interface AnalysisCompletedPayload {
+interface AnalysisCompletedBasePayload {
   readonly sessionId: string
   readonly accountId: string
   readonly plan: AccountPlan
-  readonly scores: AnalysisScores
   readonly processingMs: number
   readonly costMicrosUsd: number
 }
 
-export interface CreateAnalysisCompletedParams extends AnalysisCompletedPayload {
+export interface LegacyAnalysisCompletedPayload extends AnalysisCompletedBasePayload {
+  readonly analysisVersion: 1
+  readonly scores: AnalysisScores
+}
+
+export interface MultimodalAnalysisCompletedPayload extends AnalysisCompletedBasePayload {
+  readonly analysisVersion: 2
+}
+
+export type AnalysisCompletedPayload =
+  LegacyAnalysisCompletedPayload | MultimodalAnalysisCompletedPayload
+
+export type CreateAnalysisCompletedParams = AnalysisCompletedPayload & {
   readonly eventId: string
   readonly occurredAt: Date
 }
@@ -44,15 +55,21 @@ export class AnalysisCompleted implements IntegrationEvent<
   }
 
   static create(params: CreateAnalysisCompletedParams): AnalysisCompleted {
-    const scores = Object.freeze({ ...params.scores })
-    const payload = Object.freeze({
+    const base = {
       sessionId: params.sessionId,
       accountId: params.accountId,
       plan: params.plan,
-      scores,
       processingMs: params.processingMs,
       costMicrosUsd: params.costMicrosUsd,
-    })
+    }
+    const payload: AnalysisCompletedPayload =
+      params.analysisVersion === 2
+        ? Object.freeze({ ...base, analysisVersion: 2 })
+        : Object.freeze({
+            ...base,
+            analysisVersion: 1,
+            scores: Object.freeze({ ...params.scores }),
+          })
 
     return new AnalysisCompleted(params.eventId, params.occurredAt.getTime(), payload)
   }

@@ -102,16 +102,25 @@ function parseAnalysisCompleted(event: IntegrationEvent): AnalysisCompletedEvent
 
   const payload: unknown = event.payload
   if (typeof payload !== 'object' || payload === null) return null
+
+  const envelope = {
+    eventId: event.eventId,
+    eventName: 'analysis_completed',
+    occurredAt: event.occurredAt,
+    version: event.version,
+  } as const
+
+  if ('analysisVersion' in payload && payload.analysisVersion === 2) {
+    return { ...envelope, payload: { sessionId, analysisVersion: 2 } }
+  }
+
   if (!('scores' in payload)) return null
   const scores: unknown = payload.scores
   if (typeof scores !== 'object' || scores === null) return null
   if (!('total' in scores) || typeof scores.total !== 'number') return null
 
   return {
-    eventId: event.eventId,
-    eventName: 'analysis_completed',
-    occurredAt: event.occurredAt,
-    version: event.version,
-    payload: { sessionId, scores: { total: scores.total } },
+    ...envelope,
+    payload: { sessionId, analysisVersion: 1, scores: { total: scores.total } },
   }
 }

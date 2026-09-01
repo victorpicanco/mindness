@@ -63,6 +63,31 @@ describe('registerSessionsModule', () => {
     await app.close()
   })
 
+  it('completes a multimodal analysis event without reading a score', async () => {
+    const handlers = new Map<string, EventHandler>()
+    const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })
+    const deps = createDependencies([], handlers, createSessionRow('processing'))
+    const upsert = vi.spyOn(deps.prisma.session, 'upsert')
+    const occurredAt = new Date('2026-08-28T01:32:28.785Z')
+
+    await registerSessionsModule(app, deps)
+    await handlers.get('analysis_completed')?.({
+      eventId: 'evt-1',
+      eventName: 'analysis_completed',
+      occurredAt,
+      version: 1,
+      payload: { sessionId: 'session-1', analysisVersion: 2 },
+    })
+
+    expect(upsert).toHaveBeenCalledOnce()
+    expect(upsert.mock.calls[0]?.[0].update).toMatchObject({
+      state: 'completed',
+      completedAt: occurredAt,
+      totalScore: null,
+    })
+    await app.close()
+  })
+
   it('preserves occurredAt when the published event exposes it as a prototype getter', async () => {
     const handlers = new Map<string, EventHandler>()
     const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })

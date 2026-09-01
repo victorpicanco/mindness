@@ -12,6 +12,12 @@ import type {
   AnalysisAccess,
   SessionProcessingContext,
 } from '@/modules/analyses/domain/ports/sessions-port/index.js'
+import type {
+  FeedbackSynthesisInput,
+  FeedbackSynthesisResult,
+} from '@/modules/analyses/domain/ports/feedback-synthesis-port/index.js'
+import type { AnalysisCostEntry } from '@/modules/analyses/domain/entities/analysis-cost-entry/index.js'
+import type { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import type { TranscriptionResult } from '@/modules/analyses/domain/ports/transcription-port/index.js'
 import { AnalysisDeadlineExceededError } from '@/modules/analyses/domain/errors/analysis-deadline-exceeded-error/index.js'
 import { CommunicationFeedback } from '@/modules/analyses/domain/value-objects/communication-feedback/index.js'
@@ -153,6 +159,66 @@ class DeferredTranscriptionPort {
   }
 }
 
+class RecordingFeedbackSynthesisPort {
+  readonly received: FeedbackSynthesisInput[] = []
+
+  constructor(
+    private readonly result: FeedbackSynthesisResult,
+    private readonly clock: ControllableClock,
+  ) {}
+
+  synthesize(input: FeedbackSynthesisInput): Promise<FeedbackSynthesisResult> {
+    this.received.push(input)
+    this.clock.advance(1_500)
+    return Promise.resolve(this.result)
+  }
+}
+
+class InMemoryTranscriptionsRepository {
+  readonly saved: Transcription[] = []
+
+  findBySessionId(): Promise<Transcription | null> {
+    return Promise.resolve(null)
+  }
+
+  save(transcription: Transcription): Promise<void> {
+    this.saved.push(transcription)
+    return Promise.resolve()
+  }
+}
+
+class InMemoryCostEntriesRepository {
+  readonly saved: AnalysisCostEntry[] = []
+
+  save(entry: AnalysisCostEntry): Promise<void> {
+    this.saved.push(entry)
+    return Promise.resolve()
+  }
+
+  sumMicrosBetween(): Promise<number> {
+    return Promise.resolve(0)
+  }
+}
+
+class InMemoryUnitOfWork {
+  runCount = 0
+  savesInsideRun = 0
+
+  constructor(
+    private readonly transcriptions: InMemoryTranscriptionsRepository,
+    private readonly analyses: InMemoryCommunicationAnalysesRepository,
+    private readonly costs: InMemoryCostEntriesRepository,
+  ) {}
+
+  async run<T>(operation: () => Promise<T>): Promise<T> {
+    this.runCount += 1
+    const result = await operation()
+    this.savesInsideRun =
+      this.transcriptions.saved.length + this.analyses.saved.length + this.costs.saved.length
+    return result
+  }
+}
+
 class CountingThemesPort {
   callCount = 0
 
@@ -225,6 +291,28 @@ const auditoryResult: AuditoryAnalysisResult = {
   outputTokens: 300,
 }
 
+const synthesizedFeedback = CommunicationFeedback.create({
+  durationSeconds: 30,
+  audioUsability: 'usable',
+  alignmentQuality: 'reliable',
+  limitations: [],
+  literalTranscript: 'Eu ééé apresento a ideia com clareza',
+  mainMessage: 'A pessoa defende a ideia principal.',
+  attemptedStructure: 'Abertura, argumento e fecho.',
+  summary: 'A mensagem chega inteira. Um alongamento abre o argumento.',
+  strengths: [],
+  moments: [],
+  patterns: [],
+  asrDivergences: [],
+  priorities: [],
+})
+
+const synthesisResult: FeedbackSynthesisResult = {
+  feedback: synthesizedFeedback,
+  inputTokens: 1_000,
+  outputTokens: 500,
+}
+
 const transcriptionResult: TranscriptionResult = {
   text: 'Eu apresento a ideia com clareza',
   words: [
@@ -248,11 +336,15 @@ function createDependencies(
   readonly auditoryAnalysis: DeferredAuditoryAnalysisPort
   readonly clock: ControllableClock
   readonly communicationAnalyses: InMemoryCommunicationAnalysesRepository
+  readonly costs: InMemoryCostEntriesRepository
   readonly dependencies: ProcessMultimodalSessionAudioDependencies
   readonly events: FakeEventBus
+  readonly feedbackSynthesis: RecordingFeedbackSynthesisPort
   readonly logger: InMemoryAnalysisLogger
   readonly themes: CountingThemesPort
   readonly transcription: DeferredTranscriptionPort
+  readonly transcriptions: InMemoryTranscriptionsRepository
+  readonly unitOfWork: InMemoryUnitOfWork
 } {
   const clock = new ControllableClock(new Date('2026-08-21T15:30:00.000Z'))
   const audioPreparation = new CountingAudioPreparation()
@@ -263,6 +355,10 @@ function createDependencies(
   const logger = new InMemoryAnalysisLogger()
   const themes = new CountingThemesPort()
   const transcription = new DeferredTranscriptionPort()
+  const feedbackSynthesis = new RecordingFeedbackSynthesisPort(synthesisResult, clock)
+  const transcriptions = new InMemoryTranscriptionsRepository()
+  const costs = new InMemoryCostEntriesRepository()
+  const unitOfWork = new InMemoryUnitOfWork(transcriptions, communicationAnalyses, costs)
   const context = overrides.context === undefined ? processingContext : overrides.context
   const plan = overrides.plan === undefined ? 'free' : overrides.plan
 
@@ -272,6 +368,7 @@ function createDependencies(
     auditoryAnalysis,
     clock,
     communicationAnalyses,
+    costs,
     dependencies: {
       accounts: new InMemoryAccountsPort(plan),
       audioPreparation,
@@ -279,17 +376,29 @@ function createDependencies(
       auditoryAnalysis,
       clock,
       communicationAnalyses,
+      costRates: {
+        transcriptionCostPerMinuteMicros: 10_000,
+        geminiInputCostPerMtokMicros: 100,
+        geminiOutputCostPerMtokMicros: 200,
+      },
+      costs,
       eventPublisher: events,
+      feedbackSynthesis,
       idGenerator: new SequentialIdGenerator(),
       logger,
       sessions: new InMemorySessionsPort(context),
       themes,
       transcription,
+      transcriptions,
+      unitOfWork,
     },
     events,
+    feedbackSynthesis,
     logger,
     themes,
     transcription,
+    transcriptions,
+    unitOfWork,
   }
 }
 
@@ -355,6 +464,115 @@ describe('ProcessMultimodalSessionAudioUseCase', () => {
     auditoryAnalysis.release(auditoryResult)
     transcription.release(transcriptionResult)
     await execution
+  })
+
+  it('feeds the synthesis with the audio, the observation, the theme and the transcription', async () => {
+    const { auditoryAnalysis, dependencies, feedbackSynthesis, themes, transcription } =
+      createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release(auditoryResult)
+    transcription.release(transcriptionResult)
+    await execution
+
+    expect(themes.callCount).toBe(1)
+    expect(feedbackSynthesis.received).toHaveLength(1)
+    expect(feedbackSynthesis.received[0]).toMatchObject({
+      audio: { bytes: PREPARED_BYTES, contentType: CANONICAL_AUDIO_CONTENT_TYPE },
+      observation: auditoryResult.observation,
+      themeTitle: 'Speaking with confidence',
+      transcript: transcriptionResult.text,
+      words: transcriptionResult.words,
+      rhythm: { wordsPerMinute: 150 },
+    })
+  })
+
+  it('persists the transcription, the feedback and the cost in a single transaction', async () => {
+    const {
+      auditoryAnalysis,
+      communicationAnalyses,
+      costs,
+      dependencies,
+      transcription,
+      transcriptions,
+      unitOfWork,
+    } = createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release(auditoryResult)
+    transcription.release(transcriptionResult)
+    await execution
+
+    expect(unitOfWork.runCount).toBe(1)
+    expect(unitOfWork.savesInsideRun).toBe(3)
+    expect(transcriptions.saved).toHaveLength(1)
+    expect(communicationAnalyses.saved).toMatchObject([
+      {
+        sessionId: 'session-1',
+        feedbackVersion: 2,
+        promptVersion: 'speech-feedback-v1',
+        feedback: synthesizedFeedback,
+        processingMs: 1_500,
+        costMicrosUsd: 504,
+      },
+    ])
+    expect(costs.saved).toMatchObject([
+      {
+        sessionId: 'session-1',
+        accountId: 'account-1',
+        transcriptionMicrosUsd: 500,
+        auditoryMicrosUsd: 2,
+        synthesisMicrosUsd: 2,
+        evaluationMicrosUsd: 4,
+        totalMicrosUsd: 504,
+      },
+    ])
+  })
+
+  it('never persists the intermediate auditory observation', async () => {
+    const { auditoryAnalysis, communicationAnalyses, dependencies, transcription } =
+      createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release(auditoryResult)
+    transcription.release(transcriptionResult)
+    await execution
+
+    const persisted = JSON.stringify(communicationAnalyses.saved)
+    expect(persisted).not.toContain(auditoryResult.observation.deliverySummary)
+    expect(persisted).not.toContain('candidateEvents')
+  })
+
+  it('publishes a completion event that carries no score', async () => {
+    const { auditoryAnalysis, dependencies, events, transcription } = createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release(auditoryResult)
+    transcription.release(transcriptionResult)
+    await execution
+
+    expect(events.published).toMatchObject([
+      {
+        eventName: 'analysis_completed',
+        payload: {
+          sessionId: 'session-1',
+          accountId: 'account-1',
+          plan: 'free',
+          analysisVersion: 2,
+          processingMs: 1_500,
+          costMicrosUsd: 504,
+        },
+      },
+    ])
+    expect(Object.keys(events.published[0]?.payload ?? {})).not.toContain('scores')
   })
 
   it('skips a session that already has a communication analysis', async () => {

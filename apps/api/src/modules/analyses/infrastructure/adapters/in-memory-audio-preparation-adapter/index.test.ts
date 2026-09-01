@@ -88,4 +88,14 @@ describe('InMemoryAudioPreparationAdapter', () => {
       code: 'analyses.AUDIO_PREPARATION_FAILED',
     })
   })
+
+  it('forgets the recorded preparations when it is reset', async () => {
+    const adapter = new InMemoryAudioPreparationAdapter()
+    const controller = new AbortController()
+    await adapter.prepare({ source, signal: controller.signal })
+
+    adapter.reset()
+
+    expect(adapter.received).toHaveLength(0)
+  })
 })

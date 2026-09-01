@@ -38,6 +38,13 @@ export class InMemoryAudioPreparationAdapter implements AudioPreparationPort {
     this.hangs = true
   }
 
+  reset(): void {
+    this.failure = null
+    this.hangs = false
+    this.result = null
+    this.received.length = 0
+  }
+
   private async applySimulation(signal: AbortSignal): Promise<void> {
     if (this.failure !== null) {
       const failure = this.failure

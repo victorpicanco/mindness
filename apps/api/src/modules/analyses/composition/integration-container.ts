@@ -166,6 +166,7 @@ export async function createAnalysesIntegrationContainer(
       themes.reset()
       processingQueue.enqueued.length = 0
       evaluation.reset()
+      audioPreparation.reset()
       auditoryAnalysis.reset()
       feedbackSynthesis.reset()
       logger.messages.length = 0

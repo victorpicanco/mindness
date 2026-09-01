@@ -20,10 +20,16 @@ import type { AnalysisCostEntry } from '@/modules/analyses/domain/entities/analy
 import type { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import type { TranscriptionResult } from '@/modules/analyses/domain/ports/transcription-port/index.js'
 import { AnalysisDeadlineExceededError } from '@/modules/analyses/domain/errors/analysis-deadline-exceeded-error/index.js'
+import { AudioPreparationFailedError } from '@/modules/analyses/domain/errors/audio-preparation-failed-error/index.js'
+import { AuditoryAnalysisFailedError } from '@/modules/analyses/domain/errors/auditory-analysis-failed-error/index.js'
+import { FeedbackSynthesisFailedError } from '@/modules/analyses/domain/errors/feedback-synthesis-failed-error/index.js'
+import { MalformedAuditoryAnalysisError } from '@/modules/analyses/domain/errors/malformed-auditory-analysis-error/index.js'
+import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
+import { TranscriptionFailedError } from '@/modules/analyses/domain/errors/transcription-failed-error/index.js'
 import { CommunicationFeedback } from '@/modules/analyses/domain/value-objects/communication-feedback/index.js'
 import { FakeEventBus } from '@/shared/messaging/fake-event-bus/index.js'
 import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ProcessMultimodalSessionAudioUseCase } from './index.js'
 import type { ProcessMultimodalSessionAudioDependencies } from './types.js'
@@ -31,15 +37,18 @@ import type { ProcessMultimodalSessionAudioDependencies } from './types.js'
 interface Deferred<T> {
   readonly promise: Promise<T>
   resolve(value: T): void
+  reject(error: Error): void
 }
 
 function createDeferred<T>(): Deferred<T> {
   let settle: (value: T) => void = () => undefined
-  const promise = new Promise<T>((resolve) => {
+  let fail: (error: Error) => void = () => undefined
+  const promise = new Promise<T>((resolve, reject) => {
     settle = resolve
+    fail = reject
   })
 
-  return { promise, resolve: (value) => settle(value) }
+  return { promise, resolve: (value) => settle(value), reject: (error) => fail(error) }
 }
 
 const SOURCE_BYTES = Buffer.from('original-webm')
@@ -101,9 +110,36 @@ class CountingAudioReader {
 
 class CountingAudioPreparation {
   readonly received: PrepareAudioInput[] = []
+  private failure: Error | null = null
+  private hangs = false
+
+  failNext(error: Error): void {
+    this.failure = error
+  }
+
+  hangUntilAborted(): void {
+    this.hangs = true
+  }
 
   prepare(input: PrepareAudioInput): Promise<PreparedAudio> {
     this.received.push(input)
+
+    if (this.failure !== null) {
+      const failure = this.failure
+      this.failure = null
+      return Promise.reject(failure)
+    }
+    if (this.hangs) {
+      this.hangs = false
+      return new Promise<PreparedAudio>((_resolve, reject) => {
+        input.signal.addEventListener(
+          'abort',
+          () => reject(new AudioPreparationFailedError('preparation aborted')),
+          { once: true },
+        )
+      })
+    }
+
     return Promise.resolve({
       bytes: PREPARED_BYTES,
       contentType: CANONICAL_AUDIO_CONTENT_TYPE,
@@ -115,6 +151,7 @@ class CountingAudioPreparation {
 class DeferredAuditoryAnalysisPort {
   readonly received: { readonly audio: PreparedAudio; readonly signal: AbortSignal }[] = []
   private readonly invoked = createDeferred<void>()
+  private readonly aborted = createDeferred<void>()
   private readonly answer = createDeferred<AuditoryAnalysisResult>()
 
   get called(): Promise<void> {
@@ -127,17 +164,34 @@ class DeferredAuditoryAnalysisPort {
   }): Promise<AuditoryAnalysisResult> {
     this.received.push(input)
     this.invoked.resolve()
+    input.signal.addEventListener(
+      'abort',
+      () => {
+        this.answer.reject(new AuditoryAnalysisFailedError('request aborted'))
+        this.aborted.resolve()
+      },
+      { once: true },
+    )
     return this.answer.promise
   }
 
   release(result: AuditoryAnalysisResult): void {
     this.answer.resolve(result)
   }
+
+  reject(error: Error): void {
+    this.answer.reject(error)
+  }
+
+  get abortedByPeer(): Promise<void> {
+    return this.aborted.promise
+  }
 }
 
 class DeferredTranscriptionPort {
   readonly received: { readonly audio: Buffer; readonly deadlineMs: number }[] = []
   private readonly invoked = createDeferred<void>()
+  private readonly aborted = createDeferred<void>()
   private readonly answer = createDeferred<TranscriptionResult>()
 
   get called(): Promise<void> {
@@ -151,24 +205,67 @@ class DeferredTranscriptionPort {
   }): Promise<TranscriptionResult> {
     this.received.push({ audio: input.audio, deadlineMs: input.deadlineMs })
     this.invoked.resolve()
+    input.signal.addEventListener(
+      'abort',
+      () => {
+        this.answer.reject(new TranscriptionFailedError('request aborted'))
+        this.aborted.resolve()
+      },
+      { once: true },
+    )
     return this.answer.promise
   }
 
   release(result: TranscriptionResult): void {
     this.answer.resolve(result)
   }
+
+  reject(error: Error): void {
+    this.answer.reject(error)
+  }
+
+  get abortedByPeer(): Promise<void> {
+    return this.aborted.promise
+  }
 }
 
 class RecordingFeedbackSynthesisPort {
   readonly received: FeedbackSynthesisInput[] = []
+  private failure: Error | null = null
+  private hangs = false
 
   constructor(
     private readonly result: FeedbackSynthesisResult,
     private readonly clock: ControllableClock,
   ) {}
 
+  failNext(error: Error): void {
+    this.failure = error
+  }
+
+  hangUntilAborted(): void {
+    this.hangs = true
+  }
+
   synthesize(input: FeedbackSynthesisInput): Promise<FeedbackSynthesisResult> {
     this.received.push(input)
+
+    if (this.failure !== null) {
+      const failure = this.failure
+      this.failure = null
+      return Promise.reject(failure)
+    }
+    if (this.hangs) {
+      this.hangs = false
+      return new Promise<FeedbackSynthesisResult>((_resolve, reject) => {
+        input.signal.addEventListener(
+          'abort',
+          () => reject(new FeedbackSynthesisFailedError('request aborted')),
+          { once: true },
+        )
+      })
+    }
+
     this.clock.advance(1_500)
     return Promise.resolve(this.result)
   }
@@ -222,9 +319,11 @@ class InMemoryUnitOfWork {
 class CountingThemesPort {
   callCount = 0
 
+  constructor(private readonly title: string | null = 'Speaking with confidence') {}
+
   findTitle(): Promise<string | null> {
     this.callCount += 1
-    return Promise.resolve('Speaking with confidence')
+    return Promise.resolve(this.title)
   }
 }
 
@@ -329,6 +428,7 @@ function createDependencies(
   overrides: {
     readonly context?: SessionProcessingContext | null
     readonly plan?: AccountPlan | null
+    readonly themeTitle?: string | null
   } = {},
 ): {
   readonly audioPreparation: CountingAudioPreparation
@@ -353,7 +453,9 @@ function createDependencies(
   const communicationAnalyses = new InMemoryCommunicationAnalysesRepository()
   const events = new FakeEventBus()
   const logger = new InMemoryAnalysisLogger()
-  const themes = new CountingThemesPort()
+  const themes = new CountingThemesPort(
+    overrides.themeTitle === undefined ? 'Speaking with confidence' : overrides.themeTitle,
+  )
   const transcription = new DeferredTranscriptionPort()
   const feedbackSynthesis = new RecordingFeedbackSynthesisPort(synthesisResult, clock)
   const transcriptions = new InMemoryTranscriptionsRepository()
@@ -402,7 +504,16 @@ function createDependencies(
   }
 }
 
+const TIGHT_DEADLINE_CONTEXT: SessionProcessingContext = {
+  ...processingContext,
+  recordedAt: new Date('2026-08-21T15:29:30.000Z'),
+}
+
 describe('ProcessMultimodalSessionAudioUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('starts the auditory analysis and the transcription before either one answers', async () => {
     const { auditoryAnalysis, dependencies, transcription } = createDependencies()
     const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
@@ -618,5 +729,230 @@ describe('ProcessMultimodalSessionAudioUseCase', () => {
     expect(events.published).toMatchObject([
       { eventName: 'analysis_timeout', payload: { sessionId: 'session-1', plan: 'free' } },
     ])
+  })
+
+  it('fails closed when the audio preparation breaks', async () => {
+    const {
+      audioPreparation,
+      auditoryAnalysis,
+      communicationAnalyses,
+      dependencies,
+      events,
+      transcription,
+    } = createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+    audioPreparation.failNext(new AudioPreparationFailedError('ffmpeg exited'))
+
+    await expect(useCase.execute({ sessionId: 'session-1' })).rejects.toBeInstanceOf(
+      AudioPreparationFailedError,
+    )
+
+    expect(auditoryAnalysis.received).toHaveLength(0)
+    expect(transcription.received).toHaveLength(0)
+    expect(communicationAnalyses.saved).toHaveLength(0)
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'audio_preparation_failed' } },
+    ])
+  })
+
+  it('aborts the transcription when the auditory analysis fails and keeps the original cause', async () => {
+    const { auditoryAnalysis, communicationAnalyses, dependencies, events, transcription } =
+      createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.reject(new AuditoryAnalysisFailedError('provider unavailable'))
+    await transcription.abortedByPeer
+
+    await expect(execution).rejects.toBeInstanceOf(AuditoryAnalysisFailedError)
+    expect(communicationAnalyses.saved).toHaveLength(0)
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'auditory_analysis_failed' } },
+    ])
+  })
+
+  it('aborts the auditory analysis when the transcription fails and keeps the original cause', async () => {
+    const { auditoryAnalysis, dependencies, events, transcription } = createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    transcription.reject(new TranscriptionFailedError('provider unavailable'))
+    await auditoryAnalysis.abortedByPeer
+
+    await expect(execution).rejects.toBeInstanceOf(TranscriptionFailedError)
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'transcription_failed' } },
+    ])
+  })
+
+  it('reports a malformed auditory response as a malformed evaluation', async () => {
+    const { auditoryAnalysis, dependencies, events, transcription } = createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.reject(new MalformedAuditoryAnalysisError('candidateEvents'))
+    await transcription.abortedByPeer
+
+    await expect(execution).rejects.toBeInstanceOf(MalformedAuditoryAnalysisError)
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'malformed_evaluation' } },
+    ])
+  })
+
+  it('refuses to synthesize feedback from unusable audio', async () => {
+    const {
+      auditoryAnalysis,
+      communicationAnalyses,
+      dependencies,
+      events,
+      feedbackSynthesis,
+      transcription,
+    } = createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release({
+      ...auditoryResult,
+      observation: { ...auditoryResult.observation, audioUsability: 'unusable' },
+    })
+    transcription.release(transcriptionResult)
+
+    await expect(execution).rejects.toBeInstanceOf(AuditoryAnalysisFailedError)
+    expect(feedbackSynthesis.received).toHaveLength(0)
+    expect(communicationAnalyses.saved).toHaveLength(0)
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'unusable_audio' } },
+    ])
+  })
+
+  it('fails when the theme behind the session no longer exists', async () => {
+    const { auditoryAnalysis, dependencies, events, feedbackSynthesis, transcription } =
+      createDependencies({ themeTitle: null })
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release(auditoryResult)
+    transcription.release(transcriptionResult)
+
+    await expect(execution).rejects.toBeInstanceOf(FeedbackSynthesisFailedError)
+    expect(feedbackSynthesis.received).toHaveLength(0)
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'feedback_synthesis_failed' } },
+    ])
+  })
+
+  it('fails without persisting anything when the synthesis breaks', async () => {
+    const {
+      auditoryAnalysis,
+      communicationAnalyses,
+      costs,
+      dependencies,
+      events,
+      feedbackSynthesis,
+      transcription,
+      transcriptions,
+    } = createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+    feedbackSynthesis.failNext(new FeedbackSynthesisFailedError('provider unavailable'))
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release(auditoryResult)
+    transcription.release(transcriptionResult)
+
+    await expect(execution).rejects.toBeInstanceOf(FeedbackSynthesisFailedError)
+    expect(transcriptions.saved).toHaveLength(0)
+    expect(communicationAnalyses.saved).toHaveLength(0)
+    expect(costs.saved).toHaveLength(0)
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'feedback_synthesis_failed' } },
+    ])
+  })
+
+  it('reports a malformed synthesis response as a malformed evaluation', async () => {
+    const { auditoryAnalysis, dependencies, events, feedbackSynthesis, transcription } =
+      createDependencies()
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+    feedbackSynthesis.failNext(new MalformedEvaluationError('moments'))
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release(auditoryResult)
+    transcription.release(transcriptionResult)
+
+    await expect(execution).rejects.toBeInstanceOf(MalformedEvaluationError)
+    expect(events.published).toMatchObject([
+      { eventName: 'analysis_failed', payload: { reason: 'malformed_evaluation' } },
+    ])
+  })
+
+  it('times out when the deadline elapses during the audio preparation', async () => {
+    vi.useFakeTimers()
+    const { audioPreparation, clock, communicationAnalyses, dependencies, events } =
+      createDependencies({ context: TIGHT_DEADLINE_CONTEXT })
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+    audioPreparation.hangUntilAborted()
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    const rejected = expect(execution).rejects.toBeInstanceOf(AnalysisDeadlineExceededError)
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(270_000)
+    clock.advance(270_000)
+
+    await rejected
+    expect(communicationAnalyses.saved).toHaveLength(0)
+    expect(events.published).toMatchObject([{ eventName: 'analysis_timeout' }])
+  })
+
+  it('times out when the deadline elapses during the parallel stage', async () => {
+    vi.useFakeTimers()
+    const { auditoryAnalysis, clock, dependencies, events, transcription } = createDependencies({
+      context: TIGHT_DEADLINE_CONTEXT,
+    })
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    const rejected = expect(execution).rejects.toBeInstanceOf(AnalysisDeadlineExceededError)
+    await vi.advanceTimersByTimeAsync(0)
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    await vi.advanceTimersByTimeAsync(270_000)
+    clock.advance(270_000)
+
+    await rejected
+    expect(transcription.received).toMatchObject([{ deadlineMs: 270_000 }])
+    expect(events.published).toMatchObject([{ eventName: 'analysis_timeout' }])
+  })
+
+  it('times out when the deadline elapses during the synthesis', async () => {
+    vi.useFakeTimers()
+    const {
+      auditoryAnalysis,
+      clock,
+      communicationAnalyses,
+      dependencies,
+      events,
+      feedbackSynthesis,
+      transcription,
+    } = createDependencies({ context: TIGHT_DEADLINE_CONTEXT })
+    const useCase = new ProcessMultimodalSessionAudioUseCase(dependencies)
+    feedbackSynthesis.hangUntilAborted()
+
+    const execution = useCase.execute({ sessionId: 'session-1' })
+    const rejected = expect(execution).rejects.toBeInstanceOf(AnalysisDeadlineExceededError)
+    await vi.advanceTimersByTimeAsync(0)
+    await Promise.all([auditoryAnalysis.called, transcription.called])
+    auditoryAnalysis.release(auditoryResult)
+    transcription.release(transcriptionResult)
+    await vi.advanceTimersByTimeAsync(270_000)
+    clock.advance(270_000)
+
+    await rejected
+    expect(communicationAnalyses.saved).toHaveLength(0)
+    expect(events.published).toMatchObject([{ eventName: 'analysis_timeout' }])
   })
 })

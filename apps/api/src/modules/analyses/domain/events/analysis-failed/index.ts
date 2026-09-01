@@ -5,7 +5,14 @@ const ANALYSIS_FAILED = 'analysis_failed'
 const ANALYSIS_FAILED_VERSION = 1
 
 export type AnalysisFailureReason =
-  'transcription_failed' | 'evaluation_failed' | 'malformed_evaluation' | 'monthly_cost_cap_reached'
+  | 'transcription_failed'
+  | 'evaluation_failed'
+  | 'malformed_evaluation'
+  | 'monthly_cost_cap_reached'
+  | 'audio_preparation_failed'
+  | 'auditory_analysis_failed'
+  | 'unusable_audio'
+  | 'feedback_synthesis_failed'
 
 export interface AnalysisFailedPayload {
   readonly sessionId: string

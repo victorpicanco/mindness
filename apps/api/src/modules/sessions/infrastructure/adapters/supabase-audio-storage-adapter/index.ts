@@ -137,5 +137,3 @@ export class SupabaseAudioStorageAdapter implements AudioStoragePort {
     }
   }
 }
-
-export { AudioStorageProviderError } from './errors.js'

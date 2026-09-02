@@ -161,5 +161,3 @@ export class FfmpegAudioValidationAdapter implements AudioValidationPort {
     })
   }
 }
-
-export { AudioValidationProviderError } from './errors.js'

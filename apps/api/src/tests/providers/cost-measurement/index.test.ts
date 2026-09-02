@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest'
 import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
 
 import { CostCalculator } from '@/modules/analyses/domain/services/cost-calculator/index.js'
-import { RhythmCalculator } from '@/modules/analyses/domain/services/rhythm-calculator/index.js'
 import { DeepgramTranscriptionAdapter } from '@/modules/analyses/infrastructure/adapters/deepgram-transcription-adapter/index.js'
+import { FfmpegAudioPreparationAdapter } from '@/modules/analyses/infrastructure/adapters/ffmpeg-audio-preparation-adapter/index.js'
 import { GeminiEvaluationAdapter } from '@/modules/analyses/infrastructure/adapters/gemini-evaluation-adapter/index.js'
 
 const TRANSCRIPTION_COST_CEILING_MICROS = 20_000
@@ -75,17 +75,16 @@ describe.skipIf(!hasProviderCredentials)('real provider cost measurement', () =>
       signal: controller.signal,
     })
 
-    const [firstWord, ...remainingWords] = transcription.words
-    if (firstWord === undefined) {
-      throw new OperationFailedError('Fixture recording produced no transcribed words')
-    }
-
-    const rhythm = RhythmCalculator.calculate([firstWord, ...remainingWords])
+    const preparedAudio = await new FfmpegAudioPreparationAdapter().prepare({
+      source: { bytes: audio, contentType: 'audio/webm', durationSeconds: 60 },
+      signal: controller.signal,
+    })
 
     const evaluation = await evaluationAdapter.evaluate({
+      audio: preparedAudio,
       themeTitle: 'Medição de custo real da suíte opt-in',
       transcript: transcription.text,
-      rhythm: rhythm.metrics,
+      words: transcription.words,
       signal: controller.signal,
     })
 

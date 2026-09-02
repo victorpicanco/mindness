@@ -54,6 +54,7 @@
     "researchFinished": "Seu tempo de pesquisa terminou.",
     "recordUntil": "Inicie sua gravação até {time}",
     "expired": "Sua sessão expirou porque a gravação não começou a tempo.",
+    "expiredByInactivity": "Esta sessão foi expirada por inatividade.",
     "audioUploading": "Enviando áudio…",
     "completedConfiguration": "Quero praticar na categoria “{category}”, com dificuldade {difficulty}.",
     "completedTheme": "O tema da sessão foi “{theme}”."
@@ -74,19 +75,14 @@
   },
   "analysis": {
     "title": "Sua análise",
-    "scoresTitle": "Pontuações",
-    "scoreLabels": {
-      "total": "Pontuação total",
-      "clarity": "Clareza",
-      "rhythm": "Ritmo",
-      "fluency": "Fluência",
-      "mastery": "Domínio"
-    },
-    "guidanceTitle": "Orientações",
+    "summaryTitle": "Resumo",
+    "strengthsTitle": "Pontos fortes",
+    "improvementsTitle": "Próximos passos",
+    "evidenceLabel": "Evidência",
+    "actionLabel": "Como melhorar",
     "transcriptTitle": "Transcrição"
   },
   "session": {
-    "totalScore": "Pontuação total",
     "states": {
       "in_progress": "Em andamento",
       "expired": "Expirada",

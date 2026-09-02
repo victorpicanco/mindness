@@ -2,39 +2,53 @@ import { Type } from 'typebox'
 import { Value } from 'typebox/value'
 
 import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
-import type { EvaluationResult } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
+import type { SpeechFeedback } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 
-const MAX_GUIDANCE_LENGTH = 600
+const MAX_TEXT_LENGTH = 1_200
 const MARKUP_PATTERN = /<[A-Za-z/]|```|\[[^\]]+\]\([^)]*\)/
 
-export const EvaluationResultSchema = Type.Object(
+const FeedbackPointSchema = Type.Object(
   {
-    clarityScore: Type.Integer({ minimum: 0, maximum: 100 }),
-    clarityGuidance: Type.String({ minLength: 1, maxLength: MAX_GUIDANCE_LENGTH }),
-    fluencyScore: Type.Integer({ minimum: 0, maximum: 100 }),
-    fluencyGuidance: Type.String({ minLength: 1, maxLength: MAX_GUIDANCE_LENGTH }),
-    masteryScore: Type.Integer({ minimum: 0, maximum: 100 }),
-    masteryGuidance: Type.String({ minLength: 1, maxLength: MAX_GUIDANCE_LENGTH }),
+    title: Type.String({ minLength: 1, maxLength: 120 }),
+    evidence: Type.String({ minLength: 1, maxLength: MAX_TEXT_LENGTH }),
   },
   { additionalProperties: false },
 )
 
-export function parseEvaluationResult(
-  raw: unknown,
-): Omit<EvaluationResult, 'inputTokens' | 'outputTokens'> {
-  if (!Value.Check(EvaluationResultSchema, raw)) {
+const ImprovementPointSchema = Type.Object(
+  {
+    title: Type.String({ minLength: 1, maxLength: 120 }),
+    evidence: Type.String({ minLength: 1, maxLength: MAX_TEXT_LENGTH }),
+    action: Type.String({ minLength: 1, maxLength: MAX_TEXT_LENGTH }),
+  },
+  { additionalProperties: false },
+)
+
+export const SpeechFeedbackSchema = Type.Object(
+  {
+    summary: Type.String({ minLength: 1, maxLength: MAX_TEXT_LENGTH }),
+    strengths: Type.Array(FeedbackPointSchema, { maxItems: 3 }),
+    improvements: Type.Array(ImprovementPointSchema, { maxItems: 3 }),
+  },
+  { additionalProperties: false },
+)
+
+export function parseSpeechFeedback(raw: unknown): SpeechFeedback {
+  if (!Value.Check(SpeechFeedbackSchema, raw)) {
     throw new MalformedEvaluationError('schema')
   }
 
-  for (const [field, guidance] of Object.entries({
-    clarityGuidance: raw.clarityGuidance,
-    fluencyGuidance: raw.fluencyGuidance,
-    masteryGuidance: raw.masteryGuidance,
-  })) {
-    if (MARKUP_PATTERN.test(guidance)) {
-      throw new MalformedEvaluationError(field)
-    }
+  for (const text of collectText(raw)) {
+    if (MARKUP_PATTERN.test(text)) throw new MalformedEvaluationError('markup')
   }
 
   return raw
+}
+
+function collectText(feedback: SpeechFeedback): readonly string[] {
+  return [
+    feedback.summary,
+    ...feedback.strengths.flatMap((item) => [item.title, item.evidence]),
+    ...feedback.improvements.flatMap((item) => [item.title, item.evidence, item.action]),
+  ]
 }

@@ -62,7 +62,6 @@ function createDependencies(input?: {
     findById: () => Promise.resolve(input?.activeSession ?? null),
     findActiveByAccountId: () => Promise.resolve(input?.activeSession ?? null),
     listByAccount: () => Promise.resolve([]),
-    findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     markDeleted: () => Promise.resolve(true),

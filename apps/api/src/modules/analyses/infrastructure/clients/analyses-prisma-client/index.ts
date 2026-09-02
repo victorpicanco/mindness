@@ -14,24 +14,6 @@ export interface TranscriptionRow {
 export interface AnalysisRow {
   readonly id: string
   readonly sessionId: string
-  readonly clarityScore: number
-  readonly rhythmScore: number
-  readonly fluencyScore: number
-  readonly masteryScore: number
-  readonly totalScore: number
-  readonly guidance: unknown
-  readonly rhythmMetrics: unknown
-  readonly processingMs: number
-  readonly costMicrosUsd: number
-  readonly createdAt: Date
-  readonly viewedAt?: Date | null
-}
-
-export interface CommunicationAnalysisRow {
-  readonly id: string
-  readonly sessionId: string
-  readonly feedbackVersion: number
-  readonly promptVersion: string
   readonly feedback: unknown
   readonly processingMs: number
   readonly costMicrosUsd: number
@@ -45,8 +27,6 @@ export interface AnalysisCostEntryRow {
   readonly accountId: string
   readonly transcriptionMicrosUsd: number
   readonly evaluationMicrosUsd: number
-  readonly auditoryMicrosUsd: number
-  readonly synthesisMicrosUsd: number
   readonly totalMicrosUsd: number
   readonly incurredAt: Date
 }
@@ -76,12 +56,6 @@ export interface AnalysesPrismaClient {
       readonly data: { readonly viewedAt: Date }
     }): Promise<{ readonly count: number }>
   }
-  readonly communicationAnalysis: {
-    findUnique(args: {
-      readonly where: { readonly sessionId: string }
-    }): Promise<CommunicationAnalysisRow | null>
-    create(args: { readonly data: CommunicationAnalysisRow }): Promise<CommunicationAnalysisRow>
-  }
   readonly analysisCostEntry: {
     create(args: { readonly data: AnalysisCostEntryRow }): Promise<AnalysisCostEntryRow>
     aggregate(args: {
@@ -100,7 +74,7 @@ export interface AnalysesPrismaTransactionRunner {
 
 type AnalysesPrismaDelegates = Pick<
   PrismaClient,
-  'transcription' | 'analysis' | 'communicationAnalysis' | 'analysisCostEntry'
+  'transcription' | 'analysis' | 'analysisCostEntry'
 >
 
 export function createAnalysesPrismaClient(
@@ -129,25 +103,10 @@ function createNarrowClient(prisma: AnalysesPrismaDelegates): AnalysesPrismaClie
       upsert: (args) =>
         prisma.analysis.upsert({
           where: args.where,
-          create: {
-            ...args.create,
-            guidance: toInputJson(args.create.guidance),
-            rhythmMetrics: toInputJson(args.create.rhythmMetrics),
-          },
-          update: {
-            ...args.update,
-            guidance: toInputJson(args.update.guidance),
-            rhythmMetrics: toInputJson(args.update.rhythmMetrics),
-          },
+          create: { ...args.create, feedback: toInputJson(args.create.feedback) },
+          update: { ...args.update, feedback: toInputJson(args.update.feedback) },
         }),
       updateMany: (args) => prisma.analysis.updateMany(args),
-    },
-    communicationAnalysis: {
-      findUnique: (args) => prisma.communicationAnalysis.findUnique(args),
-      create: (args) =>
-        prisma.communicationAnalysis.create({
-          data: { ...args.data, feedback: toInputJson(args.data.feedback) },
-        }),
     },
     analysisCostEntry: {
       create: (args) => prisma.analysisCostEntry.create(args),

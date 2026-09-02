@@ -17,19 +17,6 @@ describe('OnAnalysisCompletedCompleteSession', () => {
     await handler.handle(createEvent())
 
     expect(session.state).toBe('completed')
-    expect(session.totalScore).toBe(87)
-    expect(repository.saved).toBe(1)
-  })
-
-  it('completes a multimodal session without a score', async () => {
-    const session = createProcessingSession()
-    const repository = createRepository(session)
-    const handler = new OnAnalysisCompletedCompleteSession(repository)
-
-    await handler.handle(createMultimodalEvent())
-
-    expect(session.state).toBe('completed')
-    expect(session.totalScore).toBeNull()
     expect(repository.saved).toBe(1)
   })
 
@@ -48,18 +35,7 @@ function createEvent(): AnalysisCompletedEvent {
     eventName: 'analysis_completed',
     occurredAt: new Date('2026-08-20T12:00:00.000Z'),
     version: 1,
-    payload: { sessionId: 'session-id', analysisVersion: 1, scores: { total: 87 } },
-  }
-  return event
-}
-
-function createMultimodalEvent(): AnalysisCompletedEvent {
-  const event: IntegrationEvent<'analysis_completed', AnalysisCompletedEvent['payload']> = {
-    eventId: 'event-id',
-    eventName: 'analysis_completed',
-    occurredAt: new Date('2026-08-20T12:00:00.000Z'),
-    version: 1,
-    payload: { sessionId: 'session-id', analysisVersion: 2 },
+    payload: { sessionId: 'session-id' },
   }
   return event
 }
@@ -98,7 +74,6 @@ function createRepository(session: Session | null): SessionsRepository & { saved
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
     listByAccount: () => Promise.resolve([]),
-    findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     markDeleted: () => Promise.resolve(true),

@@ -4,15 +4,7 @@ import type { IntegrationEvent } from '@/shared/messaging/integration-event/inde
 const ANALYSIS_COMPLETED = 'analysis_completed'
 const ANALYSIS_COMPLETED_VERSION = 1
 
-export interface AnalysisScores {
-  readonly clarity: number
-  readonly rhythm: number
-  readonly fluency: number
-  readonly mastery: number
-  readonly total: number
-}
-
-interface AnalysisCompletedBasePayload {
+export interface AnalysisCompletedPayload {
   readonly sessionId: string
   readonly accountId: string
   readonly plan: AccountPlan
@@ -20,19 +12,7 @@ interface AnalysisCompletedBasePayload {
   readonly costMicrosUsd: number
 }
 
-export interface LegacyAnalysisCompletedPayload extends AnalysisCompletedBasePayload {
-  readonly analysisVersion: 1
-  readonly scores: AnalysisScores
-}
-
-export interface MultimodalAnalysisCompletedPayload extends AnalysisCompletedBasePayload {
-  readonly analysisVersion: 2
-}
-
-export type AnalysisCompletedPayload =
-  LegacyAnalysisCompletedPayload | MultimodalAnalysisCompletedPayload
-
-export type CreateAnalysisCompletedParams = AnalysisCompletedPayload & {
+export interface CreateAnalysisCompletedParams extends AnalysisCompletedPayload {
   readonly eventId: string
   readonly occurredAt: Date
 }
@@ -55,22 +35,16 @@ export class AnalysisCompleted implements IntegrationEvent<
   }
 
   static create(params: CreateAnalysisCompletedParams): AnalysisCompleted {
-    const base = {
-      sessionId: params.sessionId,
-      accountId: params.accountId,
-      plan: params.plan,
-      processingMs: params.processingMs,
-      costMicrosUsd: params.costMicrosUsd,
-    }
-    const payload: AnalysisCompletedPayload =
-      params.analysisVersion === 2
-        ? Object.freeze({ ...base, analysisVersion: 2 })
-        : Object.freeze({
-            ...base,
-            analysisVersion: 1,
-            scores: Object.freeze({ ...params.scores }),
-          })
-
-    return new AnalysisCompleted(params.eventId, params.occurredAt.getTime(), payload)
+    return new AnalysisCompleted(
+      params.eventId,
+      params.occurredAt.getTime(),
+      Object.freeze({
+        sessionId: params.sessionId,
+        accountId: params.accountId,
+        plan: params.plan,
+        processingMs: params.processingMs,
+        costMicrosUsd: params.costMicrosUsd,
+      }),
+    )
   }
 }

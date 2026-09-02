@@ -26,7 +26,6 @@ function createSession(
     expiredReason: state === 'expired' ? 'timeout' : null,
     expiredAt: state === 'expired' ? new Date('2026-08-22T10:15:00.000Z') : null,
     recordedAt: null,
-    totalScore: state === 'completed' ? 80 : null,
     completedAt: state === 'completed' ? new Date('2026-08-22T10:05:00.000Z') : null,
     failedAt: state === 'failed' ? new Date('2026-08-22T10:05:00.000Z') : null,
     failureReason: state === 'failed' ? 'analysis_failed' : null,

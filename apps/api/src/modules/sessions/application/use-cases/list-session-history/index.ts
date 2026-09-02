@@ -1,5 +1,4 @@
 import { SessionAuthenticationRejectedError } from '@/modules/sessions/domain/errors/session-authentication-rejected-error/index.js'
-import { BestOfDayResolver } from '@/modules/sessions/domain/services/best-of-day-resolver/index.js'
 import { LocalCalendar } from '@/modules/sessions/domain/services/local-calendar/index.js'
 
 import { InvalidHistoryCursorError } from './errors.js'
@@ -11,8 +10,6 @@ import type {
 } from './types.js'
 
 const HISTORY_PAGE_SIZE = 20
-const DAY_LOOKUP_MARGIN_MS = 26 * 60 * 60 * 1000
-
 export class ListSessionHistoryUseCase {
   constructor(private readonly dependencies: ListSessionHistoryDependencies) {}
 
@@ -46,21 +43,6 @@ export class ListSessionHistoryUseCase {
       }
     }
 
-    const candidates = await this.dependencies.sessions.findCompletedBetween(
-      input.accountId,
-      new Date(oldest.createdAt.getTime() - DAY_LOOKUP_MARGIN_MS),
-      new Date(newest.createdAt.getTime() + DAY_LOOKUP_MARGIN_MS),
-    )
-    const bestIds = BestOfDayResolver.resolve(
-      candidates.flatMap((session) => {
-        const totalScore = session.totalScore
-        return totalScore === null
-          ? []
-          : [{ sessionId: session.id, totalScore, createdAt: session.createdAt }]
-      }),
-      profile.timeZone,
-    )
-
     const themeTitles = await this.readThemeTitles(
       items.flatMap((session) => (session.state === 'deleted' ? [] : [session.themeId])),
     )
@@ -78,9 +60,7 @@ export class ListSessionHistoryUseCase {
           categorySlug: session.configuration.categorySlug,
           themeTitle: themeTitles.get(session.themeId) ?? null,
           difficulty: session.configuration.difficulty,
-          totalScore: session.totalScore,
           state,
-          bestOfDay: bestIds.has(session.id),
         },
       ]
     })

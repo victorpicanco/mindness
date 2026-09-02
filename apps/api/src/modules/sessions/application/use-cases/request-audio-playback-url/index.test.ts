@@ -35,7 +35,6 @@ function createSession(params: {
     expiredReason: null,
     expiredAt: null,
     recordedAt: params.audio ? new Date('2026-08-22T10:01:00.000Z') : null,
-    totalScore: 80,
     completedAt: new Date('2026-08-22T10:05:00.000Z'),
     deletedAt: state === 'deleted' ? new Date('2026-08-22T11:00:00.000Z') : null,
     audio: params.audio
@@ -56,7 +55,6 @@ function createHarness(session: Session | null, objectSize: number | null = 100)
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
     listByAccount: () => Promise.resolve([]),
-    findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     markDeleted: () => Promise.resolve(true),

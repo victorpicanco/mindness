@@ -41,7 +41,6 @@ async function seedCompletedSessionWithAudio(): Promise<void> {
     expiredReason: null,
     expiredAt: null,
     recordedAt: SESSIONS_TEST_NOW,
-    totalScore: 80,
     completedAt: SESSIONS_TEST_NOW,
     audio: SessionAudio.create({
       id: SESSION_ID,

@@ -13,13 +13,7 @@ model Transcription {
 model Analysis {
   id            String    @id @db.Uuid
   sessionId     String    @unique @map("session_id") @db.Uuid
-  clarityScore  Int       @map("clarity_score")
-  rhythmScore   Int       @map("rhythm_score")
-  fluencyScore  Int       @map("fluency_score")
-  masteryScore  Int       @map("mastery_score")
-  totalScore    Int       @map("total_score")
-  guidance      Json
-  rhythmMetrics Json      @map("rhythm_metrics")
+  feedback      Json
   processingMs  Int       @map("processing_ms")
   costMicrosUsd Int       @map("cost_micros_usd")
   createdAt     DateTime  @map("created_at") @db.Timestamptz(6)
@@ -28,28 +22,12 @@ model Analysis {
   @@map("analyses")
 }
 
-model CommunicationAnalysis {
-  id              String    @id @db.Uuid
-  sessionId       String    @unique @map("session_id") @db.Uuid
-  feedbackVersion Int       @map("feedback_version")
-  promptVersion   String    @map("prompt_version")
-  feedback        Json
-  processingMs    Int       @map("processing_ms")
-  costMicrosUsd   Int       @map("cost_micros_usd")
-  createdAt       DateTime  @map("created_at") @db.Timestamptz(6)
-  viewedAt        DateTime? @map("viewed_at") @db.Timestamptz(6)
-
-  @@map("communication_analyses")
-}
-
 model AnalysisCostEntry {
   id                     String   @id @db.Uuid
   sessionId              String   @unique @map("session_id") @db.Uuid
   accountId              String   @map("account_id") @db.Uuid
   transcriptionMicrosUsd Int      @map("transcription_micros_usd")
   evaluationMicrosUsd    Int      @map("evaluation_micros_usd")
-  auditoryMicrosUsd      Int      @default(0) @map("auditory_micros_usd")
-  synthesisMicrosUsd     Int      @default(0) @map("synthesis_micros_usd")
   totalMicrosUsd         Int      @map("total_micros_usd")
   incurredAt             DateTime @map("incurred_at") @db.Timestamptz(6)
 

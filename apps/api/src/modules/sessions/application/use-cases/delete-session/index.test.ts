@@ -32,7 +32,6 @@ function createSession(
     expiredReason: null,
     expiredAt: null,
     recordedAt: null,
-    totalScore: state === 'completed' ? 80 : null,
     completedAt: state === 'completed' ? new Date('2026-08-22T10:05:00.000Z') : null,
     deletedAt: state === 'deleted' ? new Date('2026-08-22T11:00:00.000Z') : null,
   })
@@ -46,7 +45,6 @@ function createHarness(session: Session | null, profileExists = true, wonTheRace
     findById: () => Promise.resolve(session),
     findActiveByAccountId: () => Promise.resolve(null),
     listByAccount: () => Promise.resolve([]),
-    findCompletedBetween: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     markDeleted: (value) => {

@@ -15,11 +15,17 @@ function revealedText(container: HTMLElement): string[] {
 
 const ANALYSIS = sessionAnalysisSchema.parse({
   analyzedAt: '2026-08-24T12:10:00.000Z',
-  guidance: [
-    { pillar: 'clarity', text: 'Organize a ideia central antes de apresentar os detalhes.' },
-    { pillar: 'fluency', text: 'Reduza as pausas entre frases relacionadas.' },
-  ],
-  scores: { clarity: 70, fluency: 60, mastery: 85, rhythm: 75, total: 73 },
+  feedback: {
+    summary: 'A mensagem ficou clara e direta.',
+    strengths: [{ title: 'Abertura direta', evidence: 'A ideia principal aparece no início.' }],
+    improvements: [
+      {
+        title: 'Fechamento mais firme',
+        evidence: 'A última frase perde energia.',
+        action: 'Repita a mensagem principal em uma frase.',
+      },
+    ],
+  },
   sessionId: '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
   transcript: '<strong>Texto puro</strong> **sem Markdown renderizado**',
 })
@@ -27,7 +33,7 @@ const ANALYSIS = sessionAnalysisSchema.parse({
 describe('AnalysisMessage', () => {
   afterEach(cleanup)
 
-  it('presents scores, guidance and transcript as an assistant message', () => {
+  it('presents the summary, strengths, improvements and transcript', () => {
     const { container } = render(
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
         <AnalysisMessage analysis={ANALYSIS} />
@@ -39,29 +45,24 @@ describe('AnalysisMessage', () => {
       'data-split-text',
     )
     expect(screen.getByLabelText('Mensagem da Mindness')).toBeInTheDocument()
-    expect(screen.getByText('73')).toBeInTheDocument()
-    expect(screen.getByText('Pontuação total')).toBeInTheDocument()
-    expect(revealedText(container)).toContain('Reduza as pausas entre frases relacionadas.')
+    expect(revealedText(container)).toContain('A mensagem ficou clara e direta.')
+    expect(screen.getByRole('heading', { name: 'Pontos fortes' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Próximos passos' })).toBeInTheDocument()
+    expect(revealedText(container)).toContain('Repita a mensagem principal em uma frase.')
     expect(revealedText(container)).toContain(
       '<strong>Texto puro</strong> **sem Markdown renderizado**',
     )
     expect(container.querySelector('strong')).not.toBeInTheDocument()
   })
 
-  it('plots every score as a radial gauge, with the total leading the pillars', () => {
+  it('does not render scores or empty product sections', () => {
     const { container } = render(
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
         <AnalysisMessage analysis={ANALYSIS} />
       </NextIntlClientProvider>,
     )
 
-    const gauges = container.querySelectorAll('[data-score-arc="value"]')
-    const [total] = [...container.querySelectorAll('svg')]
-
-    expect(gauges).toHaveLength(5)
-    expect(total).toHaveAttribute('width', '168')
-    for (const score of ['73', '70', '75', '60', '85']) {
-      expect(screen.getByText(score)).toBeInTheDocument()
-    }
+    expect(container.querySelectorAll('[data-score-arc="value"]')).toHaveLength(0)
+    expect(screen.queryByText('Pontuações')).not.toBeInTheDocument()
   })
 })

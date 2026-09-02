@@ -24,7 +24,6 @@ beforeEach(async () => {
   await clearAnalysesData(harness.prisma)
   harness.reset()
   harness.accounts.setPlan(ACCOUNT_ID, 'free')
-  harness.themes.setTitle(THEME_ID, 'Private presentation theme')
 })
 
 describe('analysis log hygiene integration', () => {

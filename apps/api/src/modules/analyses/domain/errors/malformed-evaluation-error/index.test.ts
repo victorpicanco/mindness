@@ -4,11 +4,11 @@ import { MalformedEvaluationError } from './index.js'
 
 describe('MalformedEvaluationError', () => {
   it('keeps the diagnostic in context', () => {
-    const error = new MalformedEvaluationError('clarityScore')
+    const error = new MalformedEvaluationError('summary')
 
     expect(error.code).toBe('analyses.MALFORMED_EVALUATION')
     expect(error.httpStatus).toBe(500)
-    expect(error.context).toEqual({ field: 'clarityScore' })
-    expect(error.message).not.toContain('clarityScore')
+    expect(error.context).toEqual({ field: 'summary' })
+    expect(error.message).not.toContain('summary')
   })
 })

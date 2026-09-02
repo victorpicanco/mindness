@@ -10,9 +10,6 @@ export type AnalysisFailureReason =
   | 'malformed_evaluation'
   | 'monthly_cost_cap_reached'
   | 'audio_preparation_failed'
-  | 'auditory_analysis_failed'
-  | 'unusable_audio'
-  | 'feedback_synthesis_failed'
 
 export interface AnalysisFailedPayload {
   readonly sessionId: string

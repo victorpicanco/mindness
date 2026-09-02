@@ -64,7 +64,6 @@ describe('session API contracts', () => {
     expect(
       sessionHistorySchema.parse([
         {
-          bestOfDay: true,
           categorySlug: 'focus',
           difficulty: 'balanced',
           localDate: '24/08/2026',
@@ -73,7 +72,6 @@ describe('session API contracts', () => {
           startedAt: '2026-08-24T12:00:00.000Z',
           state: 'completed',
           themeTitle: 'Notícias do dia',
-          totalScore: 87,
         },
       ]),
     ).toHaveLength(1)

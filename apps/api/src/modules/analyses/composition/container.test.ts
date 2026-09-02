@@ -1,48 +1,26 @@
 import { describe, expect, it } from 'vitest'
 
-import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
 import type {
   AnalysesPrismaClient,
   AnalysesPrismaTransactionRunner,
 } from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
-
-import type { PreparedAudio } from '@/modules/analyses/domain/ports/audio-preparation-port/index.js'
-import { CANONICAL_AUDIO_CONTENT_TYPE } from '@/modules/analyses/domain/ports/audio-preparation-port/index.js'
-import { CommunicationFeedback } from '@/modules/analyses/domain/value-objects/communication-feedback/index.js'
-import { ProcessMultimodalSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-multimodal-session-audio/index.js'
-import { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
+import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
 
 import { createAnalysesContainer } from './container.js'
 
 describe('createAnalysesContainer', () => {
-  it('mounts with overridden adapters', () => {
+  it('builds one speech-analysis pipeline from overridden adapters', () => {
     const container = createAnalysesContainer({
       prisma: createPrismaStub(),
-      clock: { now: () => new Date('2026-01-01T00:00:00.000Z') },
-      idGenerator: { generate: () => 'generated-id' },
+      clock: { now: () => new Date() },
+      idGenerator: { generate: () => 'id' },
       eventPublisher: { publish: () => Promise.resolve() },
-      eventSubscriber: { subscribe: () => undefined },
-      logger: createLoggerStub(),
+      logger: { warn: () => undefined },
       costRates: {
         transcriptionCostPerMinuteMicros: 1,
         geminiInputCostPerMtokMicros: 1,
         geminiOutputCostPerMtokMicros: 1,
       },
-      sessionsFacade: {
-        findProcessingContext: () => Promise.resolve(null),
-        downloadAudio: () => Promise.resolve(createAudioContent()),
-        checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
-        listStuckProcessing: () => Promise.resolve([]),
-      },
-      themesFacade: {
-        findThemeById: () =>
-          Promise.resolve({
-            themeId: 'theme',
-            title: 'Theme',
-            categorySlug: 'general',
-            difficulty: 'easy',
-          }),
-      },
       adapters: {
         accounts: {
           findPlan: () => Promise.resolve('free'),
@@ -53,319 +31,69 @@ describe('createAnalysesContainer', () => {
           checkAnalysisAccess: () => Promise.resolve({ failure: null, readable: false }),
           listStuckProcessing: () => Promise.resolve([]),
         },
-        audioReader: { read: () => Promise.resolve(createAudioContent()) },
+        audioPreparation: {
+          prepare: () =>
+            Promise.resolve({
+              bytes: Buffer.from('flac'),
+              contentType: 'audio/flac',
+              durationSeconds: 1,
+            }),
+        },
+        audioReader: {
+          read: () =>
+            Promise.resolve({
+              bytes: Buffer.from('audio'),
+              contentType: 'audio/webm',
+              durationSeconds: 1,
+            }),
+        },
         themes: { findTitle: () => Promise.resolve('Theme') },
-        transcription: { transcribe: () => Promise.resolve(createTranscription()) },
-        evaluation: { evaluate: () => Promise.resolve(createEvaluation()) },
+        transcription: {
+          transcribe: () =>
+            Promise.resolve({
+              text: 'Transcript',
+              words: [{ word: 'Transcript', start: 0, end: 1, confidence: 1 }],
+              averageConfidence: 1,
+              durationSeconds: 1,
+            }),
+        },
+        evaluation: {
+          evaluate: () =>
+            Promise.resolve({
+              feedback: { summary: 'Clear.', strengths: [], improvements: [] },
+              inputTokens: 1,
+              outputTokens: 1,
+            }),
+        },
         processingQueue: { enqueue: () => Promise.resolve() },
       },
     })
 
-    expect(container.useCases.enqueueSessionAnalysis).toBeDefined()
     expect(container.useCases.processSessionAudio).toBeDefined()
+    expect(container.repositories).not.toHaveProperty('communicationAnalyses')
   })
 
   it('reports a missing required dependency', () => {
-    expect(() => createAnalysesContainer({})).toThrowError(OperationFailedError)
-
-    try {
-      createAnalysesContainer({})
-    } catch (error) {
-      expect(error).toMatchObject({ context: { missingDependency: 'prisma' } })
-    }
-  })
-
-  it('mounts the Deepgram, Gemini and BullMQ adapters from raw clients when adapters overrides are not provided', () => {
-    const container = createAnalysesContainer({
-      ...baseDeps(),
-      deepgramClient: {
-        listen: { v1: { media: { transcribeFile: () => Promise.resolve(undefined) } } },
-      },
-      geminiClient: { models: { generateContent: () => Promise.resolve(undefined) } },
-      geminiModel: 'gemini-2.5-flash',
-      bullMqQueue: { add: () => Promise.resolve(undefined) },
-    })
-
-    expect(container.useCases.enqueueSessionAnalysis).toBeDefined()
-    expect(container.useCases.processSessionAudio).toBeDefined()
-  })
-
-  it('selects the legacy pipeline by default', () => {
-    const container = createAnalysesContainer({
-      ...baseDeps(),
-      deepgramClient: {
-        listen: { v1: { media: { transcribeFile: () => Promise.resolve(undefined) } } },
-      },
-      geminiClient: { models: { generateContent: () => Promise.resolve(undefined) } },
-      geminiModel: 'gemini-2.5-flash',
-      bullMqQueue: { add: () => Promise.resolve(undefined) },
-    })
-
-    expect(container.useCases.processSessionAudio).toBeInstanceOf(ProcessSessionAudioUseCase)
-  })
-
-  it('selects the multimodal pipeline when the configured version is v2', () => {
-    const container = createAnalysesContainer({
-      ...baseDeps(),
-      pipelineVersion: 'v2',
-      deepgramClient: {
-        listen: { v1: { media: { transcribeFile: () => Promise.resolve(undefined) } } },
-      },
-      geminiClient: { models: { generateContent: () => Promise.resolve(undefined) } },
-      geminiAuditoryModel: 'gemini-2.5-flash',
-      geminiSynthesisModel: 'gemini-2.5-pro',
-      bullMqQueue: { add: () => Promise.resolve(undefined) },
-    })
-
-    expect(container.useCases.processSessionAudio).toBeInstanceOf(
-      ProcessMultimodalSessionAudioUseCase,
-    )
-  })
-
-  it('reports the missing auditory model when the multimodal pipeline is selected', () => {
-    try {
-      createAnalysesContainer({
-        ...baseDeps(),
-        pipelineVersion: 'v2',
-        deepgramClient: {
-          listen: { v1: { media: { transcribeFile: () => Promise.resolve(undefined) } } },
-        },
-        geminiClient: { models: { generateContent: () => Promise.resolve(undefined) } },
-        bullMqQueue: { add: () => Promise.resolve(undefined) },
-      })
-      expect.unreachable('createAnalysesContainer should have thrown')
-    } catch (error) {
-      expect(error).toBeInstanceOf(OperationFailedError)
-      expect(error).toMatchObject({ context: { missingDependency: 'geminiAuditoryModel' } })
-    }
-  })
-
-  it('does not require the legacy evaluation model when the multimodal pipeline is selected', () => {
-    const container = createAnalysesContainer({
-      ...baseDeps(),
-      pipelineVersion: 'v2',
-      adapters: {
-        accounts: {
-          findPlan: () => Promise.resolve('free'),
-          resolveAccountId: () => Promise.resolve(null),
-        },
-        sessions: {
-          findProcessingContext: () => Promise.resolve(null),
-          checkAnalysisAccess: () => Promise.resolve({ failure: null, readable: false }),
-          listStuckProcessing: () => Promise.resolve([]),
-        },
-        audioReader: { read: () => Promise.resolve(createAudioContent()) },
-        audioPreparation: { prepare: () => Promise.resolve(createPreparedAudio()) },
-        themes: { findTitle: () => Promise.resolve('Theme') },
-        transcription: { transcribe: () => Promise.resolve(createTranscription()) },
-        auditoryAnalysis: { observe: () => Promise.resolve(createAuditoryResult()) },
-        feedbackSynthesis: { synthesize: () => Promise.resolve(createSynthesisResult()) },
-        processingQueue: { enqueue: () => Promise.resolve() },
-      },
-    })
-
-    expect(container.useCases.processSessionAudio).toBeInstanceOf(
-      ProcessMultimodalSessionAudioUseCase,
-    )
-  })
-
-  it('reports a missing deepgramClient dependency when adapters overrides are not provided', () => {
-    try {
-      createAnalysesContainer(baseDeps())
-      expect.unreachable('createAnalysesContainer should have thrown')
-    } catch (error) {
-      expect(error).toMatchObject({ context: { missingDependency: 'deepgramClient' } })
-    }
+    expect(() => createAnalysesContainer({})).toThrow(OperationFailedError)
   })
 })
 
-function baseDeps() {
-  return {
-    prisma: createPrismaStub(),
-    clock: { now: () => new Date('2026-01-01T00:00:00.000Z') },
-    idGenerator: { generate: () => 'generated-id' },
-    eventPublisher: { publish: () => Promise.resolve() },
-    eventSubscriber: { subscribe: () => undefined },
-    logger: createLoggerStub(),
-    costRates: {
-      transcriptionCostPerMinuteMicros: 1,
-      geminiInputCostPerMtokMicros: 1,
-      geminiOutputCostPerMtokMicros: 1,
-    },
-    accountsFacade: {
-      getAccountSnapshot: () =>
-        Promise.resolve({
-          accountId: 'account',
-          plan: 'free' as const,
-          createdAt: new Date('2026-01-01T00:00:00.000Z'),
-          timeZone: 'America/Sao_Paulo',
-        }),
-      authenticate: () => Promise.resolve({ accountId: null }),
-    },
-    sessionsFacade: {
-      findProcessingContext: () => Promise.resolve(null),
-      downloadAudio: () => Promise.resolve(createAudioContent()),
-      checkReadability: () => Promise.resolve({ failureReason: null, readable: false }),
-      listStuckProcessing: () => Promise.resolve([]),
-    },
-    themesFacade: {
-      findThemeById: () =>
-        Promise.resolve({
-          themeId: 'theme',
-          title: 'Theme',
-          categorySlug: 'general' as const,
-          difficulty: 'easy' as const,
-        }),
-    },
-  }
-}
-
 function createPrismaStub(): AnalysesPrismaClient & AnalysesPrismaTransactionRunner {
-  return {
+  const client: AnalysesPrismaClient & AnalysesPrismaTransactionRunner = {
     transcription: {
       findUnique: () => Promise.resolve(null),
-      upsert: () => Promise.resolve(createTranscriptionRow()),
+      upsert: (args) => Promise.resolve(args.create),
     },
     analysis: {
       findUnique: () => Promise.resolve(null),
-      upsert: () => Promise.resolve(createAnalysisRow()),
+      upsert: (args) => Promise.resolve(args.create),
       updateMany: () => Promise.resolve({ count: 0 }),
     },
-    communicationAnalysis: {
-      findUnique: () => Promise.resolve(null),
-      create: (args) => Promise.resolve(args.data),
-    },
     analysisCostEntry: {
-      create: () => Promise.resolve(createCostEntryRow()),
+      create: (args) => Promise.resolve(args.data),
       aggregate: () => Promise.resolve({ _sum: { totalMicrosUsd: null } }),
     },
-    $transaction: <T>(operation: (client: ReturnType<typeof createPrismaStub>) => Promise<T>) =>
-      operation(createPrismaStub()),
+    $transaction: (operation) => operation(client),
   }
-}
-
-function createTranscription() {
-  return {
-    text: 'Transcript',
-    words: [{ word: 'Transcript', start: 0, end: 1, confidence: 1 }],
-    averageConfidence: 1,
-    durationSeconds: 1,
-  }
-}
-
-function createEvaluation() {
-  return {
-    clarityScore: 80,
-    clarityGuidance: 'Clear',
-    fluencyScore: 80,
-    fluencyGuidance: 'Fluid',
-    masteryScore: 80,
-    masteryGuidance: 'Strong',
-    inputTokens: 1,
-    outputTokens: 1,
-  }
-}
-
-function createTranscriptionRow() {
-  return {
-    id: 'transcription',
-    sessionId: 'session',
-    text: 'Transcript',
-    words: [],
-    averageConfidence: 1,
-    durationSeconds: 1,
-    createdAt: new Date(),
-  }
-}
-
-function createAnalysisRow() {
-  return {
-    id: 'analysis',
-    sessionId: 'session',
-    clarityScore: 80,
-    rhythmScore: 80,
-    fluencyScore: 80,
-    masteryScore: 80,
-    totalScore: 80,
-    guidance: { clarity: 'Clear', rhythm: 'On target', fluency: 'Fluid', mastery: 'Strong' },
-    rhythmMetrics: {
-      wordsPerMinute: 130,
-      wordCount: 1,
-      speechDurationSeconds: 1,
-      pauseCount: 0,
-      longPauseCount: 0,
-      longestPauseSeconds: 0,
-    },
-    processingMs: 1,
-    costMicrosUsd: 1,
-    createdAt: new Date(),
-  }
-}
-
-function createCostEntryRow() {
-  return {
-    id: 'cost',
-    sessionId: 'session',
-    accountId: 'account',
-    transcriptionMicrosUsd: 1,
-    evaluationMicrosUsd: 1,
-    auditoryMicrosUsd: 0,
-    synthesisMicrosUsd: 0,
-    totalMicrosUsd: 2,
-    incurredAt: new Date(),
-  }
-}
-
-function createLoggerStub() {
-  return { warn: () => undefined }
-}
-
-function createAudioContent() {
-  return { bytes: Buffer.from('audio'), contentType: 'audio/webm', durationSeconds: 30 }
-}
-
-function createPreparedAudio(): PreparedAudio {
-  return {
-    bytes: Buffer.from('flac'),
-    contentType: CANONICAL_AUDIO_CONTENT_TYPE,
-    durationSeconds: 30,
-  }
-}
-
-function createAuditoryResult() {
-  return {
-    observation: {
-      audioUsability: 'usable' as const,
-      limitations: [],
-      literalTranscript: 'Transcript',
-      mainMessage: 'Main message',
-      attemptedStructure: 'Opening and closing',
-      deliverySummary: 'Steady delivery',
-      candidateEvents: [],
-    },
-    inputTokens: 1,
-    outputTokens: 1,
-  }
-}
-
-function createSynthesisResult() {
-  return {
-    feedback: CommunicationFeedback.create({
-      durationSeconds: 30,
-      audioUsability: 'usable',
-      alignmentQuality: 'reliable',
-      limitations: [],
-      literalTranscript: 'Transcript',
-      mainMessage: 'Main message',
-      attemptedStructure: 'Opening and closing',
-      summary: 'The message arrives complete. The delivery stays steady.',
-      strengths: [],
-      moments: [],
-      patterns: [],
-      asrDivergences: [],
-      priorities: [],
-    }),
-    inputTokens: 1,
-    outputTokens: 1,
-  }
+  return client
 }

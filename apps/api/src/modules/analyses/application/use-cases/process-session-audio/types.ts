@@ -3,6 +3,7 @@ import type { AnalysisCostEntry } from '@/modules/analyses/domain/entities/analy
 import type { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import type { AccountsPort } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
+import type { AudioPreparationPort } from '@/modules/analyses/domain/ports/audio-preparation-port/index.js'
 import type { AudioReaderPort } from '@/modules/analyses/domain/ports/audio-reader-port/index.js'
 import type { Clock } from '@/modules/analyses/domain/ports/clock/index.js'
 import type { EvaluationPort } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
@@ -25,6 +26,7 @@ export interface ProcessingCostRates {
 export interface ProcessSessionAudioDependencies {
   readonly accounts: AccountsPort
   readonly analyses: AnalysesRepository
+  readonly audioPreparation: AudioPreparationPort
   readonly audioReader: AudioReaderPort
   readonly clock: Clock
   readonly costRates: ProcessingCostRates

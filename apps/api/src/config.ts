@@ -22,9 +22,6 @@ const EnvSchema = Type.Object({
   GOOGLE_CLOUD_PROJECT: Type.String(),
   GOOGLE_CLOUD_LOCATION: Type.String(),
   GEMINI_MODEL: Type.String(),
-  GEMINI_AUDITORY_MODEL: Type.String(),
-  GEMINI_SYNTHESIS_MODEL: Type.String(),
-  ANALYSIS_PIPELINE_VERSION: Type.Union([Type.Literal('v1'), Type.Literal('v2')]),
   DEEPGRAM_COST_PER_MINUTE_MICROS: Type.Integer({ minimum: 1 }),
   GEMINI_INPUT_COST_PER_MTOK_MICROS: Type.Integer({ minimum: 1 }),
   GEMINI_OUTPUT_COST_PER_MTOK_MICROS: Type.Integer({ minimum: 1 }),
@@ -48,9 +45,6 @@ const STRING_ENV_KEYS = [
   'GOOGLE_CLOUD_PROJECT',
   'GOOGLE_CLOUD_LOCATION',
   'GEMINI_MODEL',
-  'GEMINI_AUDITORY_MODEL',
-  'GEMINI_SYNTHESIS_MODEL',
-  'ANALYSIS_PIPELINE_VERSION',
 ] as const
 const NUMERIC_ENV_KEYS = [
   'PORT',
@@ -80,9 +74,6 @@ export interface Config {
   readonly googleCloudProject: string
   readonly googleCloudLocation: string
   readonly geminiModel: string
-  readonly geminiAuditoryModel: string
-  readonly geminiSynthesisModel: string
-  readonly analysisPipelineVersion: 'v1' | 'v2'
   readonly deepgramCostPerMinuteMicros: number
   readonly geminiInputCostPerMtokMicros: number
   readonly geminiOutputCostPerMtokMicros: number
@@ -146,9 +137,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
     googleCloudProject: candidate.GOOGLE_CLOUD_PROJECT,
     googleCloudLocation: candidate.GOOGLE_CLOUD_LOCATION,
     geminiModel: candidate.GEMINI_MODEL,
-    geminiAuditoryModel: candidate.GEMINI_AUDITORY_MODEL,
-    geminiSynthesisModel: candidate.GEMINI_SYNTHESIS_MODEL,
-    analysisPipelineVersion: candidate.ANALYSIS_PIPELINE_VERSION,
     deepgramCostPerMinuteMicros: candidate.DEEPGRAM_COST_PER_MINUTE_MICROS,
     geminiInputCostPerMtokMicros: candidate.GEMINI_INPUT_COST_PER_MTOK_MICROS,
     geminiOutputCostPerMtokMicros: candidate.GEMINI_OUTPUT_COST_PER_MTOK_MICROS,

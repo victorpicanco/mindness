@@ -6,6 +6,7 @@ import { getActiveSession, getSessionHistory } from '@/lib/api/authenticated-ses
 import { ApiClientError } from '@/lib/api/client-error'
 import { apiFetch } from '@/lib/api/server-client'
 
+import { ExpiredSession } from '@/components/practice/expired-session'
 import { SessionConversation } from '@/components/practice/session-conversation'
 import { SessionSummary } from '@/components/practice/session-summary'
 
@@ -58,6 +59,14 @@ export default async function SessionPage({ params }: SessionPageProps) {
     )
   }
 
+  if (session.state === 'expired') {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col bg-surface">
+        <ExpiredSession session={session} />
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-surface px-6 py-10">
       <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center justify-center">
@@ -67,8 +76,6 @@ export default async function SessionPage({ params }: SessionPageProps) {
           localTime={session.localTime}
           state={session.state}
           stateLabel={t(`states.${session.state}`)}
-          totalScore={session.totalScore}
-          totalScoreLabel={t('totalScore')}
         />
       </div>
     </div>

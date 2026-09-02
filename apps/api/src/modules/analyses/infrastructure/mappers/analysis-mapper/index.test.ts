@@ -4,39 +4,24 @@ import { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
 
 import { AnalysisMapper } from './index.js'
 
-const row = {
-  id: 'analysis-id',
-  sessionId: 'session-id',
-  clarityScore: 80,
-  rhythmScore: 70,
-  fluencyScore: 60,
-  masteryScore: 90,
-  totalScore: 75,
-  guidance: {
-    clarity: 'Be clearer',
-    rhythm: 'Keep pace',
-    fluency: 'Speak smoothly',
-    mastery: 'Know the subject',
-  },
-  rhythmMetrics: {
-    wordsPerMinute: 140,
-    wordCount: 20,
-    speechDurationSeconds: 8,
-    pauseCount: 2,
-    longPauseCount: 1,
-    longestPauseSeconds: 2.5,
-  },
-  processingMs: 1234,
-  costMicrosUsd: 42,
-  createdAt: new Date('2026-08-21T12:00:00.000Z'),
+const feedback = {
+  summary: 'Clear.',
+  strengths: [{ title: 'Opening', evidence: 'Direct.' }],
+  improvements: [{ title: 'Close', evidence: 'Soft.', action: 'End firmly.' }],
 }
 
 describe('AnalysisMapper', () => {
-  it('maps persisted JSON guidance and rhythm metrics to and from the domain without loss', () => {
+  it('round-trips the feedback JSON', () => {
     const mapper = new AnalysisMapper()
-    const analysis = mapper.toDomain(row)
+    const analysis = Analysis.create({
+      analysisId: 'analysis-id',
+      sessionId: 'session-id',
+      feedback,
+      processingMs: 100,
+      costMicrosUsd: 20,
+      createdAt: new Date('2026-09-01T12:00:00.000Z'),
+    })
 
-    expect(analysis).toBeInstanceOf(Analysis)
-    expect(mapper.toData(analysis)).toEqual(row)
+    expect(mapper.toDomain(mapper.toData(analysis)).feedback).toEqual(feedback)
   })
 })

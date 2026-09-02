@@ -6,8 +6,6 @@ type SessionSummaryProps = {
   readonly localTime: string
   readonly state: SessionSummaryState
   readonly stateLabel: string
-  readonly totalScore: number | null
-  readonly totalScoreLabel: string
 }
 
 export function SessionSummary({
@@ -16,8 +14,6 @@ export function SessionSummary({
   localTime,
   state,
   stateLabel,
-  totalScore,
-  totalScoreLabel,
 }: SessionSummaryProps) {
   return (
     <section className="text-center" data-session-state={state}>
@@ -28,11 +24,6 @@ export function SessionSummary({
       <p className="mt-3 text-text-muted">
         {localDate} · {localTime}
       </p>
-      {totalScore === null ? null : (
-        <p className="mt-8 text-5xl tabular-nums" title={totalScoreLabel}>
-          {totalScore}
-        </p>
-      )}
     </section>
   )
 }

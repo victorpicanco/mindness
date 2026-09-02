@@ -2,47 +2,30 @@ import { describe, expect, it } from 'vitest'
 
 import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
 
-import { parseEvaluationResult } from './schemas.js'
+import { parseSpeechFeedback } from './schemas.js'
 
-const validResult = {
-  clarityScore: 82,
-  clarityGuidance: 'Sua explicação ficou clara e bem organizada.',
-  fluencyScore: 75,
-  fluencyGuidance: 'Mantenha frases curtas para ganhar fluidez.',
-  masteryScore: 91,
-  masteryGuidance: 'Você demonstrou domínio consistente do assunto.',
+const validFeedback = {
+  summary: 'Clear and direct.',
+  strengths: [{ title: 'Opening', evidence: 'The message starts immediately.' }],
+  improvements: [
+    { title: 'Closing', evidence: 'The ending trails off.', action: 'Repeat the main point.' },
+  ],
 }
 
-describe('parseEvaluationResult', () => {
-  it.each([
-    'clarityScore',
-    'clarityGuidance',
-    'fluencyScore',
-    'fluencyGuidance',
-    'masteryScore',
-    'masteryGuidance',
-  ] as const)('rejects a missing %s field', (field) => {
-    const result = Object.fromEntries(Object.entries(validResult).filter(([key]) => key !== field))
-
-    expect(() => parseEvaluationResult(result)).toThrow(MalformedEvaluationError)
+describe('parseSpeechFeedback', () => {
+  it('accepts the minimal feedback contract', () => {
+    expect(parseSpeechFeedback(validFeedback)).toEqual(validFeedback)
   })
 
   it.each([
-    ['score above the range', { ...validResult, clarityScore: 101 }],
-    ['score below the range', { ...validResult, clarityScore: -1 }],
-    ['non-integer score', { ...validResult, clarityScore: 82.5 }],
-    ['empty guidance', { ...validResult, clarityGuidance: '' }],
-    ['guidance longer than 600 characters', { ...validResult, clarityGuidance: 'a'.repeat(601) }],
-    ['script HTML guidance', { ...validResult, clarityGuidance: '<script>alert(1)</script>' }],
-    ['HTML tag guidance', { ...validResult, clarityGuidance: '<b>texto</b>' }],
-    ['code fence guidance', { ...validResult, clarityGuidance: '```texto```' }],
-    ['Markdown link guidance', { ...validResult, clarityGuidance: '[link](http://x)' }],
-    ['undeclared property', { ...validResult, extra: 'value' }],
-  ])('rejects %s', (_description, result) => {
-    expect(() => parseEvaluationResult(result)).toThrow(MalformedEvaluationError)
-  })
-
-  it('returns a valid six-field evaluation result', () => {
-    expect(parseEvaluationResult(validResult)).toEqual(validResult)
+    ['an extra property', { ...validFeedback, score: 100 }],
+    [
+      'too many strengths',
+      { ...validFeedback, strengths: Array(4).fill(validFeedback.strengths[0]) },
+    ],
+    ['empty summary', { ...validFeedback, summary: '' }],
+    ['markup', { ...validFeedback, summary: '<b>Clear</b>' }],
+  ])('rejects %s', (_description, value) => {
+    expect(() => parseSpeechFeedback(value)).toThrow(MalformedEvaluationError)
   })
 })

@@ -79,22 +79,6 @@ export class PrismaSessionsRepository implements SessionsRepository {
     }
   }
 
-  async findCompletedBetween(accountId: string, from: Date, to: Date): Promise<Session[]> {
-    try {
-      const rows = await this.client().session.findMany({
-        where: { accountId, state: 'completed', createdAt: { gte: from, lte: to } },
-        include: { audio: true },
-      })
-
-      return rows.map((row) => this.mapper.toDomain(row))
-    } catch (error) {
-      throw new DatabaseError('Failed to find completed sessions in the time window', {
-        cause: error,
-        context: { accountId, from: from.toISOString(), to: to.toISOString() },
-      })
-    }
-  }
-
   async findExpiredInProgress(before: Date, limit: number): Promise<Session[]> {
     try {
       const rows = await this.client().session.findMany({

@@ -14,7 +14,6 @@ function createSession(params: {
   readonly id: string
   readonly state: 'completed' | 'processing' | 'failed' | 'expired' | 'deleted'
   readonly createdAt: Date
-  readonly totalScore?: number
   readonly accountId?: string
   readonly themeId?: string
 }): Session {
@@ -33,7 +32,6 @@ function createSession(params: {
     expiredReason: params.state === 'expired' ? 'timeout' : null,
     expiredAt: params.state === 'expired' ? params.createdAt : null,
     recordedAt: null,
-    totalScore: params.totalScore ?? null,
     completedAt: params.state === 'completed' ? params.createdAt : null,
     failedAt: params.state === 'failed' ? params.createdAt : null,
     deletedAt: params.state === 'deleted' ? params.createdAt : null,
@@ -42,22 +40,16 @@ function createSession(params: {
 
 function createHarness(params: {
   readonly page: readonly Session[]
-  readonly candidates?: readonly Session[]
   readonly profile?: { readonly plan: 'free'; readonly timeZone: string } | null
   readonly cursorSession?: Session | null
   readonly themeTitles?: Readonly<Record<string, string>>
 }) {
-  let completedBetweenCalls = 0
   const requestedThemeIds: (readonly string[])[] = []
   const sessions: SessionsRepository = {
     findById: (sessionId) =>
       Promise.resolve(sessionId === 'cursor' ? (params.cursorSession ?? null) : null),
     findActiveByAccountId: () => Promise.resolve(null),
     listByAccount: () => Promise.resolve([...params.page]),
-    findCompletedBetween: () => {
-      completedBetweenCalls += 1
-      return Promise.resolve([...(params.candidates ?? [])])
-    },
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     markDeleted: () => Promise.resolve(true),
@@ -89,7 +81,6 @@ function createHarness(params: {
   }
 
   return {
-    completedBetweenCalls: () => completedBetweenCalls,
     requestedThemeIds: () => requestedThemeIds,
     useCase: new ListSessionHistoryUseCase({ sessions, accounts, themes }),
   }
@@ -101,7 +92,6 @@ describe('ListSessionHistoryUseCase', () => {
       id: 'visible',
       state: 'completed',
       createdAt: new Date('2026-08-22T12:00:00.000Z'),
-      totalScore: 80,
     })
     const deleted = createSession({
       id: 'deleted',
@@ -115,17 +105,15 @@ describe('ListSessionHistoryUseCase', () => {
     expect(output.items.map((item) => item.sessionId)).toEqual(['visible'])
   })
 
-  it('returns serialized history items and marks only the best completed session of a local day', async () => {
+  it('returns serialized history items', async () => {
     const lower = createSession({
       id: 'session-1',
       state: 'completed',
-      totalScore: 70,
       createdAt: new Date('2026-08-22T12:00:00.000Z'),
     })
     const higher = createSession({
       id: 'session-2',
       state: 'completed',
-      totalScore: 90,
       createdAt: new Date('2026-08-22T13:00:00.000Z'),
     })
     const processing = createSession({
@@ -133,10 +121,7 @@ describe('ListSessionHistoryUseCase', () => {
       state: 'processing',
       createdAt: new Date('2026-08-22T14:00:00.000Z'),
     })
-    const harness = createHarness({
-      page: [processing, higher, lower],
-      candidates: [lower, higher],
-    })
+    const harness = createHarness({ page: [processing, higher, lower] })
 
     await expect(
       harness.useCase.execute({ accountId: 'account-1', cursor: null }),
@@ -150,9 +135,7 @@ describe('ListSessionHistoryUseCase', () => {
           categorySlug: 'communication',
           themeTitle: 'Climate change',
           difficulty: 'balanced',
-          totalScore: null,
           state: 'processing',
-          bestOfDay: false,
         },
         {
           sessionId: 'session-2',
@@ -162,9 +145,7 @@ describe('ListSessionHistoryUseCase', () => {
           categorySlug: 'communication',
           themeTitle: 'Climate change',
           difficulty: 'balanced',
-          totalScore: 90,
           state: 'completed',
-          bestOfDay: true,
         },
         {
           sessionId: 'session-1',
@@ -174,9 +155,7 @@ describe('ListSessionHistoryUseCase', () => {
           categorySlug: 'communication',
           themeTitle: 'Climate change',
           difficulty: 'balanced',
-          totalScore: 70,
           state: 'completed',
-          bestOfDay: false,
         },
       ],
       nextCursor: null,
@@ -243,11 +222,10 @@ describe('ListSessionHistoryUseCase', () => {
       createSession({
         id: `session-${index + 1}`,
         state: 'completed',
-        totalScore: index,
         createdAt: new Date(1760000000000 - index * 1000),
       }),
     )
-    const harness = createHarness({ page, candidates: page })
+    const harness = createHarness({ page })
 
     const result = await harness.useCase.execute({ accountId: 'account-1', cursor: null })
 
@@ -256,7 +234,7 @@ describe('ListSessionHistoryUseCase', () => {
     expect(result.pageSize).toBe(20)
   })
 
-  it('returns an empty page without querying the best-of-day window', async () => {
+  it('returns an empty page without querying themes', async () => {
     const harness = createHarness({ page: [] })
 
     await expect(
@@ -267,7 +245,6 @@ describe('ListSessionHistoryUseCase', () => {
       pageSize: 20,
       timeZone: 'America/Sao_Paulo',
     })
-    expect(harness.completedBetweenCalls()).toBe(0)
     expect(harness.requestedThemeIds()).toEqual([])
   })
 
@@ -296,34 +273,5 @@ describe('ListSessionHistoryUseCase', () => {
     await expect(harness.useCase.execute({ accountId: 'account-1', cursor: null })).rejects.toEqual(
       new SessionAuthenticationRejectedError(),
     )
-  })
-
-  it('recalculates best of day using the profile time zone', async () => {
-    const first = createSession({
-      id: 'session-1',
-      state: 'completed',
-      totalScore: 70,
-      createdAt: new Date('2026-08-22T02:00:00.000Z'),
-    })
-    const second = createSession({
-      id: 'session-2',
-      state: 'completed',
-      totalScore: 90,
-      createdAt: new Date('2026-08-22T03:00:00.000Z'),
-    })
-    const saoPaulo = createHarness({ page: [second, first], candidates: [first, second] })
-    const tokyo = createHarness({
-      page: [second, first],
-      candidates: [first, second],
-      profile: { plan: 'free', timeZone: 'Asia/Tokyo' },
-    })
-
-    const saoPauloResult = await saoPaulo.useCase.execute({ accountId: 'account-1', cursor: null })
-    const tokyoResult = await tokyo.useCase.execute({ accountId: 'account-1', cursor: null })
-
-    expect(saoPauloResult.items.map((item) => item.bestOfDay)).toEqual([true, true])
-    expect(tokyoResult.items.map((item) => item.bestOfDay)).toEqual([true, false])
-    expect(saoPauloResult.timeZone).toBe('America/Sao_Paulo')
-    expect(tokyoResult.timeZone).toBe('Asia/Tokyo')
   })
 })

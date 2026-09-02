@@ -160,23 +160,12 @@ describe('Session', () => {
     expect(createSession().recordedAt).toBeNull()
   })
 
-  it('completes a processing session with its score and completion instant', () => {
+  it('completes a processing session with its completion instant', () => {
     const session = reconstituteWithState('processing')
 
-    session.complete(86, COMPLETED_AT)
+    session.complete(COMPLETED_AT)
 
     expect(session.state).toBe('completed')
-    expect(session.totalScore).toBe(86)
-    expect(session.completedAt).toEqual(COMPLETED_AT)
-  })
-
-  it('completes a processing session without a score', () => {
-    const session = reconstituteWithState('processing')
-
-    session.completeWithoutScore(COMPLETED_AT)
-
-    expect(session.state).toBe('completed')
-    expect(session.totalScore).toBeNull()
     expect(session.completedAt).toEqual(COMPLETED_AT)
   })
 
@@ -196,8 +185,7 @@ describe('Session', () => {
     (state) => {
       const session = reconstituteWithState(state)
 
-      expect(() => session.complete(86, COMPLETED_AT)).toThrow(SessionNotInProgressError)
-      expect(() => session.completeWithoutScore(COMPLETED_AT)).toThrow(SessionNotInProgressError)
+      expect(() => session.complete(COMPLETED_AT)).toThrow(SessionNotInProgressError)
       expect(() => session.fail('analysis_timeout', COMPLETED_AT)).toThrow(
         SessionNotInProgressError,
       )

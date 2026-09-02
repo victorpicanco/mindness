@@ -3,54 +3,24 @@ import { describe, expect, it } from 'vitest'
 import { AnalysisCompleted } from './index.js'
 
 describe('AnalysisCompleted', () => {
-  it('uses the closed event name, version, and frozen primitive payload', () => {
+  it('publishes one unversioned product payload without scores', () => {
     const event = AnalysisCompleted.create({
       eventId: 'event-id',
-      occurredAt: new Date('2026-08-21T12:00:00.000Z'),
+      occurredAt: new Date('2026-09-01T12:00:00.000Z'),
       sessionId: 'session-id',
       accountId: 'account-id',
       plan: 'free',
-      analysisVersion: 1,
-      scores: { clarity: 80, rhythm: 81, fluency: 82, mastery: 83, total: 82 },
-      processingMs: 300,
-      costMicrosUsd: 400,
-    })
-
-    expect(event.eventName).toBe('analysis_completed')
-    expect(event.version).toBe(1)
-    expect(event.payload).toEqual({
-      sessionId: 'session-id',
-      accountId: 'account-id',
-      plan: 'free',
-      analysisVersion: 1,
-      scores: { clarity: 80, rhythm: 81, fluency: 82, mastery: 83, total: 82 },
-      processingMs: 300,
-      costMicrosUsd: 400,
-    })
-    expect(Object.isFrozen(event.payload)).toBe(true)
-  })
-
-  it('carries no score in the multimodal variant', () => {
-    const event = AnalysisCompleted.create({
-      eventId: 'event-id',
-      occurredAt: new Date('2026-08-21T12:00:00.000Z'),
-      sessionId: 'session-id',
-      accountId: 'account-id',
-      plan: 'free',
-      analysisVersion: 2,
-      processingMs: 300,
-      costMicrosUsd: 400,
+      processingMs: 100,
+      costMicrosUsd: 20,
     })
 
     expect(event.payload).toEqual({
       sessionId: 'session-id',
       accountId: 'account-id',
       plan: 'free',
-      analysisVersion: 2,
-      processingMs: 300,
-      costMicrosUsd: 400,
+      processingMs: 100,
+      costMicrosUsd: 20,
     })
-    expect(Object.keys(event.payload)).not.toContain('scores')
-    expect(Object.isFrozen(event.payload)).toBe(true)
+    expect(event.payload).not.toHaveProperty('scores')
   })
 })

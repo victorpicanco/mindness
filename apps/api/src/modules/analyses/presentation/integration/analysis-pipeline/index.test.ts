@@ -33,7 +33,6 @@ beforeEach(async () => {
     audioPath: 'audio/session',
     recordedAt: ANALYSES_TEST_NOW,
   })
-  harness.themes.setTitle(THEME_ID, 'Mindfulness')
   harness.audioReader.setAudio(SESSION_ID, Buffer.from('audio'))
   harness.transcription.setResult({
     text: 'Transcript',
@@ -53,7 +52,14 @@ describe('analysis pipeline integration', () => {
     expect(harness.eventBus.published).toHaveLength(1)
     expect(harness.eventBus.published[0]).toMatchObject({
       eventName: 'analysis_completed',
-      payload: { accountId: ACCOUNT_ID, plan: 'free', scores: { total: 60 } },
+      payload: { accountId: ACCOUNT_ID, plan: 'free' },
+    })
+    expect(harness.evaluation.received).toHaveLength(1)
+    expect(harness.evaluation.received[0]).toMatchObject({
+      themeTitle: 'Theme',
+      transcript: 'Transcript',
+      words: [{ word: 'Transcript', start: 0, end: 1, confidence: 1 }],
+      audio: { contentType: 'audio/flac' },
     })
   })
 
@@ -71,7 +77,7 @@ describe('analysis pipeline integration', () => {
     ])
   })
 
-  it('rejects a transcription without words', async () => {
+  it('still evaluates the audio when the transcription is empty', async () => {
     harness.transcription.setResult({
       text: '',
       words: [],
@@ -79,12 +85,11 @@ describe('analysis pipeline integration', () => {
       durationSeconds: 1,
     })
 
-    await expect(
-      harness.container.useCases.processSessionAudio.execute({ sessionId: SESSION_ID }),
-    ).rejects.toMatchObject({ code: 'analyses.TRANSCRIPTION_FAILED' })
+    await harness.container.useCases.processSessionAudio.execute({ sessionId: SESSION_ID })
 
-    await expect(harness.prisma.transcription.count()).resolves.toBe(0)
-    await expect(harness.prisma.analysis.count()).resolves.toBe(0)
+    await expect(harness.prisma.transcription.count()).resolves.toBe(1)
+    await expect(harness.prisma.analysis.count()).resolves.toBe(1)
+    expect(harness.evaluation.received.at(-1)?.transcript).toBe('')
   })
 
   it('publishes a malformed evaluation failure without persistence', async () => {

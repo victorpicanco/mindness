@@ -1,21 +1,18 @@
 import { OnRecordingSubmittedEnqueueAnalysis } from '@/modules/analyses/application/event-handlers/on-recording-submitted-enqueue-analysis/index.js'
 import { EnqueueSessionAnalysisUseCase } from '@/modules/analyses/application/use-cases/enqueue-session-analysis/index.js'
 import { GetSessionAnalysisUseCase } from '@/modules/analyses/application/use-cases/get-session-analysis/index.js'
-import { ProcessMultimodalSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-multimodal-session-audio/index.js'
 import { ProcessSessionAudioUseCase } from '@/modules/analyses/application/use-cases/process-session-audio/index.js'
+import type { ProcessingCostRates } from '@/modules/analyses/application/use-cases/process-session-audio/types.js'
 import { ReconcileOrphanAnalysesUseCase } from '@/modules/analyses/application/use-cases/reconcile-orphan-analyses/index.js'
 import { ResolveAccountIdentityUseCase } from '@/modules/analyses/application/use-cases/resolve-account-identity/index.js'
-import type { ProcessingCostRates } from '@/modules/analyses/application/use-cases/process-session-audio/types.js'
 import type { AccountsPort } from '@/modules/analyses/domain/ports/accounts-port/index.js'
 import type { AnalysisLogger } from '@/modules/analyses/domain/ports/analysis-logger/index.js'
 import type { AudioPreparationPort } from '@/modules/analyses/domain/ports/audio-preparation-port/index.js'
 import type { AudioReaderPort } from '@/modules/analyses/domain/ports/audio-reader-port/index.js'
-import type { AuditoryAnalysisPort } from '@/modules/analyses/domain/ports/auditory-analysis-port/index.js'
 import type { Clock } from '@/modules/analyses/domain/ports/clock/index.js'
 import type { EvaluationPort } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 import type { EventPublisher } from '@/modules/analyses/domain/ports/event-publisher/index.js'
 import type { EventSubscriber } from '@/modules/analyses/domain/ports/event-subscriber/index.js'
-import type { FeedbackSynthesisPort } from '@/modules/analyses/domain/ports/feedback-synthesis-port/index.js'
 import type { IdGenerator } from '@/modules/analyses/domain/ports/id-generator/index.js'
 import type { ProcessingQueuePort } from '@/modules/analyses/domain/ports/processing-queue-port/index.js'
 import type { SessionsPort } from '@/modules/analyses/domain/ports/sessions-port/index.js'
@@ -24,7 +21,6 @@ import type { TranscriptionPort } from '@/modules/analyses/domain/ports/transcri
 import type { UnitOfWork } from '@/modules/analyses/domain/ports/unit-of-work/index.js'
 import type { AnalysesRepository } from '@/modules/analyses/domain/repositories/analyses-repository/index.js'
 import type { AnalysisCostEntriesRepository } from '@/modules/analyses/domain/repositories/analysis-cost-entries-repository/index.js'
-import type { CommunicationAnalysesRepository } from '@/modules/analyses/domain/repositories/communication-analyses-repository/index.js'
 import type { TranscriptionsRepository } from '@/modules/analyses/domain/repositories/transcriptions-repository/index.js'
 import {
   BullMqProcessingQueueAdapter,
@@ -34,20 +30,20 @@ import {
   DeepgramTranscriptionAdapter,
   type DeepgramTranscriptionClient,
 } from '@/modules/analyses/infrastructure/adapters/deepgram-transcription-adapter/index.js'
+import { FfmpegAudioPreparationAdapter } from '@/modules/analyses/infrastructure/adapters/ffmpeg-audio-preparation-adapter/index.js'
 import {
   GeminiEvaluationAdapter,
   type GeminiGenerateContentClient,
 } from '@/modules/analyses/infrastructure/adapters/gemini-evaluation-adapter/index.js'
-import { FfmpegAudioPreparationAdapter } from '@/modules/analyses/infrastructure/adapters/ffmpeg-audio-preparation-adapter/index.js'
-import {
-  GeminiAuditoryAnalysisAdapter,
-  type GeminiAuditoryAnalysisClient,
-} from '@/modules/analyses/infrastructure/adapters/gemini-auditory-analysis-adapter/index.js'
-import {
-  GeminiFeedbackSynthesisAdapter,
-  type GeminiFeedbackSynthesisClient,
-} from '@/modules/analyses/infrastructure/adapters/gemini-feedback-synthesis-adapter/index.js'
 import { PrismaUnitOfWorkAdapter } from '@/modules/analyses/infrastructure/adapters/prisma-unit-of-work-adapter/index.js'
+import type {
+  AnalysesPrismaClient,
+  AnalysesPrismaTransactionRunner,
+} from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
+import { AnalysesTransactionContext } from '@/modules/analyses/infrastructure/clients/analyses-transaction-context/index.js'
+import { AnalysisCostEntryMapper } from '@/modules/analyses/infrastructure/mappers/analysis-cost-entry-mapper/index.js'
+import { AnalysisMapper } from '@/modules/analyses/infrastructure/mappers/analysis-mapper/index.js'
+import { TranscriptionMapper } from '@/modules/analyses/infrastructure/mappers/transcription-mapper/index.js'
 import {
   AccountsPortAdapter,
   type AccountsPlanReader,
@@ -64,18 +60,8 @@ import {
   ThemesPortAdapter,
   type ThemesTitleReader,
 } from '@/modules/analyses/infrastructure/module-adapters/themes-port-adapter/index.js'
-import { AnalysesTransactionContext } from '@/modules/analyses/infrastructure/clients/analyses-transaction-context/index.js'
-import type {
-  AnalysesPrismaClient,
-  AnalysesPrismaTransactionRunner,
-} from '@/modules/analyses/infrastructure/clients/analyses-prisma-client/index.js'
-import { AnalysisCostEntryMapper } from '@/modules/analyses/infrastructure/mappers/analysis-cost-entry-mapper/index.js'
-import { AnalysisMapper } from '@/modules/analyses/infrastructure/mappers/analysis-mapper/index.js'
-import { CommunicationAnalysisMapper } from '@/modules/analyses/infrastructure/mappers/communication-analysis-mapper/index.js'
-import { TranscriptionMapper } from '@/modules/analyses/infrastructure/mappers/transcription-mapper/index.js'
-import { PrismaAnalysisCostEntriesRepository } from '@/modules/analyses/infrastructure/repositories/prisma-analysis-cost-entries-repository/index.js'
 import { PrismaAnalysesRepository } from '@/modules/analyses/infrastructure/repositories/prisma-analyses-repository/index.js'
-import { PrismaCommunicationAnalysesRepository } from '@/modules/analyses/infrastructure/repositories/prisma-communication-analyses-repository/index.js'
+import { PrismaAnalysisCostEntriesRepository } from '@/modules/analyses/infrastructure/repositories/prisma-analysis-cost-entries-repository/index.js'
 import { PrismaTranscriptionsRepository } from '@/modules/analyses/infrastructure/repositories/prisma-transcriptions-repository/index.js'
 import { GetSessionAnalysisController } from '@/modules/analyses/presentation/controllers/get-session-analysis-controller/index.js'
 import type { AnalysesControllers } from '@/modules/analyses/presentation/routes/analyses-routes/types.js'
@@ -83,23 +69,18 @@ import { OperationFailedError } from '@/shared/errors/operation-failed-error/ind
 
 export interface AnalysesAdapterOverrides {
   readonly accounts?: AccountsPort
+  readonly analyses?: AnalysesRepository
   readonly audioPreparation?: AudioPreparationPort
   readonly audioReader?: AudioReaderPort
-  readonly auditoryAnalysis?: AuditoryAnalysisPort
+  readonly costs?: AnalysisCostEntriesRepository
   readonly evaluation?: EvaluationPort
-  readonly feedbackSynthesis?: FeedbackSynthesisPort
   readonly processingQueue?: ProcessingQueuePort
   readonly sessions?: SessionsPort
   readonly themes?: ThemesPort
   readonly transcription?: TranscriptionPort
-  readonly analyses?: AnalysesRepository
-  readonly communicationAnalyses?: CommunicationAnalysesRepository
-  readonly costs?: AnalysisCostEntriesRepository
   readonly transcriptions?: TranscriptionsRepository
   readonly unitOfWork?: UnitOfWork
 }
-
-export type AnalysisPipelineVersion = 'v1' | 'v2'
 
 export interface AnalysisPipelineUseCase {
   execute(input: { readonly sessionId: string }): Promise<void>
@@ -117,13 +98,8 @@ export interface AnalysesModuleDeps {
   readonly sessionsFacade?: SessionsProcessingContextReader & SessionsAudioReader
   readonly themesFacade?: ThemesTitleReader
   readonly deepgramClient?: DeepgramTranscriptionClient
-  readonly geminiClient?: GeminiGenerateContentClient &
-    GeminiAuditoryAnalysisClient &
-    GeminiFeedbackSynthesisClient
+  readonly geminiClient?: GeminiGenerateContentClient
   readonly geminiModel?: string
-  readonly geminiAuditoryModel?: string
-  readonly geminiSynthesisModel?: string
-  readonly pipelineVersion?: AnalysisPipelineVersion
   readonly bullMqQueue?: BullMqQueue
   readonly adapters?: AnalysesAdapterOverrides
 }
@@ -155,9 +131,16 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
   const audioReader =
     adapters.audioReader ??
     new SessionsAudioReaderAdapter(required(deps.sessionsFacade, 'sessionsFacade'))
+  const audioPreparation = adapters.audioPreparation ?? new FfmpegAudioPreparationAdapter()
   const transcription =
     adapters.transcription ??
     new DeepgramTranscriptionAdapter(required(deps.deepgramClient, 'deepgramClient'))
+  const evaluation =
+    adapters.evaluation ??
+    new GeminiEvaluationAdapter(
+      required(deps.geminiClient, 'geminiClient'),
+      required(deps.geminiModel, 'geminiModel'),
+    )
   const processingQueue =
     adapters.processingQueue ??
     new BullMqProcessingQueueAdapter(required(deps.bullMqQueue, 'bullMqQueue'))
@@ -168,13 +151,6 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
   const transcriptions =
     adapters.transcriptions ??
     new PrismaTranscriptionsRepository(prisma, transactionContext, new TranscriptionMapper())
-  const communicationAnalyses =
-    adapters.communicationAnalyses ??
-    new PrismaCommunicationAnalysesRepository(
-      prisma,
-      transactionContext,
-      new CommunicationAnalysisMapper(),
-    )
   const costs =
     adapters.costs ??
     new PrismaAnalysisCostEntriesRepository(
@@ -198,60 +174,24 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
     processingQueue,
     clock,
   })
-  const costRates = required(deps.costRates, 'costRates')
-  const processSessionAudio: AnalysisPipelineUseCase =
-    (deps.pipelineVersion ?? 'v1') === 'v2'
-      ? new ProcessMultimodalSessionAudioUseCase({
-          accounts,
-          audioPreparation: adapters.audioPreparation ?? new FfmpegAudioPreparationAdapter(),
-          audioReader,
-          auditoryAnalysis:
-            adapters.auditoryAnalysis ??
-            new GeminiAuditoryAnalysisAdapter(
-              required(deps.geminiClient, 'geminiClient'),
-              required(deps.geminiAuditoryModel, 'geminiAuditoryModel'),
-            ),
-          clock,
-          communicationAnalyses,
-          costRates,
-          costs,
-          eventPublisher,
-          feedbackSynthesis:
-            adapters.feedbackSynthesis ??
-            new GeminiFeedbackSynthesisAdapter(
-              required(deps.geminiClient, 'geminiClient'),
-              required(deps.geminiSynthesisModel, 'geminiSynthesisModel'),
-            ),
-          idGenerator,
-          logger,
-          sessions,
-          themes,
-          transcription,
-          transcriptions,
-          unitOfWork,
-        })
-      : new ProcessSessionAudioUseCase({
-          accounts,
-          analyses,
-          audioReader,
-          clock,
-          costRates,
-          costs,
-          evaluation:
-            adapters.evaluation ??
-            new GeminiEvaluationAdapter(
-              required(deps.geminiClient, 'geminiClient'),
-              required(deps.geminiModel, 'geminiModel'),
-            ),
-          eventPublisher,
-          idGenerator,
-          logger,
-          sessions,
-          themes,
-          transcription,
-          transcriptions,
-          unitOfWork,
-        })
+  const processSessionAudio: AnalysisPipelineUseCase = new ProcessSessionAudioUseCase({
+    accounts,
+    analyses,
+    audioPreparation,
+    audioReader,
+    clock,
+    costRates: required(deps.costRates, 'costRates'),
+    costs,
+    evaluation,
+    eventPublisher,
+    idGenerator,
+    logger,
+    sessions,
+    themes,
+    transcription,
+    transcriptions,
+    unitOfWork,
+  })
   const resolveAccountIdentity = new ResolveAccountIdentityUseCase({ accounts })
   const getSessionAnalysis = new GetSessionAnalysisUseCase({
     analyses,
@@ -271,7 +211,7 @@ export function createAnalysesContainer(deps: AnalysesModuleDeps) {
       onRecordingSubmitted: new OnRecordingSubmittedEnqueueAnalysis(enqueueSessionAnalysis, logger),
     },
     controllers,
-    repositories: { analyses, communicationAnalyses, costs, transcriptions },
+    repositories: { analyses, costs, transcriptions },
     useCases: {
       enqueueSessionAnalysis,
       getSessionAnalysis,

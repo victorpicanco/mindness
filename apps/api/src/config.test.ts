@@ -21,9 +21,6 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   GOOGLE_CLOUD_PROJECT: 'mindness-test',
   GOOGLE_CLOUD_LOCATION: 'us-central1',
   GEMINI_MODEL: 'gemini-2.5-flash',
-  GEMINI_AUDITORY_MODEL: 'gemini-2.5-flash',
-  GEMINI_SYNTHESIS_MODEL: 'gemini-2.5-flash',
-  ANALYSIS_PIPELINE_VERSION: 'v1',
   DEEPGRAM_COST_PER_MINUTE_MICROS: '4800',
   GEMINI_INPUT_COST_PER_MTOK_MICROS: '300000',
   GEMINI_OUTPUT_COST_PER_MTOK_MICROS: '2500000',
@@ -53,9 +50,6 @@ describe('loadConfig', () => {
       googleCloudProject: 'mindness-test',
       googleCloudLocation: 'us-central1',
       geminiModel: 'gemini-2.5-flash',
-      geminiAuditoryModel: 'gemini-2.5-flash',
-      geminiSynthesisModel: 'gemini-2.5-flash',
-      analysisPipelineVersion: 'v1',
       deepgramCostPerMinuteMicros: 4800,
       geminiInputCostPerMtokMicros: 300000,
       geminiOutputCostPerMtokMicros: 2500000,
@@ -122,58 +116,6 @@ describe('loadConfig', () => {
       field: 'REDIS_URL',
       message: 'Missing required environment variable: REDIS_URL',
     })
-  })
-
-  it('accepts v2 as the analysis pipeline version', () => {
-    const config = loadConfig({ ...VALID_ENV, ANALYSIS_PIPELINE_VERSION: 'v2' })
-
-    expect(config.analysisPipelineVersion).toBe('v2')
-  })
-
-  it.each(['v3', 'V1', 'latest', ''] as const)(
-    'rejects %s as an analysis pipeline version',
-    (value) => {
-      expect(() => loadConfig({ ...VALID_ENV, ANALYSIS_PIPELINE_VERSION: value })).toThrow(
-        ValidationFailedError,
-      )
-    },
-  )
-
-  it.each([
-    'ANALYSIS_PIPELINE_VERSION',
-    'GEMINI_AUDITORY_MODEL',
-    'GEMINI_SYNTHESIS_MODEL',
-  ] as const)('lists %s when it is missing', (key) => {
-    const envWithoutKey = { ...VALID_ENV }
-    delete envWithoutKey[key]
-
-    let caught: unknown
-    try {
-      loadConfig(envWithoutKey)
-    } catch (error) {
-      caught = error
-    }
-
-    expect(caught).toBeInstanceOf(ValidationFailedError)
-    if (!(caught instanceof ValidationFailedError)) return
-
-    expect(caught.context.issues).toContainEqual({
-      field: key,
-      message: `Missing required environment variable: ${key}`,
-    })
-  })
-
-  it('keeps the two analysis models independent from the legacy model', () => {
-    const config = loadConfig({
-      ...VALID_ENV,
-      GEMINI_MODEL: 'legacy-model',
-      GEMINI_AUDITORY_MODEL: 'auditory-model',
-      GEMINI_SYNTHESIS_MODEL: 'synthesis-model',
-    })
-
-    expect(config.geminiModel).toBe('legacy-model')
-    expect(config.geminiAuditoryModel).toBe('auditory-model')
-    expect(config.geminiSynthesisModel).toBe('synthesis-model')
   })
 
   it('lists PUBLIC_WEB_URL when it is missing', () => {

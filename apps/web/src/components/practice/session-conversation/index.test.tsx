@@ -28,8 +28,17 @@ const SESSION: PracticeSession = {
 
 const ANALYSIS = sessionAnalysisSchema.parse({
   analyzedAt: '2026-08-27T12:10:00.000Z',
-  guidance: [{ pillar: 'clarity', text: 'Organize a ideia central.' }],
-  scores: { clarity: 70, fluency: 60, mastery: 85, rhythm: 75, total: 73 },
+  feedback: {
+    summary: 'A mensagem ficou clara.',
+    strengths: [],
+    improvements: [
+      {
+        title: 'Organização',
+        evidence: 'Os detalhes aparecem antes da ideia central.',
+        action: 'Organize a ideia central antes de apresentar os detalhes.',
+      },
+    ],
+  },
   sessionId: SESSION.sessionId,
   transcript: 'Transcrição da apresentação.',
 })
@@ -144,7 +153,10 @@ describe('SessionConversation', () => {
     expect(screen.getByRole('button', { name: 'Reproduzir gravação' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Sua análise' })).toBeInTheDocument()
     expect(revealedText()).toEqual(
-      expect.arrayContaining(['Organize a ideia central.', 'Transcrição da apresentação.']),
+      expect.arrayContaining([
+        'Organize a ideia central antes de apresentar os detalhes.',
+        'Transcrição da apresentação.',
+      ]),
     )
     expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeDisabled()
   })

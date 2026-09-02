@@ -1,11 +1,11 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
-import { countdownSeconds, formatCountdown, TIMER_TICK_MS } from '@/components/practice/countdown'
+import { countdownSeconds, TIMER_TICK_MS } from '@/components/practice/countdown'
+import { ThemeCountdown } from '@/components/practice/theme-countdown'
 
 const WARNING_THRESHOLD_SECONDS = 10
 const WARNING_AUDIO_SOURCE = '/countdown-warning.wav'
@@ -30,8 +30,6 @@ export function ResearchTimerView({
 }: {
   readonly logAudioFailure: (cause: unknown) => void
 }) {
-  const t = useTranslations('home.research')
-  const themeId = useId()
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
   const openRecordingWindow = usePracticeSessionStore((state) => state.openRecordingWindow)
@@ -78,21 +76,10 @@ export function ResearchTimerView({
   if (session === null) return null
 
   return (
-    <section aria-labelledby={themeId} className="mt-2">
-      <h1
-        className="font-(family-name:--font-buenard) text-2xl leading-tight tracking-tight sm:text-3xl"
-        id={themeId}
-      >
-        {session.themeTitle}
-      </h1>
-      <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface px-4 py-3">
-        <span className="text-sm text-text-muted">{t('eyebrow')}</span>
-        <p aria-live="polite" className="text-2xl font-medium tabular-nums" role="timer">
-          {formatCountdown(seconds)}
-        </p>
-      </div>
+    <>
+      <ThemeCountdown seconds={seconds} themeTitle={session.themeTitle} />
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- The warning is a non-speech tone with no content to caption. */}
       <audio aria-hidden="true" preload="auto" ref={audioRef} src={WARNING_AUDIO_SOURCE} />
-    </section>
+    </>
   )
 }

@@ -134,7 +134,6 @@ function createSessionRow(): SessionRow {
     expiredAt: null,
     recordingStartedAt: null,
     recordedAt: null,
-    totalScore: null,
     completedAt: null,
     audio: null,
   }
@@ -150,10 +149,6 @@ function createAnalysesPrismaStub(): AnalysesPrismaClient & AnalysesPrismaTransa
       findUnique: () => Promise.resolve(null),
       upsert: () => Promise.resolve(createAnalysisRow()),
       updateMany: () => Promise.resolve({ count: 0 }),
-    },
-    communicationAnalysis: {
-      findUnique: () => Promise.resolve(null),
-      create: (args) => Promise.resolve(args.data),
     },
     analysisCostEntry: {
       create: () => Promise.resolve(createCostEntryRow()),
@@ -176,12 +171,7 @@ function createTranscription() {
 
 function createEvaluation() {
   return {
-    clarityScore: 80,
-    clarityGuidance: 'Clear',
-    fluencyScore: 80,
-    fluencyGuidance: 'Fluid',
-    masteryScore: 80,
-    masteryGuidance: 'Strong',
+    feedback: { summary: 'Clear.', strengths: [], improvements: [] },
     inputTokens: 1,
     outputTokens: 1,
   }
@@ -203,20 +193,7 @@ function createAnalysisRow() {
   return {
     id: 'analysis',
     sessionId: 'session',
-    clarityScore: 80,
-    rhythmScore: 80,
-    fluencyScore: 80,
-    masteryScore: 80,
-    totalScore: 80,
-    guidance: { clarity: 'Clear', rhythm: 'On target', fluency: 'Fluid', mastery: 'Strong' },
-    rhythmMetrics: {
-      wordsPerMinute: 130,
-      wordCount: 1,
-      speechDurationSeconds: 1,
-      pauseCount: 0,
-      longPauseCount: 0,
-      longestPauseSeconds: 0,
-    },
+    feedback: { summary: 'Clear.', strengths: [], improvements: [] },
     processingMs: 1,
     costMicrosUsd: 1,
     createdAt: new Date(),
@@ -230,8 +207,6 @@ function createCostEntryRow() {
     accountId: 'account',
     transcriptionMicrosUsd: 1,
     evaluationMicrosUsd: 1,
-    auditoryMicrosUsd: 0,
-    synthesisMicrosUsd: 0,
     totalMicrosUsd: 2,
     incurredAt: new Date(),
   }

@@ -9,8 +9,6 @@ export class AnalysisCostEntryMapper {
       accountId: entry.accountId,
       transcriptionMicrosUsd: entry.transcriptionMicrosUsd,
       evaluationMicrosUsd: entry.evaluationMicrosUsd,
-      auditoryMicrosUsd: entry.auditoryMicrosUsd,
-      synthesisMicrosUsd: entry.synthesisMicrosUsd,
       totalMicrosUsd: entry.totalMicrosUsd,
       incurredAt: entry.incurredAt,
     }

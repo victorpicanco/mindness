@@ -20,7 +20,7 @@ describe('registerSessionsModule', () => {
     await app.close()
   })
 
-  it('rejects an analysis event whose payload does not have the expected shape', async () => {
+  it('rejects an analysis event without a session id', async () => {
     const handlers = new Map<string, EventHandler>()
     const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })
     const warn = vi.spyOn(app.log, 'warn')
@@ -33,7 +33,7 @@ describe('registerSessionsModule', () => {
       eventName: 'analysis_completed',
       occurredAt: new Date(),
       version: 1,
-      payload: { sessionId: 'session-1' },
+      payload: {},
     })
 
     expect(findById).not.toHaveBeenCalled()
@@ -56,14 +56,14 @@ describe('registerSessionsModule', () => {
       eventName: 'analysis_completed',
       occurredAt: new Date(),
       version: 1,
-      payload: { sessionId: 'session-1', scores: { total: 80 } },
+      payload: { sessionId: 'session-1' },
     })
 
     expect(findById).toHaveBeenCalledOnce()
     await app.close()
   })
 
-  it('completes a multimodal analysis event without reading a score', async () => {
+  it('completes an analysis event without reading a score', async () => {
     const handlers = new Map<string, EventHandler>()
     const app = buildApp({ logger: createLogger({ level: 'silent', pretty: false }) })
     const deps = createDependencies([], handlers, createSessionRow('processing'))
@@ -76,14 +76,13 @@ describe('registerSessionsModule', () => {
       eventName: 'analysis_completed',
       occurredAt,
       version: 1,
-      payload: { sessionId: 'session-1', analysisVersion: 2 },
+      payload: { sessionId: 'session-1' },
     })
 
     expect(upsert).toHaveBeenCalledOnce()
     expect(upsert.mock.calls[0]?.[0].update).toMatchObject({
       state: 'completed',
       completedAt: occurredAt,
-      totalScore: null,
     })
     await app.close()
   })
@@ -191,7 +190,6 @@ function createSessionRow(state: SessionRow['state'] = 'in_progress'): SessionRo
     expiredAt: null,
     recordingStartedAt: null,
     recordedAt: null,
-    totalScore: null,
     completedAt: null,
     audio: null,
   }

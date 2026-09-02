@@ -2,13 +2,10 @@ import { Type, type Static } from '@fastify/type-provider-typebox'
 
 import { successSchema } from '@/shared/http/envelope/index.js'
 
-const PillarSchema = Type.Integer({ minimum: 0, maximum: 100 })
-const PillarNameSchema = Type.Union([
-  Type.Literal('clarity'),
-  Type.Literal('rhythm'),
-  Type.Literal('fluency'),
-  Type.Literal('mastery'),
-])
+const FeedbackPointSchema = Type.Object(
+  { title: Type.String(), evidence: Type.String() },
+  { additionalProperties: false },
+)
 
 export const SessionIdParamsSchema = Type.Object(
   { sessionId: Type.String({ format: 'uuid' }) },
@@ -21,22 +18,19 @@ export const SessionAnalysisResponseSchema = successSchema(
   Type.Object(
     {
       sessionId: Type.String({ format: 'uuid' }),
-      scores: Type.Object(
+      feedback: Type.Object(
         {
-          clarity: PillarSchema,
-          rhythm: PillarSchema,
-          fluency: PillarSchema,
-          mastery: PillarSchema,
-          total: PillarSchema,
+          summary: Type.String(),
+          strengths: Type.Array(FeedbackPointSchema, { maxItems: 3 }),
+          improvements: Type.Array(
+            Type.Object(
+              { title: Type.String(), evidence: Type.String(), action: Type.String() },
+              { additionalProperties: false },
+            ),
+            { maxItems: 3 },
+          ),
         },
         { additionalProperties: false },
-      ),
-      guidance: Type.Array(
-        Type.Object(
-          { pillar: PillarNameSchema, text: Type.String() },
-          { additionalProperties: false },
-        ),
-        { minItems: 1 },
       ),
       transcript: Type.String(),
       analyzedAt: Type.String({ format: 'date-time' }),

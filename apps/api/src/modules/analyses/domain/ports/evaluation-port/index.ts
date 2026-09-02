@@ -1,14 +1,16 @@
-import type { RhythmMetrics } from '@/modules/analyses/domain/value-objects/rhythm-metrics/index.js'
+import type { PreparedAudio } from '@/modules/analyses/domain/ports/audio-preparation-port/index.js'
+import type { TranscriptionWord } from '@/modules/analyses/domain/entities/transcription/index.js'
 
 import type { EvaluationResult } from './types.js'
 
 export interface EvaluationPort {
   evaluate(input: {
+    readonly audio: PreparedAudio
     readonly themeTitle: string
     readonly transcript: string
-    readonly rhythm: RhythmMetrics
+    readonly words: readonly TranscriptionWord[]
     readonly signal: AbortSignal
   }): Promise<EvaluationResult>
 }
 
-export type { EvaluationResult } from './types.js'
+export type { EvaluationResult, FeedbackPoint, ImprovementPoint, SpeechFeedback } from './types.js'

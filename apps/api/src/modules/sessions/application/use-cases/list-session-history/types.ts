@@ -19,9 +19,7 @@ export interface SessionHistoryItem {
   readonly categorySlug: string
   readonly themeTitle: string | null
   readonly difficulty: SessionConfiguration['difficulty']
-  readonly totalScore: number | null
   readonly state: VisibleSessionState
-  readonly bestOfDay: boolean
 }
 
 export interface ListSessionHistoryOutput {
@@ -32,7 +30,7 @@ export interface ListSessionHistoryOutput {
 }
 
 export interface ListSessionHistoryDependencies {
-  readonly sessions: Pick<SessionsRepository, 'findById' | 'listByAccount' | 'findCompletedBetween'>
+  readonly sessions: Pick<SessionsRepository, 'findById' | 'listByAccount'>
   readonly accounts: Pick<AccountsPort, 'findProfile'>
   readonly themes: Pick<ThemesPort, 'listThemeTitles'>
 }

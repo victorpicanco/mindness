@@ -48,7 +48,6 @@ vi.mock('next-intl/server', () => ({
         'states.failed': 'Falhou',
         'states.in_progress': 'Em andamento',
         'states.processing': 'Processando',
-        totalScore: 'Pontuação total',
       }
 
       return values[key] ?? key
@@ -111,7 +110,6 @@ function createApiFetch(activeSession: unknown, sessions: unknown = []): ApiFetc
 
 function completedSession() {
   return {
-    bestOfDay: true,
     categorySlug: 'focus',
     difficulty: 'balanced' as const,
     localDate: '24/08/2026',
@@ -120,18 +118,23 @@ function completedSession() {
     startedAt: '2026-08-24T12:00:00.000Z',
     state: 'completed' as const,
     themeTitle: 'Notícias do dia',
-    totalScore: 73,
   }
 }
 
 function analysis() {
   return {
     analyzedAt: '2026-08-24T12:10:00.000Z',
-    guidance: [
-      { pillar: 'clarity', text: 'Organize a ideia central antes de apresentar os detalhes.' },
-      { pillar: 'fluency', text: 'Reduza as pausas entre frases relacionadas.' },
-    ],
-    scores: { clarity: 70, fluency: 60, mastery: 85, rhythm: 75, total: 73 },
+    feedback: {
+      summary: 'A mensagem ficou clara e direta.',
+      strengths: [{ title: 'Abertura direta', evidence: 'A ideia principal aparece no início.' }],
+      improvements: [
+        {
+          title: 'Organização',
+          evidence: 'Os detalhes aparecem antes da ideia central.',
+          action: 'Organize a ideia central antes de apresentar os detalhes.',
+        },
+      ],
+    },
     sessionId: SESSION_ID,
     transcript: '<strong>Texto puro</strong> **sem Markdown renderizado**',
   }
@@ -307,10 +310,9 @@ describe('SessionPage', () => {
     expect(notFound).toHaveBeenCalledOnce()
   })
 
-  it('represents a synchronized non-active session without an analysis from the sidebar aggregate', async () => {
+  it('keeps the session layout of an expired session and replaces the recorder with the notice', async () => {
     respondToApi = createApiFetch(null, [
       {
-        bestOfDay: true,
         categorySlug: 'focus',
         difficulty: 'balanced',
         localDate: '24/08/2026',
@@ -319,7 +321,30 @@ describe('SessionPage', () => {
         startedAt: '2026-08-24T12:00:00.000Z',
         state: 'expired',
         themeTitle: 'Notícias do dia',
-        totalScore: null,
+      },
+    ])
+    const Page = await loadSessionPage()
+
+    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
+
+    expect(screen.getByRole('region', { name: 'Conversa da sessão' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Notícias do dia' })).toBeInTheDocument()
+    expect(screen.getByRole('timer')).toHaveTextContent('00:00')
+    expect(screen.queryByRole('group', { name: 'Gravador de áudio' })).not.toBeInTheDocument()
+    expect(screen.getByText('Esta sessão foi expirada por inatividade.')).toBeInTheDocument()
+  })
+
+  it('represents a synchronized non-active session without an analysis from the sidebar aggregate', async () => {
+    respondToApi = createApiFetch(null, [
+      {
+        categorySlug: 'focus',
+        difficulty: 'balanced',
+        localDate: '24/08/2026',
+        localTime: '09:00',
+        sessionId: SESSION_ID,
+        startedAt: '2026-08-24T12:00:00.000Z',
+        state: 'processing',
+        themeTitle: 'Notícias do dia',
       },
     ])
     const Page = await loadSessionPage()
@@ -327,10 +352,10 @@ describe('SessionPage', () => {
     renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
 
     expect(screen.getByRole('heading', { name: 'focus' })).toBeInTheDocument()
-    expect(screen.getByText('Expirada')).toBeInTheDocument()
+    expect(screen.getByText('Processando')).toBeInTheDocument()
   })
 
-  it('renders scores, guidance and transcript as plain text for a completed session', async () => {
+  it('renders feedback and transcript as plain text for a completed session', async () => {
     const fetchFromApi: ApiFetch = (path, options) => {
       const response =
         path === '/sessions/active'
@@ -357,15 +382,11 @@ describe('SessionPage', () => {
     expect(screen.getAllByLabelText('Sua mensagem')).toHaveLength(2)
     expect(screen.getAllByLabelText('Mensagem da Mindness')).toHaveLength(2)
     expect(screen.getByRole('button', { name: 'Reproduzir gravação' })).toBeInTheDocument()
-    expect(screen.getByText('73')).toBeInTheDocument()
-    expect(screen.getByText('70')).toBeInTheDocument()
-    expect(screen.getByText('75')).toBeInTheDocument()
-    expect(screen.getByText('60')).toBeInTheDocument()
-    expect(screen.getByText('85')).toBeInTheDocument()
     expect(revealedText()).toEqual(
       expect.arrayContaining([
+        'A mensagem ficou clara e direta.',
+        'A ideia principal aparece no início.',
         'Organize a ideia central antes de apresentar os detalhes.',
-        'Reduza as pausas entre frases relacionadas.',
         '<strong>Texto puro</strong> **sem Markdown renderizado**',
       ]),
     )

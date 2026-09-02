@@ -252,9 +252,6 @@ export async function startWorker(): Promise<void> {
         location: config.googleCloudLocation,
       }),
       geminiModel: config.geminiModel,
-      geminiAuditoryModel: config.geminiAuditoryModel,
-      geminiSynthesisModel: config.geminiSynthesisModel,
-      pipelineVersion: config.analysisPipelineVersion,
       bullMqQueue,
     },
   })

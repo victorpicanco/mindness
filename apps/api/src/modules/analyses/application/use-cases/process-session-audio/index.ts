@@ -2,18 +2,18 @@ import { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
 import { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
 import { AnalysisCompleted } from '@/modules/analyses/domain/events/analysis-completed/index.js'
 import { AnalysisFailed } from '@/modules/analyses/domain/events/analysis-failed/index.js'
+import type { AnalysisFailureReason } from '@/modules/analyses/domain/events/analysis-failed/index.js'
 import { AnalysisTimedOut } from '@/modules/analyses/domain/events/analysis-timed-out/index.js'
 import { AnalysisDeadlineExceededError } from '@/modules/analyses/domain/errors/analysis-deadline-exceeded-error/index.js'
+import { AudioPreparationFailedError } from '@/modules/analyses/domain/errors/audio-preparation-failed-error/index.js'
 import { EvaluationFailedError } from '@/modules/analyses/domain/errors/evaluation-failed-error/index.js'
 import { MalformedEvaluationError } from '@/modules/analyses/domain/errors/malformed-evaluation-error/index.js'
 import { TranscriptionFailedError } from '@/modules/analyses/domain/errors/transcription-failed-error/index.js'
 import type { AccountPlan } from '@/modules/analyses/domain/ports/accounts-port/index.js'
-import { CostCalculator } from '@/modules/analyses/domain/services/cost-calculator/index.js'
-import { RhythmCalculator } from '@/modules/analyses/domain/services/rhythm-calculator/index.js'
-import { PillarScore } from '@/modules/analyses/domain/value-objects/pillar-score/index.js'
 import type { EvaluationResult } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 import type { IdGenerator } from '@/modules/analyses/domain/ports/id-generator/index.js'
 import type { TranscriptionResult } from '@/modules/analyses/domain/ports/transcription-port/index.js'
+import { CostCalculator } from '@/modules/analyses/domain/services/cost-calculator/index.js'
 
 import type {
   PersistedAnalysis,
@@ -29,8 +29,7 @@ export class ProcessSessionAudioUseCase {
   constructor(private readonly dependencies: ProcessSessionAudioDependencies) {}
 
   async execute(input: ProcessSessionAudioInput): Promise<ProcessSessionAudioOutput> {
-    const existingAnalysis = await this.dependencies.analyses.findBySessionId(input.sessionId)
-    if (existingAnalysis !== null) return
+    if ((await this.dependencies.analyses.findBySessionId(input.sessionId)) !== null) return
 
     const context = await this.dependencies.sessions.findProcessingContext(input.sessionId)
     if (context === null) {
@@ -50,69 +49,73 @@ export class ProcessSessionAudioUseCase {
     const remainingMs =
       ANALYSIS_DEADLINE_MS -
       (this.dependencies.clock.now().getTime() - context.recordedAt.getTime())
-    if (remainingMs <= 0) {
-      await this.publishTimeout(context, plan)
-      throw new AnalysisDeadlineExceededError(remainingMs)
-    }
+    if (remainingMs <= 0) return await this.timeout(context, plan, remainingMs)
 
     const startedAt = this.dependencies.clock.now()
     const controller = new AbortController()
     const deadlineTimer = setTimeout(() => controller.abort(), remainingMs)
     try {
-      let transcriptionResult: TranscriptionResult
-      try {
-        const audio = await this.dependencies.audioReader.read(context.sessionId)
-        transcriptionResult = await this.dependencies.transcription.transcribe({
-          audio: audio.bytes,
-          deadlineMs: remainingMs,
-          signal: controller.signal,
-        })
-      } catch (error) {
-        if (controller.signal.aborted) {
-          await this.publishTimeout(context, plan)
-          throw new AnalysisDeadlineExceededError(remainingMs)
-        }
-        const failure = new TranscriptionFailedError('provider request failed', { cause: error })
-        await this.publishFailure({ context, plan, reason: 'transcription_failed' })
-        throw failure
-      }
-      const rhythm = calculateRhythm(transcriptionResult.words)
-      if (rhythm === null) {
-        const failure = new TranscriptionFailedError('transcription has no words')
-        await this.publishFailure({ context, plan, reason: 'transcription_failed' })
-        throw failure
-      }
+      const source = await this.run(
+        () => this.dependencies.audioReader.read(context.sessionId),
+        'transcription_failed',
+        context,
+        plan,
+        controller,
+        remainingMs,
+        (cause) => new TranscriptionFailedError('audio read failed', { cause }),
+      )
+      const transcriptionResult = await this.run(
+        () =>
+          this.dependencies.transcription.transcribe({
+            audio: source.bytes,
+            deadlineMs: remainingMs,
+            signal: controller.signal,
+          }),
+        'transcription_failed',
+        context,
+        plan,
+        controller,
+        remainingMs,
+        (cause) => new TranscriptionFailedError('provider request failed', { cause }),
+      )
+      const audio = await this.run(
+        () => this.dependencies.audioPreparation.prepare({ source, signal: controller.signal }),
+        'audio_preparation_failed',
+        context,
+        plan,
+        controller,
+        remainingMs,
+        (cause) => new AudioPreparationFailedError('audio preparation failed', { cause }),
+      )
 
       const themeTitle = await this.dependencies.themes.findTitle(context.themeId)
       if (themeTitle === null) {
-        const failure = new EvaluationFailedError('theme not found')
-        await this.publishFailure({ context, plan, reason: 'evaluation_failed' })
-        throw failure
+        const error = new EvaluationFailedError('theme not found')
+        await this.publishFailure(context, plan, 'evaluation_failed')
+        throw error
       }
 
-      let evaluation: EvaluationResult
-      try {
-        evaluation = await this.dependencies.evaluation.evaluate({
-          themeTitle,
-          transcript: transcriptionResult.text,
-          rhythm: rhythm.metrics,
-          signal: controller.signal,
-        })
-      } catch (error) {
-        if (controller.signal.aborted) {
-          await this.publishTimeout(context, plan)
-          throw new AnalysisDeadlineExceededError(remainingMs)
-        }
-        const failure = translateEvaluationFailure(error)
-        await this.publishFailure({ context, plan, reason: failure.reason })
-        throw failure.error
-      }
+      const evaluation = await this.run(
+        () =>
+          this.dependencies.evaluation.evaluate({
+            audio,
+            themeTitle,
+            transcript: transcriptionResult.text,
+            words: transcriptionResult.words,
+            signal: controller.signal,
+          }),
+        'evaluation_failed',
+        context,
+        plan,
+        controller,
+        remainingMs,
+        translateEvaluationFailure,
+      )
       const completedAt = this.dependencies.clock.now()
       const persisted = createPersistedAnalysis({
         context,
         transcriptionResult,
         evaluation,
-        rhythm,
         startedAt,
         completedAt,
         idGenerator: this.dependencies.idGenerator,
@@ -131,14 +134,6 @@ export class ProcessSessionAudioUseCase {
           sessionId: context.sessionId,
           accountId: context.accountId,
           plan,
-          analysisVersion: 1,
-          scores: {
-            clarity: persisted.analysis.clarityScore.value,
-            rhythm: persisted.analysis.rhythmScore.value,
-            fluency: persisted.analysis.fluencyScore.value,
-            mastery: persisted.analysis.masteryScore.value,
-            total: persisted.analysis.totalScore,
-          },
           processingMs: persisted.analysis.processingMs,
           costMicrosUsd: persisted.analysis.costMicrosUsd,
         }),
@@ -148,10 +143,38 @@ export class ProcessSessionAudioUseCase {
     }
   }
 
-  private async publishTimeout(
+  private async run<T>(
+    operation: () => Promise<T>,
+    reason: AnalysisFailureReason,
     context: { readonly sessionId: string; readonly accountId: string },
     plan: AccountPlan,
-  ): Promise<void> {
+    controller: AbortController,
+    remainingMs: number,
+    translate: (
+      cause: unknown,
+    ) =>
+      | AudioPreparationFailedError
+      | EvaluationFailedError
+      | MalformedEvaluationError
+      | TranscriptionFailedError,
+  ): Promise<T> {
+    try {
+      return await operation()
+    } catch (cause) {
+      if (controller.signal.aborted) return await this.timeout(context, plan, remainingMs)
+      const error = translate(cause)
+      const failureReason =
+        error instanceof MalformedEvaluationError ? 'malformed_evaluation' : reason
+      await this.publishFailure(context, plan, failureReason)
+      throw error
+    }
+  }
+
+  private async timeout(
+    context: { readonly sessionId: string; readonly accountId: string },
+    plan: AccountPlan,
+    remainingMs: number,
+  ): Promise<never> {
     await this.dependencies.eventPublisher.publish(
       AnalysisTimedOut.create({
         eventId: this.dependencies.idGenerator.generate(),
@@ -161,58 +184,39 @@ export class ProcessSessionAudioUseCase {
         plan,
       }),
     )
+    throw new AnalysisDeadlineExceededError(remainingMs)
   }
 
-  private async publishFailure(input: {
-    readonly context: { readonly sessionId: string; readonly accountId: string }
-    readonly plan: AccountPlan
-    readonly reason: 'transcription_failed' | 'evaluation_failed' | 'malformed_evaluation'
-  }): Promise<void> {
+  private async publishFailure(
+    context: { readonly sessionId: string; readonly accountId: string },
+    plan: AccountPlan,
+    reason: AnalysisFailureReason,
+  ): Promise<void> {
     await this.dependencies.eventPublisher.publish(
       AnalysisFailed.create({
         eventId: this.dependencies.idGenerator.generate(),
         occurredAt: this.dependencies.clock.now(),
-        sessionId: input.context.sessionId,
-        accountId: input.context.accountId,
-        plan: input.plan,
-        reason: input.reason,
+        sessionId: context.sessionId,
+        accountId: context.accountId,
+        plan,
+        reason,
       }),
     )
   }
 }
 
-function translateEvaluationFailure(error: unknown): {
-  readonly error: EvaluationFailedError | MalformedEvaluationError
-  readonly reason: 'evaluation_failed' | 'malformed_evaluation'
-} {
-  if (error instanceof MalformedEvaluationError) {
-    return { error, reason: 'malformed_evaluation' }
-  }
-  if (error instanceof EvaluationFailedError) {
-    return { error, reason: 'evaluation_failed' }
-  }
-
-  return {
-    error: new EvaluationFailedError('provider request failed', { cause: error }),
-    reason: 'evaluation_failed',
-  }
-}
-
-function calculateRhythm(words: TranscriptionResult['words']) {
-  const [firstWord, ...remainingWords] = words
-  if (firstWord === undefined) return null
-
-  const lastWord = remainingWords.at(-1) ?? firstWord
-  if (lastWord.end - firstWord.start <= 0) return null
-
-  return RhythmCalculator.calculate([firstWord, ...remainingWords])
+function translateEvaluationFailure(
+  cause: unknown,
+): EvaluationFailedError | MalformedEvaluationError {
+  if (cause instanceof MalformedEvaluationError || cause instanceof EvaluationFailedError)
+    return cause
+  return new EvaluationFailedError('provider request failed', { cause })
 }
 
 function createPersistedAnalysis(input: {
   readonly context: { readonly sessionId: string; readonly accountId: string }
   readonly transcriptionResult: TranscriptionResult
   readonly evaluation: EvaluationResult
-  readonly rhythm: NonNullable<ReturnType<typeof calculateRhythm>>
   readonly startedAt: Date
   readonly completedAt: Date
   readonly idGenerator: IdGenerator
@@ -235,15 +239,7 @@ function createPersistedAnalysis(input: {
   const analysis = Analysis.create({
     analysisId: input.idGenerator.generate(),
     sessionId: input.context.sessionId,
-    clarityScore: PillarScore.create(input.evaluation.clarityScore),
-    rhythmScore: PillarScore.create(input.rhythm.score),
-    fluencyScore: PillarScore.create(input.evaluation.fluencyScore),
-    masteryScore: PillarScore.create(input.evaluation.masteryScore),
-    clarityGuidance: input.evaluation.clarityGuidance,
-    rhythmGuidance: input.rhythm.guidance,
-    fluencyGuidance: input.evaluation.fluencyGuidance,
-    masteryGuidance: input.evaluation.masteryGuidance,
-    rhythmMetrics: input.rhythm.metrics,
+    feedback: input.evaluation.feedback,
     processingMs: input.completedAt.getTime() - input.startedAt.getTime(),
     costMicrosUsd: cost.totalMicrosUsd,
     createdAt: input.completedAt,
@@ -258,8 +254,6 @@ function createPersistedAnalysis(input: {
       accountId: input.context.accountId,
       transcriptionMicrosUsd: cost.transcriptionMicrosUsd,
       evaluationMicrosUsd: cost.evaluationMicrosUsd,
-      auditoryMicrosUsd: 0,
-      synthesisMicrosUsd: 0,
       totalMicrosUsd: cost.totalMicrosUsd,
       incurredAt: input.completedAt,
     },

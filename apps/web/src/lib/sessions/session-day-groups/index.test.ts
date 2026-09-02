@@ -6,7 +6,6 @@ import { groupSessionsByDay } from './index'
 
 function createSession(overrides: Partial<SessionHistoryItem> = {}): SessionHistoryItem {
   return {
-    bestOfDay: false,
     categorySlug: 'focus',
     difficulty: 'balanced',
     localDate: '2026-08-25',
@@ -15,7 +14,6 @@ function createSession(overrides: Partial<SessionHistoryItem> = {}): SessionHist
     startedAt: '2026-08-25T12:00:00.000Z',
     state: 'completed',
     themeTitle: 'Notícias do dia',
-    totalScore: 70,
     ...overrides,
   }
 }

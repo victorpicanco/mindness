@@ -23,7 +23,6 @@ interface HistoryResponseBody {
     readonly localDate: string
     readonly localTime: string
     readonly state: SessionState
-    readonly bestOfDay: boolean
   }[]
   readonly meta: { readonly nextCursor: string | null; readonly timeZone: string }
 }
@@ -39,7 +38,6 @@ async function seedSession(input: {
   readonly accountId: string
   readonly state: SessionState
   readonly createdAt: Date
-  readonly totalScore?: number | null
 }): Promise<void> {
   const session = Session.reconstitute({
     sessionId: input.sessionId,
@@ -56,7 +54,6 @@ async function seedSession(input: {
     expiredReason: null,
     expiredAt: null,
     recordedAt: null,
-    totalScore: input.totalScore ?? null,
     completedAt: input.state === 'completed' ? input.createdAt : null,
     failedAt: input.state === 'failed' ? input.createdAt : null,
     deletedAt: input.state === 'deleted' ? input.createdAt : null,
@@ -116,19 +113,16 @@ describe('session history integration', () => {
       sessionId: sessionId(1),
       state: 'completed' as const,
       createdAt: new Date(now.getTime() - 2 * 60_000),
-      totalScore: 80,
     }
     const newest = {
       sessionId: sessionId(2),
       state: 'in_progress' as const,
       createdAt: now,
-      totalScore: null,
     }
     const middle = {
       sessionId: sessionId(3),
       state: 'expired' as const,
       createdAt: new Date(now.getTime() - 60_000),
-      totalScore: null,
     }
 
     for (const seed of [oldest, newest, middle]) {
@@ -175,7 +169,6 @@ describe('session history integration', () => {
         accountId: ACCOUNT_A,
         state: 'completed',
         createdAt: new Date(base.getTime() - index * 60_000),
-        totalScore: 50,
       })
     }
     const deletedId = sessionId(999)
@@ -213,57 +206,6 @@ describe('session history integration', () => {
     expect(harness.eventBus.published).toEqual([])
   })
 
-  it('marks only the highest scoring completed session of the day as best of day, and reclassifies it when the time zone shifts the day boundary', async () => {
-    harness.accounts.registerProfile(ACCOUNT_A, { plan: 'free', timeZone: 'UTC' })
-
-    const lowerScore = {
-      sessionId: sessionId(1),
-      createdAt: new Date('2026-08-19T02:00:00.000Z'),
-      totalScore: 70,
-    }
-    const higherScore = {
-      sessionId: sessionId(2),
-      createdAt: new Date('2026-08-19T20:00:00.000Z'),
-      totalScore: 90,
-    }
-    const failedWithHigherScore = {
-      sessionId: sessionId(3),
-      createdAt: new Date('2026-08-19T15:00:00.000Z'),
-      totalScore: 99,
-    }
-    const expiredWithHigherScore = {
-      sessionId: sessionId(4),
-      createdAt: new Date('2026-08-19T16:00:00.000Z'),
-      totalScore: 98,
-    }
-
-    await seedSession({ ...lowerScore, accountId: ACCOUNT_A, state: 'completed' })
-    await seedSession({ ...higherScore, accountId: ACCOUNT_A, state: 'completed' })
-    await seedSession({ ...failedWithHigherScore, accountId: ACCOUNT_A, state: 'failed' })
-    await seedSession({ ...expiredWithHigherScore, accountId: ACCOUNT_A, state: 'expired' })
-
-    const sameDay = await getHistory('account-a')
-    expect(sameDay.statusCode).toBe(200)
-    const sameDayMarks = new Map(sameDay.body.data.map((item) => [item.sessionId, item.bestOfDay]))
-    expect(sameDayMarks.get(higherScore.sessionId)).toBe(true)
-    expect(sameDayMarks.get(lowerScore.sessionId)).toBe(false)
-    expect(sameDayMarks.get(failedWithHigherScore.sessionId)).toBe(false)
-    expect(sameDayMarks.get(expiredWithHigherScore.sessionId)).toBe(false)
-
-    harness.accounts.registerProfile(ACCOUNT_A, { plan: 'free', timeZone: 'America/Sao_Paulo' })
-
-    const shifted = await getHistory('account-a')
-    expect(shifted.statusCode).toBe(200)
-    const shiftedMarks = new Map(shifted.body.data.map((item) => [item.sessionId, item.bestOfDay]))
-    expect(shiftedMarks.get(lowerScore.sessionId)).toBe(true)
-    expect(shiftedMarks.get(higherScore.sessionId)).toBe(true)
-
-    await expect(
-      harness.prisma.session.findMany({ where: { accountId: ACCOUNT_A } }),
-    ).resolves.toHaveLength(4)
-    expect(harness.eventBus.published).toEqual([])
-  })
-
   it('never exposes account A history to account B and rejects a cross-account cursor', async () => {
     harness.accounts.registerProfile(ACCOUNT_A, { plan: 'free', timeZone: 'UTC' })
     harness.accounts.registerProfile(ACCOUNT_B, { plan: 'free', timeZone: 'UTC' })
@@ -274,7 +216,6 @@ describe('session history integration', () => {
       accountId: ACCOUNT_A,
       state: 'completed',
       createdAt: new Date('2026-08-19T12:00:00.000Z'),
-      totalScore: 80,
     })
 
     const asB = await getHistory('account-b')

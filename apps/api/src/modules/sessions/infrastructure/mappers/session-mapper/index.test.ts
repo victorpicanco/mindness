@@ -22,7 +22,6 @@ const row: SessionRow = {
   expiredAt: null,
   recordingStartedAt: new Date('2026-08-19T12:03:00.000Z'),
   recordedAt: new Date('2026-08-19T12:04:00.000Z'),
-  totalScore: 86,
   completedAt: null,
   failedAt: new Date('2026-08-19T12:09:00.000Z'),
   audio: {
@@ -57,7 +56,6 @@ describe('SessionMapper', () => {
       expiredAt: row.expiredAt,
       recordingStartedAt: row.recordingStartedAt,
       recordedAt: row.recordedAt,
-      totalScore: row.totalScore,
       completedAt: row.completedAt,
       failedAt: row.failedAt,
     })
@@ -92,7 +90,6 @@ describe('SessionMapper', () => {
       expiresAt: row.expiresAt,
       recordingStartedAt: row.recordingStartedAt,
       recordedAt: row.recordedAt,
-      totalScore: row.totalScore,
       completedAt: row.completedAt,
       failedAt: row.failedAt,
     })

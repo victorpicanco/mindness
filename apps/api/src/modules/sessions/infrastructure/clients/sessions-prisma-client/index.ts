@@ -30,7 +30,6 @@ export interface SessionRow {
   readonly expiredAt: Date | null
   readonly recordingStartedAt: Date | null
   readonly recordedAt: Date | null
-  readonly totalScore?: number | null
   readonly completedAt?: Date | null
   readonly failedAt?: Date | null
   readonly deletedAt?: Date | null
@@ -52,7 +51,6 @@ export interface SessionScalars {
   readonly expiredAt: Date | null
   readonly recordingStartedAt: Date | null
   readonly recordedAt: Date | null
-  readonly totalScore: number | null
   readonly completedAt: Date | null
   readonly failedAt: Date | null
   readonly deletedAt: Date | null
@@ -91,11 +89,6 @@ export interface SessionFindManyArgs {
     | SessionFindExpiredArgs['where']
     | SessionFindStuckProcessingArgs['where']
     | { readonly accountId: string; readonly state: { readonly not: 'deleted' } }
-    | {
-        readonly accountId: string
-        readonly state: 'completed'
-        readonly createdAt: { readonly gte: Date; readonly lte: Date }
-      }
   readonly include: { readonly audio: true }
   readonly take?: number
   readonly orderBy?: [{ readonly createdAt: 'desc' }, { readonly id: 'desc' }]

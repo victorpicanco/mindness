@@ -39,7 +39,6 @@ async function seedSession(input: {
     expiredReason: null,
     expiredAt: null,
     recordedAt: null,
-    totalScore: input.state === 'completed' ? 80 : null,
     completedAt: input.state === 'completed' ? SESSIONS_TEST_NOW : null,
   })
 

@@ -18,7 +18,6 @@ const SessionHistoryItemSchema = Type.Object(
     categorySlug: Type.String(),
     themeTitle: Type.Union([Type.String(), Type.Null()]),
     difficulty: Type.Union([Type.Literal('easy'), Type.Literal('balanced'), Type.Literal('hard')]),
-    totalScore: Type.Union([Type.Integer({ minimum: 0, maximum: 100 }), Type.Null()]),
     state: Type.Union([
       Type.Literal('in_progress'),
       Type.Literal('expired'),
@@ -26,7 +25,6 @@ const SessionHistoryItemSchema = Type.Object(
       Type.Literal('completed'),
       Type.Literal('failed'),
     ]),
-    bestOfDay: Type.Boolean(),
   },
   { additionalProperties: false },
 )

@@ -23,7 +23,6 @@ export interface ReconstituteSessionParams extends StartSessionParams {
   readonly failureReason?: SessionFailureReason | null
   readonly recordedAt: Date | null
   readonly recordingStartedAt?: Date | null
-  readonly totalScore?: number | null
   readonly completedAt?: Date | null
   readonly failedAt?: Date | null
   readonly deletedAt?: Date | null

@@ -3,7 +3,6 @@ import { AnalysisAuthenticationRejectedError } from '@/modules/analyses/domain/e
 import { AnalysisFailedError } from '@/modules/analyses/domain/errors/analysis-failed-error/index.js'
 import { AnalysisNotFoundError } from '@/modules/analyses/domain/errors/analysis-not-found-error/index.js'
 import { AnalysisTimedOutError } from '@/modules/analyses/domain/errors/analysis-timed-out-error/index.js'
-import { GuidanceSelector } from '@/modules/analyses/domain/services/guidance-selector/index.js'
 
 import type {
   GetSessionAnalysisDependencies,
@@ -36,29 +35,13 @@ export class GetSessionAnalysisUseCase {
     const plan = await this.dependencies.accounts.findPlan(input.accountId)
     if (plan === null) throw new AnalysisAuthenticationRejectedError()
 
-    const scores = {
-      clarity: analysis.clarityScore.value,
-      rhythm: analysis.rhythmScore.value,
-      fluency: analysis.fluencyScore.value,
-      mastery: analysis.masteryScore.value,
-      total: analysis.totalScore,
-    }
-    const guidance = GuidanceSelector.select({
-      clarity: { score: scores.clarity, guidance: analysis.clarityGuidance },
-      rhythm: { score: scores.rhythm, guidance: analysis.rhythmGuidance },
-      fluency: { score: scores.fluency, guidance: analysis.fluencyGuidance },
-      mastery: { score: scores.mastery, guidance: analysis.masteryGuidance },
-    })
-
     const viewedAt = this.dependencies.clock.now()
-    const firstView = await this.dependencies.analyses.markFirstView(input.sessionId, viewedAt)
-    if (firstView) {
+    if (await this.dependencies.analyses.markFirstView(input.sessionId, viewedAt)) {
       await this.dependencies.eventPublisher.publish(
         AnalysisViewed.create({
           sessionId: input.sessionId,
           accountId: input.accountId,
           plan,
-          scores,
           eventId: this.dependencies.idGenerator.generate(),
           occurredAt: viewedAt,
         }),
@@ -67,8 +50,7 @@ export class GetSessionAnalysisUseCase {
 
     return {
       sessionId: input.sessionId,
-      scores,
-      guidance: guidance.map(({ pillar, guidance: text }) => ({ pillar, text })),
+      feedback: analysis.feedback,
       transcript: transcription.text,
       analyzedAt: analysis.createdAt.toISOString(),
     }

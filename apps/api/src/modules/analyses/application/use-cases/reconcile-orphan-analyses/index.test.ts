@@ -3,8 +3,6 @@ import { describe, expect, it } from 'vitest'
 import { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
 import type { AnalysesRepository } from '@/modules/analyses/domain/repositories/analyses-repository/index.js'
 import type { SessionsPort } from '@/modules/analyses/domain/ports/sessions-port/index.js'
-import { PillarScore } from '@/modules/analyses/domain/value-objects/pillar-score/index.js'
-import { RhythmMetrics } from '@/modules/analyses/domain/value-objects/rhythm-metrics/index.js'
 
 import { ReconcileOrphanAnalysesUseCase } from './index.js'
 
@@ -14,22 +12,7 @@ function createAnalysis(sessionId: string): Analysis {
   return Analysis.create({
     analysisId: `analysis-${sessionId}`,
     sessionId,
-    clarityScore: PillarScore.create(80),
-    rhythmScore: PillarScore.create(80),
-    fluencyScore: PillarScore.create(80),
-    masteryScore: PillarScore.create(80),
-    clarityGuidance: 'Clear',
-    rhythmGuidance: 'Steady',
-    fluencyGuidance: 'Fluid',
-    masteryGuidance: 'Strong',
-    rhythmMetrics: RhythmMetrics.create({
-      wordsPerMinute: 120,
-      wordCount: 100,
-      speechDurationSeconds: 50,
-      pauseCount: 2,
-      longPauseCount: 0,
-      longestPauseSeconds: 1,
-    }),
+    feedback: { summary: 'Clear.', strengths: [], improvements: [] },
     processingMs: 1_000,
     costMicrosUsd: 1_000,
     createdAt: NOW,

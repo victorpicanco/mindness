@@ -8,7 +8,6 @@ export interface SessionsRepository {
     readonly limit: number
     readonly cursor: string | null
   }): Promise<Session[]>
-  findCompletedBetween(accountId: string, from: Date, to: Date): Promise<Session[]>
   findExpiredInProgress(before: Date, limit: number): Promise<Session[]>
   findStuckProcessing(before: Date, limit: number): Promise<Session[]>
   markDeleted(session: Session): Promise<boolean>

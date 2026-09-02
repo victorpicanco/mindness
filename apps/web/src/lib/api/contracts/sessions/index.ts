@@ -11,7 +11,6 @@ const sessionConfigurationSchema = z.object({
 export type SessionConfiguration = z.output<typeof sessionConfigurationSchema>
 
 const sessionHistoryItemSchema = z.object({
-  bestOfDay: z.boolean(),
   categorySlug: z.string(),
   difficulty: sessionDifficultySchema,
   localDate: z.string(),
@@ -20,7 +19,6 @@ const sessionHistoryItemSchema = z.object({
   startedAt: z.iso.datetime(),
   state: z.enum(['in_progress', 'expired', 'processing', 'completed', 'failed']),
   themeTitle: z.string().nullable(),
-  totalScore: z.number().int().min(0).max(100).nullable(),
 })
 
 export const activeSessionSchema = z
@@ -86,24 +84,27 @@ export const sessionAnalysisAvailabilitySchema = z.object({
   sessionId: z.uuid(),
 })
 
-const analysisPillarSchema = z.enum(['clarity', 'rhythm', 'fluency', 'mastery'])
-
 export const sessionAnalysisSchema = z.strictObject({
   analyzedAt: z.iso.datetime(),
-  guidance: z
-    .array(
-      z.strictObject({
-        pillar: analysisPillarSchema,
-        text: z.string(),
-      }),
-    )
-    .min(1),
-  scores: z.strictObject({
-    clarity: z.number().int().min(0).max(100),
-    fluency: z.number().int().min(0).max(100),
-    mastery: z.number().int().min(0).max(100),
-    rhythm: z.number().int().min(0).max(100),
-    total: z.number().int().min(0).max(100),
+  feedback: z.strictObject({
+    summary: z.string().min(1),
+    strengths: z
+      .array(
+        z.strictObject({
+          title: z.string().min(1),
+          evidence: z.string().min(1),
+        }),
+      )
+      .max(3),
+    improvements: z
+      .array(
+        z.strictObject({
+          title: z.string().min(1),
+          evidence: z.string().min(1),
+          action: z.string().min(1),
+        }),
+      )
+      .max(3),
   }),
   sessionId: z.uuid(),
   transcript: z.string(),

@@ -185,7 +185,7 @@ export function registerOrphanAnalysisReconciliationSweep(
 export async function startWorker(): Promise<void> {
   const config = loadConfig(process.env)
   const logger = createLogger({ level: config.logLevel, pretty: config.nodeEnv !== 'production' })
-  const app = buildApp({ logger })
+  const app = buildApp({ logger, trustProxy: config.trustProxy })
   const prisma = createPrismaClient({
     databaseUrl: config.databaseUrl,
     logQueries: config.nodeEnv !== 'production',
@@ -281,7 +281,7 @@ export async function startWorker(): Promise<void> {
     await closeAnalysisWorker(analysisWorker, redisConnection)
   })
 
-  await app.listen({ port: config.workerHealthPort })
+  await app.listen({ host: config.host, port: config.workerHealthPort })
 }
 
 function isWorkerEntrypoint(): boolean {

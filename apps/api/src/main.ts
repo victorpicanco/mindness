@@ -58,7 +58,7 @@ export async function registerAnalysisPipelineModules(
 export async function startServer(): Promise<void> {
   const config = loadConfig(process.env)
   const logger = createLogger({ level: config.logLevel, pretty: config.nodeEnv !== 'production' })
-  const app = buildApp({ logger })
+  const app = buildApp({ logger, trustProxy: config.trustProxy })
 
   registerHealthRoute(app)
 
@@ -141,7 +141,7 @@ export async function startServer(): Promise<void> {
     redisConnection.disconnect()
   })
 
-  await app.listen({ port: config.port })
+  await app.listen({ host: config.host, port: config.port })
 }
 
 function isMainEntrypoint(): boolean {

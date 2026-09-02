@@ -7,7 +7,7 @@ import type { TurnstileApi } from './types'
 export const TURNSTILE_SCRIPT_URL =
   'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 
-export const TURNSTILE_TOKEN_FIELD_NAME = 'captchaToken'
+const TURNSTILE_TOKEN_FIELD_NAME = 'captchaToken'
 
 type TurnstileProps = {
   readonly onError?: (code: string) => void

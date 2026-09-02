@@ -1,7 +1,6 @@
 import { z } from 'zod'
 
 import type { AuthActionMessageKey } from '@/lib/auth/form-validation'
-import { passwordSchema } from '@/lib/auth/password-policy'
 
 export const emailSchema = z.email().max(254)
 export const captchaTokenSchema = z.string().min(1)
@@ -33,12 +32,4 @@ export function credentialsMessageKey(
   if (validation.success) return undefined
 
   return messageKeyOfField(validation.error.issues[0]?.path[0])
-}
-
-export function isValidEmail(value: string): boolean {
-  return emailSchema.safeParse(value).success
-}
-
-export function isValidNewPassword(value: string): boolean {
-  return passwordSchema.safeParse(value).success
 }

@@ -1,0 +1,31 @@
+# Everything the image never needs. Keeping this tight is what makes the COPY
+# layers cache: any file listed here can change without busting the build.
+
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/test-results
+**/*.tsbuildinfo
+
+# Regenerated inside the build by `prisma generate`.
+apps/api/src/generated
+
+.git
+.github
+.husky
+.pnpm-store
+.claude
+.agents
+.codex
+
+docs
+
+**/.env
+**/.env.*
+!**/.env.example
+
+*.md
+.DS_Store
+
+secrets

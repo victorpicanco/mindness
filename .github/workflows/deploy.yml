@@ -75,6 +75,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      packages: read
     steps:
       - name: Pull the new images and restart the stack
         uses: appleboy/ssh-action@v1

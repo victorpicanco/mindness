@@ -6,7 +6,7 @@ import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
 
 import { createThemesContainer, type ThemesContainer } from './container.js'
 
-export const THEMES_TEST_NOW = new Date('2026-08-16T12:00:00.000Z')
+const THEMES_TEST_NOW = new Date('2026-08-16T12:00:00.000Z')
 
 export interface ThemesIntegrationDeps {
   readonly databaseUrl: string

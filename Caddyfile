@@ -11,3 +11,7 @@
 	encode zstd gzip
 	reverse_proxy api:3333
 }
+
+www.{$WEB_DOMAIN} {
+	redir https://{$WEB_DOMAIN}{uri} permanent
+}

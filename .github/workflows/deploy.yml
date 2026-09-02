@@ -90,6 +90,9 @@ jobs:
           script: |
             set -euo pipefail
             cd /opt/mindness
+            DOCKER_CONFIG="$(mktemp -d)"
+            export DOCKER_CONFIG
+            trap 'rm -rf "$DOCKER_CONFIG"' EXIT
             echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
             if grep -q "^IMAGE_TAG=" .env; then
               sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env
@@ -100,7 +103,6 @@ jobs:
             docker compose up -d --remove-orphans
             docker compose ps
             docker image prune -f
-            docker logout ghcr.io
         env:
           IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
           REGISTRY_USER: ${{ github.actor }}

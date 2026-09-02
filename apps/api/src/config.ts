@@ -7,6 +7,7 @@ import { ValidationFailedError } from '@/shared/errors/validation-failed-error/i
 
 const EnvSchema = Type.Object({
   NODE_ENV: Type.String(),
+  HOST: Type.String(),
   PORT: Type.Integer(),
   WORKER_HEALTH_PORT: Type.Integer(),
   LOG_LEVEL: Type.String(),
@@ -17,6 +18,7 @@ const EnvSchema = Type.Object({
   SUPABASE_SECRET_KEY: Type.String(),
   EMAIL_CONFIRMATION_REDIRECT_URL: Type.String(),
   ACCOUNTS_CONSENT_VERSION: Type.String(),
+  TRUST_PROXY: Type.Boolean(),
   REDIS_URL: Type.String(),
   DEEPGRAM_API_KEY: Type.String(),
   GOOGLE_CLOUD_PROJECT: Type.String(),
@@ -32,6 +34,7 @@ const EnvSchema = Type.Object({
 
 const STRING_ENV_KEYS = [
   'NODE_ENV',
+  'HOST',
   'LOG_LEVEL',
   'DATABASE_URL',
   'PUBLIC_API_URL',
@@ -46,6 +49,7 @@ const STRING_ENV_KEYS = [
   'GOOGLE_CLOUD_LOCATION',
   'GEMINI_MODEL',
 ] as const
+const BOOLEAN_ENV_KEYS = ['TRUST_PROXY'] as const
 const NUMERIC_ENV_KEYS = [
   'PORT',
   'WORKER_HEALTH_PORT',
@@ -59,6 +63,7 @@ const NUMERIC_ENV_KEYS = [
 
 export interface Config {
   readonly nodeEnv: string
+  readonly host: string
   readonly port: number
   readonly workerHealthPort: number
   readonly logLevel: string
@@ -69,6 +74,7 @@ export interface Config {
   readonly supabaseSecretKey: string
   readonly emailConfirmationRedirectUrl: string
   readonly accountsConsentVersion: string
+  readonly trustProxy: boolean
   readonly redisUrl: string
   readonly deepgramApiKey: string
   readonly googleCloudProject: string
@@ -88,6 +94,14 @@ function buildCandidate(env: NodeJS.ProcessEnv): Record<string, unknown> {
   for (const key of STRING_ENV_KEYS) {
     const raw = env[key]
     if (raw !== undefined && raw !== '') candidate[key] = raw
+  }
+
+  for (const key of BOOLEAN_ENV_KEYS) {
+    const raw = env[key]
+    if (raw === undefined || raw === '') continue
+    // An unparseable value stays a string so the schema reports it as invalid
+    // instead of silently turning into false.
+    candidate[key] = raw === 'true' ? true : raw === 'false' ? false : raw
   }
 
   for (const key of NUMERIC_ENV_KEYS) {
@@ -122,6 +136,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
 
   return Object.freeze({
     nodeEnv: candidate.NODE_ENV,
+    host: candidate.HOST,
     port: candidate.PORT,
     workerHealthPort: candidate.WORKER_HEALTH_PORT,
     logLevel: candidate.LOG_LEVEL,
@@ -132,6 +147,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
     supabaseSecretKey: candidate.SUPABASE_SECRET_KEY,
     emailConfirmationRedirectUrl: candidate.EMAIL_CONFIRMATION_REDIRECT_URL,
     accountsConsentVersion: candidate.ACCOUNTS_CONSENT_VERSION,
+    trustProxy: candidate.TRUST_PROXY,
     redisUrl: candidate.REDIS_URL,
     deepgramApiKey: candidate.DEEPGRAM_API_KEY,
     googleCloudProject: candidate.GOOGLE_CLOUD_PROJECT,

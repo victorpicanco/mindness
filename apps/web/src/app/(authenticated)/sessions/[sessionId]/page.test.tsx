@@ -263,6 +263,7 @@ describe('SessionPage', () => {
       hour: '2-digit',
       hour12: false,
       minute: '2-digit',
+      timeZone: DEFAULT_TIME_ZONE,
     }).format(new Date(activeSession().expiresAt))
 
     expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeEnabled()

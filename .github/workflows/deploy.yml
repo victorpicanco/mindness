@@ -16,8 +16,6 @@ env:
 
 jobs:
   build:
-    # A dispatch has no upstream conclusion to read; a workflow_run only deploys
-    # what CI already proved green.
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:

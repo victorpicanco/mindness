@@ -29,8 +29,6 @@ services:
     expose:
       - '3000'
     environment:
-      # The browser reaches the API through the BFF, which stays on the private
-      # compose network — no TLS hop and no trip back out through Caddy.
       API_BASE_URL: http://api:3333
 
   api:
@@ -45,7 +43,6 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: '3333'
-      # Only Caddy reaches this port, and it overwrites the forwarded header.
       TRUST_PROXY: 'true'
       REDIS_URL: redis://redis:6379
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-credentials.json
@@ -66,7 +63,6 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       WORKER_HEALTH_PORT: '3334'
-      # The health port is never published, so nothing proxies it.
       TRUST_PROXY: 'false'
       REDIS_URL: redis://redis:6379
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-credentials.json
@@ -91,8 +87,6 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
-    # BullMQ requires noeviction: a job key dropped under memory pressure is a
-    # silently lost analysis.
     command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
     volumes:
       - redis-data:/data

@@ -1,10 +1,4 @@
 # syntax=docker/dockerfile:1
-#
-# Build context is the repository root:
-#   docker build -f apps/api/Dockerfile .
-#
-# One image serves both API processes. `main.js` is the default; the worker is
-# the same image started with `node dist/worker.js`.
 
 FROM node:24-slim AS base
 ENV PNPM_HOME=/pnpm \
@@ -17,7 +11,6 @@ WORKDIR /app
 
 FROM base AS build
 
-# Manifests first: this layer only rebuilds when a dependency actually changes.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
@@ -33,15 +26,9 @@ RUN pnpm --filter @mindness/api exec prisma generate \
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm deploy --legacy --filter @mindness/api --prod --ignore-scripts /prod/api
 
-# The Prisma CLI and TypeScript reach production only as optional peers of
-# @prisma/client — nothing under its runtime/ imports either — and the CLI drags
-# Studio, pglite and a React tree along. Cutting both first lets the prune sweep
-# those subtrees.
 RUN rm -rf /prod/api/node_modules/.pnpm/prisma@* /prod/api/node_modules/.pnpm/typescript@* \
  && node scripts/prune-runtime-store.mjs /prod/api
 
-# The installers ship the binaries without the execute bit and their only install
-# script is the `chmod` that `--ignore-scripts` skipped (see roadmap A-25).
 RUN find /prod/api/node_modules -type f \( -name ffmpeg -o -name ffprobe \) -exec chmod +x {} +
 
 

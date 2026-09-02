@@ -1,12 +1,4 @@
 # syntax=docker/dockerfile:1
-#
-# Build context is the repository root:
-#   docker build -f apps/web/Dockerfile .
-#
-# NEXT_PUBLIC_* values are inlined by the compiler, so they are build arguments,
-# not runtime variables: an image built with one set of them belongs to one
-# environment. Everything the server reads at runtime (API_BASE_URL) stays an
-# ordinary environment variable.
 
 FROM node:24-slim AS base
 ENV PNPM_HOME=/pnpm \
@@ -47,8 +39,6 @@ ENV NODE_ENV=production \
     PORT=3000
 WORKDIR /app
 
-# `output: 'standalone'` traces from the workspace root, so the server and its
-# assets keep the monorepo layout inside the image.
 COPY --from=build --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public

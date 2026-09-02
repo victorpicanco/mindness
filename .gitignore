@@ -43,5 +43,4 @@ CLAUDE.local.md
 # MCPs
 .mcp.json
 
-# deploy secrets (never versioned)
 /secrets/

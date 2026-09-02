@@ -1,7 +1,5 @@
 name: Migrate
 
-# Applying a migration is an environment step, never part of a deploy: it runs
-# only when someone asks for it (see docs/roadmap/03, A-19).
 on:
   workflow_dispatch:
 

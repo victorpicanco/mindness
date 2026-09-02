@@ -99,8 +99,6 @@ function buildCandidate(env: NodeJS.ProcessEnv): Record<string, unknown> {
   for (const key of BOOLEAN_ENV_KEYS) {
     const raw = env[key]
     if (raw === undefined || raw === '') continue
-    // An unparseable value stays a string so the schema reports it as invalid
-    // instead of silently turning into false.
     candidate[key] = raw === 'true' ? true : raw === 'false' ? false : raw
   }
 

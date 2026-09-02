@@ -22,9 +22,6 @@ const CANONICAL_CHANNELS = 1
 const MAX_PREPARED_SIZE_BYTES = 25 * 1024 * 1024
 const MAX_PREPARED_DURATION_SECONDS = 60
 
-// fluent-ffmpeg emits the timeout error before it signals the process
-// (processor.js:466-472), so ffmpeg can still create the output file after the
-// removal has listed the workspace, and the removal fails with ENOTEMPTY.
 const WORKSPACE_REMOVAL_RETRIES = 5
 const WORKSPACE_REMOVAL_RETRY_DELAY_MS = 50
 

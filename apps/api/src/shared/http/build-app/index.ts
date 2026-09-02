@@ -7,9 +7,6 @@ import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
 
 export interface BuildAppDeps {
   readonly logger: FastifyBaseLogger
-  // Only true behind a proxy that overwrites the forwarded header: a client
-  // reaching the process directly can otherwise forge its own address and walk
-  // past the per-IP rate limit of ADR-007.
   readonly trustProxy?: boolean
 }
 

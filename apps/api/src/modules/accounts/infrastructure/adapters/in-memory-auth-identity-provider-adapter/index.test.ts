@@ -66,6 +66,20 @@ describe('InMemoryAuthIdentityProviderAdapter', () => {
     })
   })
 
+  it('keeps the session id across a refresh', async () => {
+    const adapter = createAdapter()
+    await adapter.signUpWithPassword(credentials)
+    adapter.confirmEmail(credentials.email)
+    const previous = await adapter.signInWithPassword(credentials)
+
+    const refreshed = await adapter.refreshSession(previous.refreshToken)
+
+    expect(refreshed.identity.sessionId).toBe(previous.identity.sessionId)
+    await expect(adapter.validateAccessToken(refreshed.accessToken)).resolves.toMatchObject({
+      sessionId: previous.identity.sessionId,
+    })
+  })
+
   it('completes Google OAuth only with a verified provider email', async () => {
     const adapter = createAdapter()
     adapter.registerGoogleCode('google-code', {

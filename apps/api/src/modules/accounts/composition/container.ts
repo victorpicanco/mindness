@@ -137,7 +137,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     getAccountProfile: new GetAccountProfileUseCase({ accounts, authIdentityProvider }),
     getAccountSnapshot: new GetAccountSnapshotUseCase(accounts),
     signIn: new SignInUseCase(shared),
-    refreshSession: new RefreshSessionUseCase({ authIdentityProvider }),
+    refreshSession: new RefreshSessionUseCase({ accounts, authIdentityProvider }),
     requestPasswordRecovery: new RequestPasswordRecoveryUseCase({ authIdentityProvider }),
     resendSignUpConfirmation: new ResendSignUpConfirmationUseCase({ authIdentityProvider }),
     signOut: new SignOutUseCase({ authIdentityProvider }),

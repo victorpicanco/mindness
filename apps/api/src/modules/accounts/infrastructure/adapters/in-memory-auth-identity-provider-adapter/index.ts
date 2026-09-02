@@ -97,10 +97,12 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     }
 
     this.sessionsByRefreshToken.delete(refreshToken)
-    return this.createSession(
-      session.identity.authUserId,
-      session.identity.email,
-      session.identity.authenticationMethod,
+    // Supabase chains refresh tokens inside one session: the tokens rotate and
+    // the session id survives. Minting a new one would hide single-session
+    // eviction (ADR-001) from every flow that runs on this adapter.
+    return this.storeSession(
+      { ...session.identity, issuedAt: this.clock.now() },
+      this.idGenerator.generate(),
     )
   }
 
@@ -210,7 +212,16 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     email: string,
     authenticationMethod: AuthenticationMethod,
   ): AuthSession {
-    const previousToken = this.currentTokenByUser.get(authUserId)
+    const sessionId = this.idGenerator.generate()
+
+    return this.storeSession(
+      { authUserId, email, issuedAt: this.clock.now(), sessionId, authenticationMethod },
+      sessionId,
+    )
+  }
+
+  private storeSession(identity: VerifiedAuthIdentity, tokenId: string): AuthSession {
+    const previousToken = this.currentTokenByUser.get(identity.authUserId)
     if (previousToken !== undefined) {
       const previousSession = this.sessionsByToken.get(previousToken)
       this.sessionsByToken.delete(previousToken)
@@ -219,18 +230,16 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       }
     }
 
-    const sessionId = this.idGenerator.generate()
-    const accessToken = `access-${sessionId}`
-    const issuedAt = this.clock.now()
+    const accessToken = `access-${tokenId}`
     const session: AuthSession = {
       accessToken,
-      refreshToken: `refresh-${sessionId}`,
-      expiresAt: new Date(issuedAt.getTime() + 60 * 60 * 1000),
-      identity: { authUserId, email, issuedAt, sessionId, authenticationMethod },
+      refreshToken: `refresh-${tokenId}`,
+      expiresAt: new Date(identity.issuedAt.getTime() + 60 * 60 * 1000),
+      identity,
     }
     this.sessionsByToken.set(accessToken, session)
     this.sessionsByRefreshToken.set(session.refreshToken, session)
-    this.currentTokenByUser.set(authUserId, accessToken)
+    this.currentTokenByUser.set(identity.authUserId, accessToken)
     return session
   }
 

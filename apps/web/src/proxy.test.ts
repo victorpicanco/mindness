@@ -290,7 +290,19 @@ describe('proxy', () => {
       const response = await proxy(request('/'))
       const contentSecurityPolicy = response.headers.get('content-security-policy')
 
-      expect(contentSecurityPolicy).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/)
+      expect(contentSecurityPolicy).toMatch(/script-src 'self' 'nonce-[^']+'/u)
+    })
+
+    // The prerendered shell is built without a request, so Next cannot stamp a
+    // nonce on the script tags it bakes in; 'strict-dynamic' would disable the
+    // 'self' that is the only thing left to authorise them.
+    it("keeps 'self' effective for the script tags of the prerendered shell", async () => {
+      const response = await proxy(request('/auth/sign-in'))
+      const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
+      const scriptSource = /script-src ([^;]*)/u.exec(contentSecurityPolicy)?.[1] ?? ''
+
+      expect(scriptSource).toContain("'self'")
+      expect(scriptSource).not.toContain("'strict-dynamic'")
     })
 
     it('lets the toast library inject its runtime stylesheet', async () => {

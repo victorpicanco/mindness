@@ -1,3 +1,5 @@
+import { join } from 'node:path'
+
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
 
@@ -14,6 +16,8 @@ const withNextIntl = createNextIntlPlugin({
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  output: 'standalone',
+  outputFileTracingRoot: join(import.meta.dirname, '../..'),
   devIndicators: false,
   images: {
     qualities: [90],

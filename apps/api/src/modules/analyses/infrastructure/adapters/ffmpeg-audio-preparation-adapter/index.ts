@@ -22,6 +22,9 @@ const CANONICAL_CHANNELS = 1
 const MAX_PREPARED_SIZE_BYTES = 25 * 1024 * 1024
 const MAX_PREPARED_DURATION_SECONDS = 60
 
+const WORKSPACE_REMOVAL_RETRIES = 5
+const WORKSPACE_REMOVAL_RETRY_DELAY_MS = 50
+
 export class FfmpegAudioPreparationAdapter implements AudioPreparationPort {
   constructor(private readonly timeoutSeconds: number = PREPARATION_TIMEOUT_SECONDS) {
     ffmpeg.setFfmpegPath(ffmpegInstaller.path)
@@ -55,7 +58,12 @@ export class FfmpegAudioPreparationAdapter implements AudioPreparationPort {
         ? cause
         : new AudioPreparationFailedError('transcoding failed', { cause })
     } finally {
-      await rm(directory, { recursive: true, force: true })
+      await rm(directory, {
+        recursive: true,
+        force: true,
+        maxRetries: WORKSPACE_REMOVAL_RETRIES,
+        retryDelay: WORKSPACE_REMOVAL_RETRY_DELAY_MS,
+      })
     }
   }
 

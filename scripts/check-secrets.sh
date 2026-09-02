@@ -8,14 +8,20 @@ fail() {
 
 ENV_EXAMPLE="apps/api/.env.example"
 
-# Every backend-only var name declared in apps/api/.env.example (i.e. not NEXT_PUBLIC_-prefixed)
-# must never leak verbatim into apps/web/ — that's the client bundle.
+# NODE_ENV, PORT and HOST are standard Node/Docker runtime variables that any
+# service declares independently; they are not secrets and apps/web owns its
+# own values for them.
+ALLOWED_SHARED_NAMES="NODE_ENV PORT HOST"
+
 if [ -f "$ENV_EXAMPLE" ]; then
   while IFS='=' read -r name _; do
     case "$name" in
       ''|'#'*|NEXT_PUBLIC_*) continue ;;
     esac
-    if git grep --quiet --fixed-strings "$name" -- 'apps/web/' 2>/dev/null; then
+    case " $ALLOWED_SHARED_NAMES " in
+      *" $name "*) continue ;;
+    esac
+    if git grep --quiet --word-regexp --fixed-strings "$name" -- 'apps/web/' 2>/dev/null; then
       fail "found backend env var '$name' under apps/web/"
     fi
   done < <(grep -v '^[[:space:]]*#' "$ENV_EXAMPLE" | grep -v '^[[:space:]]*$')

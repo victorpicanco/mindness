@@ -30,6 +30,7 @@ import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { BaseError } from '@/shared/errors/base-error/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
 import { registerHealthRoute } from '@/shared/http/health-route/index.js'
+import { registerShutdownSignals } from '@/shared/http/shutdown-signals/index.js'
 import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
 import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import { InProcessEventBus } from '@/shared/messaging/in-process-event-bus/index.js'
@@ -185,7 +186,7 @@ export function registerOrphanAnalysisReconciliationSweep(
 export async function startWorker(): Promise<void> {
   const config = loadConfig(process.env)
   const logger = createLogger({ level: config.logLevel, pretty: config.nodeEnv !== 'production' })
-  const app = buildApp({ logger })
+  const app = buildApp({ logger, trustProxy: config.trustProxy })
   const prisma = createPrismaClient({
     databaseUrl: config.databaseUrl,
     logQueries: config.nodeEnv !== 'production',
@@ -281,7 +282,9 @@ export async function startWorker(): Promise<void> {
     await closeAnalysisWorker(analysisWorker, redisConnection)
   })
 
-  await app.listen({ port: config.workerHealthPort })
+  registerShutdownSignals({ close: () => app.close(), logger })
+
+  await app.listen({ host: config.host, port: config.workerHealthPort })
 }
 
 function isWorkerEntrypoint(): boolean {

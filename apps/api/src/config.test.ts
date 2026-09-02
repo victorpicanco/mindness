@@ -6,6 +6,7 @@ import { loadConfig } from './config.js'
 
 const VALID_ENV: NodeJS.ProcessEnv = {
   NODE_ENV: 'test',
+  HOST: '127.0.0.1',
   PORT: '3333',
   WORKER_HEALTH_PORT: '3334',
   LOG_LEVEL: 'info',
@@ -16,6 +17,7 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   SUPABASE_SECRET_KEY: 'secret-key',
   EMAIL_CONFIRMATION_REDIRECT_URL: 'https://app.mindness.test/auth/confirmed',
   ACCOUNTS_CONSENT_VERSION: '2026-08-15',
+  TRUST_PROXY: 'false',
   REDIS_URL: 'redis://localhost:6379',
   DEEPGRAM_API_KEY: 'deepgram-api-key',
   GOOGLE_CLOUD_PROJECT: 'mindness-test',
@@ -35,6 +37,7 @@ describe('loadConfig', () => {
 
     expect(config).toEqual({
       nodeEnv: 'test',
+      host: '127.0.0.1',
       port: 3333,
       workerHealthPort: 3334,
       logLevel: 'info',
@@ -45,6 +48,7 @@ describe('loadConfig', () => {
       supabaseSecretKey: 'secret-key',
       emailConfirmationRedirectUrl: 'https://app.mindness.test/auth/confirmed',
       accountsConsentVersion: '2026-08-15',
+      trustProxy: false,
       redisUrl: 'redis://localhost:6379',
       deepgramApiKey: 'deepgram-api-key',
       googleCloudProject: 'mindness-test',
@@ -85,6 +89,34 @@ describe('loadConfig', () => {
     ])
   })
 
+  it('reads TRUST_PROXY as a boolean', () => {
+    expect(loadConfig({ ...VALID_ENV, TRUST_PROXY: 'true' }).trustProxy).toBe(true)
+  })
+
+  it('rejects a TRUST_PROXY that is neither true nor false', () => {
+    expect(() => loadConfig({ ...VALID_ENV, TRUST_PROXY: 'yes' })).toThrow(ValidationFailedError)
+  })
+
+  it('lists TRUST_PROXY when it is missing', () => {
+    const envWithoutTrustProxy = { ...VALID_ENV }
+    delete envWithoutTrustProxy.TRUST_PROXY
+
+    let caught: unknown
+    try {
+      loadConfig(envWithoutTrustProxy)
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBeInstanceOf(ValidationFailedError)
+    if (!(caught instanceof ValidationFailedError)) return
+
+    expect(caught.context.issues).toContainEqual({
+      field: 'TRUST_PROXY',
+      message: 'Missing required environment variable: TRUST_PROXY',
+    })
+  })
+
   it('rejects a non-numeric PORT', () => {
     expect(() => loadConfig({ ...VALID_ENV, PORT: 'not-a-number' })).toThrow(ValidationFailedError)
   })
@@ -115,6 +147,26 @@ describe('loadConfig', () => {
     expect(caught.context.issues).toContainEqual({
       field: 'REDIS_URL',
       message: 'Missing required environment variable: REDIS_URL',
+    })
+  })
+
+  it('lists HOST when it is missing', () => {
+    const envWithoutHost = { ...VALID_ENV }
+    delete envWithoutHost.HOST
+
+    let caught: unknown
+    try {
+      loadConfig(envWithoutHost)
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBeInstanceOf(ValidationFailedError)
+    if (!(caught instanceof ValidationFailedError)) return
+
+    expect(caught.context.issues).toContainEqual({
+      field: 'HOST',
+      message: 'Missing required environment variable: HOST',
     })
   })
 

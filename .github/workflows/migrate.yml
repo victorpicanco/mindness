@@ -1,0 +1,24 @@
+name: Migrate
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @mindness/api...
+      - run: pnpm --filter @mindness/api db:deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

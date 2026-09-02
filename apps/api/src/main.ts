@@ -26,6 +26,7 @@ import { registerThemesModule } from '@/modules/themes/index.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
 import { registerHealthRoute } from '@/shared/http/health-route/index.js'
+import { registerShutdownSignals } from '@/shared/http/shutdown-signals/index.js'
 import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import { InProcessEventBus } from '@/shared/messaging/in-process-event-bus/index.js'
 import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
@@ -58,7 +59,7 @@ export async function registerAnalysisPipelineModules(
 export async function startServer(): Promise<void> {
   const config = loadConfig(process.env)
   const logger = createLogger({ level: config.logLevel, pretty: config.nodeEnv !== 'production' })
-  const app = buildApp({ logger })
+  const app = buildApp({ logger, trustProxy: config.trustProxy })
 
   registerHealthRoute(app)
 
@@ -141,7 +142,9 @@ export async function startServer(): Promise<void> {
     redisConnection.disconnect()
   })
 
-  await app.listen({ port: config.port })
+  registerShutdownSignals({ close: () => app.close(), logger })
+
+  await app.listen({ host: config.host, port: config.port })
 }
 
 function isMainEntrypoint(): boolean {

@@ -6,9 +6,16 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+        required: true
 
 concurrency:
-  group: deploy
+  group: deploy-${{ inputs.environment || 'staging' }}
   cancel-in-progress: false
 
 env:
@@ -18,6 +25,7 @@ jobs:
   build:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'staging' }}
     permissions:
       contents: read
       packages: write
@@ -28,10 +36,33 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - id: meta
+      - name: Check the client build variables are set for the target environment
+        env:
+          TARGET_ENV: ${{ inputs.environment || 'staging' }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
         run: |
-          echo "tag=sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-          echo "repo=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          missing=0
+          for name in NEXT_PUBLIC_API_BASE_URL NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_TURNSTILE_SITE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::${name} is not set for the ${TARGET_ENV} environment"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - id: meta
+        env:
+          TARGET_ENV: ${{ inputs.environment || 'staging' }}
+        run: |
+          set -euo pipefail
+          {
+            echo "tag=${TARGET_ENV}-sha-$(git rev-parse --short HEAD)"
+            echo "moving-tag=${TARGET_ENV}"
+            echo "repo=${REGISTRY}/${GITHUB_REPOSITORY,,}"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v4
 
@@ -50,7 +81,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta.outputs.repo }}/api:${{ steps.meta.outputs.tag }}
-            ${{ steps.meta.outputs.repo }}/api:latest
+            ${{ steps.meta.outputs.repo }}/api:${{ steps.meta.outputs.moving-tag }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
 
@@ -67,17 +98,34 @@ jobs:
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           tags: |
             ${{ steps.meta.outputs.repo }}/web:${{ steps.meta.outputs.tag }}
-            ${{ steps.meta.outputs.repo }}/web:latest
+            ${{ steps.meta.outputs.repo }}/web:${{ steps.meta.outputs.moving-tag }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ inputs.environment || 'staging' }}
     permissions:
       packages: read
     steps:
+      - name: Check the host credentials are set for the target environment
+        env:
+          TARGET_ENV: ${{ inputs.environment || 'staging' }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in VPS_HOST VPS_USER VPS_SSH_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::${name} is not set for the ${TARGET_ENV} environment"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Pull the new images and restart the stack
         uses: appleboy/ssh-action@v1
         with:

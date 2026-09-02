@@ -23,7 +23,7 @@ services:
         condition: service_healthy
 
   web:
-    image: ${IMAGE_REPO:?set IMAGE_REPO in .env}/web:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REPO:?set IMAGE_REPO in .env}/web:${IMAGE_TAG:?set IMAGE_TAG in .env}
     restart: unless-stopped
     init: true
     expose:
@@ -32,7 +32,7 @@ services:
       API_BASE_URL: http://api:3333
 
   api:
-    image: ${IMAGE_REPO:?set IMAGE_REPO in .env}/api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REPO:?set IMAGE_REPO in .env}/api:${IMAGE_TAG:?set IMAGE_TAG in .env}
     restart: unless-stopped
     init: true
     expose:
@@ -53,7 +53,7 @@ services:
         condition: service_healthy
 
   worker:
-    image: ${IMAGE_REPO:?set IMAGE_REPO in .env}/api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REPO:?set IMAGE_REPO in .env}/api:${IMAGE_TAG:?set IMAGE_TAG in .env}
     command: ['node', 'dist/worker.js']
     restart: unless-stopped
     init: true

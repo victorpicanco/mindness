@@ -2,15 +2,22 @@ name: Migrate
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+        required: true
 
 concurrency:
-  group: migrate
+  group: migrate-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
   migrate:
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -18,6 +25,15 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Check the database url is set for the target environment
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL is not set for the ${{ inputs.environment }} environment"
+            exit 1
+          fi
       - run: pnpm install --frozen-lockfile --filter @mindness/api...
       - run: pnpm --filter @mindness/api db:deploy
         env:

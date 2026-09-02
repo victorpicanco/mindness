@@ -20,8 +20,12 @@ type Dependencies = {
   readonly fetcher: typeof fetch
 }
 
-function redirect(request: Request, path: string): NextResponse {
-  return NextResponse.redirect(new URL(path, request.url), { status: 302 })
+// The standalone server builds request.url from HOSTNAME, which is 0.0.0.0 in
+// the container, so resolving against it sends the browser to an address that
+// only exists inside the network. A relative location resolves against the
+// origin the browser asked for.
+function redirect(path: string): NextResponse {
+  return new NextResponse(null, { status: 302, headers: { location: path } })
 }
 
 export function createEmailConfirmationRouteHandler({ cookieStore, fetcher }: Dependencies) {
@@ -30,7 +34,7 @@ export function createEmailConfirmationRouteHandler({ cookieStore, fetcher }: De
     const tokenHash = url.searchParams.get('token_hash')
     const type = url.searchParams.get('type')
     if (tokenHash === null || (type !== 'email' && type !== 'recovery')) {
-      return redirect(request, '/auth/confirmed?status=invalid')
+      return redirect('/auth/confirmed?status=invalid')
     }
 
     try {
@@ -43,17 +47,16 @@ export function createEmailConfirmationRouteHandler({ cookieStore, fetcher }: De
         schema: sessionSchema,
       })
       writeSessionCookies(cookieStore, session)
-      if (type === 'recovery') return redirect(request, '/auth/update-password')
+      if (type === 'recovery') return redirect('/auth/update-password')
 
       const provisionError = await provisionAccount({ cookieStore, fetcher })
       if (provisionError !== null) {
-        return redirect(request, `/auth/sign-in?error=${encodeURIComponent(provisionError.code)}`)
+        return redirect(`/auth/sign-in?error=${encodeURIComponent(provisionError.code)}`)
       }
 
-      return redirect(request, SIGNED_IN_HOME)
+      return redirect(SIGNED_IN_HOME)
     } catch {
       return redirect(
-        request,
         type === 'recovery'
           ? '/auth/update-password?status=invalid'
           : '/auth/confirmed?status=invalid',

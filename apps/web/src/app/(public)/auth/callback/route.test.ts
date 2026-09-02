@@ -55,7 +55,7 @@ describe('Google callback route', () => {
     const response = await handler(new Request(callbackUrl))
 
     expect(response.status).toBe(302)
-    expect(response.headers.get('location')).toBe('https://web.mindness.test/')
+    expect(response.headers.get('location')).toBe('/')
     expect(cookieStore.values).toEqual(
       new Map([
         ['mindness_access_token', 'access-token'],
@@ -120,9 +120,7 @@ describe('Google callback route', () => {
     )
 
     expect(response.status).toBe(302)
-    expect(response.headers.get('location')).toBe(
-      'https://web.mindness.test/auth/sign-in?error=google_callback_failed',
-    )
+    expect(response.headers.get('location')).toBe('/auth/sign-in?error=google_callback_failed')
     expect(cookieStore.values).toEqual(new Map())
   })
 
@@ -166,7 +164,7 @@ describe('Google callback route', () => {
 
     expect(response.status).toBe(302)
     expect(response.headers.get('location')).toBe(
-      'https://web.mindness.test/auth/sign-in?error=accounts.BETA_CAPACITY_REACHED',
+      '/auth/sign-in?error=accounts.BETA_CAPACITY_REACHED',
     )
     expect(cookieStore.values).toEqual(new Map())
   })

@@ -15,12 +15,16 @@ type GoogleCallbackRouteHandlerDependencies = {
 
 const GOOGLE_CALLBACK_FAILED = 'google_callback_failed'
 
-function redirect(request: Request, path: string): NextResponse {
-  return NextResponse.redirect(new URL(path, request.url), { status: 302 })
+// The standalone server builds request.url from HOSTNAME, which is 0.0.0.0 in
+// the container, so resolving against it sends the browser to an address that
+// only exists inside the network. A relative location resolves against the
+// origin the browser asked for.
+function redirect(path: string): NextResponse {
+  return new NextResponse(null, { status: 302, headers: { location: path } })
 }
 
-function signInWithError(request: Request, code: string): NextResponse {
-  return redirect(request, `/auth/sign-in?error=${encodeURIComponent(code)}`)
+function signInWithError(code: string): NextResponse {
+  return redirect(`/auth/sign-in?error=${encodeURIComponent(code)}`)
 }
 
 export function createGoogleCallbackRouteHandler({
@@ -33,16 +37,16 @@ export function createGoogleCallbackRouteHandler({
     const refreshToken = url.searchParams.get('refresh_token')
 
     if (accessToken === null || refreshToken === null) {
-      return signInWithError(request, GOOGLE_CALLBACK_FAILED)
+      return signInWithError(GOOGLE_CALLBACK_FAILED)
     }
 
     writeSessionCookies(cookieStore, { accessToken, refreshToken })
 
     const provisionError = await provisionAccount({ cookieStore, fetcher })
 
-    if (provisionError !== null) return signInWithError(request, provisionError.code)
+    if (provisionError !== null) return signInWithError(provisionError.code)
 
-    return redirect(request, SIGNED_IN_HOME)
+    return redirect(SIGNED_IN_HOME)
   }
 }
 

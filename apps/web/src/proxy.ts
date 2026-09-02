@@ -33,7 +33,10 @@ function createContentSecurityPolicy(nonce: string): string {
 
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${CAPTCHA_ORIGIN}${developmentSource}`,
+    // 'strict-dynamic' is deliberately absent: cacheComponents serves a shell
+    // prerendered at build time, whose script tags predate the request that
+    // carries the nonce, and the keyword would void the 'self' they rely on.
+    `script-src 'self' 'nonce-${nonce}' ${CAPTCHA_ORIGIN}${developmentSource}`,
     // The toast library injects its stylesheet at runtime and cannot carry a
     // nonce, and a nonce in style-src would make the browser ignore this.
     "style-src 'self' 'unsafe-inline'",

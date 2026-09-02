@@ -17,7 +17,7 @@ const AlternativeSchema = Type.Object({
   words: Type.Array(TranscriptionWordSchema),
 })
 
-export const TranscriptionResponseSchema = Type.Object({
+const TranscriptionResponseSchema = Type.Object({
   results: Type.Object({
     channels: Type.Array(
       Type.Object({

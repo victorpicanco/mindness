@@ -24,7 +24,7 @@ const ImprovementPointSchema = Type.Object(
   { additionalProperties: false },
 )
 
-export const SpeechFeedbackSchema = Type.Object(
+const SpeechFeedbackSchema = Type.Object(
   {
     summary: Type.String({ minLength: 1, maxLength: MAX_TEXT_LENGTH }),
     strengths: Type.Array(FeedbackPointSchema, { maxItems: 3 }),

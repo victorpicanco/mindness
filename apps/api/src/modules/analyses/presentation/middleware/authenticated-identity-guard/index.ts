@@ -11,7 +11,7 @@ declare module 'fastify' {
 
 const BEARER_PREFIX = 'Bearer '
 
-export function readBearerToken(request: FastifyRequest): string {
+function readBearerToken(request: FastifyRequest): string {
   const header = request.headers.authorization
   if (header === undefined || !header.startsWith(BEARER_PREFIX)) {
     throw new AnalysisAuthenticationRejectedError()

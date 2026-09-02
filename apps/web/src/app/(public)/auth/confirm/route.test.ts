@@ -79,7 +79,7 @@ describe('email confirmation route', () => {
       new Request('https://web.test/auth/confirm?token_hash=secret-hash&type=email'),
     )
 
-    expect(response.headers.get('location')).toBe('https://web.test/')
+    expect(response.headers.get('location')).toBe('/')
     expect(store.values.get('mindness_access_token')).toBe('access-token')
     expect(response.headers.get('location')).not.toContain('secret-hash')
     expect(calls).toEqual([
@@ -103,7 +103,7 @@ describe('email confirmation route', () => {
     )
 
     expect(response.headers.get('location')).toBe(
-      'https://web.test/auth/sign-in?error=accounts.BETA_CAPACITY_REACHED',
+      '/auth/sign-in?error=accounts.BETA_CAPACITY_REACHED',
     )
     expect(store.values.get('mindness_access_token')).toBeUndefined()
   })
@@ -121,7 +121,7 @@ describe('email confirmation route', () => {
       new Request('https://web.test/auth/confirm?token_hash=used&type=email'),
     )
 
-    expect(response.headers.get('location')).toBe('https://web.test/auth/confirmed?status=invalid')
+    expect(response.headers.get('location')).toBe('/auth/confirmed?status=invalid')
   })
 
   it('routes a valid recovery link to the password update screen', async () => {
@@ -137,7 +137,7 @@ describe('email confirmation route', () => {
       new Request('https://web.test/auth/confirm?token_hash=recovery&type=recovery'),
     )
 
-    expect(response.headers.get('location')).toBe('https://web.test/auth/update-password')
+    expect(response.headers.get('location')).toBe('/auth/update-password')
     expect(calls).toEqual(['/auth/email/confirm'])
   })
 })

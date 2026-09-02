@@ -30,6 +30,7 @@ import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
 import { BaseError } from '@/shared/errors/base-error/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
 import { registerHealthRoute } from '@/shared/http/health-route/index.js'
+import { registerShutdownSignals } from '@/shared/http/shutdown-signals/index.js'
 import { UuidGenerator } from '@/shared/id/uuid-generator/index.js'
 import { createLogger } from '@/shared/logger/pino-logger/index.js'
 import { InProcessEventBus } from '@/shared/messaging/in-process-event-bus/index.js'
@@ -280,6 +281,8 @@ export async function startWorker(): Promise<void> {
     await bullMqQueue.close()
     await closeAnalysisWorker(analysisWorker, redisConnection)
   })
+
+  registerShutdownSignals({ close: () => app.close(), logger })
 
   await app.listen({ host: config.host, port: config.workerHealthPort })
 }

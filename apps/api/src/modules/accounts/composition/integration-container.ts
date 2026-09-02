@@ -13,8 +13,8 @@ import { ControllableClock } from '@/shared/time/controllable-clock/index.js'
 import type { AccountsContainer } from './container.js'
 import { registerAccountsModule } from './register.js'
 
-export const TEST_CONSENT_VERSION = '2026-08-15'
-export const TEST_NOW = new Date('2026-08-15T12:00:00.000Z')
+const TEST_CONSENT_VERSION = '2026-08-15'
+const TEST_NOW = new Date('2026-08-15T12:00:00.000Z')
 
 export interface AccountsIntegrationDeps {
   readonly databaseUrl: string

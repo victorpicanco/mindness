@@ -41,7 +41,9 @@ function createContentSecurityPolicy(nonce: string): string {
     // nonce, and a nonce in style-src would make the browser ignore this.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
-    "media-src 'self' data: blob:",
+    // Recordings are played straight from the signed Storage URL, so the
+    // origin has to be allowed here as well as in connect-src.
+    `media-src 'self' data: blob: ${storageOrigin}`,
     "font-src 'self'",
     `connect-src 'self' ${storageOrigin} ${CAPTCHA_ORIGIN}`,
     `frame-src 'self' ${CAPTCHA_ORIGIN}`,

@@ -211,14 +211,44 @@ jobs:
             WEB_DOMAIN="$(grep '^WEB_DOMAIN=' .env | cut -d= -f2-)"
             API_DOMAIN="$(grep '^API_DOMAIN=' .env | cut -d= -f2-)"
 
-            web_status="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "https://${WEB_DOMAIN}/" || echo failed)"
-            case "$web_status" in
-              2*|3*) echo "web ok (${web_status})" ;;
-              *) echo "::error::https://${WEB_DOMAIN}/ answered ${web_status}"; exit 1 ;;
-            esac
+            # Caddy carries no healthcheck, so the loop above releases it the moment it is
+            # running — which, on a host whose volume holds no certificate yet, is before ACME
+            # has answered. A single request then dies on a TLS alert with the stack healthy.
+            # `-w` already prints 000 when curl gives up, so `|| true` keeps that status instead
+            # of appending a word to it, and curl's own reason still reaches the log on stderr.
+            probe() {
+              curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "$1" || true
+            }
 
-            api_status="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "https://${API_DOMAIN}/healthz" || echo failed)"
-            case "$api_status" in
-              200) echo "api ok (${api_status})" ;;
-              *) echo "::error::https://${API_DOMAIN}/healthz answered ${api_status}"; exit 1 ;;
-            esac
+            web_answers() {
+              web_status="$(probe "https://${WEB_DOMAIN}/")"
+              case "$web_status" in
+                2*|3*) return 0 ;;
+                *) return 1 ;;
+              esac
+            }
+
+            api_answers() {
+              api_status="$(probe "https://${API_DOMAIN}/healthz")"
+              [ "$api_status" = 200 ]
+            }
+
+            wait_for() {
+              deadline=$((SECONDS + 120))
+              until "$1"; do
+                [ "$SECONDS" -ge "$deadline" ] && return 1
+                sleep 5
+              done
+            }
+
+            wait_for web_answers || {
+              echo "::error::https://${WEB_DOMAIN}/ answered ${web_status}"
+              exit 1
+            }
+            echo "web ok (${web_status})"
+
+            wait_for api_answers || {
+              echo "::error::https://${API_DOMAIN}/healthz answered ${api_status}"
+              exit 1
+            }
+            echo "api ok (${api_status})"

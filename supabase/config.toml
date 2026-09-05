@@ -499,12 +499,14 @@ secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET_PRODUCTION)"
 max_frequency = "60s"
 
 # Refresh token rotation alone never ends a session: the rotation keeps renewing
-# it for as long as the token is used. These two bound how long a stolen session
-# stays worth anything, which is the only thing that limits it today — the web
-# proxy renews on every request, so an idle tab would otherwise live forever.
-[remotes.production.auth.sessions]
-timebox = "24h"
-inactivity_timeout = "8h"
+# it for as long as the token is used, and the web proxy renews on every request,
+# so an idle tab lives forever. The block below is what bounds a stolen session
+# and it stays commented because the project is on the free plan — pushing it
+# answers 402 and aborts the whole `config push`, taking every other setting with
+# it. Uncomment together with the Pro upgrade.
+# [remotes.production.auth.sessions]
+# timebox = "24h"
+# inactivity_timeout = "8h"
 
 [remotes.production.auth.rate_limit]
 email_sent = 100

@@ -18,6 +18,13 @@ described in the root `README.md`.
 ```bash
 curl -fsSL https://get.docker.com | sh
 mkdir -p /opt/mindness/secrets
+
+# The provider firewall filters IPv4 only, and the VPS answers on IPv6 too. Docker
+# publishes 80/443 past ufw on its own, so this is what stands between a service
+# that binds `::` by accident and the internet.
+ufw default deny incoming && ufw default allow outgoing
+ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp
+ufw --force enable
 ```
 
 Copy into `/opt/mindness`:
@@ -162,11 +169,10 @@ The Data API is unused — no client ever talks to PostgREST, and
 `NEXT_PUBLIC_SUPABASE_URL` reaches the browser only as a CSP `connect-src` entry
 for signed Storage URLs. Leave it disabled on every project.
 
-**`config push` does not turn it off on a project that already has it on.** The
-`[remotes.<name>.api] enabled = false` block is honoured when the project is
-created, not as a later change; a project provisioned with the Data API on keeps
-answering on `/rest/v1` and the push says nothing. Verify it per project, and fix
-it in the dashboard (Project Settings → API → Data API) when it is on:
+A project is provisioned with it **on**, and `[remotes.<name>.api] enabled =
+false` only takes effect once the config is pushed — so a new project answers on
+`/rest/v1` until the first `config push` lands. Verify it per project rather than
+assuming the file won:
 
 ```bash
 curl -s -H "apikey: <publishable key>" \
@@ -176,6 +182,13 @@ curl -s -H "apikey: <publishable key>" \
 `PGRST205` (table not found) or a row means the Data API is **on**. `PGRST002`
 (cannot build the schema cache) means it is off, or that the Data API roles hold
 no privilege — which is the state the migrations leave behind.
+
+Two settings the file wants are **Pro-plan only** and answer 402 on the free
+plan, which aborts the entire push: `[auth.sessions]` (`timebox`,
+`inactivity_timeout`) and leaked-password protection against HaveIBeenPwned.
+The sessions block is commented for that reason — uncomment it, and turn on
+leaked-password protection, when the project moves to Pro. Until then nothing
+ends a session that keeps being refreshed.
 
 ## Provisioning production
 

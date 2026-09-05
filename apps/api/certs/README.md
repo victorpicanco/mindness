@@ -12,3 +12,6 @@ this root, and every query fails with `self-signed certificate in certificate ch
 `prisma migrate deploy` does not use this file: its schema engine ignores `sslmode=verify-full`
 and cannot load a custom root, so the migration string stays on `sslmode=require` — encrypted,
 unverified, with `[remotes.<name>.db.ssl_enforcement]` guaranteeing the encryption.
+
+The `Migrate` workflow reads it straight from the checkout for `themes:sync`, which runs on the
+driver adapter and so does verify the chain.

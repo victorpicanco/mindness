@@ -19,13 +19,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - name: Check the database url is set for the target environment
+      # Prisma defaults to `sslmode=prefer`, which downgrades to plaintext without
+      # complaining. The connection carries the migration and the credentials, so
+      # the mode is required to be explicit rather than inherited.
+      - name: Check the database url is set and demands TLS
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
@@ -34,6 +37,13 @@ jobs:
             echo "::error::DATABASE_URL is not set for the ${{ inputs.environment }} environment"
             exit 1
           fi
+          case "$DATABASE_URL" in
+            *sslmode=require*|*sslmode=verify-ca*|*sslmode=verify-full*) ;;
+            *)
+              echo "::error::DATABASE_URL for ${{ inputs.environment }} does not set sslmode=require"
+              exit 1
+              ;;
+          esac
       - run: pnpm install --frozen-lockfile --filter @mindness/api...
       - run: pnpm --filter @mindness/api db:deploy
         env:

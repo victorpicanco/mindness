@@ -5,39 +5,50 @@ import {
   AuthenticatedShellView,
   type AuthenticatedShellProps,
 } from '@/components/layouts/authenticated-shell'
+import { updateAccountName as updateAccountNameRequest } from '@/lib/api/update-account-name'
 import {
   PracticeSessionProvider,
   usePracticeSessionStore,
 } from '@/stores/practice-session/provider'
 import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
+import { useTheme } from '@/components/providers/theme-provider'
 
-interface AuthenticatedSessionShellProps extends AuthenticatedShellProps {
+interface AuthenticatedSessionShellProps extends Omit<
+  AuthenticatedShellProps,
+  'onThemeChange' | 'theme'
+> {
   readonly initialPracticeSessionState?: PracticeSessionInitialState | undefined
 }
 
 type AuthenticatedSessionShellViewProps = AuthenticatedSessionShellProps & {
   readonly abandonSession: (sessionId: string) => Promise<void>
   readonly deleteSession: (sessionId: string) => Promise<void>
+  readonly updateAccountName?: ((name: string) => Promise<string>) | undefined
 }
 
-type SessionNavigationShellProps = AuthenticatedShellProps & {
+type SessionNavigationShellProps = Omit<AuthenticatedShellProps, 'onThemeChange' | 'theme'> & {
   readonly abandonSession?: ((sessionId: string) => Promise<void>) | undefined
   readonly deleteSession?: ((sessionId: string) => Promise<void>) | undefined
+  readonly updateAccountName?: ((name: string) => Promise<string>) | undefined
 }
 
 function SessionNavigationShell({
   abandonSession,
   deleteSession,
+  updateAccountName = (name) => updateAccountNameRequest({ name }),
   ...props
 }: SessionNavigationShellProps) {
   const status = usePracticeSessionStore((state) => state.status)
   const reset = usePracticeSessionStore((state) => state.reset)
+  const { setTheme, theme } = useTheme()
   const shouldConfirmSessionNavigation = status === 'recording' || status === 'uploading'
 
   const shellProps = {
     ...props,
     onSessionAbandoned: reset,
+    onThemeChange: setTheme,
     shouldConfirmSessionNavigation,
+    theme,
   }
 
   return abandonSession === undefined || deleteSession === undefined ? (
@@ -47,6 +58,7 @@ function SessionNavigationShell({
       {...shellProps}
       abandonSession={abandonSession}
       deleteSession={deleteSession}
+      updateAccountName={updateAccountName}
     />
   )
 }

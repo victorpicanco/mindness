@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
+import { DisplayName } from '@/modules/accounts/domain/value-objects/display-name/index.js'
 import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 
@@ -27,6 +28,7 @@ describe('Account', () => {
       authUserId: 'auth-user-1',
       plan: 'free',
       status: 'accessible',
+      name: null,
       voiceConsent: null,
       createdAt,
     })
@@ -62,11 +64,13 @@ describe('Account', () => {
       ...validParams(),
       plan: 'free',
       status: 'accessible',
+      name: DisplayName.create('Maria Silva'),
       voiceConsent: null,
       currentSessionId: null,
     })
 
     expect(account).toMatchObject({ id: 'account-1', plan: 'free', status: 'accessible' })
+    expect(account.name?.value).toBe('Maria Silva')
   })
 
   it('rejects reconstituting an account without an identity', () => {
@@ -76,6 +80,7 @@ describe('Account', () => {
         id: '',
         plan: 'free',
         status: 'accessible',
+        name: null,
         voiceConsent: null,
         currentSessionId: null,
       }),
@@ -121,6 +126,21 @@ describe('Account', () => {
     expect(() => account.changeTimeZone(TimeZone.create('Europe/Lisbon'))).toThrow(
       InvalidAccountValueError,
     )
+    expect(() => account.changeName(DisplayName.create('Maria Silva'))).toThrow(
+      InvalidAccountValueError,
+    )
+  })
+
+  it('starts without a name and keeps the latest one it was given', () => {
+    const account = Account.create(validParams())
+
+    expect(account.name).toBeNull()
+
+    account.changeName(DisplayName.create('Maria Silva'))
+    expect(account.name?.value).toBe('Maria Silva')
+
+    account.changeName(DisplayName.create('Maria Souza'))
+    expect(account.name?.value).toBe('Maria Souza')
   })
 
   it('does not expose a mutable created-at instant', () => {

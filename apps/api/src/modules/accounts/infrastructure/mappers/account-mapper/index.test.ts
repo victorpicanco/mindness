@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { Account } from '@/modules/accounts/domain/entities/account/index.js'
+import { DisplayName } from '@/modules/accounts/domain/value-objects/display-name/index.js'
 import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 import type { AccountRow } from '@/modules/accounts/infrastructure/clients/accounts-prisma-client/index.js'
@@ -12,6 +13,7 @@ const row: AccountRow = {
   email: 'person@example.com',
   authUserId: 'auth-user-1',
   timeZone: 'America/Sao_Paulo',
+  name: null,
   plan: 'free',
   status: 'accessible',
   consentPurpose: null,
@@ -60,6 +62,22 @@ describe('AccountMapper', () => {
     })
 
     expect(new AccountMapper().toPersistence(account)).toEqual(row)
+  })
+
+  it('round-trips the name as a validated value object', () => {
+    const mapper = new AccountMapper()
+    const account = mapper.toDomain({ ...row, name: 'Maria Silva' })
+
+    expect(account.name).toBeInstanceOf(DisplayName)
+    expect(account.name?.value).toBe('Maria Silva')
+    expect(mapper.toPersistence(account).name).toBe('Maria Silva')
+  })
+
+  it('keeps an account that was never named without a name', () => {
+    const mapper = new AccountMapper()
+
+    expect(mapper.toDomain(row).name).toBeNull()
+    expect(mapper.toPersistence(mapper.toDomain(row)).name).toBeNull()
   })
 
   it('round-trips the current authenticated session', () => {

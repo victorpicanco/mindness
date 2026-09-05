@@ -193,7 +193,7 @@ export function createSignOutAction({
   fetcher,
   redirect,
 }: CommonDependencies & { readonly redirect: (path: string) => never }) {
-  return async function signOutAction(): Promise<never> {
+  return async function signOutAction(): Promise<void> {
     const { accessToken } = readSessionCookies(cookieStore)
     try {
       if (accessToken !== undefined) {
@@ -206,7 +206,7 @@ export function createSignOutAction({
       }
     } finally {
       clearSessionCookies(cookieStore)
+      redirect('/auth/sign-in')
     }
-    return redirect('/auth/sign-in')
   }
 }

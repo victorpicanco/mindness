@@ -16,6 +16,10 @@
     "test:integration": "pnpm -r test:integration",
     "test:e2e": "pnpm -r test:e2e",
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "supabase": "supabase",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset --no-seed && pnpm --filter @mindness/api db:deploy && pnpm --filter @mindness/api themes:sync",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -30,6 +34,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
     "prettier": "^3.5.0",
+    "supabase": "2.116.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.24.0"
   },

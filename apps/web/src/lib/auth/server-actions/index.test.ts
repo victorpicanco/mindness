@@ -95,6 +95,24 @@ describe('auth flow actions', () => {
     expect(navigate).toHaveBeenCalledWith('/auth/sign-in')
   })
 
+  it('clears local cookies and redirects when global sign-out is unavailable', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const store = new InMemoryCookieStore()
+    writeSessionCookies(store, { accessToken: 'access-token', refreshToken: 'refresh-token' })
+    const navigate = vi.fn<(path: string) => never>(() => {
+      throw new DOMException('redirected')
+    })
+    const action = createSignOutAction({
+      cookieStore: store,
+      fetcher: () => Promise.reject(new TypeError('network down')),
+      redirect: navigate,
+    })
+
+    await expect(action()).rejects.toThrow('redirected')
+    expect(readSessionCookies(store)).toEqual({ accessToken: undefined, refreshToken: undefined })
+    expect(navigate).toHaveBeenCalledWith('/auth/sign-in')
+  })
+
   it('reports the API failure of an email request instead of swallowing it', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.test')
     const action = createEmailRequestAction({

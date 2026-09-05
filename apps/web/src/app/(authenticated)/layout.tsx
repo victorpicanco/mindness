@@ -6,7 +6,11 @@ import { Suspense, type ReactNode } from 'react'
 import { authenticatedClientMessages } from '@/i18n/client-messages'
 import { RouteLoading } from '@/components/layouts/route-loading'
 import type { activeSessionSchema } from '@/lib/api/contracts/sessions'
-import { getActiveSession, getSessionHistory } from '@/lib/api/authenticated-session-data'
+import {
+  getAccountProfile,
+  getActiveSession,
+  getSessionHistory,
+} from '@/lib/api/authenticated-session-data'
 import { createRequireSession } from '@/lib/auth/require-session'
 import { signOutAction } from '@/lib/auth/sign-out'
 import { groupSessionsByDay } from '@/lib/sessions/session-day-groups'
@@ -51,12 +55,17 @@ function practiceSessionInitialState(
 async function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
   const cookieStore = await cookies()
   createRequireSession({ cookieStore, redirect })()
-  const [history, activeSession] = await Promise.all([getSessionHistory(), getActiveSession()])
+  const [history, activeSession, accountProfile] = await Promise.all([
+    getSessionHistory(),
+    getActiveSession(),
+    getAccountProfile(),
+  ])
   const isSidebarExpanded = cookieStore.get(SIDEBAR_PREFERENCE_COOKIE_NAME)?.value !== 'false'
   const initialPracticeSessionState = practiceSessionInitialState(activeSession)
 
   return (
     <AuthenticatedSessionShell
+      accountProfile={accountProfile}
       activeSessionId={activeSession?.sessionId}
       initialPracticeSessionState={initialPracticeSessionState}
       initialIsExpanded={isSidebarExpanded}

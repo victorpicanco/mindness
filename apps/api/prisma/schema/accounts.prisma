@@ -16,6 +16,7 @@ model Account {
   email      String        @unique
   authUserId String        @unique @map("auth_user_id")
   timeZone   String        @map("time_zone")
+  name       String?
   plan       AccountPlan
   status     AccountStatus
   consentPurpose    String?   @map("consent_purpose")

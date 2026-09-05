@@ -1,4 +1,7 @@
-import type { VerifiedAuthIdentity } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
+import type {
+  AuthenticationMethod,
+  VerifiedAuthIdentity,
+} from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 
 export interface GetAccountProfileInput {
   readonly identity?: VerifiedAuthIdentity
@@ -13,7 +16,10 @@ export interface AccountConsentView {
 
 export interface GetAccountProfileOutput {
   readonly accountId: string
+  readonly authenticationMethod: AuthenticationMethod
   readonly email: string
+  readonly name: string | null
+  readonly createdAt: string
   readonly timeZone: string
   readonly plan: 'free'
   readonly consent: AccountConsentView | null

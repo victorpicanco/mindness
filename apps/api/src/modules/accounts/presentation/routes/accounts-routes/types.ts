@@ -11,6 +11,7 @@ import type { ResendSignUpConfirmationController } from '@/modules/accounts/pres
 import type { SignOutController } from '@/modules/accounts/presentation/controllers/sign-out-controller/index.js'
 import type { SignUpController } from '@/modules/accounts/presentation/controllers/sign-up-controller/index.js'
 import type { StartGoogleSignInController } from '@/modules/accounts/presentation/controllers/start-google-sign-in-controller/index.js'
+import type { UpdateAccountNameController } from '@/modules/accounts/presentation/controllers/update-account-name-controller/index.js'
 import type { UpdateTimeZoneController } from '@/modules/accounts/presentation/controllers/update-time-zone-controller/index.js'
 import type { UpdatePasswordController } from '@/modules/accounts/presentation/controllers/update-password-controller/index.js'
 
@@ -28,6 +29,7 @@ export interface AccountsControllers {
   readonly signOut: SignOutController
   readonly signUp: SignUpController
   readonly startGoogleSignIn: StartGoogleSignInController
+  readonly updateAccountName: UpdateAccountNameController
   readonly updateTimeZone: UpdateTimeZoneController
   readonly updatePassword: UpdatePasswordController
 }
@@ -47,4 +49,5 @@ export const ACCOUNTS_ROUTE_PATHS = {
   profile: '/accounts/me',
   consent: '/accounts/me/consent',
   timeZone: '/accounts/me/time-zone',
+  name: '/accounts/me/name',
 } as const

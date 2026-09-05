@@ -1,4 +1,5 @@
 import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
+import type { DisplayName } from '@/modules/accounts/domain/value-objects/display-name/index.js'
 import type { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 import type { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 import type { VoiceConsent } from '@/modules/accounts/domain/value-objects/voice-consent/index.js'
@@ -33,7 +34,12 @@ export class Account {
     private readonly createdAtEpoch: number,
     private _voiceConsent: VoiceConsent | null,
     private _currentSessionId: string | null,
+    private _name: DisplayName | null,
   ) {}
+
+  get name(): DisplayName | null {
+    return this._name
+  }
 
   get voiceConsent(): VoiceConsent | null {
     return this._voiceConsent
@@ -66,6 +72,7 @@ export class Account {
       params.createdAt.getTime(),
       null,
       null,
+      null,
     )
   }
 
@@ -80,6 +87,7 @@ export class Account {
       params.createdAt.getTime(),
       params.voiceConsent,
       params.currentSessionId,
+      params.name,
     )
   }
 
@@ -90,6 +98,11 @@ export class Account {
     }
     this._voiceConsent = consent
     return { changed: true, consent }
+  }
+
+  changeName(name: DisplayName): void {
+    this.requireAccessible()
+    this._name = name
   }
 
   changeTimeZone(timeZone: TimeZone): void {

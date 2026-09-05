@@ -20,6 +20,7 @@ const row: AccountRow = {
   email: 'person@example.com',
   authUserId: 'auth-user-1',
   timeZone: 'America/Sao_Paulo',
+  name: null,
   plan: 'free',
   status: 'accessible',
   consentPurpose: null,

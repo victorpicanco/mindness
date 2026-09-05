@@ -31,7 +31,7 @@ export function Dialog({ children, description, onClose, open, title }: DialogPr
     <dialog
       aria-describedby={descriptionId}
       aria-labelledby={titleId}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-divider bg-surface p-6 text-text shadow-xl backdrop:bg-text/30 backdrop:backdrop-blur-[1px]"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-divider bg-surface p-6 text-text shadow-xl backdrop:bg-black/30 backdrop:backdrop-blur-[1px] dark:backdrop:bg-black/60"
       onCancel={(event) => {
         event.preventDefault()
         onClose()

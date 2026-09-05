@@ -26,7 +26,10 @@ export class GetAccountProfileUseCase {
 
     return {
       accountId: account.id,
+      authenticationMethod: identity.authenticationMethod,
+      createdAt: account.createdAt.toISOString(),
       email: account.email.value,
+      name: account.name?.value ?? null,
       timeZone: account.timeZone.value,
       plan: account.plan,
       consent:

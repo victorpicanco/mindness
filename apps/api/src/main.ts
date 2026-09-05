@@ -82,6 +82,7 @@ export async function startServer(): Promise<void> {
       publicWebUrl: config.publicWebUrl,
       secureCookies: config.nodeEnv === 'production',
       supabaseUrl: config.supabaseUrl,
+      supabasePublishableKey: config.supabasePublishableKey,
       supabaseSecretKey: config.supabaseSecretKey,
       emailConfirmationRedirectUrl: config.emailConfirmationRedirectUrl,
       authRateLimit: {

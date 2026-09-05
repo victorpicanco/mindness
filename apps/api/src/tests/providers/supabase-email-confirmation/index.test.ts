@@ -5,12 +5,13 @@ import { SupabaseAuthIdentityProviderAdapter } from '@/modules/accounts/infrastr
 import { SupabaseAuthApiClient } from '@/modules/accounts/infrastructure/clients/supabase-auth-api/index.js'
 
 const url = process.env.SUPABASE_PROVIDER_URL
+const publishableKey = process.env.SUPABASE_PROVIDER_PUBLISHABLE_KEY
 const secretKey = process.env.SUPABASE_PROVIDER_SECRET_KEY
-const configured = url !== undefined && secretKey !== undefined
+const configured = url !== undefined && publishableKey !== undefined && secretKey !== undefined
 
 describe.skipIf(!configured)('Supabase email confirmation provider', () => {
   it('exchanges a real generated token hash once', async () => {
-    if (url === undefined || secretKey === undefined) return
+    if (url === undefined || publishableKey === undefined || secretKey === undefined) return
 
     const admin = createClient(url, secretKey, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -32,6 +33,7 @@ describe.skipIf(!configured)('Supabase email confirmation provider', () => {
     const adapter = new SupabaseAuthIdentityProviderAdapter(
       new SupabaseAuthApiClient({
         url,
+        publishableKey,
         secretKey,
         emailRedirectUrl: 'http://localhost:3000/auth/confirm',
       }),

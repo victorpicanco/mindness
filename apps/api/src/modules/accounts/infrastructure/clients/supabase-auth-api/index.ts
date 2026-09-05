@@ -41,11 +41,18 @@ export interface SupabaseAuthApi {
 
 export interface SupabaseAuthConfig {
   readonly url: string
+  readonly publishableKey: string
   readonly secretKey: string
   readonly emailRedirectUrl: string
 }
 
-class SupabaseRequestStorage {
+export type SupabaseAuthClientFactory = (
+  url: string,
+  key: string,
+  storage: SupabaseRequestStorage,
+) => ReturnType<typeof createClient>
+
+export class SupabaseRequestStorage {
   readonly isServer = true
 
   constructor(private readonly entries = new Map<string, string>()) {}
@@ -84,7 +91,10 @@ class SupabaseRequestStorage {
 }
 
 export class SupabaseAuthApiClient implements SupabaseAuthApi {
-  constructor(private readonly config: SupabaseAuthConfig) {}
+  constructor(
+    private readonly config: SupabaseAuthConfig,
+    private readonly createSupabaseClient: SupabaseAuthClientFactory = defaultClientFactory,
+  ) {}
 
   signUp(params: {
     readonly email: string
@@ -168,7 +178,7 @@ export class SupabaseAuthApiClient implements SupabaseAuthApi {
   }
 
   updatePassword(authUserId: string, password: string): Promise<SupabaseAuthResult> {
-    return this.client().auth.admin.updateUserById(authUserId, { password })
+    return this.adminClient().auth.admin.updateUserById(authUserId, { password })
   }
 
   getClaims(accessToken: string): Promise<SupabaseAuthResult> {
@@ -176,18 +186,37 @@ export class SupabaseAuthApiClient implements SupabaseAuthApi {
   }
 
   signOut(accessToken: string): Promise<{ readonly error: unknown }> {
-    return this.client().auth.admin.signOut(accessToken, 'global')
+    return this.adminClient().auth.admin.signOut(accessToken, 'global')
   }
 
+  // The secret key bypasses every project-side protection, so it is reserved for
+  // `auth.admin.*`. Everything a signed-out visitor can reach runs on the
+  // publishable key, which is what those endpoints are designed for.
   private client(storage: SupabaseRequestStorage = new SupabaseRequestStorage()) {
-    return createClient(this.config.url, this.config.secretKey, {
-      auth: {
-        storage,
-        persistSession: true,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-        flowType: 'pkce',
-      },
-    })
+    return this.createSupabaseClient(this.config.url, this.config.publishableKey, storage)
   }
+
+  private adminClient() {
+    return this.createSupabaseClient(
+      this.config.url,
+      this.config.secretKey,
+      new SupabaseRequestStorage(),
+    )
+  }
+}
+
+function defaultClientFactory(
+  url: string,
+  key: string,
+  storage: SupabaseRequestStorage,
+): ReturnType<typeof createClient> {
+  return createClient(url, key, {
+    auth: {
+      storage,
+      persistSession: true,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      flowType: 'pkce',
+    },
+  })
 }

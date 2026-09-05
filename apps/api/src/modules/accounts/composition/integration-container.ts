@@ -55,6 +55,7 @@ export async function buildAccountsTestApp(
       publicWebUrl: 'https://app.test',
       secureCookies: false,
       supabaseUrl: 'https://project.supabase.test',
+      supabasePublishableKey: 'test-publishable-key',
       supabaseSecretKey: 'test-secret-key',
       emailConfirmationRedirectUrl: 'https://app.test/auth/confirmed',
       // High enough that no integration flow trips it; the limit itself is

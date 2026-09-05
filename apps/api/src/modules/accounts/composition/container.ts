@@ -64,6 +64,7 @@ export interface AccountsConfig {
   readonly publicWebUrl: string
   readonly secureCookies: boolean
   readonly supabaseUrl: string
+  readonly supabasePublishableKey: string
   readonly supabaseSecretKey: string
   readonly emailConfirmationRedirectUrl: string
   readonly authRateLimit: AuthRateLimitOptions
@@ -94,6 +95,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     new SupabaseAuthIdentityProviderAdapter(
       new SupabaseAuthApiClient({
         url: deps.config.supabaseUrl,
+        publishableKey: deps.config.supabasePublishableKey,
         secretKey: deps.config.supabaseSecretKey,
         emailRedirectUrl: deps.config.emailConfirmationRedirectUrl,
       }),

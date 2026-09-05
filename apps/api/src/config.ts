@@ -15,6 +15,7 @@ const EnvSchema = Type.Object({
   PUBLIC_API_URL: Type.String(),
   PUBLIC_WEB_URL: Type.String(),
   SUPABASE_URL: Type.String(),
+  SUPABASE_PUBLISHABLE_KEY: Type.String(),
   SUPABASE_SECRET_KEY: Type.String(),
   EMAIL_CONFIRMATION_REDIRECT_URL: Type.String(),
   ACCOUNTS_CONSENT_VERSION: Type.String(),
@@ -40,6 +41,7 @@ const STRING_ENV_KEYS = [
   'PUBLIC_API_URL',
   'PUBLIC_WEB_URL',
   'SUPABASE_URL',
+  'SUPABASE_PUBLISHABLE_KEY',
   'SUPABASE_SECRET_KEY',
   'EMAIL_CONFIRMATION_REDIRECT_URL',
   'ACCOUNTS_CONSENT_VERSION',
@@ -71,6 +73,7 @@ export interface Config {
   readonly publicApiUrl: string
   readonly publicWebUrl: string
   readonly supabaseUrl: string
+  readonly supabasePublishableKey: string
   readonly supabaseSecretKey: string
   readonly emailConfirmationRedirectUrl: string
   readonly accountsConsentVersion: string
@@ -142,6 +145,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
     publicApiUrl: candidate.PUBLIC_API_URL,
     publicWebUrl: candidate.PUBLIC_WEB_URL,
     supabaseUrl: candidate.SUPABASE_URL,
+    supabasePublishableKey: candidate.SUPABASE_PUBLISHABLE_KEY,
     supabaseSecretKey: candidate.SUPABASE_SECRET_KEY,
     emailConfirmationRedirectUrl: candidate.EMAIL_CONFIRMATION_REDIRECT_URL,
     accountsConsentVersion: candidate.ACCOUNTS_CONSENT_VERSION,

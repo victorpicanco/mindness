@@ -7,8 +7,16 @@
 	reverse_proxy web:3000
 }
 
+# The web app sets its own headers in the Next.js proxy; the API serves JSON from
+# a domain of its own, so nothing upstream of Caddy would set these for it.
 {$API_DOMAIN} {
 	encode zstd gzip
+	header {
+		>Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		>X-Content-Type-Options "nosniff"
+		>Referrer-Policy "no-referrer"
+		-Server
+	}
 	reverse_proxy api:3333
 }
 

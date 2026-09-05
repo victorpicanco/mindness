@@ -14,6 +14,7 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   PUBLIC_API_URL: 'https://api.mindness.test',
   PUBLIC_WEB_URL: 'https://app.mindness.test',
   SUPABASE_URL: 'https://project.supabase.co',
+  SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
   SUPABASE_SECRET_KEY: 'secret-key',
   EMAIL_CONFIRMATION_REDIRECT_URL: 'https://app.mindness.test/auth/confirmed',
   ACCOUNTS_CONSENT_VERSION: '2026-08-15',
@@ -45,6 +46,7 @@ describe('loadConfig', () => {
       publicApiUrl: 'https://api.mindness.test',
       publicWebUrl: 'https://app.mindness.test',
       supabaseUrl: 'https://project.supabase.co',
+      supabasePublishableKey: 'publishable-key',
       supabaseSecretKey: 'secret-key',
       emailConfirmationRedirectUrl: 'https://app.mindness.test/auth/confirmed',
       accountsConsentVersion: '2026-08-15',
@@ -68,6 +70,13 @@ describe('loadConfig', () => {
     delete envWithoutSupabase.SUPABASE_SECRET_KEY
 
     expect(() => loadConfig(envWithoutSupabase)).toThrow(ValidationFailedError)
+  })
+
+  it('rejects an environment without the supabase publishable key', () => {
+    const envWithoutPublishableKey = { ...VALID_ENV }
+    delete envWithoutPublishableKey.SUPABASE_PUBLISHABLE_KEY
+
+    expect(() => loadConfig(envWithoutPublishableKey)).toThrow(ValidationFailedError)
   })
 
   it('lists the missing variable name and leaks no other value', () => {

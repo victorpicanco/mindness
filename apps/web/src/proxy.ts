@@ -36,6 +36,11 @@ function createContentSecurityPolicy(nonce: string): string {
     // 'strict-dynamic' is deliberately absent: cacheComponents serves a shell
     // prerendered at build time, whose script tags predate the request that
     // carries the nonce, and the keyword would void the 'self' they rely on.
+    // That same shell carries one inline script of React's own — the reveal
+    // timestamp, `$RT` — which no nonce can reach, so the browser reports a
+    // violation for it on every load. React guards the read (`typeof $RT`) and
+    // reveals on the next frame instead, and admitting its hash here would buy
+    // a quiet console at the price of a pin to React's exact build.
     `script-src 'self' 'nonce-${nonce}' ${CAPTCHA_ORIGIN}${developmentSource}`,
     // The toast library injects its stylesheet at runtime and cannot carry a
     // nonce, and a nonce in style-src would make the browser ignore this.

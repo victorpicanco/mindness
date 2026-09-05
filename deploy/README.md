@@ -152,10 +152,30 @@ Creating the production project means copying the staging block, changing
 `env()` references resolved from `supabase/.env.local`, which git ignores.
 
 The database refuses plaintext connections (`[remotes.<name>.db.ssl_enforcement]`)
-and every `DATABASE_URL` carries `sslmode=require`. Prisma negotiates
-`sslmode=prefer` when the string is silent, which downgrades without complaining,
-so both halves are needed — the `Migrate` workflow fails when the string is
-missing it.
+and every `DATABASE_URL` demands TLS. Prisma negotiates `sslmode=prefer` when the
+string is silent, which downgrades without complaining, so both halves are needed
+— the `Migrate` workflow fails when the string is missing it.
+
+**The two `DATABASE_URL`s are different strings, and deliberately so.** Prisma
+reaches the database through two drivers that do not agree on what a TLS
+parameter means, and Supabase signs the pooler with a private root
+(`Supabase Root 2021 CA`) that no public trust store carries:
+
+|                           | runtime — `@prisma/adapter-pg`                         | `migrate deploy` — schema engine           |
+| ------------------------- | ------------------------------------------------------ | ------------------------------------------ |
+| `sslmode=require`         | verifies the chain; **fails** against the private root | encrypts, does not verify                  |
+| `sslmode=verify-full`     | verifies                                               | **ignored** — connects with any root       |
+| `sslrootcert` / `sslcert` | loads the root                                         | never trusted, whatever the path           |
+| `sslaccept=strict`        | ignored                                                | verifies, but with no way to load the root |
+
+So the VPS `.env` gets `sslmode=verify-full` plus `sslrootcert` pointing at
+`apps/api/certs/supabase-prod-ca-2021.crt`, which `apps/api/Dockerfile` lands at
+`/app/certs/`; `createPrismaClient` refuses to boot when that file is not
+readable. The `DATABASE_URL` **secret** the `Migrate` workflow uses stays on
+`sslmode=require` — the schema engine cannot do better, and
+`ssl_enforcement` is what guarantees the connection is encrypted anyway. Giving
+the workflow the runtime string would point `sslrootcert` at a path the runner
+does not have.
 
 Two invariants hold across all three environments and are asserted by
 `sessions/presentation/integration/session-isolation`:

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { AuthCaptchaField } from '@/components/auth/captcha-field'
 import { AuthFormAlert } from '@/components/auth/form-alert'
+import { LegalNotice } from '@/components/auth/legal-notice'
 import { PasswordChecklist } from '@/components/auth/password-checklist'
 import { useAuthForm, type AuthFormAction } from '@/components/auth/use-auth-form'
 import { Button } from '@/components/ui/button'
@@ -96,7 +97,7 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
         <AuthFormAlert
           message={alertMessageKey === undefined ? undefined : translate(alertMessageKey)}
         />
-        <p className="text-xs text-text-muted">{t('consent.notice')}</p>
+        <LegalNotice />
         <Button
           disabled={siteKey === undefined}
           isLoading={form.isSubmitting}

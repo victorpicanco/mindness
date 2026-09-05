@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { PathnameContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime'
 import { NextIntlClientProvider } from 'next-intl'
@@ -7,11 +7,32 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
 import { ApiClientError } from '@/lib/api/client-error'
+import type { AccountProfile } from '@/lib/api/contracts/accounts'
 import type { SessionDayGroup } from '@/lib/sessions/session-day-groups'
 
 import { AuthenticatedShellView } from './index'
 
+const ACCOUNT_PROFILE: AccountProfile = {
+  accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
+  authenticationMethod: 'password',
+  consent: {
+    acceptedAt: '2026-08-15T12:00:00.000Z',
+    purpose: 'voice_recording_and_analysis',
+    version: '2026-08-15',
+  },
+  createdAt: '2026-08-01T10:30:00.000Z',
+  email: 'person@example.com',
+  name: null,
+  plan: 'free',
+  timeZone: 'America/Sao_Paulo',
+}
+
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+
+interface ShellOverrides {
+  readonly accountProfile?: AccountProfile
+  readonly updateAccountName?: (name: string) => Promise<string>
+}
 
 function renderShell(
   children: ReactNode,
@@ -47,6 +68,8 @@ function renderShell(
   shouldConfirmSessionNavigation = false,
   abandonSession: (sessionId: string) => Promise<void> = () => Promise.resolve(),
   deleteSession: (sessionId: string) => Promise<void> = () => Promise.resolve(),
+  onThemeChange: (theme: 'dark' | 'light') => void = () => undefined,
+  overrides: ShellOverrides = {},
 ) {
   const router = {
     back: vi.fn(),
@@ -62,14 +85,18 @@ function renderShell(
       <PathnameContext.Provider value={pathname}>
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
           <AuthenticatedShellView
+            accountProfile={overrides.accountProfile ?? ACCOUNT_PROFILE}
             abandonSession={abandonSession}
             deleteSession={deleteSession}
+            updateAccountName={overrides.updateAccountName ?? ((name) => Promise.resolve(name))}
             {...(activeSessionId === undefined ? {} : { activeSessionId })}
             initialIsExpanded={isInitiallyExpanded}
+            onThemeChange={onThemeChange}
             preferenceCookieName="mindness-sidebar-expanded"
             sessionGroups={sessionGroups}
             shouldConfirmSessionNavigation={shouldConfirmSessionNavigation}
             signOut={signOut}
+            theme="light"
             {...(header === undefined ? {} : { header })}
           >
             {children}
@@ -478,7 +505,7 @@ describe('AuthenticatedShell', () => {
     const railSidebar = screen.getByRole('complementary')
     const railAccount = within(railSidebar).getByRole('button', { name: 'Conta' })
 
-    expect(railAccount).toHaveTextContent('Mindness')
+    expect(railAccount).toHaveTextContent('person')
     expect(railAccount).toHaveTextContent('Plano gratuito')
 
     fireEvent.click(within(screen.getByRole('banner')).getByLabelText('Abrir navegação'))
@@ -486,8 +513,165 @@ describe('AuthenticatedShell', () => {
     const mobileSidebar = screen.getByRole('dialog', { name: 'Navegação do aplicativo' })
     const mobileAccount = within(mobileSidebar).getByRole('button', { name: 'Conta' })
 
-    expect(mobileAccount).toHaveTextContent('Mindness')
+    expect(mobileAccount).toHaveTextContent('person')
     expect(mobileAccount).toHaveTextContent('Plano gratuito')
+  })
+
+  it('names the account control after the account name', () => {
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      () => undefined,
+      undefined,
+      false,
+      () => Promise.resolve(),
+      () => Promise.resolve(),
+      () => undefined,
+      { accountProfile: { ...ACCOUNT_PROFILE, name: 'Maria Silva' } },
+    )
+
+    const account = within(screen.getByRole('complementary')).getByRole('button', { name: 'Conta' })
+
+    expect(account).toHaveTextContent('Maria Silva')
+    expect(account).not.toHaveTextContent('person@example.com')
+  })
+
+  it('saves the name typed in the settings dialog and reloads the shell data', async () => {
+    const updateAccountName = vi.fn((name: string) => Promise.resolve(name))
+    const router = renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      () => undefined,
+      undefined,
+      false,
+      () => Promise.resolve(),
+      () => Promise.resolve(),
+      () => undefined,
+      { updateAccountName },
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Conta' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }))
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Configurações' })).getByRole('button', {
+        name: 'Perfil',
+      }),
+    )
+
+    const profilePanel = screen.getByRole('region', { name: 'Perfil' })
+
+    fireEvent.change(within(profilePanel).getByRole('textbox', { name: 'Nome' }), {
+      target: { value: 'Maria Silva' },
+    })
+    fireEvent.click(within(profilePanel).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => {
+      expect(updateAccountName).toHaveBeenCalledWith('Maria Silva')
+    })
+
+    const account = within(
+      screen.getByRole('complementary', { name: 'Navegação do aplicativo' }),
+    ).getByRole('button', { name: 'Conta' })
+
+    expect(account).toHaveTextContent('Maria Silva')
+    expect(router.refresh).toHaveBeenCalled()
+  })
+
+  it('reports a rejected name without renaming the account control', async () => {
+    const { toast } = await import('sonner')
+    const updateAccountName = vi.fn(() =>
+      Promise.reject(
+        new ApiClientError({
+          code: 'accounts.INVALID_ACCOUNT_VALUE',
+          issues: null,
+          message: 'Account value is invalid',
+          requestId: null,
+        }),
+      ),
+    )
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      () => undefined,
+      undefined,
+      false,
+      () => Promise.resolve(),
+      () => Promise.resolve(),
+      () => undefined,
+      { updateAccountName },
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Conta' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }))
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Configurações' })).getByRole('button', {
+        name: 'Perfil',
+      }),
+    )
+
+    const profilePanel = screen.getByRole('region', { name: 'Perfil' })
+
+    fireEvent.change(within(profilePanel).getByRole('textbox', { name: 'Nome' }), {
+      target: { value: 'Maria Silva' },
+    })
+    fireEvent.click(within(profilePanel).getByRole('button', { name: 'Salvar' }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled()
+    })
+
+    expect(
+      within(screen.getByRole('complementary', { name: 'Navegação do aplicativo' })).getByRole(
+        'button',
+        { name: 'Conta' },
+      ),
+    ).toHaveTextContent('person')
+  })
+
+  it('opens settings and reports theme changes from the account menu', () => {
+    const onThemeChange = vi.fn()
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      () => undefined,
+      undefined,
+      false,
+      () => Promise.resolve(),
+      () => Promise.resolve(),
+      onThemeChange,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Conta' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }))
+
+    const settings = screen.getByRole('dialog', { name: 'Configurações' })
+
+    expect(within(settings).getByRole('button', { name: 'Geral' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+
+    fireEvent.change(within(settings).getByRole('combobox', { name: 'Tema' }), {
+      target: { value: 'dark' },
+    })
+
+    expect(onThemeChange).toHaveBeenCalledWith('dark')
+
+    fireEvent.click(within(settings).getByRole('button', { name: 'Fechar configurações' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Configurações' })).not.toBeInTheDocument()
   })
 
   it('highlights the navigation item matching the current route', () => {
@@ -534,11 +718,17 @@ describe('AuthenticatedShell', () => {
     ).toHaveClass('grid', 'size-9', 'place-items-center')
     expect(sidebarBackground).toHaveClass('absolute', 'inset-0', 'cursor-col-resize')
     expect(sidebar).toHaveClass('w-16', 'cursor-col-resize')
+    expect(
+      within(sidebar).getByRole('button', { name: 'Conta' }).parentElement?.parentElement,
+    ).toHaveClass('mt-auto')
     expect(document.cookie).toContain('mindness-sidebar-expanded=false')
 
     fireEvent.click(sidebarBackground)
 
     expect(screen.getByLabelText('Recolher barra lateral')).toHaveAttribute('aria-expanded', 'true')
+    expect(
+      within(sidebar).getByRole('button', { name: 'Conta' }).parentElement?.parentElement,
+    ).toHaveClass('mt-auto')
     expect(document.cookie).toContain('mindness-sidebar-expanded=true')
   })
 
@@ -577,11 +767,15 @@ describe('AuthenticatedShell', () => {
         <PathnameContext.Provider value="/">
           <NextIntlClientProvider locale="pt-BR" messages={messages}>
             <AuthenticatedShellView
+              accountProfile={ACCOUNT_PROFILE}
               abandonSession={() => Promise.resolve()}
               deleteSession={() => Promise.resolve()}
+              updateAccountName={(name) => Promise.resolve(name)}
               initialIsExpanded
+              onThemeChange={() => undefined}
               preferenceCookieName="mindness-sidebar-expanded"
               signOut={() => undefined}
+              theme="light"
             >
               <p>Content</p>
             </AuthenticatedShellView>

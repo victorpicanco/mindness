@@ -18,6 +18,7 @@ const ICON_NAMES = [
   'pencil-edit-02',
   'sidebar-left',
   'stop',
+  'user-circle',
   'view',
   'view-off',
 ] as const satisfies readonly IconName[]

@@ -17,7 +17,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "themes:sync": "tsx scripts/sync-themes.ts"
+    "themes:sync": "tsx --env-file-if-exists=.env scripts/sync-themes.ts"
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^12.1.0",

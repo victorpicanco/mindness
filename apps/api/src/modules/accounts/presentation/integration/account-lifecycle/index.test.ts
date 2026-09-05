@@ -171,6 +171,92 @@ describe('account lifecycle', () => {
     expect(harness.eventBus.published).toHaveLength(eventCount)
   })
 
+  it('names the account and serves the name on its profile', async () => {
+    const email = 'named@example.com'
+    const accessToken = await provisionedPasswordAccount(email)
+    const eventCount = harness.eventBus.published.length
+
+    const response = await harness.app.inject({
+      method: 'PATCH',
+      url: '/accounts/me/name',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { name: '  Maria Silva  ' },
+    })
+    const profile = await harness.app.inject({
+      method: 'GET',
+      url: '/accounts/me',
+      headers: { authorization: `Bearer ${accessToken}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ data: { name: 'Maria Silva' } })
+    assertResponseMatchesSchema(harness.app, 'PATCH', '/accounts/me/name', response, 200)
+    const persisted = await harness.repositories.accounts.findByEmail(email)
+    expect(persisted?.name?.value).toBe('Maria Silva')
+    expect(profile.json<{ data: { name: string | null } }>().data.name).toBe('Maria Silva')
+    expect(harness.eventBus.published).toHaveLength(eventCount)
+  })
+
+  it('serves a null name while the account was never named', async () => {
+    const accessToken = await provisionedPasswordAccount('unnamed@example.com')
+
+    const profile = await harness.app.inject({
+      method: 'GET',
+      url: '/accounts/me',
+      headers: { authorization: `Bearer ${accessToken}` },
+    })
+
+    expect(profile.statusCode).toBe(200)
+    assertResponseMatchesSchema(harness.app, 'GET', '/accounts/me', profile, 200)
+    expect(profile.json<{ data: { name: string | null } }>().data.name).toBeNull()
+  })
+
+  it('refuses a name longer than the accepted length and keeps the stored one', async () => {
+    const email = 'long-name@example.com'
+    const accessToken = await provisionedPasswordAccount(email)
+    await harness.app.inject({
+      method: 'PATCH',
+      url: '/accounts/me/name',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { name: 'Maria Silva' },
+    })
+
+    const response = await harness.app.inject({
+      method: 'PATCH',
+      url: '/accounts/me/name',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { name: 'a'.repeat(41) },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ error: { code: 'shared.VALIDATION_FAILED' } })
+    assertResponseMatchesSchema(harness.app, 'PATCH', '/accounts/me/name', response, 400)
+    const persisted = await harness.repositories.accounts.findByEmail(email)
+    expect(persisted?.name?.value).toBe('Maria Silva')
+  })
+
+  it('names only the account behind the validated token', async () => {
+    const tokenA = await provisionedPasswordAccount('name-owner-a@example.com')
+    const tokenB = await provisionedPasswordAccount('name-owner-b@example.com')
+
+    const response = await harness.app.inject({
+      method: 'PATCH',
+      url: '/accounts/me/name',
+      headers: { authorization: `Bearer ${tokenB}` },
+      payload: { name: 'Maria Silva' },
+    })
+    const profileA = await harness.app.inject({
+      method: 'GET',
+      url: '/accounts/me',
+      headers: { authorization: `Bearer ${tokenA}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(profileA.json<{ data: { name: string | null } }>().data.name).toBeNull()
+    const persisted = await harness.repositories.accounts.findByEmail('name-owner-b@example.com')
+    expect(persisted?.name?.value).toBe('Maria Silva')
+  })
+
   it('cancels billing, makes a deleted account inaccessible and schedules its removal', async () => {
     const email = 'deletion@example.com'
     const accessToken = await provisionedPasswordAccount(email)

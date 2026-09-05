@@ -14,6 +14,7 @@ import { ResendSignUpConfirmationUseCase } from '@/modules/accounts/application/
 import { SignOutUseCase } from '@/modules/accounts/application/use-cases/sign-out/index.js'
 import { SignUpUseCase } from '@/modules/accounts/application/use-cases/sign-up/index.js'
 import { StartGoogleSignInUseCase } from '@/modules/accounts/application/use-cases/start-google-sign-in/index.js'
+import { UpdateAccountNameUseCase } from '@/modules/accounts/application/use-cases/update-account-name/index.js'
 import { UpdateTimeZoneUseCase } from '@/modules/accounts/application/use-cases/update-time-zone/index.js'
 import { UpdatePasswordUseCase } from '@/modules/accounts/application/use-cases/update-password/index.js'
 import type { AuthIdentityProvider } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
@@ -48,6 +49,7 @@ import { ResendSignUpConfirmationController } from '@/modules/accounts/presentat
 import { SignOutController } from '@/modules/accounts/presentation/controllers/sign-out-controller/index.js'
 import { SignUpController } from '@/modules/accounts/presentation/controllers/sign-up-controller/index.js'
 import { StartGoogleSignInController } from '@/modules/accounts/presentation/controllers/start-google-sign-in-controller/index.js'
+import { UpdateAccountNameController } from '@/modules/accounts/presentation/controllers/update-account-name-controller/index.js'
 import { UpdateTimeZoneController } from '@/modules/accounts/presentation/controllers/update-time-zone-controller/index.js'
 import { UpdatePasswordController } from '@/modules/accounts/presentation/controllers/update-password-controller/index.js'
 import type { AuthRateLimitOptions } from '@/modules/accounts/presentation/middleware/auth-rate-limit/index.js'
@@ -146,6 +148,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
       authIdentityProvider,
       googleCallbackUrl: `${deps.config.publicApiUrl}${ACCOUNTS_ROUTE_PATHS.googleCallback}`,
     }),
+    updateAccountName: new UpdateAccountNameUseCase(shared),
     updateTimeZone: new UpdateTimeZoneUseCase(shared),
     updatePassword: new UpdatePasswordUseCase({ authIdentityProvider }),
   }
@@ -175,6 +178,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
       secureCookie: deps.config.secureCookies,
       callbackPath: ACCOUNTS_ROUTE_PATHS.googleCallback,
     }),
+    updateAccountName: new UpdateAccountNameController(useCases.updateAccountName),
     updateTimeZone: new UpdateTimeZoneController(useCases.updateTimeZone),
     updatePassword: new UpdatePasswordController(useCases.updatePassword),
   }

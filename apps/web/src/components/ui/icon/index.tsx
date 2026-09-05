@@ -37,13 +37,6 @@ function IconDrawing({ name }: { readonly name: IconName }) {
       return (
         <path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0 .8 12.1A2 2 0 0 0 8.8 21h6.4a2 2 0 0 0 2-1.9L18 7M10 11v6m4-6v6" />
       )
-    case 'help-circle':
-      return (
-        <>
-          <circle cx="12" cy="12" r="8" />
-          <path d="M9.5 9a2.7 2.7 0 1 1 4.6 1.9c-1.1 1-2.1 1.5-2.1 3.1M12 17h.01" />
-        </>
-      )
     case 'logout-01':
       return <path d="M10 5H6v14h4m4-11 4 4-4 4m4-4H9" />
     case 'menu-01':
@@ -90,6 +83,21 @@ function IconDrawing({ name }: { readonly name: IconName }) {
       )
     case 'stop':
       return <rect fill="currentColor" height="12" rx="1" stroke="none" width="12" x="6" y="6" />
+    case 'user-01':
+      return (
+        <>
+          <circle cx="12" cy="8" r="3.5" />
+          <path d="M5 20a7 7 0 0 1 14 0" />
+        </>
+      )
+    case 'user-circle':
+      return (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="10" r="2.75" />
+          <path d="M6.5 18.5a6 6 0 0 1 11 0" />
+        </>
+      )
     case 'view':
       return (
         <>

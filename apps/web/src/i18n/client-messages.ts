@@ -15,5 +15,6 @@ export const publicClientMessages = {
 
 export const authenticatedClientMessages = {
   ...rootClientMessages,
+  auth: { ...rootClientMessages.auth, legal: messages.auth.legal },
   home: messages.home,
 }

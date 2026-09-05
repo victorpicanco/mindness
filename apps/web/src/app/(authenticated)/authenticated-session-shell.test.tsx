@@ -4,6 +4,7 @@ import { PathnameContext } from 'next/dist/shared/lib/hooks-client-context.share
 import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { ThemeProvider } from '@/components/providers/theme-provider'
 import { messages } from '@/i18n/messages'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
@@ -35,33 +36,45 @@ describe('AuthenticatedSessionShell', () => {
       <AppRouterContext.Provider value={router}>
         <PathnameContext.Provider value={`/sessions/${SESSION_ID}`}>
           <NextIntlClientProvider locale="pt-BR" messages={messages}>
-            <AuthenticatedSessionShellView
-              abandonSession={abandonSession}
-              activeSessionId={SESSION_ID}
-              deleteSession={() => Promise.resolve()}
-              initialIsExpanded
-              initialPracticeSessionState={{
-                serverTimeOffsetMs: 0,
-                session: {
-                  configuration: {
-                    categorySlug: 'news',
-                    difficulty: 'balanced',
-                    searchWindowMinutes: 3,
-                  } as const,
-                  createdAt: '2026-08-25T12:00:00.000Z',
-                  expiresAt: '2026-08-25T12:20:00.000Z',
-                  recordingStartedAt: null,
-                  researchEndsAt: '2026-08-25T12:03:00.000Z',
-                  sessionId: SESSION_ID,
-                  themeTitle: 'Notícias do dia',
-                },
-                status: 'researching',
-              }}
-              preferenceCookieName="mindness-sidebar-expanded"
-              signOut={() => undefined}
-            >
-              <PracticeSessionStatus />
-            </AuthenticatedSessionShellView>
+            <ThemeProvider>
+              <AuthenticatedSessionShellView
+                accountProfile={{
+                  accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
+                  authenticationMethod: 'password',
+                  consent: null,
+                  createdAt: '2026-08-01T10:30:00.000Z',
+                  email: 'person@example.com',
+                  name: null,
+                  plan: 'free',
+                  timeZone: 'America/Sao_Paulo',
+                }}
+                abandonSession={abandonSession}
+                activeSessionId={SESSION_ID}
+                deleteSession={() => Promise.resolve()}
+                initialIsExpanded
+                initialPracticeSessionState={{
+                  serverTimeOffsetMs: 0,
+                  session: {
+                    configuration: {
+                      categorySlug: 'news',
+                      difficulty: 'balanced',
+                      searchWindowMinutes: 3,
+                    } as const,
+                    createdAt: '2026-08-25T12:00:00.000Z',
+                    expiresAt: '2026-08-25T12:20:00.000Z',
+                    recordingStartedAt: null,
+                    researchEndsAt: '2026-08-25T12:03:00.000Z',
+                    sessionId: SESSION_ID,
+                    themeTitle: 'Notícias do dia',
+                  },
+                  status: 'researching',
+                }}
+                preferenceCookieName="mindness-sidebar-expanded"
+                signOut={() => undefined}
+              >
+                <PracticeSessionStatus />
+              </AuthenticatedSessionShellView>
+            </ThemeProvider>
           </NextIntlClientProvider>
         </PathnameContext.Provider>
       </AppRouterContext.Provider>,

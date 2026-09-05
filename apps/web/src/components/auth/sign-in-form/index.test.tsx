@@ -95,11 +95,7 @@ describe('SignInForm', () => {
 
     renderSignInForm(signInAction)
 
-    expect(
-      screen.getByText(
-        'Ao criar sua conta, você aceita os termos de uso e a política de privacidade.',
-      ),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Termos de Uso e Privacidade' })).toBeInTheDocument()
 
     await verifyCaptcha()
     fillCredentials()

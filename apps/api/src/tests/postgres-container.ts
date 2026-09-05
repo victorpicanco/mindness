@@ -19,18 +19,17 @@ export async function setup(project: TestProject): Promise<void> {
   container = await new PostgreSqlContainer('postgres:17-alpine').start()
   const databaseUrl = container.getConnectionUri()
 
-  await run(
-    'pnpm',
-    [
-      'exec',
-      'prisma',
-      'db',
-      'execute',
-      '--file',
-      fileURLToPath(new URL('./storage-schema.sql', import.meta.url)),
-    ],
-    { env: { ...process.env, DATABASE_URL: databaseUrl } },
-  )
+  // Roles come first: their default privileges only reach tables created after
+  // they are set, which is how a Supabase database hands `public` to the Data
+  // API roles in the first place.
+  for (const file of ['./supabase-roles.sql', './storage-schema.sql']) {
+    await run(
+      'pnpm',
+      ['exec', 'prisma', 'db', 'execute', '--file', fileURLToPath(new URL(file, import.meta.url))],
+      { env: { ...process.env, DATABASE_URL: databaseUrl } },
+    )
+  }
+
   await run('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
     env: { ...process.env, DATABASE_URL: databaseUrl },
   })

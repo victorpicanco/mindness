@@ -1,6 +1,5 @@
 'use client'
 
-import type { FocusEvent } from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -8,10 +7,9 @@ import { Icon } from '@/components/ui/icon'
 import { cn } from '@/lib/ui/class-names'
 
 interface AccountMenuProps {
-  readonly helpItems: readonly string[]
-  readonly helpLabel: string
   readonly isExpanded: boolean
   readonly name: string
+  readonly onOpenSettings: () => void
   readonly plan: string
   readonly popupLabel: string
   readonly settingsLabel: string
@@ -28,17 +26,15 @@ const POPUP_GAP_IN_PIXELS = 8
 const VIEWPORT_INSET_IN_PIXELS = 12
 
 export function AccountMenu({
-  helpItems,
-  helpLabel,
   isExpanded,
   name,
+  onOpenSettings,
   plan,
   popupLabel,
   settingsLabel,
   signOut,
   signOutLabel,
 }: AccountMenuProps) {
-  const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [position, setPosition] = useState<AccountMenuPosition | null>(null)
   const popupId = useId()
   const popupRef = useRef<HTMLDivElement>(null)
@@ -103,10 +99,9 @@ export function AccountMenu({
     })
   }
 
-  function closeHelpWhenFocusLeaves(event: FocusEvent<HTMLDivElement>) {
-    if (event.currentTarget.contains(event.relatedTarget)) return
-
-    setIsHelpOpen(false)
+  function openSettings() {
+    setPosition(null)
+    onOpenSettings()
   }
 
   return (
@@ -162,52 +157,12 @@ export function AccountMenu({
 
               <button
                 className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-2 text-left text-sm text-text transition-colors hover:bg-input focus-visible:bg-input focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-text"
+                onClick={openSettings}
                 type="button"
               >
                 <Icon className="text-lg" name="settings-01" />
                 {settingsLabel}
               </button>
-
-              <div
-                className="relative"
-                onBlur={closeHelpWhenFocusLeaves}
-                onFocus={() => setIsHelpOpen(true)}
-                onMouseEnter={() => setIsHelpOpen(true)}
-                onMouseLeave={() => setIsHelpOpen(false)}
-              >
-                <button
-                  aria-expanded={isHelpOpen}
-                  aria-haspopup="menu"
-                  className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-2 text-left text-sm text-text transition-colors hover:bg-input focus-visible:bg-input focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-text"
-                  onClick={() => setIsHelpOpen((isOpen) => !isOpen)}
-                  type="button"
-                >
-                  <Icon className="text-lg" name="help-circle" />
-                  <span className="flex-1">{helpLabel}</span>
-                  <Icon className="text-base" name="arrow-right-01" />
-                </button>
-
-                <div
-                  className={cn(
-                    'absolute bottom-0 left-full z-10 ml-2 w-60 rounded-2xl border border-divider bg-surface p-2 shadow-xl transition-opacity motion-reduce:transition-none',
-                    isHelpOpen
-                      ? 'pointer-events-auto opacity-100'
-                      : 'pointer-events-none opacity-0',
-                  )}
-                  role="menu"
-                >
-                  {helpItems.map((item) => (
-                    <button
-                      className="flex h-10 w-full cursor-pointer items-center rounded-xl px-2 text-left text-sm text-text transition-colors hover:bg-input focus-visible:bg-input focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-text"
-                      key={item}
-                      role="menuitem"
-                      type="button"
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <div className="my-1 border-t border-divider" />
 

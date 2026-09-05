@@ -179,7 +179,13 @@ describe('account onboarding', () => {
 
     expect(response.statusCode).toBe(200)
     assertResponseMatchesSchema(harness.app, 'GET', '/accounts/me', response, 200)
-    expect(response.json<{ data: { email: string } }>().data.email).toBe('b@example.com')
+    const profile = response.json<{
+      data: { authenticationMethod: string; createdAt: string; email: string }
+    }>().data
+
+    expect(profile.authenticationMethod).toBe('password')
+    expect(profile.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/u)
+    expect(profile.email).toBe('b@example.com')
   })
 
   it('refuses an unauthenticated profile read', async () => {

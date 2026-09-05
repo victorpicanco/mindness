@@ -7,7 +7,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3333}
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54421}
         NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
     image: mindness/web:local
     init: true
@@ -32,6 +32,10 @@ services:
       PORT: '3333'
       TRUST_PROXY: 'false'
       REDIS_URL: redis://redis:6379
+      SUPABASE_URL: http://host.docker.internal:54421
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54422/postgres
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     depends_on:
       redis:
         condition: service_healthy
@@ -51,6 +55,22 @@ services:
       WORKER_HEALTH_PORT: '3334'
       TRUST_PROXY: 'false'
       REDIS_URL: redis://redis:6379
+      SUPABASE_URL: http://host.docker.internal:54421
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54422/postgres
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - '-e'
+        - >-
+          fetch('http://127.0.0.1:' + process.env.WORKER_HEALTH_PORT +
+          '/healthz').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
     depends_on:
       api:
         condition: service_started

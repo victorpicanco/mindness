@@ -352,6 +352,15 @@ describe('proxy', () => {
       )
     })
 
+    it('lets the audio element load a recording from the Supabase Storage origin', async () => {
+      const response = await proxy(request('/auth/sign-in'))
+      const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
+
+      expect(contentSecurityPolicy).toContain(
+        "media-src 'self' data: blob: https://project.supabase.co",
+      )
+    })
+
     it('keeps the security headers on a redirect', async () => {
       const response = await proxy(request('/practice'))
 

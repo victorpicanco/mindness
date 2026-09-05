@@ -42,12 +42,7 @@
     "signOut": "Sair",
     "account": {
       "label": "Conta",
-      "help": "Ajuda",
-      "helpCenter": "Central de ajuda",
-      "keyboardShortcuts": "Atalhos do teclado",
-      "name": "Mindness",
       "plan": "Plano gratuito",
-      "releaseNotes": "Novidades",
       "settings": "Configurações"
     },
     "activeSessionDialog": {
@@ -55,6 +50,47 @@
       "description": "Para começar uma nova sessão, a atual será encerrada e não poderá ser retomada.",
       "return": "Voltar para a sessão",
       "abandon": "Abandonar e começar outra"
+    },
+    "settingsDialog": {
+      "title": "Configurações",
+      "close": "Fechar configurações",
+      "general": "Geral",
+      "account": "Conta",
+      "accountDetails": {
+        "email": "E-mail",
+        "plan": "Plano",
+        "plans": {
+          "free": "Gratuito"
+        },
+        "timeZone": "Fuso horário",
+        "authenticationMethod": "Método de acesso",
+        "authenticationMethods": {
+          "password": "E-mail e senha",
+          "google": "Google"
+        },
+        "createdAt": "Membro desde",
+        "consent": {
+          "label": "Consentimento de voz",
+          "accepted": "Aceito",
+          "notRecorded": "Não registrado",
+          "purpose": "Finalidade",
+          "purposeVoice": "Gravação de voz e análise",
+          "version": "Versão",
+          "acceptedAt": "Aceito em"
+        }
+      },
+      "theme": {
+        "label": "Tema",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "profile": {
+        "label": "Perfil",
+        "name": "Nome",
+        "nameDescription": "Até 40 caracteres.",
+        "namePlaceholder": "Como devemos te chamar?",
+        "save": "Salvar"
+      }
     },
     "sessionActions": {
       "label": "Ações de {session}",

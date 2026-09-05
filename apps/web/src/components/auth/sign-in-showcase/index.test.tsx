@@ -30,4 +30,19 @@ describe('SignInShowcase', () => {
 
     expect(screen.getByRole('region', { name: 'Imagem do Mindness' })).toBeInTheDocument()
   })
+
+  it('overlays the brand message on the showcase image', () => {
+    const { container } = renderSignInShowcase()
+
+    const message = container.querySelector('[data-split-text="words"]')
+
+    expect(message).toHaveClass(
+      'font-(family-name:--font-buenard)',
+      'font-normal',
+      'text-[clamp(2rem,3vw,3.5rem)]',
+      'whitespace-pre',
+    )
+    expect(message).toHaveTextContent('Melhore sua comunicação enquanto fica mais inteligente.')
+    expect(container.querySelectorAll('[data-split-word]').length).toBeGreaterThan(0)
+  })
 })

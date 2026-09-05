@@ -43,6 +43,11 @@ import {
   type SignUpBody,
 } from '@/modules/accounts/presentation/controllers/sign-up-controller/schemas.js'
 import {
+  UpdateAccountNameBodySchema,
+  UpdateAccountNameResponseSchema,
+  type UpdateAccountNameBody,
+} from '@/modules/accounts/presentation/controllers/update-account-name-controller/schemas.js'
+import {
   UpdateTimeZoneBodySchema,
   UpdateTimeZoneResponseSchema,
   type UpdateTimeZoneBody,
@@ -235,6 +240,17 @@ export async function registerAccountsRoutes(
         },
       },
       (request, reply) => controllers.updateTimeZone.handle(request, reply),
+    )
+
+    authenticated.patch<{ Body: UpdateAccountNameBody }>(
+      ACCOUNTS_ROUTE_PATHS.name,
+      {
+        schema: {
+          body: UpdateAccountNameBodySchema,
+          response: { 200: UpdateAccountNameResponseSchema, ...ERROR_RESPONSES },
+        },
+      },
+      (request, reply) => controllers.updateAccountName.handle(request, reply),
     )
 
     authenticated.delete(

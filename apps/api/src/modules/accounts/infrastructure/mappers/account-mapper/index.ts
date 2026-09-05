@@ -1,4 +1,5 @@
 import { Account } from '@/modules/accounts/domain/entities/account/index.js'
+import { DisplayName } from '@/modules/accounts/domain/value-objects/display-name/index.js'
 import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 import { VoiceConsent } from '@/modules/accounts/domain/value-objects/voice-consent/index.js'
@@ -11,6 +12,7 @@ export class AccountMapper {
       email: EmailAddress.create(row.email),
       authUserId: row.authUserId,
       timeZone: TimeZone.create(row.timeZone),
+      name: row.name === null ? null : DisplayName.create(row.name),
       plan: row.plan,
       status: row.status,
       voiceConsent:
@@ -33,6 +35,7 @@ export class AccountMapper {
       email: account.email.value,
       authUserId: account.authUserId,
       timeZone: account.timeZone.value,
+      name: account.name?.value ?? null,
       plan: account.plan,
       status: account.status,
       consentPurpose: account.voiceConsent?.purpose ?? null,

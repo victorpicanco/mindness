@@ -4,6 +4,7 @@ import { Account } from '@/modules/accounts/domain/entities/account/index.js'
 import { AccountNotFoundError } from '@/modules/accounts/domain/errors/account-not-found-error/index.js'
 import type { VerifiedAuthIdentity } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 import type { AccountsRepository } from '@/modules/accounts/domain/repositories/accounts-repository/index.js'
+import { DisplayName } from '@/modules/accounts/domain/value-objects/display-name/index.js'
 import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 import { VoiceConsent } from '@/modules/accounts/domain/value-objects/voice-consent/index.js'
@@ -71,11 +72,23 @@ describe('GetAccountProfileUseCase', () => {
       createUseCase(accountFor()).execute({ accessToken: 'access-token' }),
     ).resolves.toEqual({
       accountId: 'account-1',
+      authenticationMethod: 'password',
+      createdAt: NOW.toISOString(),
       email: 'person@example.com',
+      name: null,
       timeZone: 'America/Sao_Paulo',
       plan: 'free',
       consent: null,
     })
+  })
+
+  it('exposes the name of an account that has one', async () => {
+    const account = accountFor()
+    account.changeName(DisplayName.create('Maria Silva'))
+
+    await expect(
+      createUseCase(account).execute({ accessToken: 'access-token' }),
+    ).resolves.toMatchObject({ name: 'Maria Silva' })
   })
 
   it('exposes the recorded voice consent', async () => {

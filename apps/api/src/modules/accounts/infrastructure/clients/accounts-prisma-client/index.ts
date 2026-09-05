@@ -6,6 +6,7 @@ export interface AccountRow {
   readonly email: string
   readonly authUserId: string
   readonly timeZone: string
+  readonly name: string | null
   readonly plan: AccountPlan
   readonly status: AccountStatus
   readonly consentPurpose: string | null

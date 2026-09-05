@@ -1,3 +1,4 @@
+import type { DisplayName } from '@/modules/accounts/domain/value-objects/display-name/index.js'
 import type { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
 import type { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 import type { VoiceConsent } from '@/modules/accounts/domain/value-objects/voice-consent/index.js'
@@ -17,6 +18,7 @@ export interface CreateAccountParams {
 export interface ReconstituteAccountParams extends CreateAccountParams {
   readonly plan: AccountPlan
   readonly status: AccountStatus
+  readonly name: DisplayName | null
   readonly voiceConsent: VoiceConsent | null
   readonly currentSessionId: string | null
 }

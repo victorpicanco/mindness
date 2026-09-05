@@ -6,7 +6,10 @@ export const AccountProfileResponseSchema = successSchema(
   Type.Object(
     {
       accountId: Type.String({ format: 'uuid' }),
+      authenticationMethod: Type.Union([Type.Literal('password'), Type.Literal('google')]),
+      createdAt: Type.String({ format: 'date-time' }),
       email: Type.String({ format: 'email' }),
+      name: Type.Union([Type.String(), Type.Null()]),
       timeZone: Type.String(),
       plan: Type.Literal('free'),
       consent: Type.Union([

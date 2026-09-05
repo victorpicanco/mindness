@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import { AuthCaptchaField } from '@/components/auth/captcha-field'
 import { AuthFormAlert } from '@/components/auth/form-alert'
+import { LegalNotice } from '@/components/auth/legal-notice'
 import { useAuthForm, type AuthFormAction } from '@/components/auth/use-auth-form'
 import { Button, buttonStyles } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
@@ -69,7 +70,7 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
         >
           {t('signIn.google')}
         </a>
-        <p className="text-xs text-text-muted">{t('consent.notice')}</p>
+        <LegalNotice />
         <div className="flex items-center gap-3 text-xs text-text-muted" role="separator">
           <span className="h-px flex-1 bg-divider" />
           {t('signIn.divider')}

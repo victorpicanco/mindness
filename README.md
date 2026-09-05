@@ -1,69 +1,83 @@
-<p align="center">
-  <img src="apps/web/public/logo-icon.svg" width="96" height="96" alt="Mindness" />
-</p>
+# mindness
 
-<h1 align="center">mindness</h1>
+Backend workspace scaffolded with `mercury`, following the LAW-001..011 canonical
+architecture. See `docs/architecture/laws/` for the rules and `CLAUDE.md` for the
+conventions an agent (or you) should follow before touching `apps/api/`.
 
-<p align="center">
-  Um SaaS com inteligência artificial para desenvolver comunicação e oratória.<br />
-  Transforme apresentações faladas em feedback prático, claro e personalizado.<br />
-  Pratique com propósito, identifique oportunidades e fale com mais confiança.
-</p>
-
-## O que é o Mindness?
-
-O Mindness é uma plataforma de prática de comunicação **AI-powered**. Ela propõe temas, acompanha a preparação de uma apresentação e analisa a gravação para ajudar cada pessoa a evoluir sua clareza, estrutura e segurança ao falar.
-
-Em vez de depender apenas de percepção, quem pratica recebe uma análise estruturada da própria apresentação: resumo, pontos fortes, oportunidades de melhoria, evidências e transcrição. O objetivo é tornar a prática deliberada, recorrente e mensurável.
-
-## Ambientes
-
-| Ambiente                  | Endereço                                     | Status                                        |
-| ------------------------- | -------------------------------------------- | --------------------------------------------- |
-| Desenvolvimento / staging | [dev.mindness.app](https://dev.mindness.app) | Disponível para desenvolvimento e validação.  |
-| Produção                  | —                                            | Em ajustes antes da disponibilização pública. |
-
-## Como funciona
-
-1. **Clique em “Nova sessão”.** Inicie uma nova prática a partir da área autenticada da plataforma.
-2. **Defina o desafio.** Escolha a categoria, o nível de dificuldade e o tempo disponível para pesquisar.
-3. **Prepare-se para o tema.** O Mindness apresenta um tema e abre uma janela de pesquisa para você organizar suas ideias.
-4. **Grave sua apresentação.** Use o gravador da plataforma para apresentar o tema no seu ritmo.
-5. **Receba a análise da IA.** Depois do envio, a IA processa a apresentação e entrega um resumo, pontos fortes, próximos passos, evidências e a transcrição para orientar a próxima prática.
-
-## Monorepo
-
-O Mindness é organizado como um monorepo gerenciado pelo [pnpm](https://pnpm.io/). Esse formato mantém as aplicações do produto no mesmo repositório, com dependências, comandos e padrões compartilhados.
-
-```text
-apps/
-├── api/     # API e serviços de backend
-└── web/     # Aplicação web em Next.js
-```
-
-O arquivo `pnpm-workspace.yaml` define os pacotes do workspace, e os comandos na raiz são executados de forma recursiva quando aplicável.
-
-## Começando
+## Quickstart
 
 ```bash
 pnpm install
-pnpm --filter @mindness/web dev
-```
-
-Para trabalhar na API, use:
-
-```bash
+pnpm supabase:start                    # local Postgres, Auth, Storage and Mailpit
+cp apps/api/.env.example apps/api/.env # fill SUPABASE_SECRET_KEY with the printed secret key
+cp apps/web/.env.example apps/web/.env
+pnpm --filter @mindness/api db:deploy  # schema
+pnpm --filter @mindness/api themes:sync
 pnpm --filter @mindness/api dev
+curl localhost:3333/healthz
 ```
 
-## Comandos principais
+## Local Supabase
+
+`supabase/config.toml` describes a stack that stands alone: Postgres, Auth,
+Storage, Studio and a mailbox. Its `[remotes.*]` blocks configure the cloud
+projects, but only when `supabase config push` is run by hand — no local command
+reaches them, and no cloud project is ever a developer's database. See
+`deploy/README.md`.
 
 ```bash
-pnpm lint
-pnpm format:check
-pnpm typecheck
-pnpm test
-pnpm verify
+pnpm supabase:start   # boot; prints every URL and key
+pnpm supabase:stop    # shut down, keeping the data
+pnpm supabase status  # reprint the URLs and keys (add -o env for shell format)
+pnpm supabase:reset   # wipe, reapply the Prisma migrations, republish the themes
 ```
 
-`pnpm verify` executa as verificações locais de lint, formatação, tipagem e testes.
+| Service                               | Address                                                 |
+| ------------------------------------- | ------------------------------------------------------- |
+| API gateway (`SUPABASE_URL`)          | http://127.0.0.1:54421                                  |
+| Postgres (`DATABASE_URL`)             | postgresql://postgres:postgres@127.0.0.1:54422/postgres |
+| Studio                                | http://127.0.0.1:54423                                  |
+| Mailbox (every email the stack sends) | http://127.0.0.1:54424                                  |
+
+Ports sit on 544xx rather than the Supabase default 543xx, so another project's
+stack can run beside this one.
+
+The schema is Prisma's, not Supabase's: `supabase/migrations/` stays empty and
+`pnpm --filter @mindness/api db:deploy` is what builds the database — including
+the `session-audio` storage bucket. `supabase:reset` chains both.
+
+Sign-up needs a captcha token, so the stack carries Cloudflare's always-passes
+Turnstile test secret; `apps/web/.env` must carry the test sitekey that pairs
+with it. Confirmation and recovery emails land in the mailbox above, never in a
+real inbox, and their links already point at `/auth/confirm`.
+
+Google sign-in reuses staging's OAuth client, so its authorized redirect URIs
+must include `http://127.0.0.1:54421/auth/v1/callback`. Put the credentials in
+`supabase/.env.local` — the CLI loads it before reading `config.toml`, and git
+ignores it — then restart the stack:
+
+```bash
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=...
+SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=...
+```
+
+## Canonical commands
+
+```bash
+pnpm lint             # eslint, zero warnings
+pnpm format:check     # prettier
+pnpm typecheck        # tsc --noEmit
+pnpm test             # vitest unit
+pnpm test:integration # vitest integration (requires Docker)
+pnpm test:e2e         # vitest e2e (requires Docker)
+pnpm verify           # lint + format:check + typecheck + test — the local gate
+```
+
+## Adding a module
+
+```bash
+mercury add-module <name> --project .
+```
+
+Creates the empty LAW-001.2 tree under `apps/api/src/modules/<name>/`. Commit scopes for
+that module are picked up automatically by `commitlint.config.js` — no config edit needed.

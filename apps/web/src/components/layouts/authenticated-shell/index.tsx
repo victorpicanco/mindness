@@ -1,13 +1,14 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import type { MouseEvent, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import { BrandLink } from '@/components/layouts/brand-link'
 import { AccountMenu } from '@/components/layouts/account-menu'
 import { Header } from '@/components/layouts/header'
+import { SettingsDialog } from '@/components/layouts/settings-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { IconButton } from '@/components/ui/icon-button'
@@ -26,25 +27,33 @@ import { sessionPath } from '@/lib/navigation/session-routes'
 import type { SessionDayGroup, SessionDayHeading } from '@/lib/sessions/session-day-groups'
 import { abandonSession as abandonSessionRequest } from '@/lib/api/abandon-session'
 import { deleteSession as deleteSessionRequest } from '@/lib/api/delete-session'
+import { updateAccountName as updateAccountNameRequest } from '@/lib/api/update-account-name'
 import { apiErrorDetails } from '@/lib/api/api-error'
+import { accountDisplayName } from '@/lib/accounts/account-display-name'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
+import type { AccountProfile } from '@/lib/api/contracts/accounts'
 import { cn } from '@/lib/ui/class-names'
+import type { Theme } from '@/lib/ui/theme'
 
 export interface AuthenticatedShellProps {
+  readonly accountProfile: AccountProfile
   readonly activeSessionId?: string | undefined
   readonly children: ReactNode
   readonly header?: ReactNode | undefined
   readonly initialIsExpanded: boolean
+  readonly onThemeChange: (theme: Theme) => void
   readonly preferenceCookieName: string
   readonly sessionGroups?: readonly SessionDayGroup[] | undefined
   readonly onSessionAbandoned?: (() => void) | undefined
   readonly shouldConfirmSessionNavigation?: boolean | undefined
   readonly signOut: SignOutAction
+  readonly theme: Theme
 }
 
 type AuthenticatedShellViewProps = AuthenticatedShellProps & {
   readonly abandonSession: (sessionId: string) => Promise<void>
   readonly deleteSession: (sessionId: string) => Promise<void>
+  readonly updateAccountName: (name: string) => Promise<string>
 }
 
 const ONE_YEAR_IN_SECONDS = 31_536_000
@@ -55,9 +64,7 @@ type SignOutAction = () => void | Promise<void>
 
 interface SidebarLabels {
   readonly account: string
-  readonly accountHelp: string
-  readonly accountHelpItems: readonly string[]
-  readonly accountName: string
+  readonly accountDisplayName: string
   readonly accountPlan: string
   readonly accountSettings: string
   readonly primaryNavigation: string
@@ -70,6 +77,7 @@ interface SidebarBodyProps {
   readonly isExpanded: boolean
   readonly labels: SidebarLabels
   readonly navigationItems: readonly SidebarNavigationItem[]
+  readonly onOpenSettings: () => void
   readonly onPrimaryNavigate: (
     item: SidebarNavigationItem,
     event: MouseEvent<HTMLAnchorElement>,
@@ -91,6 +99,7 @@ function SidebarBody({
   isExpanded,
   labels,
   navigationItems,
+  onOpenSettings,
   onPrimaryNavigate,
   onSessionNavigate,
   renderSessionAction,
@@ -116,17 +125,18 @@ function SidebarBody({
           renderItemAction={renderSessionAction}
         />
       ) : null}
-      <AccountMenu
-        helpItems={labels.accountHelpItems}
-        helpLabel={labels.accountHelp}
-        isExpanded={isExpanded}
-        name={labels.accountName}
-        plan={labels.accountPlan}
-        popupLabel={labels.account}
-        settingsLabel={labels.accountSettings}
-        signOut={signOut}
-        signOutLabel={labels.signOut}
-      />
+      <div className="mt-auto">
+        <AccountMenu
+          isExpanded={isExpanded}
+          name={labels.accountDisplayName}
+          onOpenSettings={onOpenSettings}
+          plan={labels.accountPlan}
+          popupLabel={labels.account}
+          settingsLabel={labels.accountSettings}
+          signOut={signOut}
+          signOutLabel={labels.signOut}
+        />
+      </div>
     </>
   )
 }
@@ -137,30 +147,38 @@ export function AuthenticatedShell({ ...props }: AuthenticatedShellProps) {
       {...props}
       abandonSession={abandonSessionRequest}
       deleteSession={deleteSessionRequest}
+      updateAccountName={(name) => updateAccountNameRequest({ name })}
     />
   )
 }
 
 export function AuthenticatedShellView({
   abandonSession,
+  accountProfile,
   activeSessionId,
   children,
   deleteSession,
   header,
   initialIsExpanded,
   onSessionAbandoned,
+  onThemeChange,
   preferenceCookieName,
   sessionGroups = [],
   signOut,
+  theme,
+  updateAccountName,
   shouldConfirmSessionNavigation = false,
 }: AuthenticatedShellViewProps) {
   const t = useTranslations('common.authenticatedShell')
   const translate = useTranslations()
+  const format = useFormatter()
   const activeHref = usePathname()
   const router = useRouter()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(initialIsExpanded)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isActiveSessionDialogOpen, setIsActiveSessionDialogOpen] = useState(false)
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
+  const [accountName, setAccountName] = useState(accountProfile.name)
   const [sessionPendingDeletion, setSessionPendingDeletion] = useState<SidebarSessionItem | null>(
     null,
   )
@@ -171,13 +189,7 @@ export function AuthenticatedShellView({
   const controlLabel = isSidebarExpanded ? t('collapseSidebar') : t('expandSidebar')
   const sidebarLabels = {
     account: t('account.label'),
-    accountHelp: t('account.help'),
-    accountHelpItems: [
-      t('account.helpCenter'),
-      t('account.releaseNotes'),
-      t('account.keyboardShortcuts'),
-    ],
-    accountName: t('account.name'),
+    accountDisplayName: accountDisplayName({ email: accountProfile.email, name: accountName }),
     accountPlan: t('account.plan'),
     accountSettings: t('account.settings'),
     primaryNavigation: t('primaryNavigationLabel'),
@@ -187,6 +199,19 @@ export function AuthenticatedShellView({
   const navigationItems: readonly SidebarNavigationItem[] = AUTHENTICATED_NAVIGATION_ITEMS.map(
     (item) => ({ href: item.href, icon: item.icon, label: t(item.labelKey) }),
   )
+
+  async function saveAccountName(name: string) {
+    try {
+      setAccountName(await updateAccountName(name))
+    } catch (error: unknown) {
+      showApiErrorToast(apiErrorDetails(error), translate)
+
+      return
+    }
+
+    // The profile the shell was rendered with comes from the layout's fetch, which only a refresh redoes.
+    router.refresh()
+  }
 
   function headingLabel(heading: SessionDayHeading): string {
     if (heading.kind === 'today') return t('today')
@@ -235,6 +260,22 @@ export function AuthenticatedShellView({
 
   function closeMobileSidebar() {
     setIsMobileSidebarOpen(false)
+  }
+
+  function formatAccountDateTime(value: string, timeZone: string) {
+    return format.dateTime(new Date(value), {
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      month: 'short',
+      timeZone,
+      year: 'numeric',
+    })
+  }
+
+  function openSettingsDialog() {
+    setIsSettingsDialogOpen(true)
+    closeMobileSidebar()
   }
 
   function closeActiveSessionDialog() {
@@ -380,6 +421,7 @@ export function AuthenticatedShellView({
             isExpanded={isSidebarExpanded}
             labels={sidebarLabels}
             navigationItems={navigationItems}
+            onOpenSettings={openSettingsDialog}
             onPrimaryNavigate={handlePrimaryNavigation}
             onSessionNavigate={handleSessionNavigation}
             renderSessionAction={renderSessionAction}
@@ -450,6 +492,7 @@ export function AuthenticatedShellView({
             isExpanded
             labels={sidebarLabels}
             navigationItems={navigationItems}
+            onOpenSettings={openSettingsDialog}
             onPrimaryNavigate={(item, event) => {
               handlePrimaryNavigation(item, event)
               closeMobileSidebar()
@@ -465,6 +508,56 @@ export function AuthenticatedShellView({
           />
         </Sidebar>
       </div>
+
+      <SettingsDialog
+        accountLabels={{
+          authenticationMethod: t('settingsDialog.accountDetails.authenticationMethod'),
+          authenticationMethodGoogle: t(
+            'settingsDialog.accountDetails.authenticationMethods.google',
+          ),
+          authenticationMethodPassword: t(
+            'settingsDialog.accountDetails.authenticationMethods.password',
+          ),
+          consent: t('settingsDialog.accountDetails.consent.label'),
+          consentAccepted: t('settingsDialog.accountDetails.consent.accepted'),
+          consentAcceptedAt: t('settingsDialog.accountDetails.consent.acceptedAt'),
+          consentNotRecorded: t('settingsDialog.accountDetails.consent.notRecorded'),
+          consentPurpose: t('settingsDialog.accountDetails.consent.purpose'),
+          consentPurposeVoice: t('settingsDialog.accountDetails.consent.purposeVoice'),
+          consentVersion: t('settingsDialog.accountDetails.consent.version'),
+          createdAt: t('settingsDialog.accountDetails.createdAt'),
+          email: t('settingsDialog.accountDetails.email'),
+          plan: t('settingsDialog.accountDetails.plan'),
+          planFree: t('settingsDialog.accountDetails.plans.free'),
+          timeZone: t('settingsDialog.accountDetails.timeZone'),
+        }}
+        accountLabel={t('settingsDialog.account')}
+        accountProfile={{ ...accountProfile, name: accountName }}
+        closeLabel={t('settingsDialog.close')}
+        generalLabel={t('settingsDialog.general')}
+        formatDateTime={formatAccountDateTime}
+        onClose={() => setIsSettingsDialogOpen(false)}
+        onSaveName={saveAccountName}
+        onThemeChange={onThemeChange}
+        open={isSettingsDialogOpen}
+        privacyLabel={translate('auth.legal.privacy.label')}
+        profileLabel={t('settingsDialog.profile.label')}
+        profileLabels={{
+          name: t('settingsDialog.profile.name'),
+          nameDescription: t('settingsDialog.profile.nameDescription'),
+          namePlaceholder: t('settingsDialog.profile.namePlaceholder'),
+          save: t('settingsDialog.profile.save'),
+        }}
+        theme={theme}
+        themeLabel={t('settingsDialog.theme.label')}
+        themeOptions={{
+          dark: t('settingsDialog.theme.dark'),
+          light: t('settingsDialog.theme.light'),
+        }}
+        termsLabel={translate('auth.legal.terms.label')}
+        title={t('settingsDialog.title')}
+        updatedAtLabel={translate('auth.legal.updatedAt')}
+      />
 
       <Dialog
         description={t('activeSessionDialog.description')}

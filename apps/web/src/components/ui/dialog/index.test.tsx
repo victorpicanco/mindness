@@ -41,7 +41,11 @@ describe('Dialog', () => {
     expect(screen.getByRole('dialog', { name: 'Confirm' })).toHaveAccessibleDescription(
       'Choose what happens next',
     )
-    expect(screen.getByRole('dialog')).toBeInstanceOf(HTMLDialogElement)
+    const dialog = screen.getByRole('dialog')
+
+    expect(dialog).toBeInstanceOf(HTMLDialogElement)
+    expect(dialog).toHaveClass('backdrop:bg-black/30', 'dark:backdrop:bg-black/60')
+    expect(dialog).not.toHaveClass('backdrop:bg-text/30')
   })
 
   it('closes on Escape', () => {

@@ -9,7 +9,9 @@ GitHub Actions builds and pushes to GHCR, then restarts the stack over SSH. The
 VPS never compiles anything.
 
 Each environment is a host of its own, with its own domains, its own `.env` and
-its own Supabase project. Nothing is shared between them.
+its own Supabase project. Nothing is shared between them, and no cloud project
+is ever a developer's database: local development runs the Supabase CLI stack
+described in the root `README.md`.
 
 ## Prepare the VPS (once, per environment)
 
@@ -32,6 +34,15 @@ A   app.example.com   -> <vps ip>
 A   api.example.com   -> <vps ip>
 ```
 
+> **The production names are already in the zone, pointed at the staging VPS.**
+> `mindness.app`, `api.mindness.app` and `www.mindness.app` resolve to
+> `92.113.34.184`. Nothing serves them — the staging Caddy has no site block for
+> those names, so the TLS handshake fails, which is the intended placeholder.
+> Repointing them is the **first** step of provisioning production, done before
+> the production Caddy ever boots: a host that answers a name it has no block
+> for will fail ACME, and a production Caddyfile landing on the staging host
+> would make staging serve the production domain.
+
 ## Environments
 
 `staging` and `production` are GitHub environments. Every secret and every
@@ -48,12 +59,29 @@ Variables (not secrets — the compiler inlines them into the client bundle):
 restart.
 
 Both workflows fail before doing any work when a value is missing for the
-environment they were pointed at.
+environment they were pointed at — but only while the repository level stays
+empty. A repository-level secret resolves inside a job that declares _any_
+environment, so it satisfies those guards silently and the run goes green
+against the wrong host. Keep both of these printing nothing:
+
+```bash
+gh secret list    # repository level
+gh variable list  # repository level
+```
 
 ```bash
 gh secret set VPS_HOST --env staging
 gh variable set NEXT_PUBLIC_API_BASE_URL --env staging --body https://api.example.com
 ```
+
+`production` additionally requires a reviewer to approve each run, so a
+dispatch against it cannot proceed unattended.
+
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` on staging is Cloudflare's `1x0000…AA` test
+sitekey, paired with the always-passes test secret in the Supabase project.
+Staging therefore has **no bot protection on sign-up**, deliberately. Production
+takes a real sitekey and the matching secret — carrying the test pair forward
+would ship an unprotected sign-up.
 
 ## Deploying
 
@@ -83,6 +111,70 @@ against the same database:
 ```bash
 pnpm --filter @mindness/api db:deploy
 ```
+
+## Supabase
+
+The Prisma migrations own the schema, in every environment. Everything else a
+Supabase project holds — redirect URLs, captcha, password rules, token
+lifetimes, email templates, the Google client — is **project configuration**,
+and it lives in `supabase/config.toml`.
+
+The top-level blocks describe the local stack. Each cloud environment overrides
+only what differs, under `[remotes.<name>]` keyed by `project_id`:
+
+The CLI is a workspace dependency, so it is `pnpm supabase`, never a bare
+`supabase`:
+
+```bash
+pnpm supabase login              # the account that owns the mindness projects
+pnpm supabase link --project-ref <ref>
+pnpm supabase config push        # never with --yes the first time
+```
+
+**There is no dry run.** `config push` takes no flags but `--project-ref`, and
+it applies on confirmation; the global `--yes` is the only thing between a run
+and an unattended apply, so leave it off and read what the CLI asks before
+accepting.
+
+That prompt is not a review either. The `[remotes.staging]` block was
+reconstructed from the deployed environment, not read back from the dashboard,
+so the values have to be compared against the dashboard by hand before the first
+push — nothing in the CLI does that comparison. Until it has happened once, the
+dashboard, not this file, is the source of truth.
+
+Creating the production project means copying the staging block, changing
+`project_id` and the URLs, and pushing. Secrets stay out of the file: they are
+`env()` references resolved from `supabase/.env.local`, which git ignores.
+
+Two invariants hold across all three environments and are asserted by
+`sessions/presentation/integration/session-isolation`:
+
+- RLS is enabled, with no policies, on every domain table (ADR-003).
+- `anon` and `authenticated` hold no privilege on anything in `public`, and the
+  default privileges no longer grant them any, so a table added later is not
+  exposed by omission.
+
+The Data API is unused — no client ever talks to PostgREST, and
+`NEXT_PUBLIC_SUPABASE_URL` reaches the browser only as a CSP `connect-src` entry
+for signed Storage URLs. Leave it disabled on every project.
+
+## Provisioning production
+
+In order. Each step assumes the one above it landed.
+
+1. Repoint `mindness.app`, `api.mindness.app` and `www.mindness.app` off the
+   staging VPS. Nothing below works until DNS is correct.
+2. Create the Supabase project in `sa-east-1` — same region as the VPS, which is
+   what keeps the API-to-database hop short. Disable the Data API.
+3. Add `[remotes.production]` to `supabase/config.toml`, then `config push`.
+4. Provision the VPS, following "Prepare the VPS" above.
+5. Set the five secrets and three variables on the `production` environment.
+   Verify the repository level is still empty.
+6. Run `Migrate` against `production`.
+7. Run `Deploy` against `production`.
+8. Enable backups or take a snapshot. `/opt/mindness/.env` and
+   `secrets/google-credentials.json` exist nowhere else — keep a copy in a
+   password manager.
 
 ## Running the images locally
 

@@ -424,9 +424,10 @@ enabled = true
 # only what differs, so one file drives all three. `supabase config push`
 # targets the remote whose project_id matches the linked project.
 #
-# Never push without diffing first — these blocks were reconstructed from the
-# deployed environment, not read back from the dashboard:
-#   supabase link --project-ref <ref> && supabase config push --dry-run
+# These blocks were reconstructed from the deployed environment, not read back
+# from the dashboard, and `config push` has no dry run — it applies on
+# confirmation. Compare against the dashboard by hand before the first push.
+#   pnpm supabase link --project-ref <ref> && pnpm supabase config push
 
 [remotes.staging]
 project_id = "fvhdckpfxivorrazhpwp"

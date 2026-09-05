@@ -428,9 +428,26 @@ enabled = true
 # from the dashboard, and `config push` has no dry run — it applies on
 # confirmation. Compare against the dashboard by hand before the first push.
 #   pnpm supabase link --project-ref <ref> && pnpm supabase config push
+#
+# Inheriting is what makes them dangerous: the local stack turns on the Data API
+# and vector buckets, and a block that stays silent about either pushes both to
+# the cloud. Every remote turns them back off — no client here talks to
+# PostgREST, and vector buckets answer 402 below a paid tier.
 
 [remotes.staging]
 project_id = "fvhdckpfxivorrazhpwp"
+
+[remotes.staging.api]
+enabled = false
+
+# Prisma negotiates `sslmode=prefer` by default and accepts a plaintext
+# downgrade without saying so; refusing the insecure connection server-side is
+# what makes the requirement hold regardless of the client string.
+[remotes.staging.db.ssl_enforcement]
+enabled = true
+
+[remotes.staging.storage.vector]
+enabled = false
 
 [remotes.staging.auth]
 site_url = "https://dev.mindness.app"
@@ -450,3 +467,61 @@ enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 skip_nonce_check = true
+
+[remotes.production]
+project_id = "puqgzuabondhbkmwbsln"
+
+[remotes.production.api]
+enabled = false
+
+[remotes.production.db.ssl_enforcement]
+enabled = true
+
+[remotes.production.storage.vector]
+enabled = false
+
+[remotes.production.auth]
+site_url = "https://mindness.app"
+additional_redirect_urls = [
+  "https://mindness.app/auth/confirm",
+  "https://mindness.app/auth/callback",
+  "https://api.mindness.app/auth/google/callback",
+]
+
+[remotes.production.auth.captcha]
+enabled = true
+provider = "turnstile"
+secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET_PRODUCTION)"
+
+# The blocks above set values for the local stack that a cloud project must not
+# inherit: one confirmation email per second, and two per hour in total.
+[remotes.production.auth.email]
+max_frequency = "60s"
+
+# Refresh token rotation alone never ends a session: the rotation keeps renewing
+# it for as long as the token is used. These two bound how long a stolen session
+# stays worth anything, which is the only thing that limits it today — the web
+# proxy renews on every request, so an idle tab would otherwise live forever.
+[remotes.production.auth.sessions]
+timebox = "24h"
+inactivity_timeout = "8h"
+
+[remotes.production.auth.rate_limit]
+email_sent = 100
+
+[remotes.production.auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(SUPABASE_AUTH_SMTP_PASS_PRODUCTION)"
+admin_email = "env(SUPABASE_AUTH_SENDER_EMAIL_PRODUCTION)"
+sender_name = "Mindness"
+
+# Google sign-in runs the authorization code flow with PKCE through the API, so
+# the nonce check the local stack skips does not apply to it.
+[remotes.production.auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID_PRODUCTION)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET_PRODUCTION)"
+skip_nonce_check = false

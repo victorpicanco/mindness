@@ -34,14 +34,12 @@ A   app.example.com   -> <vps ip>
 A   api.example.com   -> <vps ip>
 ```
 
-> **The production names are already in the zone, pointed at the staging VPS.**
-> `mindness.app`, `api.mindness.app` and `www.mindness.app` resolve to
-> `92.113.34.184`. Nothing serves them — the staging Caddy has no site block for
-> those names, so the TLS handshake fails, which is the intended placeholder.
-> Repointing them is the **first** step of provisioning production, done before
-> the production Caddy ever boots: a host that answers a name it has no block
+> Repointing the names is the **first** step of provisioning an environment,
+> done before its Caddy ever boots: a host that answers a name it has no block
 > for will fail ACME, and a production Caddyfile landing on the staging host
-> would make staging serve the production domain.
+> would make staging serve the production domain. `mindness.app`,
+> `api.mindness.app` and `www.mindness.app` now resolve to the production VPS;
+> `dev.mindness.app` and `api.dev.mindness.app` stay on staging.
 
 ## Environments
 
@@ -146,6 +144,12 @@ Creating the production project means copying the staging block, changing
 `project_id` and the URLs, and pushing. Secrets stay out of the file: they are
 `env()` references resolved from `supabase/.env.local`, which git ignores.
 
+The database refuses plaintext connections (`[remotes.<name>.db.ssl_enforcement]`)
+and every `DATABASE_URL` carries `sslmode=require`. Prisma negotiates
+`sslmode=prefer` when the string is silent, which downgrades without complaining,
+so both halves are needed — the `Migrate` workflow fails when the string is
+missing it.
+
 Two invariants hold across all three environments and are asserted by
 `sessions/presentation/integration/session-isolation`:
 
@@ -158,6 +162,21 @@ The Data API is unused — no client ever talks to PostgREST, and
 `NEXT_PUBLIC_SUPABASE_URL` reaches the browser only as a CSP `connect-src` entry
 for signed Storage URLs. Leave it disabled on every project.
 
+**`config push` does not turn it off on a project that already has it on.** The
+`[remotes.<name>.api] enabled = false` block is honoured when the project is
+created, not as a later change; a project provisioned with the Data API on keeps
+answering on `/rest/v1` and the push says nothing. Verify it per project, and fix
+it in the dashboard (Project Settings → API → Data API) when it is on:
+
+```bash
+curl -s -H "apikey: <publishable key>" \
+  "https://<ref>.supabase.co/rest/v1/accounts?select=id&limit=1"
+```
+
+`PGRST205` (table not found) or a row means the Data API is **on**. `PGRST002`
+(cannot build the schema cache) means it is off, or that the Data API roles hold
+no privilege — which is the state the migrations leave behind.
+
 ## Provisioning production
 
 In order. Each step assumes the one above it landed.
@@ -165,7 +184,9 @@ In order. Each step assumes the one above it landed.
 1. Repoint `mindness.app`, `api.mindness.app` and `www.mindness.app` off the
    staging VPS. Nothing below works until DNS is correct.
 2. Create the Supabase project in `sa-east-1` — same region as the VPS, which is
-   what keeps the API-to-database hop short. Disable the Data API.
+   what keeps the API-to-database hop short. Disable the Data API in the
+   dashboard and confirm it with the `curl` above; the config file will not do
+   it for you.
 3. Add `[remotes.production]` to `supabase/config.toml`, then `config push`.
 4. Provision the VPS, following "Prepare the VPS" above.
 5. Set the five secrets and three variables on the `production` environment.

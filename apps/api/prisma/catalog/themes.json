@@ -5,6 +5,16 @@
       "name": "Figuras históricas",
       "themes": [
         {
+          "title": "Nikola Tesla",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Marie Curie",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
           "title": "Leonardo da Vinci",
           "difficulty": "easy",
           "publicationStatus": "published"
@@ -15,37 +25,17 @@
           "publicationStatus": "published"
         },
         {
-          "title": "Marie Curie",
-          "difficulty": "easy",
+          "title": "Ada Lovelace",
+          "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
-          "title": "Santos Dumont",
-          "difficulty": "easy",
-          "publicationStatus": "published"
-        },
-        {
-          "title": "Nelson Mandela",
-          "difficulty": "easy",
-          "publicationStatus": "published"
-        },
-        {
-          "title": "Cleópatra",
-          "difficulty": "easy",
+          "title": "Alan Turing",
+          "difficulty": "balanced",
           "publicationStatus": "published"
         },
         {
           "title": "Isaac Newton",
-          "difficulty": "easy",
-          "publicationStatus": "published"
-        },
-        {
-          "title": "Frida Kahlo",
-          "difficulty": "easy",
-          "publicationStatus": "published"
-        },
-        {
-          "title": "Mahatma Gandhi",
           "difficulty": "easy",
           "publicationStatus": "published"
         },
@@ -55,104 +45,564 @@
           "publicationStatus": "published"
         },
         {
-          "title": "Ada Lovelace e o primeiro algoritmo",
+          "title": "Charles Darwin",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Rosalind Franklin",
           "difficulty": "balanced",
           "publicationStatus": "published"
+        },
+        {
+          "title": "Katherine Johnson",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Emmy Noether",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Lise Meitner",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Chien-Shiung Wu",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Niels Bohr",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Richard Feynman",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Stephen Hawking",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Carl Sagan",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Louis Pasteur",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Alexander Fleming",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Ignaz Semmelweis",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Florence Nightingale",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Santiago Ramón y Cajal",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Ibn al-Haytham",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Al-Khwarizmi",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Avicena",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Hipátia de Alexandria",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Arquimedes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Johannes Kepler",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Nicolau Copérnico",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Santos Dumont",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "André Rebouças",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Oswaldo Cruz",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Carlos Chagas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Nise da Silveira",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Bertha Lutz",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Enedina Alves Marques",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Milton Santos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Carolina Maria de Jesus",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Machado de Assis",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Lima Barreto",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Clarice Lispector",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Lélia Gonzalez",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Abdias do Nascimento",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Luiz Gama",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Dandara dos Palmares",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Zumbi dos Palmares",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Maria Quitéria",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Anita Garibaldi",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Chiquinha Gonzaga",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Heitor Villa-Lobos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Pixinguinha",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Cartola",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Clementina de Jesus",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Tarsila do Amaral",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Aleijadinho",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Frida Kahlo",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Vincent van Gogh",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Artemisia Gentileschi",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Michelangelo",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Ludwig van Beethoven",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Johann Sebastian Bach",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Nina Simone",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Josephine Baker",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Oscar Wilde",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Mary Shelley",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Virginia Woolf",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "James Baldwin",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Chinua Achebe",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Rabindranath Tagore",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Cleópatra",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Hatshepsut",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Júlio César",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Alexandre, o Grande",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Gêngis Khan",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Mansa Musa",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Nzinga de Ndongo e Matamba",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Shaka Zulu",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Saladino",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Suleiman, o Magnífico",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Wu Zetian",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Qin Shi Huang",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Tokugawa Ieyasu",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Joana d’Arc",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Catarina, a Grande",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Napoleão Bonaparte",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Toussaint Louverture",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Simón Bolívar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Harriet Tubman",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Frederick Douglass",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Sojourner Truth",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Rosa Parks",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Martin Luther King Jr.",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Malcolm X",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Nelson Mandela",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Mahatma Gandhi",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "B. R. Ambedkar",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Zheng He",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Ibn Battuta",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Ernest Shackleton",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Ada Lovelace e o primeiro algoritmo",
+          "difficulty": "balanced",
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Alan Turing e a quebra do código Enigma",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Nikola Tesla e a guerra das correntes",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Zumbi dos Palmares e o quilombo que resistiu um século",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Charles Darwin e a viagem do Beagle",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Chiquinha Gonzaga e a música popular brasileira",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Rosa Parks e o boicote aos ônibus de Montgomery",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Dom Pedro II e o Segundo Reinado",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Winston Churchill nos anos da Segunda Guerra",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Maria Antonieta e a queda da monarquia francesa",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Napoleão Bonaparte: reformador ou tirano",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Cristóvão Colombo e a disputa sobre seu legado",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Getúlio Vargas entre o Estado Novo e o trabalhismo",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Maquiavel e a separação entre política e moral",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Robespierre e o Terror na Revolução Francesa",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Oppenheimer e a responsabilidade do cientista",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Che Guevara: símbolo e crítica",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Constantino e a conversão do Império Romano",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Simón Bolívar e o sonho da América unida",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Catarina, a Grande, e o despotismo esclarecido",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         }
       ]
     },
@@ -161,154 +611,654 @@
       "name": "Ciência",
       "themes": [
         {
-          "title": "O sistema solar",
+          "title": "Por que os polvos têm três corações",
           "difficulty": "easy",
           "publicationStatus": "published"
+        },
+        {
+          "title": "Como os polvos mudam a textura da própria pele",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O camarão que produz uma onda de choque com a garra",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o peixe-arqueiro derruba insetos com jatos de água",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que os wombats fazem cocô em cubos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como as lagartixas conseguem andar no teto",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O besouro que dispara um jato químico quente",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como as enguias elétricas produzem descargas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que alguns animais brilham no escuro",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os vagalumes sincronizam seus flashes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os morcegos caçam usando ecos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que as corujas voam tão silenciosamente",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os pinguins mantêm os ovos aquecidos no gelo",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que os flamingos ficam rosados",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como as aves migratórias percebem o campo magnético",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como as abelhas indicam caminhos por meio de uma dança",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "As formigas que cultivam fungos para se alimentar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os cupinzeiros trocam ar sem ventiladores",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O fungo que altera o comportamento de formigas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como as aranhas produzem fios resistentes e flexíveis",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O axolote que regenera membros amputados",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A água-viva capaz de retornar a uma fase juvenil",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os tardígrados sobrevivem à desidratação extrema",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Os sapos que sobrevivem ao congelamento parcial do corpo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os peixes antárticos evitam congelar",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que os tubarões trocam de dentes continuamente",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como as baleias conseguem mergulhar por tanto tempo",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que alguns golfinhos dormem com metade do cérebro",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os corvos reconhecem rostos humanos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que certas espécies de cigarras aparecem em ciclos de 13 ou 17 anos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que sentimos o membro decepado depois de uma amputação",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma mão de borracha pode parecer parte do corpo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que não percebemos o ponto cego dos nossos olhos",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que a nossa voz gravada parece diferente",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o cérebro completa palavras que não conseguimos ouvir",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que cheiros podem trazer lembranças tão intensas",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como lembranças falsas podem parecer verdadeiras",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que sentimos enjoo ao ler dentro de um carro",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que acontece no cérebro durante a paralisia do sono",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que algumas pessoas não conseguem imaginar imagens",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a sinestesia faz alguém associar sons a cores",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o tempo parece mudar de velocidade conforme a situação",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que provoca os arrepios ao ouvir música",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que é difícil fazer cócegas em si mesmo",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o cérebro aprende a ignorar cheiros constantes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que a pimenta provoca sensação de calor",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que a hortelã provoca sensação de frio",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a altitude muda a fervura da água",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o gelo flutua na água",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma gota de água pode deslizar sobre uma panela muito quente",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o vidro temperado se quebra em pequenos pedaços",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como metais podem recuperar uma forma anterior",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o alumínio não enferruja como o ferro",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o sabão remove gordura usando água",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que cebolas fazem os olhos lacrimejarem",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que faz o pão crescer antes de entrar no forno",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que maçãs escurecem depois de cortadas",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o milho vira pipoca",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que certos alimentos ficam crocantes ao fritar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o chocolate muda quando derrete e endurece novamente",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o céu é azul e o pôr do sol fica avermelhado",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma miragem faz parecer que existe água no asfalto",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que os flocos de neve têm simetria de seis lados",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como se formam os raios dentro das nuvens",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que vulcões podem produzir relâmpagos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma erupção vulcânica pode resfriar o planeta",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que as bolhas de ar no gelo revelam sobre o passado",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os cientistas descobrem a idade de uma rocha",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o fundo do oceano tem montanhas e vales",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como animais vivem perto de fontes hidrotermais sem luz solar",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma baleia morta sustenta vida no fundo do mar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que alguns lagos liberam grandes quantidades de gás",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como rios podem mudar de caminho e deixar lagos para trás",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que alguns desertos florescem depois da chuva",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a areia do Saara transporta nutrientes para a Amazônia",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que os anéis das árvores contam sobre secas antigas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como raízes convivem com fungos para trocar nutrientes",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que incêndios ajudam algumas sementes a germinar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como fósseis de conchas chegam ao alto de montanhas",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que permite encontrar pegadas de animais de milhões de anos atrás",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que vemos sempre quase a mesma face da Lua",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como sabemos que a Lua está se afastando da Terra",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que um dia em Vênus dura mais que seu ano",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como sabemos do que uma estrela é feita sem visitá-la",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que olhar para o espaço também é olhar para o passado",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um planeta pode ser descoberto pela sombra que faz",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que astronautas flutuam mesmo sob a gravidade da Terra",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os astronautas voltam a caminhar depois de meses no espaço",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o espaço não transmite som como o ar",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como buracos negros podem ser detectados sem emitir luz",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que acontece quando duas estrelas de nêutrons colidem",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma estrela pode produzir elementos presentes no nosso corpo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que os anéis de Saturno não formam um disco sólido",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma tempestade solar pode afetar a Terra",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que meteoritos podem revelar a idade do Sistema Solar",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como bactérias evoluem para resistir a antibióticos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que um vírus precisa encontrar para conseguir se multiplicar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como nosso corpo reconhece células infectadas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que mitocôndrias têm seu próprio DNA",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como fragmentos de vírus antigos foram parar no DNA humano",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O sistema solar",
+          "difficulty": "easy",
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona a fotossíntese",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Os estados da matéria",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O ciclo da água",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Por que o céu é azul",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona uma vacina",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "As fases da Lua",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A cadeia alimentar",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é a gravidade",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como se forma um arco-íris",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A teoria da evolução por seleção natural",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A tabela periódica dos elementos",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como o DNA guarda informação",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que são buracos negros",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A tectônica de placas e os terremotos",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como as bactérias criaram resistência a antibióticos",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O papel do microbioma intestinal",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A descoberta da penicilina",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona o sistema imunológico",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O experimento da dupla fenda",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A teoria da relatividade de Einstein",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O princípio da incerteza de Heisenberg",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A segunda lei da termodinâmica e a seta do tempo",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que a mecânica quântica diz sobre a realidade",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A crise de reprodutibilidade na ciência",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "CRISPR e os limites da edição genética",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O problema difícil da consciência",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Matéria escura e energia escura",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O paradoxo de Fermi",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Modelos climáticos e a incerteza científica",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         }
       ]
     },
@@ -317,154 +1267,654 @@
       "name": "Tecnologia",
       "themes": [
         {
-          "title": "Como funciona a internet",
+          "title": "Como o celular descobre sua posição usando satélites",
           "difficulty": "easy",
           "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o GPS precisa corrigir a passagem do tempo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma tela reconhece o toque do dedo",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o celular sabe que foi virado de lado",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o cancelamento de ruído reduz o som ao redor",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que a câmera do celular distorce rostos muito próximos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o modo noturno fotografa com pouca luz",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o reconhecimento facial tenta distinguir um rosto de uma fotografia",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que baterias de celular perdem capacidade com o tempo",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o carregamento sem fio transfere energia",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um QR Code continua funcionando mesmo parcialmente danificado",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que códigos de barras têm espaços de larguras diferentes",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o teclado prevê a próxima palavra",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma mensagem de voz vira texto",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o celular encontra uma rede Wi-Fi conhecida",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que duas redes Wi-Fi podem interferir uma na outra",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a internet atravessa oceanos por cabos submarinos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que acontece quando você digita o endereço de um site",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma foto é dividida em pacotes para viajar pela internet",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que uma chamada de vídeo trava mesmo com internet aparentemente rápida",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como serviços de vídeo ajustam a qualidade durante a reprodução",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma rede distribui cópias de um vídeo pelo mundo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o modo anônimo não torna alguém invisível na internet",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como cookies mantêm você conectado a um site",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a criptografia protege uma conversa de ponta a ponta",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como duas pessoas combinam uma chave secreta por um canal público",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que senhas não deveriam ser armazenadas como texto",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como vazamentos revelam senhas reutilizadas em vários serviços",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como aplicativos geram códigos de autenticação sem internet",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma chave de acesso substitui uma senha",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um ataque de phishing imita uma página legítima",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um ransomware bloqueia os arquivos de uma empresa",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como redes de aparelhos infectados derrubam sites",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma atualização de software pode afetar milhões de computadores",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que um pequeno erro de data pode interromper um sistema",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que o bug do milênio ameaçava causar nos computadores",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que computadores antigos podem ter problemas com o ano de 2038",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um defeito de divisão virou uma crise para o processador Pentium",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A falha de software que participou de acidentes com o Therac-25",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O erro de conversão numérica na explosão do Ariane 5",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como transistores minúsculos representam zeros e uns",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que chips são fabricados em salas extremamente limpas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a luz desenha circuitos em um chip",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que um computador precisa de memória e armazenamento separados",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um SSD guarda dados sem peças móveis",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como discos rígidos gravam dados usando magnetismo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que apagar um arquivo nem sempre elimina seus dados",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como arquivos são comprimidos sem perder informação",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que um JPEG descarta para diminuir uma fotografia",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um jogo cria a sensação de movimento com imagens paradas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o ray tracing simula o caminho da luz",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um personagem de jogo encontra uma rota até você",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma inteligência artificial transforma palavras em números",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que uma inteligência artificial pode inventar referências",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma inteligência artificial aprende padrões sem receber cada regra",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como imagens falsas podem reproduzir o rosto de uma pessoa",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que pequenos detalhes de uma imagem podem confundir uma IA",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como sistemas de recomendação escolhem o próximo vídeo",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um carro autônomo estima a distância de um pedestre",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que carros autônomos têm dificuldade com situações incomuns",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como aviões medem velocidade usando a pressão do ar",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que as janelas dos aviões têm cantos arredondados",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o piloto automático mantém a rota de um avião",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como caixas-pretas resistem a impactos e incêndios",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como helicópteros podem pousar após perder potência",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um foguete consegue voltar e pousar em pé",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como satélites mudam de órbita sem asas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como sondas enviam informações de tão longe",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como robôs exploram Marte com atraso nas comunicações",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um traje espacial funciona como uma pequena nave",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como submarinos controlam a profundidade",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como sonares encontram objetos debaixo d’água",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um navio de aço consegue flutuar",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o contêiner padronizado mudou o transporte de mercadorias",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como trens de levitação magnética se sustentam sem rodas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o freio regenerativo recupera energia em um carro elétrico",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como airbags detectam uma colisão e inflam tão rápido",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o ABS impede que as rodas travem",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como semáforos podem se adaptar ao fluxo de carros",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como elevadores evitam uma queda livre",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um forno de micro-ondas aquece os alimentos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que geladeiras conseguem retirar calor de dentro delas",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como fogões de indução aquecem a panela",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma máquina de lavar equilibra roupas durante a centrifugação",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como impressoras 3D constroem objetos camada por camada",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como próteses podem responder aos sinais dos músculos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como implantes cocleares transformam som em estímulos elétricos",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a ressonância magnética forma imagens do interior do corpo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a dessalinização separa o sal da água do mar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como painéis solares transformam luz em eletricidade",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A máquina de Anticítera e o cálculo de ciclos astronômicos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os cartões do tear Jacquard codificavam desenhos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o telégrafo enviava mensagens antes do telefone",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o fonógrafo gravava uma voz sem arquivos digitais",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como filmes sonoros sincronizaram imagem e fala",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como radares ajudaram a detectar aviões durante a guerra",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o Projeto Apollo usou computadores com memória limitada",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que a primeira mensagem da ARPANET chegou incompleta",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o CD guarda música em uma superfície refletora",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o corretivo de erros permite recuperar dados danificados",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como funciona a internet",
+          "difficulty": "easy",
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona o Wi-Fi",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é computação em nuvem",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona o GPS",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A história do telefone celular",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que faz um sistema operacional",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona uma impressora 3D",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é software livre",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funcionam as baterias de íon-lítio",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona um mecanismo de busca",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como a criptografia protege suas mensagens",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é blockchain",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funcionam os algoritmos de recomendação",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A transição para as energias renováveis",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Carros autônomos e o estado da tecnologia",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona o reconhecimento facial",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A corrida espacial privada",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que são computadores quânticos",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O Pix e a mudança nos pagamentos no Brasil",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Robótica e automação nas fábricas",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funcionam os modelos de linguagem",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O dilema da moderação de conteúdo nas redes",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Privacidade e vigilância na era dos dados",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O custo ambiental dos data centers",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Viés algorítmico e discriminação automatizada",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A regulação da inteligência artificial",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Guerra cibernética e infraestrutura crítica",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Obsolescência programada e o lixo eletrônico",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Neutralidade da rede",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Deepfakes e a crise da evidência",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         }
       ]
     },
@@ -473,154 +1923,654 @@
       "name": "Arte e cultura",
       "themes": [
         {
-          "title": "Quem foi Vincent van Gogh",
+          "title": "O roubo da Mona Lisa em 1911",
           "difficulty": "easy",
           "publicationStatus": "published"
+        },
+        {
+          "title": "O urinol que Marcel Duchamp apresentou como obra de arte",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A pintura de Banksy que se destruiu parcialmente após um leilão",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que os exames de imagem revelam sob pinturas antigas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que estátuas gregas perderam as cores que tinham",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como pigmentos venenosos foram usados em pinturas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O azul ultramarino feito de uma pedra preciosa",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A descoberta acidental do corante malva",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a perspectiva criou profundidade em uma tela plana",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como espelhos convexos aparecem dentro de pinturas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "As caveiras escondidas por ilusões de perspectiva na arte",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como Caravaggio usava luz e sombra para conduzir o olhar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que o teto da Capela Sistina exigiu de Michelangelo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o concreto aparece na arquitetura de igrejas de Le Corbusier",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que a Torre Eiffel quase foi desmontada",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A construção de uma cúpula gigante na Catedral de Florença",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como Gaudí usava correntes suspensas para estudar estruturas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A reconstrução de Varsóvia depois da Segunda Guerra",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como azulejos se tornaram uma marca da arquitetura portuguesa",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Os jardins que tentam transformar paisagens em miniaturas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O escândalo na estreia de A Sagração da Primavera",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A peça de John Cage em que os músicos não tocam seus instrumentos",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como Beethoven continuou compondo com a perda de audição",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que afinações diferentes mudam a sensação de uma música",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma sala transforma o som de uma orquestra",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que um maestro comunica sem dizer uma palavra",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o gramofone mudou a duração das músicas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o limite de um disco ajudou a moldar o álbum musical",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o Auto-Tune passou de correção a efeito artístico",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o sampling transforma uma gravação antiga em outra música",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como DJs prolongavam as partes dançantes dos discos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "As festas no Bronx que ajudaram a formar o hip-hop",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os sound systems jamaicanos ocupavam as ruas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o reggae se tornou uma voz política",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o samba foi perseguido e depois adotado como símbolo nacional",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A disputa de autoria em torno de Pelo Telefone",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os desfiles de escolas de samba contam histórias",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o frevo uniu música, dança e ocupação das ruas",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a sanfona se tornou uma marca do forró",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O papel dos terreiros na preservação de tradições musicais brasileiras",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como cineastas criavam monstros antes dos efeitos digitais",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o stop-motion dá movimento a objetos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o mesmo rosto parece expressar emoções diferentes na montagem",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o cinema criou diálogos alternando planos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que mudou na atuação com a chegada do cinema falado",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o Código Hays limitou o que Hollywood podia mostrar",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como roteiristas trabalharam sob pseudônimos durante a lista negra de Hollywood",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A transmissão de A Guerra dos Mundos e o mito do pânico generalizado",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como efeitos sonoros são produzidos com objetos comuns",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que filmes antigos parecem se mover rápido demais",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como películas de cinema se perderam em incêndios e deterioração",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um filme desaparecido pode ser reconstruído com fragmentos",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a rotoscopia transforma filmagens em animação",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que dublar exige mais do que traduzir as falas",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como legendas comprimem diálogos sem reproduzir cada palavra",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o faroeste italiano reinventou o cowboy americano",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o cinema japonês influenciou os filmes de samurai e de espaço",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O uso de atores não profissionais no neorrealismo italiano",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o Cinema Novo retratou a fome e a desigualdade",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o cordel conta histórias em versos e xilogravuras",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Mary Shelley e a criação de Frankenstein durante uma reunião entre escritores",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como histórias publicadas em capítulos prendiam leitores de jornais",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que escritoras publicaram usando nomes masculinos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como traduções podem mudar o humor de um livro",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como livros eram copiados antes da imprensa",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como livros proibidos continuaram circulando clandestinamente",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que os manuscritos corrigidos revelam sobre a escrita de um romance",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um narrador não confiável faz o leitor desconfiar da história",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como línguas inventadas ganharam gramática e vocabulário",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como histórias orais mudam ao passar de uma geração para outra",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A origem do gesto de aplaudir em apresentações",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que usamos alianças para representar casamento",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o vestido branco se popularizou nos casamentos ocidentais",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o salto alto também fez parte do vestuário masculino",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como bolsos de roupas masculinas e femininas tomaram caminhos diferentes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o jeans passou de roupa de trabalho a símbolo de juventude",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como tatuagens marcaram pertencimento em diferentes sociedades",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a cerimônia japonesa do chá organiza gestos e objetos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O papel dos altares no Dia dos Mortos mexicano",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como máscaras transformam a identidade de quem dança",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o carnaval de Veneza usava máscaras para ocultar identidades",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a capoeira combina luta, música e disfarce corporal",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o futebol chegou aos clubes de trabalhadores no Brasil",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que as camisas de futebol se tornaram símbolos fora dos estádios",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como as figurinhas transformaram coleções em ritual social",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o xadrez mudou quando a rainha ganhou mais movimentos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o go cria complexidade com poucas regras",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como jogos de tabuleiro representavam caminhos morais e religiosos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os quadrinhos mostram movimento em imagens paradas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como balões e enquadramentos controlam o ritmo de uma história em quadrinhos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o café ajudou a criar espaços de encontro entre artistas e escritores",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o chocolate passou de bebida a barra",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a pimenta americana entrou nas cozinhas asiáticas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o tomate foi incorporado à culinária italiana",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a feijoada ganhou narrativas de origem diferentes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a fermentação criou sabores que parecem alimentos estragados",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como receitas preservam histórias de migração",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que algumas comidas são de festa e outras de luto",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como museus discutem a devolução de objetos retirados de outros povos",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que se perde quando uma língua deixa de ser falada",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Quem foi Vincent van Gogh",
+          "difficulty": "easy",
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A Mona Lisa",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O Carnaval brasileiro",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A história do cinema",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Quem foi Beethoven",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é a Bossa Nova",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "As pirâmides do Egito",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Shakespeare e suas peças",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A história das histórias em quadrinhos",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O grafite como arte urbana",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O Impressionismo e a ruptura com a academia",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A Semana de Arte Moderna de 1922",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O Renascimento italiano",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A Bauhaus e o design moderno",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O jazz e suas origens em Nova Orleans",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A arquitetura de Oscar Niemeyer",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O cinema neorrealista italiano",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A literatura de Machado de Assis",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O barroco mineiro e Aleijadinho",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A cultura pop coreana e o K-pop",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que faz uma obra ser considerada arte",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A restituição de obras saqueadas aos países de origem",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Arte gerada por inteligência artificial e a questão da autoria",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Apropriação cultural: limites e debates",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O mercado de arte e a especulação financeira",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Duchamp e a arte conceitual",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Censura e liberdade artística",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O cânone literário e quem fica de fora",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A morte do autor e a interpretação da obra",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Museus e o dever de contar histórias difíceis",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         }
       ]
     },
@@ -629,154 +2579,654 @@
       "name": "Sociedade e economia",
       "themes": [
         {
-          "title": "Para que serve o dinheiro",
+          "title": "A execução de Luís XVI na guilhotina",
           "difficulty": "easy",
           "publicationStatus": "published"
+        },
+        {
+          "title": "A fuga de Luís XVI que terminou em Varennes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A prisão que virou símbolo na tomada da Bastilha",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a Revolução Francesa tentou mudar o calendário",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O julgamento e a execução de Robespierre",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A revolta de pessoas escravizadas que levou à independência do Haiti",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a dívida imposta pela França marcou a história do Haiti",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A abertura do Muro de Berlim após um anúncio confuso",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A ponte aérea que abasteceu Berlim durante o bloqueio soviético",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A troca de espiões entre Estados Unidos e União Soviética em uma ponte",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A corrida para retirar soldados das praias de Dunkirk",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A trégua de Natal entre soldados inimigos em 1914",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como passaportes falsos ajudaram pessoas a fugir do nazismo",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a descoberta de uma cidade soterrada revelou a vida em Pompeia",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A morte de Júlio César dentro de uma conspiração política",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A disputa pelo corpo de Alexandre depois de sua morte",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o exército de terracota foi enterrado junto ao imperador chinês",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a construção do Canal de Suez mudou as rotas comerciais",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A nacionalização do Canal de Suez e a crise de 1956",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a construção do Canal do Panamá separou terras e conectou oceanos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A Guerra do Ópio e a abertura forçada de portos chineses",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o sal se tornou instrumento de protesto na Índia",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A destruição de chá no porto de Boston",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como cercamentos de terras transformaram o trabalho rural na Inglaterra",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a mecanização levou trabalhadores a destruir máquinas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O incêndio da fábrica Triangle e a segurança no trabalho",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A greve de operárias por melhores condições nas fábricas de fósforos de Londres",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a jornada de oito horas se tornou uma reivindicação internacional",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o fim da escravidão ocorreu sem distribuição de terras no Brasil",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A Revolta da Chibata contra os castigos na Marinha",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A Revolta da Vacina e as intervenções na cidade do Rio de Janeiro",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a expulsão de moradores acompanhou reformas urbanas no Rio",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A destruição de Canudos pelo Exército brasileiro",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A mobilização pelas eleições diretas no Brasil",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a Lei de Terras de 1850 restringiu o acesso à propriedade",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A corrida pelo ouro e a ocupação do interior do Brasil",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o ciclo da borracha transformou Manaus",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A revolta contra o aumento das passagens em Porto Alegre em 2013",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a construção de Brasília deslocou trabalhadores de diferentes regiões",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "A ocupação de escolas por estudantes em São Paulo em 2015",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que uma cédula tem valor mesmo sem poder ser trocada por ouro",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como pessoas usavam conchas como dinheiro",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como moedas tinham seu valor metálico reduzido por governantes",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como comerciantes transferiam dinheiro sem transportar moedas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que bancos podem ficar sem caixa quando todos sacam ao mesmo tempo",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma corrida bancária pode atingir uma instituição solvente",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que criar mais dinheiro não cria mais produtos automaticamente",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a hiperinflação muda a rotina de compras de uma família",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a URV ajudou a preparar a criação do real",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que cortar zeros da moeda não resolve sozinho a inflação",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o congelamento de preços pode provocar falta de produtos",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que um país pode ter moeda fraca e exportações competitivas",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma dívida cresce mesmo sem novos empréstimos",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que pagar só o mínimo de uma fatura pode prolongar a dívida",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o risco de não pagamento entra no preço de um empréstimo",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como seguros dividem o custo de eventos raros entre muitas pessoas",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que seguradoras se preocupam com quem decide contratar uma apólice",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como um esquema de pirâmide depende de novos participantes",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como Charles Ponzi prometia lucros usando cupons postais",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como Bernard Madoff manteve uma fraude por anos",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma bolha faz pessoas comprarem algo só porque esperam revendê-lo",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "O que aconteceu com os preços de tulipas na Holanda do século XVII",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a Companhia dos Mares do Sul alimentou uma bolha financeira",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como empréstimos imobiliários ajudaram a espalhar a crise de 2008",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que um investimento aparentemente seguro pode concentrar riscos escondidos",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma safra ruim pode encarecer alimentos em outros países",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o preço do frete pode alterar o preço do supermercado",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma fábrica parada pode interromper uma cadeia inteira de produção",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que empresas mantêm fornecedores em países diferentes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como estoques muito enxutos tornam atrasos mais difíceis de absorver",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que produtos custam R$ 9,99 em vez de R$ 10",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como embalagens menores podem esconder aumentos de preço",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o mesmo voo pode ser vendido por preços diferentes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como supermercados escolhem onde colocar produtos essenciais",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que o preço por quilo pode contar uma história diferente do preço da embalagem",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma opção intermediária muda a escolha entre dois produtos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que assinaturas baratas podem somar uma despesa grande",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como testes gratuitos se transformam em pagamentos recorrentes",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que cancelar um serviço às vezes exige mais etapas do que contratar",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como programas de fidelidade influenciam onde compramos",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que um aplicativo fica mais útil quando mais pessoas o usam",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma plataforma atrai usuários antes de começar a cobrar",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que serviços gratuitos disputam a nossa atenção",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como avaliações falsas alteram a confiança em um produto",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que notas médias podem esconder experiências muito diferentes",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o medo de perder uma oportunidade influencia compras",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que continuamos em uma fila depois de já esperar muito",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma escolha padrão aumenta a adesão a um programa",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que dividir uma conta pode mudar o que as pessoas pedem",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como metas mal desenhadas incentivam comportamentos indesejados",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que construir mais pistas nem sempre acaba com o trânsito",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como o preço do estacionamento interfere no uso do carro",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que uma estação de transporte pode mudar o preço dos imóveis",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como aluguéis por temporada transformam bairros residenciais",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que casas podem ficar vazias em cidades com falta de moradia",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como a ausência de endereço formal dificulta o acesso a serviços",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como os fusos horários ajudaram a organizar os trens",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Por que sobrenomes e documentos passaram a identificar populações",
+          "difficulty": "balanced",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como mapas podem aumentar ou diminuir visualmente o tamanho dos países",
+          "difficulty": "easy",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Como uma fronteira traçada no mapa pode dividir uma comunidade",
+          "difficulty": "hard",
+          "publicationStatus": "published"
+        },
+        {
+          "title": "Para que serve o dinheiro",
+          "difficulty": "easy",
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é inflação",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona uma eleição no Brasil",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que faz o SUS",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é o PIB",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funcionam os impostos",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é o salário mínimo",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funcionam os juros",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é a ONU",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Para que serve uma constituição",
           "difficulty": "easy",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona o sistema de aposentadoria",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A desigualdade de renda no Brasil",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funcionam os programas de transferência de renda",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como os bancos centrais controlam a inflação",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O envelhecimento da população e seus efeitos",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O que é economia circular",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Migração e refúgio no mundo contemporâneo",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Como funciona o comércio internacional",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A economia dos aplicativos e o trabalho por demanda",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O acesso à universidade e a política de cotas",
           "difficulty": "balanced",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Renda básica universal: argumentos a favor e contra",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Capitalismo e crise climática",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O impacto da automação sobre o emprego",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Democracia e desinformação",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A concentração de poder das big techs",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Reparação histórica pela escravidão",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Segurança pública e políticas de encarceramento",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "A guerra às drogas e suas alternativas",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "O futuro do Estado de bem-estar social",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         },
         {
           "title": "Liberdade de expressão e seus limites",
           "difficulty": "hard",
-          "publicationStatus": "published"
+          "publicationStatus": "withdrawn"
         }
       ]
     }

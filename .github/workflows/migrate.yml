@@ -48,3 +48,10 @@ jobs:
       - run: pnpm --filter @mindness/api db:deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # The sync only upserts by (category, normalized title); it never deletes.
+      # A theme retired from the catalog is carried as `withdrawn` so the run
+      # unpublishes it instead of leaving it live.
+      - run: pnpm --filter @mindness/api themes:sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production

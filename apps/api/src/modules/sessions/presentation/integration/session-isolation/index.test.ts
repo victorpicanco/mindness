@@ -96,6 +96,29 @@ describe('session isolation integration', () => {
     expect(policies[0]?.count).toBe(0)
   })
 
+  it('grants the data api roles no privilege on any table in public', async () => {
+    const grants = await harness.prisma.$queryRawUnsafe<Array<{ readonly count: number }>>(
+      `SELECT count(*)::int AS count
+         FROM information_schema.role_table_grants
+        WHERE table_schema = 'public'
+          AND grantee IN ('anon', 'authenticated')`,
+    )
+
+    expect(grants[0]?.count).toBe(0)
+  })
+
+  it('leaves the data api roles out of the default privileges of public', async () => {
+    const defaults = await harness.prisma.$queryRawUnsafe<Array<{ readonly grantee: string }>>(
+      `SELECT (aclexplode(d.defaclacl)).grantee::regrole::text AS grantee
+         FROM pg_default_acl d
+         JOIN pg_namespace n ON n.oid = d.defaclnamespace
+        WHERE n.nspname = 'public'`,
+    )
+
+    expect(defaults.map((row) => row.grantee)).not.toContain('anon')
+    expect(defaults.map((row) => row.grantee)).not.toContain('authenticated')
+  })
+
   it('enforces one in-progress session per account at the database level', async () => {
     const indexes = await harness.prisma.$queryRawUnsafe<Array<{ readonly indexdef: string }>>(
       `SELECT indexdef FROM pg_indexes WHERE tablename = 'sessions' AND indexname = 'sessions_account_id_active_key'`,

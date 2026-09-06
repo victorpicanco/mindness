@@ -1,6 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 
-import { buildCatalogReport, synchronizeThemeCatalog } from '@scripts/sync-themes.js'
+import {
+  buildCatalogReport,
+  parseThemeCatalogCommand,
+  synchronizeThemeCatalog,
+  validateThemeCatalog,
+} from '@scripts/sync-themes.js'
 import {
   createThemesIntegrationContainer,
   type ThemesIntegrationContainer,
@@ -25,6 +30,54 @@ beforeEach(async () => {
 })
 
 describe('theme catalog sync integration', () => {
+  it('validates the catalog without requiring runtime dependencies', () => {
+    const catalog: unknown = { categories: [] }
+
+    expect(validateThemeCatalog(catalog)).toEqual(catalog)
+    expect(parseThemeCatalogCommand('validate')).toBe('validate')
+    expect(parseThemeCatalogCommand('preview')).toBe('preview')
+    expect(parseThemeCatalogCommand('apply')).toBe('apply')
+    expect(() => parseThemeCatalogCommand('unknown')).toThrow(ValidationFailedError)
+  })
+
+  it('previews the catalog against PostgreSQL without persisting it', async () => {
+    const catalog: unknown = {
+      categories: [
+        {
+          slug: 'mindfulness',
+          name: 'Mindfulness',
+          themes: [
+            { title: 'Notice your breathing', difficulty: 'easy', publicationStatus: 'published' },
+          ],
+        },
+      ],
+    }
+
+    const result = await synchronizeThemeCatalog(catalog, integration.container.useCases, {
+      mode: 'preview',
+    })
+
+    expect(result.changes).toEqual({
+      categories: { created: 1, updated: 0, unchanged: 0 },
+      themes: { created: 1, updated: 0, unchanged: 0 },
+    })
+    expect(result.poolReports).toMatchObject([{ publishedCount: 1 }])
+    await expect(integration.prisma.themeCategory.count()).resolves.toBe(0)
+    await expect(integration.prisma.theme.count()).resolves.toBe(0)
+    expect(integration.eventBus.published).toEqual([])
+  })
+
+  it('synchronizes the complete production catalog idempotently', async () => {
+    const catalogPath = new URL('../../../../../../prisma/catalog/themes.json', import.meta.url)
+    const catalog: unknown = JSON.parse(await readFile(catalogPath, 'utf8'))
+
+    await synchronizeThemeCatalog(catalog, integration.container.useCases)
+    await synchronizeThemeCatalog(catalog, integration.container.useCases)
+
+    await expect(integration.prisma.themeCategory.count()).resolves.toBe(5)
+    await expect(integration.prisma.theme.count()).resolves.toBe(640)
+  })
+
   it('reports structured validation issues for an invalid catalog', async () => {
     const catalog: unknown = { categories: 'invalid' }
 
@@ -133,6 +186,8 @@ describe('theme catalog sync integration', () => {
     )
 
     expect(report.lines).toEqual([
+      'change categories: 0 created, 0 updated, 1 unchanged',
+      'change themes: 0 created, 0 updated, 1 unchanged',
       'pool  mindfulness / easy: 0/10 published',
       'drift mindfulness / "Notice your breathing": manual withdrawal preserved',
     ])
@@ -158,7 +213,11 @@ describe('theme catalog sync integration', () => {
       await synchronizeThemeCatalog(catalog, integration.container.useCases),
     )
 
-    expect(report.lines).toEqual(['pool  mindfulness / easy: 10/10 published'])
+    expect(report.lines).toEqual([
+      'change categories: 1 created, 0 updated, 0 unchanged',
+      'change themes: 10 created, 0 updated, 0 unchanged',
+      'pool  mindfulness / easy: 10/10 published',
+    ])
     expect(report.hasFindings).toBe(false)
   })
 
@@ -276,3 +335,4 @@ describe('theme catalog sync integration', () => {
     )
   })
 })
+import { readFile } from 'node:fs/promises'

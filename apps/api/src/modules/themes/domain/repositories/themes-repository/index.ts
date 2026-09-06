@@ -5,6 +5,18 @@ export interface ThemeCombination {
   readonly difficulty: ThemeDifficulty
 }
 
+export interface ThemePoolCount extends ThemeCombination {
+  readonly publishedCount: number
+}
+
+export interface ThemeCatalogThemesRepository {
+  listByCategoryIds(categoryIds: readonly string[]): Promise<Theme[]>
+  saveMany(themes: readonly Theme[]): Promise<void>
+  countPublishedByMany(
+    combinations: readonly ThemeCombination[],
+  ): Promise<readonly ThemePoolCount[]>
+}
+
 export interface ThemesRepository {
   findById(themeId: string): Promise<Theme | null>
   listByIds(themeIds: readonly string[]): Promise<Theme[]>

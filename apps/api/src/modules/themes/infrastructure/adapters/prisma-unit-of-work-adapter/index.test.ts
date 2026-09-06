@@ -7,7 +7,7 @@ import type {
 } from '@/modules/themes/infrastructure/clients/themes-prisma-client/index.js'
 import { ThemesTransactionContext } from '@/modules/themes/infrastructure/clients/themes-transaction-context/index.js'
 
-import { PrismaUnitOfWorkAdapter, THEME_CATALOG_SYNC_TRANSACTION_TIMEOUT_MS } from './index.js'
+import { PrismaUnitOfWorkAdapter } from './index.js'
 
 function fakeClient(): ThemesPrismaClient {
   return {
@@ -24,6 +24,7 @@ function fakeClient(): ThemesPrismaClient {
       findMany: () => Promise.resolve([]),
     },
     $queryRaw: () => Promise.resolve([]),
+    $executeRaw: () => Promise.resolve(0),
   }
 }
 
@@ -52,9 +53,7 @@ describe('PrismaUnitOfWorkAdapter', () => {
     const adapter = new PrismaUnitOfWorkAdapter(runner, new ThemesTransactionContext())
 
     await expect(adapter.run(() => Promise.resolve('done'))).resolves.toBe('done')
-    expect(runner.options).toStrictEqual([
-      { isolationLevel: 'Serializable', timeout: THEME_CATALOG_SYNC_TRANSACTION_TIMEOUT_MS },
-    ])
+    expect(runner.options).toStrictEqual([{ isolationLevel: 'Serializable', timeout: 30_000 }])
   })
 
   it('binds the transaction client to the context for the whole operation', async () => {

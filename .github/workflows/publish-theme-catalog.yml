@@ -1,0 +1,73 @@
+name: Publish Theme Catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+        required: true
+      mode:
+        description: Preview or apply the catalog
+        type: choice
+        options: [preview, apply]
+        default: preview
+        required: true
+
+concurrency:
+  group: theme-catalog-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @mindness/api...
+      - run: pnpm --filter @mindness/api themes:catalog:validate
+      - name: Preview or apply the theme catalog
+        env:
+          CATALOG_MODE: ${{ inputs.mode }}
+          CATALOG_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          if [ -z "$CATALOG_DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL is not set for the ${{ inputs.environment }} environment"
+            exit 1
+          fi
+          case "$CATALOG_DATABASE_URL" in
+            *sslmode=require*|*sslmode=verify-ca*|*sslmode=verify-full*) ;;
+            *)
+              echo "::error::DATABASE_URL for ${{ inputs.environment }} does not demand TLS"
+              exit 1
+              ;;
+          esac
+          verified_url=$(node --input-type=module -e '
+            const url = new URL(process.env.CATALOG_DATABASE_URL)
+            url.searchParams.set("sslmode", "verify-full")
+            url.searchParams.set("sslrootcert", process.argv[1])
+            process.stdout.write(url.toString())
+          ' "${GITHUB_WORKSPACE}/apps/api/certs/supabase-prod-ca-2021.crt")
+          echo "::add-mask::${verified_url//%/%25}"
+          script="themes:catalog:${CATALOG_MODE}"
+          set +e
+          DATABASE_URL="$verified_url" pnpm --filter @mindness/api "$script" 2>&1 | tee catalog-report.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          {
+            echo '```text'
+            cat catalog-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"

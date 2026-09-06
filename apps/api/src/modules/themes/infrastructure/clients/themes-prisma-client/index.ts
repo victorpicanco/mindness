@@ -4,6 +4,7 @@ import type {
   ThemeDifficulty,
   ThemePublicationStatus,
 } from '@/generated/prisma/client.js'
+import type { Prisma } from '@/generated/prisma/client.js'
 
 export type ThemeRow = Theme
 export type ThemeCategoryRow = ThemeCategory
@@ -29,7 +30,14 @@ export interface ThemeFindManyArgs {
   readonly where:
     | { readonly publicationStatus: ThemePublicationStatus }
     | { readonly id: { readonly in: string[] } }
+    | { readonly categoryId: { readonly in: string[] } }
   readonly distinct?: ['categoryId', 'difficulty']
+}
+
+export interface ThemeCategoryFindManyArgs {
+  readonly where:
+    | { readonly themes: { readonly some: { readonly publicationStatus: ThemePublicationStatus } } }
+    | { readonly slug: { readonly in: string[] } }
 }
 
 export interface ThemesPrismaClient {
@@ -53,13 +61,13 @@ export interface ThemesPrismaClient {
       readonly where: { readonly id: string } | { readonly slug: string }
     }): Promise<ThemeCategoryRow | null>
     upsert(args: ThemeCategoryUpsertArgs): Promise<ThemeCategoryRow>
-    findMany(args: {
-      readonly where: {
-        readonly themes: { readonly some: { readonly publicationStatus: ThemePublicationStatus } }
-      }
-    }): Promise<ThemeCategoryRow[]>
+    findMany(args: ThemeCategoryFindManyArgs): Promise<ThemeCategoryRow[]>
   }
-  $queryRaw(query: TemplateStringsArray, ...values: readonly unknown[]): Promise<unknown>
+  $queryRaw(
+    query: TemplateStringsArray | Prisma.Sql,
+    ...values: readonly unknown[]
+  ): Promise<unknown>
+  $executeRaw(query: Prisma.Sql): Promise<number>
 }
 
 export interface ThemesTransactionOptions {

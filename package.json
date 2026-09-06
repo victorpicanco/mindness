@@ -19,7 +19,7 @@
     "supabase": "supabase",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
-    "supabase:reset": "supabase db reset --no-seed && pnpm --filter @mindness/api db:deploy && pnpm --filter @mindness/api themes:sync",
+    "supabase:reset": "supabase db reset --no-seed && pnpm --filter @mindness/api db:deploy && pnpm --filter @mindness/api themes:catalog:apply",
     "prepare": "husky"
   },
   "devDependencies": {

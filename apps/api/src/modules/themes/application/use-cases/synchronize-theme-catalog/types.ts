@@ -19,6 +19,21 @@ export interface SynchronizeThemeCatalogInput {
   readonly categories: readonly ThemeCatalogCategory[]
 }
 
+export interface SynchronizeThemeCatalogOptions {
+  readonly mode: 'preview' | 'apply'
+}
+
+export interface ThemeCatalogChangeCounts {
+  readonly created: number
+  readonly updated: number
+  readonly unchanged: number
+}
+
+export interface ThemeCatalogChanges {
+  readonly categories: ThemeCatalogChangeCounts
+  readonly themes: ThemeCatalogChangeCounts
+}
+
 export interface ThemePoolReport {
   readonly categorySlug: string
   readonly difficulty: ThemeDifficulty
@@ -35,4 +50,5 @@ export interface ThemeCatalogDivergence {
 export interface SynchronizeThemeCatalogOutput {
   readonly poolReports: readonly ThemePoolReport[]
   readonly divergences: readonly ThemeCatalogDivergence[]
+  readonly changes: ThemeCatalogChanges
 }

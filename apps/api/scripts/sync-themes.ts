@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
@@ -59,10 +60,26 @@ type ThemeCatalogUseCases = ReturnType<typeof createThemesContainer>['useCases']
 type CatalogSyncResult = Awaited<
   ReturnType<ThemeCatalogUseCases['synchronizeThemeCatalog']['execute']>
 >
+type CatalogSyncOptions = NonNullable<
+  Parameters<ThemeCatalogUseCases['synchronizeThemeCatalog']['execute']>[1]
+>
+type ThemeCatalogInput = Parameters<ThemeCatalogUseCases['synchronizeThemeCatalog']['execute']>[0]
+type ThemeCatalogCommand = 'validate' | CatalogSyncOptions['mode']
 
 export interface CatalogReport {
   readonly lines: readonly string[]
   readonly hasFindings: boolean
+}
+
+export function parseThemeCatalogCommand(value: string | undefined): ThemeCatalogCommand {
+  if (value === 'validate' || value === 'preview' || value === 'apply') return value
+
+  throw new ValidationFailedError([
+    {
+      field: 'command',
+      message: 'Theme catalog command must be validate, preview or apply',
+    },
+  ])
 }
 
 function issuesFromValidationError(error: TLocalizedValidationError): FieldIssue[] {
@@ -86,17 +103,26 @@ function issuesFromEnvValidationError(error: TLocalizedValidationError): FieldIs
 export async function synchronizeThemeCatalog(
   catalog: unknown,
   useCases: Pick<ThemeCatalogUseCases, 'synchronizeThemeCatalog'>,
+  options: CatalogSyncOptions = { mode: 'apply' },
 ): Promise<CatalogSyncResult> {
+  return useCases.synchronizeThemeCatalog.execute(validateThemeCatalog(catalog), options)
+}
+
+export function validateThemeCatalog(catalog: unknown): ThemeCatalogInput {
   if (!Value.Check(ThemeCatalogSchema, catalog)) {
     throw new ValidationFailedError(
       Value.Errors(ThemeCatalogSchema, catalog).flatMap(issuesFromValidationError),
     )
   }
 
-  return useCases.synchronizeThemeCatalog.execute(catalog)
+  return catalog
 }
 
 export function buildCatalogReport(result: CatalogSyncResult): CatalogReport {
+  const changeLines = [
+    `change categories: ${result.changes.categories.created} created, ${result.changes.categories.updated} updated, ${result.changes.categories.unchanged} unchanged`,
+    `change themes: ${result.changes.themes.created} created, ${result.changes.themes.updated} updated, ${result.changes.themes.unchanged} unchanged`,
+  ]
   const poolLines = result.poolReports.map(
     (report) =>
       `pool  ${report.categorySlug} / ${report.difficulty}: ${report.publishedCount}/${report.minimum} published`,
@@ -107,7 +133,7 @@ export function buildCatalogReport(result: CatalogSyncResult): CatalogReport {
   )
 
   return {
-    lines: [...poolLines, ...divergenceLines],
+    lines: [...changeLines, ...poolLines, ...divergenceLines],
     hasFindings:
       result.divergences.length > 0 ||
       result.poolReports.some((report) => report.publishedCount < report.minimum),
@@ -144,6 +170,25 @@ function loadSyncEnv(env: NodeJS.ProcessEnv): {
 }
 
 async function run(): Promise<void> {
+  const command = parseThemeCatalogCommand(process.argv[2])
+  const catalogPath = new URL('../prisma/catalog/themes.json', import.meta.url)
+  const catalogSource = await readFile(catalogPath, 'utf8')
+  const catalog: unknown = JSON.parse(catalogSource)
+  const validatedCatalog = validateThemeCatalog(catalog)
+  const checksum = createHash('sha256').update(catalogSource).digest('hex')
+
+  console.log(`catalog sha256: ${checksum}`)
+  if (command === 'validate') {
+    const themeCount = validatedCatalog.categories.reduce(
+      (count, category) => count + category.themes.length,
+      0,
+    )
+    console.log(
+      `catalog valid: ${validatedCatalog.categories.length} categories, ${themeCount} themes`,
+    )
+    return
+  }
+
   const config = loadSyncEnv(process.env)
   const logger = createLogger({ level: config.logLevel, pretty: config.nodeEnv !== 'production' })
   const prisma = createPrismaClient({
@@ -158,9 +203,9 @@ async function run(): Promise<void> {
   })
 
   try {
-    const catalogPath = new URL('../prisma/catalog/themes.json', import.meta.url)
-    const catalog: unknown = JSON.parse(await readFile(catalogPath, 'utf8'))
-    const report = buildCatalogReport(await synchronizeThemeCatalog(catalog, container.useCases))
+    const report = buildCatalogReport(
+      await synchronizeThemeCatalog(validatedCatalog, container.useCases, { mode: command }),
+    )
     for (const line of report.lines) console.log(line)
     if (report.hasFindings) process.exitCode = 1
   } finally {

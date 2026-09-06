@@ -1,5 +1,6 @@
 'use client'
 
+import posthog from 'posthog-js'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -104,6 +105,13 @@ export function AccountMenu({
     onOpenSettings()
   }
 
+  function handleSignOut() {
+    posthog.capture('sign_out')
+    posthog.reset()
+
+    return signOut()
+  }
+
   return (
     <div className="mt-1 pt-1">
       <button
@@ -166,7 +174,7 @@ export function AccountMenu({
 
               <div className="my-1 border-t border-divider" />
 
-              <form action={signOut}>
+              <form action={handleSignOut}>
                 <button
                   className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-2 text-left text-sm text-text transition-colors hover:bg-input focus-visible:bg-input focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-text"
                   type="submit"

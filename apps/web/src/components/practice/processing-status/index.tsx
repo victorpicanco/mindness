@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import posthog from 'posthog-js'
 import { useEffect, useRef, useState } from 'react'
 import type { z } from 'zod'
 
@@ -141,6 +142,7 @@ function AnalysisPoll({
     const failure = terminalFailure(query.error)
     if (failure !== null) {
       settledRef.current = true
+      posthog.capture('analysis_failed', { session_id: sessionId, reason: failure })
       reset()
       onTerminalFailure(failure)
       return
@@ -149,9 +151,10 @@ function AnalysisPoll({
     if (query.data === undefined) return
 
     settledRef.current = true
+    posthog.capture('analysis_ready', { session_id: sessionId })
     completeAnalysis()
     router.refresh()
-  }, [completeAnalysis, onTerminalFailure, query.data, query.error, reset, router])
+  }, [completeAnalysis, onTerminalFailure, query.data, query.error, reset, router, sessionId])
 
   return null
 }

@@ -1,5 +1,8 @@
 'use client'
 
+import posthog from 'posthog-js'
+import { useEffect } from 'react'
+
 import {
   AuthenticatedShell,
   AuthenticatedShellView,
@@ -42,6 +45,11 @@ function SessionNavigationShell({
   const reset = usePracticeSessionStore((state) => state.reset)
   const { setTheme, theme } = useTheme()
   const shouldConfirmSessionNavigation = status === 'recording' || status === 'uploading'
+  const accountEmail = props.accountProfile.email
+
+  useEffect(() => {
+    posthog.identify(accountEmail, { email: accountEmail })
+  }, [accountEmail])
 
   const shellProps = {
     ...props,

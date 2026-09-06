@@ -3,6 +3,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import posthog from 'posthog-js'
 import { useState, type FormEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -109,8 +110,20 @@ export function PracticeConfigForm({
 
   const mutation = useMutation({
     mutationFn: startSession,
+    onError: (error) => {
+      if (inlineFailureCode(error) === PRACTICE_NOT_ALLOWED_CODE) {
+        posthog.capture('practice_not_allowed')
+      }
+    },
     onSuccess: (session, startedConfiguration) => {
       const { serverNow, ...practiceSession } = session
+
+      posthog.capture('session_started', {
+        category_slug: startedConfiguration.categorySlug,
+        difficulty: startedConfiguration.difficulty,
+        search_window_minutes: startedConfiguration.searchWindowMinutes,
+        session_id: session.sessionId,
+      })
 
       startResearching(
         { ...practiceSession, configuration: startedConfiguration, recordingStartedAt: null },
@@ -134,6 +147,13 @@ export function PracticeConfigForm({
   }
   const failureCode = inlineFailureCode(mutation.isError ? mutation.error : null)
   const isConsentPending = failureCode === PRACTICE_NOT_ALLOWED_CODE
+
+  function handleSignOut() {
+    posthog.capture('sign_out')
+    posthog.reset()
+
+    return signOut()
+  }
 
   return (
     <div className="mt-8 flex w-full max-w-4xl flex-col gap-4">
@@ -201,7 +221,7 @@ export function PracticeConfigForm({
         <div className="flex flex-col items-start gap-3 text-sm text-error" role="alert">
           <p>{translate(describeApiError(failureCode).messageKey)}</p>
           {isConsentPending ? (
-            <form action={signOut}>
+            <form action={handleSignOut}>
               <Button size="sm" type="submit" variant="secondary">
                 {t('signOutToRetry')}
               </Button>

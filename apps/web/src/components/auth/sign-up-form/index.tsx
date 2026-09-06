@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
+import posthog from 'posthog-js'
 
 import { AuthCaptchaField } from '@/components/auth/captcha-field'
 import { AuthFormAlert } from '@/components/auth/form-alert'
@@ -22,6 +23,7 @@ type SignUpFormProps = {
 export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const siteKey = clientEnv().turnstileSiteKey
   const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined })
@@ -33,9 +35,11 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
 
   useEffect(() => {
     if (hasSucceeded) {
+      posthog.identify(email, { email })
+      posthog.capture('sign_up_submitted')
       onSuccess?.()
     }
-  }, [hasSucceeded, onSuccess])
+  }, [email, hasSucceeded, onSuccess])
 
   if (hasSucceeded) {
     return null
@@ -53,6 +57,9 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
           <Input
             autoComplete="email"
             name="email"
+            onChange={(event) => {
+              setEmail(event.target.value)
+            }}
             placeholder={t('signIn.emailPlaceholder')}
             type="email"
           />

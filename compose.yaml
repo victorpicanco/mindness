@@ -30,6 +30,8 @@ services:
       - '3000'
     environment:
       API_BASE_URL: http://api:3333
+      NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+      NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-}
 
   api:
     image: ${IMAGE_REPO:?set IMAGE_REPO in .env}/api:${IMAGE_TAG:?set IMAGE_TAG in .env}

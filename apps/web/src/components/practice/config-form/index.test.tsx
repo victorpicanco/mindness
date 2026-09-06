@@ -10,6 +10,15 @@ import { DEFAULT_TIME_ZONE } from '@/i18n/request'
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
+const { captureMock, resetMock } = vi.hoisted(() => ({
+  captureMock: vi.fn(),
+  resetMock: vi.fn(),
+}))
+
+vi.mock('posthog-js', () => ({
+  default: { capture: captureMock, reset: resetMock },
+}))
+
 function ApiProviders({ children }: { readonly children: ReactNode }) {
   const translate = useTranslations()
   const [queryClient] = useState(() => createQueryClient(translate))
@@ -102,6 +111,27 @@ describe('PracticeConfigForm', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  it('reports a blocked practice start to PostHog when consent is required again', async () => {
+    renderPracticeConfigForm(rejectingRequest('sessions.PRACTICE_NOT_ALLOWED'))
+    submitConfiguration()
+
+    await screen.findByRole('alert')
+
+    expect(captureMock).toHaveBeenCalledWith('practice_not_allowed')
+  })
+
+  it('reports the sign-out and resets the PostHog identity from the consent retry control', async () => {
+    const signOut = vi.fn()
+    renderPracticeConfigForm(rejectingRequest('sessions.PRACTICE_NOT_ALLOWED'), undefined, signOut)
+    submitConfiguration()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sair e entrar de novo' }))
+
+    expect(captureMock).toHaveBeenCalledWith('sign_out')
+    expect(resetMock).toHaveBeenCalledOnce()
+    expect(signOut).toHaveBeenCalledOnce()
   })
 
   it('moves the practice session store to researching with the started session', async () => {

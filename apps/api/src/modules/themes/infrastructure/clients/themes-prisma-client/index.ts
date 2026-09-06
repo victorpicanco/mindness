@@ -64,6 +64,7 @@ export interface ThemesPrismaClient {
 
 export interface ThemesTransactionOptions {
   readonly isolationLevel: 'Serializable'
+  readonly timeout: number
 }
 
 export interface ThemesPrismaTransactionRunner {

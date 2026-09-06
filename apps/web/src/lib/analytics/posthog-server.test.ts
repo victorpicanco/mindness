@@ -16,9 +16,7 @@ describe('createPostHogClient', () => {
 
     createPostHogClient({ env: { NODE_ENV: 'development' } })
 
-    expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining('NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN'),
-    )
+    expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('NEXT_PUBLIC_POSTHOG_KEY'))
     consoleError.mockRestore()
   })
 
@@ -35,7 +33,7 @@ describe('createPostHogClient', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
     createPostHogClient({
-      env: { NODE_ENV: 'development', NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: 'phc_test' },
+      env: { NODE_ENV: 'development', NEXT_PUBLIC_POSTHOG_KEY: 'phc_test' },
       createClient: () => ({
         capture: () => undefined,
         identify: () => undefined,
@@ -57,7 +55,7 @@ describe('createPostHogClient', () => {
     createPostHogClient({
       env: {
         NODE_ENV: 'production',
-        NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: 'phc_test',
+        NEXT_PUBLIC_POSTHOG_KEY: 'phc_test',
         NEXT_PUBLIC_POSTHOG_HOST: 'https://posthog.test',
       },
       createClient,
@@ -74,7 +72,7 @@ describe('createPostHogClient', () => {
     })
 
     createPostHogClient({
-      env: { NODE_ENV: 'production', NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: 'phc_test' },
+      env: { NODE_ENV: 'production', NEXT_PUBLIC_POSTHOG_KEY: 'phc_test' },
       createClient,
     })
 
@@ -85,7 +83,7 @@ describe('createPostHogClient', () => {
     const createClient = vi.fn()
 
     const client = createPostHogClient({
-      env: { NODE_ENV: 'production', NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: '' },
+      env: { NODE_ENV: 'production', NEXT_PUBLIC_POSTHOG_KEY: '' },
       createClient,
     })
 
@@ -103,7 +101,7 @@ describe('createPostHogClient', () => {
     createPostHogClient({
       env: {
         NODE_ENV: 'production',
-        NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: 'phc_test',
+        NEXT_PUBLIC_POSTHOG_KEY: 'phc_test',
         NEXT_PUBLIC_POSTHOG_HOST: '',
       },
       createClient,

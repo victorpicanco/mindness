@@ -6,9 +6,10 @@ import { useState } from 'react'
 import type { z } from 'zod'
 
 import type { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
-import { ShinyText } from '@/components/ui/shiny-text'
+import { humanizeSlug } from '@/lib/text/humanize-slug'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
+import { AnalysisPlaybackProvider } from '@/components/practice/analysis-playback'
 import { AnalysisMessage } from '@/components/practice/analysis-message'
 import { ProcessingStatus } from '@/components/practice/processing-status'
 import { RecordedAudioMessage } from '@/components/practice/recorded-audio-message'
@@ -49,87 +50,75 @@ export function SessionConversation({ analysis }: SessionConversationProps) {
   }
 
   return (
-    <section aria-label={t('label')} className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-8">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
-          <SessionMessage label={t('userMessageLabel')} sender="user">
-            <p>
-              {t('configuration', {
-                category: session.configuration.categorySlug,
-                difficulty: t(`difficulties.${session.configuration.difficulty}`),
-                minutes: session.configuration.searchWindowMinutes,
-              })}
-            </p>
-          </SessionMessage>
+    <AnalysisPlaybackProvider>
+      <section aria-label={t('label')} className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-8">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+            <SessionMessage label={t('userMessageLabel')} sender="user">
+              <p>
+                {t('configuration', {
+                  category: humanizeSlug(session.configuration.categorySlug),
+                  difficulty: t(`difficulties.${session.configuration.difficulty}`),
+                  minutes: session.configuration.searchWindowMinutes,
+                })}
+              </p>
+            </SessionMessage>
 
-          <SessionMessage label={t('assistantMessageLabel')} sender="assistant">
-            <p className="text-sm text-text-muted">{t('themeIntroduction')}</p>
-            <ResearchTimer />
-            <p className="mt-3 text-sm leading-6 text-text-muted">{t('researchInstructions')}</p>
-          </SessionMessage>
-
-          <AnimatePresence initial={false}>
-            {researchFinished ? (
-              <motion.div
-                animate={{ opacity: 1, y: 0 }}
-                exit={exit}
-                initial={enter}
-                key="research-finished"
-                layout="position"
-                transition={transition}
-              >
-                <SessionMessage label={t('assistantMessageLabel')} sender="assistant">
-                  {status === 'expired' ? (
-                    <p role="alert">{t('expired')}</p>
-                  ) : (
-                    <div aria-live="polite">
-                      <p className="font-medium">{t('researchFinished')}</p>
-                      <p className="mt-1 text-sm text-text-muted">
-                        {t('recordUntil', {
-                          time: format.dateTime(new Date(session.expiresAt), {
-                            hour: '2-digit',
-                            hour12: false,
-                            minute: '2-digit',
-                          }),
-                        })}
-                      </p>
-                    </div>
-                  )}
-                </SessionMessage>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-
-          <div className="flex flex-col gap-1.5">
-            {status === 'uploading' ? (
-              <motion.p
-                animate={{ opacity: 1, y: 0 }}
-                className="text-xs"
-                initial={enter}
-                role="status"
-                transition={transition}
-              >
-                <ShinyText text={t('audioUploading')} />
-              </motion.p>
-            ) : null}
+            <SessionMessage label={t('assistantMessageLabel')} sender="assistant">
+              <p className="text-sm text-text-muted">{t('themeIntroduction')}</p>
+              <ResearchTimer />
+              <p className="mt-3 text-sm leading-6 text-text-muted">{t('researchInstructions')}</p>
+            </SessionMessage>
 
             <AnimatePresence initial={false}>
-              {hasAudioMessage ? (
+              {researchFinished ? (
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
+                  exit={exit}
                   initial={enter}
-                  key="recorded-audio"
+                  key="research-finished"
                   layout="position"
                   transition={transition}
                 >
-                  <RecordedAudioMessage label={t('userMessageLabel')} />
+                  <SessionMessage label={t('assistantMessageLabel')} sender="assistant">
+                    {status === 'expired' ? (
+                      <p role="alert">{t('expired')}</p>
+                    ) : (
+                      <div aria-live="polite">
+                        <p className="font-medium">{t('researchFinished')}</p>
+                        <p className="mt-1 text-sm text-text-muted">
+                          {t('recordUntil', {
+                            time: format.dateTime(new Date(session.expiresAt), {
+                              hour: '2-digit',
+                              hour12: false,
+                              minute: '2-digit',
+                            }),
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </SessionMessage>
                 </motion.div>
               ) : null}
             </AnimatePresence>
-          </div>
 
-          <div className="flex flex-col gap-1.5">
-            <ProcessingStatus holdUntilResponse={analysis === undefined} />
+            <div className="flex flex-col gap-2">
+              <AnimatePresence initial={false}>
+                {hasAudioMessage ? (
+                  <motion.div
+                    animate={{ opacity: 1, y: 0 }}
+                    initial={enter}
+                    key="recorded-audio"
+                    layout="position"
+                    transition={transition}
+                  >
+                    <RecordedAudioMessage label={t('userMessageLabel')} />
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+
+              <ProcessingStatus holdUntilResponse={analysis === undefined} />
+            </div>
 
             <AnimatePresence initial={false}>
               {analysis === undefined ? null : (
@@ -146,13 +135,13 @@ export function SessionConversation({ analysis }: SessionConversationProps) {
             </AnimatePresence>
           </div>
         </div>
-      </div>
 
-      <div className="border-t border-divider bg-surface/95 px-4 py-4 backdrop-blur-sm sm:px-8">
-        <div className="mx-auto w-full max-w-3xl">
-          <RecordingStart />
+        <div className="border-t border-divider bg-surface/95 px-4 py-4 backdrop-blur-sm sm:px-8">
+          <div className="mx-auto w-full max-w-3xl">
+            <RecordingStart />
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </AnalysisPlaybackProvider>
   )
 }

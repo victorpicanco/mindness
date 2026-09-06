@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { NextIntlClientProvider } from 'next-intl'
 import { useEffect, type ReactNode } from 'react'
@@ -17,7 +17,7 @@ import type { PracticeSession } from '@/stores/practice-session/store'
 import { SessionConversation } from './index'
 
 const SESSION: PracticeSession = {
-  configuration: { categorySlug: 'news', difficulty: 'balanced', searchWindowMinutes: 3 },
+  configuration: { categorySlug: 'arte-e-cultura', difficulty: 'balanced', searchWindowMinutes: 3 },
   createdAt: '2026-08-27T12:00:00.000Z',
   expiresAt: '2026-08-27T12:15:00.000Z',
   recordingStartedAt: '2026-08-27T12:03:00.000Z',
@@ -74,6 +74,16 @@ function CompleteAnalysis({ children }: { readonly children: ReactNode }) {
   return children
 }
 
+function ProcessingTrigger() {
+  const beginProcessing = usePracticeSessionStore((state) => state.beginProcessing)
+
+  return (
+    <button onClick={beginProcessing} type="button">
+      begin processing
+    </button>
+  )
+}
+
 function renderConversation(children: ReactNode) {
   render(
     <AppRouterContext.Provider value={createRouter()}>
@@ -113,10 +123,10 @@ describe('SessionConversation', () => {
     const uploading = screen.getByRole('status')
     const audioMessage = screen.getByRole('group', { name: 'Áudio enviado' }).closest('article')
 
-    expect(uploading).toHaveTextContent('Enviando áudio…')
+    expect(uploading).toHaveTextContent('Enviando seu áudio…')
     expect(uploading.closest('article')).toBeNull()
     if (audioMessage === null) throw new DOMException('Audio message was not rendered')
-    expect(uploading.compareDocumentPosition(audioMessage)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(uploading.compareDocumentPosition(audioMessage)).toBe(Node.DOCUMENT_POSITION_PRECEDING)
     expect(screen.getByRole('button', { name: 'Iniciar gravação' })).toBeDisabled()
   })
 
@@ -132,7 +142,23 @@ describe('SessionConversation', () => {
 
     await act(() => vi.advanceTimersByTimeAsync(500))
 
-    expect(screen.queryByText('Enviando áudio…')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+
+  it('keeps one progress line in the same place as the upload turns into the analysis', () => {
+    renderConversation(
+      <>
+        <SessionConversation />
+        <ProcessingTrigger />
+      </>,
+    )
+
+    const uploading = screen.getByRole('status')
+
+    fireEvent.click(screen.getByRole('button', { name: 'begin processing' }))
+
+    expect(screen.getByRole('status')).toBe(uploading)
+    expect(uploading).toHaveTextContent('Enviando seu áudio…')
   })
 
   it('appends the analysis to the conversation it already holds', () => {
@@ -144,7 +170,7 @@ describe('SessionConversation', () => {
 
     expect(
       screen.getByText(
-        'Quero iniciar uma sessão com 3 minutos de pesquisa, dificuldade equilibrada e categoria “news”.',
+        'Quero iniciar uma sessão com 3 minutos de pesquisa, dificuldade equilibrada e categoria “arte e cultura”.',
       ),
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Notícias do dia' })).toBeInTheDocument()

@@ -1,5 +1,7 @@
 import { Type, type Static } from '@fastify/type-provider-typebox'
 
+import { DeliveryFeedbackSchema } from './delivery-schema.js'
+
 import { successSchema } from '@/shared/http/envelope/index.js'
 
 const FeedbackPointSchema = Type.Object(
@@ -21,6 +23,7 @@ export const SessionAnalysisResponseSchema = successSchema(
       feedback: Type.Object(
         {
           summary: Type.String(),
+          delivery: Type.Optional(DeliveryFeedbackSchema),
           strengths: Type.Array(FeedbackPointSchema, { maxItems: 3 }),
           improvements: Type.Array(
             Type.Object(

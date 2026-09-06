@@ -14,3 +14,13 @@ export interface EvaluationPort {
 }
 
 export type { EvaluationResult, FeedbackPoint, ImprovementPoint, SpeechFeedback } from './types.js'
+export type {
+  DeliveryFeedback,
+  FillerOccurrence,
+  FillerAssessmentStatus,
+  FillerMeasurements,
+  RhythmMeasurements,
+  RhythmWindow,
+  SpeechMoment,
+  PracticeExercise,
+} from './types.js'

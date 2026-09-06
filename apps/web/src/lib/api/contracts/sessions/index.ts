@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { deliveryFeedbackSchema } from './delivery-schema'
+
 const sessionDifficultySchema = z.enum(['easy', 'balanced', 'hard'])
 
 const sessionConfigurationSchema = z.object({
@@ -88,6 +90,7 @@ export const sessionAnalysisSchema = z.strictObject({
   analyzedAt: z.iso.datetime(),
   feedback: z.strictObject({
     summary: z.string().min(1),
+    delivery: deliveryFeedbackSchema.optional(),
     strengths: z
       .array(
         z.strictObject({

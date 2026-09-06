@@ -13,8 +13,8 @@ import { sessionAnalysisAvailabilitySchema } from '@/lib/api/contracts/sessions'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
 import { buttonStyles } from '@/components/ui/button'
-import { ShinyText } from '@/components/ui/shiny-text'
 
+import { ProcessingSteps } from '@/components/practice/processing-steps'
 import { SessionMessage } from '@/components/practice/session-message'
 
 const DEFAULT_POLL_INTERVAL_MS = 2_000
@@ -70,27 +70,26 @@ export function ProcessingStatusView({
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
 
+  const waiting =
+    status === 'uploading' || status === 'processing' || (status === 'done' && holdUntilResponse)
+
   if (failure !== null) return <ProcessingFailure message={failure} />
-  if (status === 'done' && holdUntilResponse) return <AnalysisWaiting />
-  if (status !== 'processing' || session === null) return null
+  if (!waiting || session === null) return null
 
+  // The steps sit outside the status branch so the same line survives the upload becoming the
+  // analysis: remounting it would restart the sequence and break the sense of one running task.
   return (
-    <AnalysisPoll
-      fetchAnalysis={fetchAnalysis}
-      onTerminalFailure={setFailure}
-      pollIntervalMs={pollIntervalMs}
-      sessionId={session.sessionId}
-    />
-  )
-}
-
-function AnalysisWaiting() {
-  const t = useTranslations('home.processing')
-
-  return (
-    <p className="text-xs" role="status">
-      <ShinyText text={t('waiting')} />
-    </p>
+    <>
+      <ProcessingSteps paused={status === 'uploading'} />
+      {status === 'processing' ? (
+        <AnalysisPoll
+          fetchAnalysis={fetchAnalysis}
+          onTerminalFailure={setFailure}
+          pollIntervalMs={pollIntervalMs}
+          sessionId={session.sessionId}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -99,14 +98,16 @@ function ProcessingFailure({ message }: { readonly message: TerminalFailureMessa
   const conversationT = useTranslations('home.conversation')
 
   return (
-    <SessionMessage label={conversationT('assistantMessageLabel')} sender="assistant">
-      <section className="flex max-w-md flex-col items-start gap-4">
-        <p role="alert">{t(message)}</p>
-        <Link className={buttonStyles()} href="/">
-          {t('newSessionLink')}
-        </Link>
-      </section>
-    </SessionMessage>
+    <div className="pt-6">
+      <SessionMessage label={conversationT('assistantMessageLabel')} sender="assistant">
+        <section className="flex max-w-md flex-col items-start gap-4">
+          <p role="alert">{t(message)}</p>
+          <Link className={buttonStyles()} href="/">
+            {t('newSessionLink')}
+          </Link>
+        </section>
+      </SessionMessage>
+    </div>
   )
 }
 
@@ -155,5 +156,5 @@ function AnalysisPoll({
     router.refresh()
   }, [completeAnalysis, onTerminalFailure, query.data, query.error, reset, router])
 
-  return <AnalysisWaiting />
+  return null
 }

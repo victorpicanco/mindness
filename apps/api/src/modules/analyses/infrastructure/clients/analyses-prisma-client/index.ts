@@ -116,17 +116,19 @@ function createNarrowClient(prisma: AnalysesPrismaDelegates): AnalysesPrismaClie
 }
 
 interface JsonObject {
-  [key: string]: Prisma.InputJsonValue
+  [key: string]: Prisma.InputJsonValue | null
 }
 
 function toInputJson(value: unknown): Prisma.InputJsonValue {
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value
   }
-  if (Array.isArray(value)) return value.map(toInputJson)
+  if (Array.isArray(value))
+    return value.map((entry) => (entry === null ? null : toInputJson(entry)))
   if (typeof value === 'object' && value !== null) {
     const object: JsonObject = {}
-    for (const [key, entry] of Object.entries(value)) object[key] = toInputJson(entry)
+    for (const [key, entry] of Object.entries(value))
+      object[key] = entry === null ? null : toInputJson(entry)
     return object
   }
   throw new DatabaseError('Invalid JSON value for analysis persistence')

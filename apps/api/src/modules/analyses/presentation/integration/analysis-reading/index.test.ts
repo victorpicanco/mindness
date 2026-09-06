@@ -11,6 +11,8 @@ import {
 } from '@/modules/analyses/composition/integration-fixtures.js'
 import { Analysis } from '@/modules/analyses/domain/entities/analysis/index.js'
 import { Transcription } from '@/modules/analyses/domain/entities/transcription/index.js'
+import { createDetailedFeedback } from '@/modules/analyses/infrastructure/adapters/gemini-evaluation-adapter/fixtures.js'
+import { parseEvaluationFeedback } from '@/modules/analyses/infrastructure/adapters/gemini-evaluation-adapter/schemas.js'
 
 const ACCOUNT_A = '00000000-0000-4000-8000-000000000101'
 const ACCOUNT_B = '00000000-0000-4000-8000-000000000102'
@@ -80,6 +82,48 @@ function read(accessToken: string) {
 }
 
 describe('analysis reading integration', () => {
+  it('persists nullable measurements and exposes timed evidence without changing legacy readings', async () => {
+    const detailed = parseEvaluationFeedback(
+      createDetailedFeedback(),
+      { durationSeconds: 30, wordCount: 0, wordsPerMinute: null, windows: [] },
+      'test-model',
+    )
+    await harness.repositories.analyses.save(
+      Analysis.create({
+        analysisId: '00000000-0000-4000-8000-000000001001',
+        sessionId: SESSION_ID,
+        feedback: detailed,
+        processingMs: 100,
+        costMicrosUsd: 20,
+        createdAt: ANALYSES_TEST_NOW,
+      }),
+    )
+
+    const response = await read('account-a')
+    expect(response.statusCode).toBe(200)
+    assertResponseMatchesSchema(harness.app, 'GET', '/sessions/{sessionId}/analysis', response, 200)
+    expect(response.json<AnalysisResponse>().data.feedback).toEqual(detailed)
+    expect((await harness.repositories.analyses.findBySessionId(SESSION_ID))?.feedback).toEqual(
+      detailed,
+    )
+    expect(harness.eventBus.published).toHaveLength(1)
+    expect(harness.eventBus.published[0]?.payload).toEqual({
+      sessionId: SESSION_ID,
+      accountId: ACCOUNT_A,
+      plan: 'free',
+    })
+
+    const forbidden = await read('account-b')
+    expect(forbidden.statusCode).toBe(404)
+    assertResponseMatchesSchema(
+      harness.app,
+      'GET',
+      '/sessions/{sessionId}/analysis',
+      forbidden,
+      404,
+    )
+    expect(harness.eventBus.published).toHaveLength(1)
+  })
   it('returns feedback and transcript through the documented contract', async () => {
     const response = await read('account-a')
 

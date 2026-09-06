@@ -6,6 +6,7 @@ import { messages } from '@/i18n/messages'
 import { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
 
 import { AnalysisMessage } from './index'
+import { createDeliveryFeedback } from '@/lib/api/contracts/sessions/fixtures'
 
 function revealedText(container: HTMLElement): string[] {
   return [...container.querySelectorAll('[data-split-text="words"]')].map(
@@ -32,6 +33,59 @@ const ANALYSIS = sessionAnalysisSchema.parse({
 
 describe('AnalysisMessage', () => {
   afterEach(cleanup)
+
+  it('shows measured pace, contextual filler counts and a next-practice exercise', () => {
+    const analysis = sessionAnalysisSchema.parse({
+      ...ANALYSIS,
+      feedback: { ...ANALYSIS.feedback, delivery: createDeliveryFeedback() },
+    })
+    render(
+      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <AnalysisMessage analysis={analysis} />
+      </NextIntlClientProvider>,
+    )
+
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByText('palavras/min')).toBeInTheDocument()
+    expect(screen.getByText('2 ocorrências identificadas')).toBeInTheDocument()
+    expect(screen.getByText('é × 2')).toBeInTheDocument()
+    expect(screen.getByText('Dê espaço ao benefício')).toBeInTheDocument()
+    expect(
+      screen.getByText('Conclua o benefício sem acrescentar uma ideia nova.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('As palavras finais ficam pouco distinguíveis.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ouvir trecho em 00:20' })).toBeDisabled()
+  })
+
+  it('does not present unavailable filler assessment as zero occurrences', () => {
+    const delivery = createDeliveryFeedback()
+    const analysis = sessionAnalysisSchema.parse({
+      ...ANALYSIS,
+      feedback: {
+        ...ANALYSIS.feedback,
+        delivery: {
+          ...delivery,
+          limitations: ['O ruído impede uma contagem confiável.'],
+          fillers: {
+            status: 'unavailable',
+            total: null,
+            perMinute: null,
+            byExpression: [],
+            occurrences: [],
+          },
+        },
+      },
+    })
+    render(
+      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <AnalysisMessage analysis={analysis} />
+      </NextIntlClientProvider>,
+    )
+
+    expect(screen.getByText('Contagem indisponível')).toBeInTheDocument()
+    expect(screen.queryByText('0 ocorrências identificadas')).not.toBeInTheDocument()
+    expect(screen.getByText('O ruído impede uma contagem confiável.')).toBeInTheDocument()
+  })
 
   it('presents the summary, strengths, improvements and transcript', () => {
     const { container } = render(

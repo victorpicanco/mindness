@@ -55,7 +55,6 @@
     "recordUntil": "Inicie sua gravação até {time}",
     "expired": "Sua sessão expirou porque a gravação não começou a tempo.",
     "expiredByInactivity": "Esta sessão foi expirada por inatividade.",
-    "audioUploading": "Enviando áudio…",
     "completedConfiguration": "Quero praticar na categoria “{category}”, com dificuldade {difficulty}.",
     "completedTheme": "O tema da sessão foi “{theme}”."
   },
@@ -65,10 +64,20 @@
     "play": "Reproduzir gravação",
     "pause": "Pausar gravação",
     "loading": "Carregando gravação…",
-    "playbackFailed": "Não foi possível reproduzir a gravação. Tente novamente."
+    "playbackFailed": "Não foi possível reproduzir a gravação. Tente novamente.",
+    "pressPlay": "Trecho posicionado. Pressione reproduzir para ouvir."
   },
   "processing": {
     "waiting": "Estamos analisando sua apresentação…",
+    "steps": {
+      "sending": "Enviando seu áudio…",
+      "transcribing": "Transcrevendo sua fala…",
+      "pacing": "Medindo seu ritmo e suas pausas…",
+      "structure": "Avaliando a estrutura do seu argumento…",
+      "strengths": "Identificando seus pontos fortes…",
+      "improvements": "Reunindo sugestões de melhoria…",
+      "assembling": "Montando sua análise…"
+    },
     "failed": "Não foi possível analisar esta apresentação. Inicie uma nova sessão.",
     "timeout": "A análise não foi concluída. Inicie uma nova sessão.",
     "newSessionLink": "Iniciar nova sessão"
@@ -80,7 +89,41 @@
     "improvementsTitle": "Próximos passos",
     "evidenceLabel": "Evidência",
     "actionLabel": "Como melhorar",
-    "transcriptTitle": "Transcrição"
+    "transcriptTitle": "Transcrição",
+    "delivery": {
+      "practiceTitle": "Na próxima sessão",
+      "successLabel": "Como perceber a melhora",
+      "rhythmTitle": "Ritmo da gravação",
+      "rateUnit": "palavras/min",
+      "rateUnavailable": "Ritmo indisponível",
+      "rateNote": "Média aproximada da transcrição dividida pelo tempo total, incluindo silêncios. O número sozinho não indica se você falou bem.",
+      "duration": "{seconds} s de gravação",
+      "wordCount": "{count} palavras transcritas",
+      "windowsTitle": "Variação ao longo da gravação",
+      "windowRate": "{rate} palavras/min",
+      "fillersTitle": "Preenchimentos e vícios de linguagem",
+      "fillerTotal": "{count, plural, one {# ocorrência identificada} other {# ocorrências identificadas}}",
+      "fillerRate": "{rate} por minuto de gravação",
+      "fillerGroup": "{expression} × {count}",
+      "fillersNote": "Ocorrências identificadas no áudio. Nem todo preenchimento prejudica a comunicação; os próximos passos destacam o que merece atenção.",
+      "partialCount": "Contagem parcial",
+      "unavailableCount": "Contagem indisponível",
+      "occurrencesTitle": "Conferir as ocorrências",
+      "mediumConfidence": "Identificação com alguma incerteza",
+      "momentsTitle": "Trechos para praticar",
+      "listen": "Ouvir trecho em {time}",
+      "pauseExcerpt": "Pausar trecho em {time}",
+      "timestampNote": "Os tempos são aproximados.",
+      "limitationsTitle": "Limites desta análise",
+      "kinds": {
+        "pace": "Ritmo",
+        "pause": "Pausa",
+        "articulation": "Articulação",
+        "structure": "Organização",
+        "repetition": "Repetição",
+        "delivery": "Expressão vocal"
+      }
+    }
   },
   "session": {
     "states": {

@@ -1,4 +1,5 @@
 import type { CreateAnalysisParams, ReconstituteAnalysisParams } from './types.js'
+import type { DeliveryFeedback } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 
 export class Analysis {
   private constructor(
@@ -39,6 +40,32 @@ function freezeFeedback(feedback: CreateAnalysisParams['feedback']) {
     summary: feedback.summary,
     strengths: Object.freeze(feedback.strengths.map((item) => Object.freeze({ ...item }))),
     improvements: Object.freeze(feedback.improvements.map((item) => Object.freeze({ ...item }))),
+    ...(feedback.delivery === undefined ? {} : { delivery: freezeDelivery(feedback.delivery) }),
+  })
+}
+
+function freezeDelivery(delivery: DeliveryFeedback): DeliveryFeedback {
+  return Object.freeze({
+    ...delivery,
+    limitations: Object.freeze([...delivery.limitations]),
+    metrics: Object.freeze({
+      ...delivery.metrics,
+      windows: Object.freeze(
+        delivery.metrics.windows.map((window) => Object.freeze({ ...window })),
+      ),
+    }),
+    fillers: Object.freeze({
+      ...delivery.fillers,
+      byExpression: Object.freeze(
+        delivery.fillers.byExpression.map((item) => Object.freeze({ ...item })),
+      ),
+      occurrences: Object.freeze(
+        delivery.fillers.occurrences.map((item) => Object.freeze({ ...item })),
+      ),
+    }),
+    moments: Object.freeze(delivery.moments.map((moment) => Object.freeze({ ...moment }))),
+    nextPractice:
+      delivery.nextPractice === null ? null : Object.freeze({ ...delivery.nextPractice }),
   })
 }
 

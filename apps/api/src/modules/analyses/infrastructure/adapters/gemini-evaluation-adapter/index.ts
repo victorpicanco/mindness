@@ -1,4 +1,3 @@
-import { Type } from '@google/genai'
 import { Type as TypeBox } from 'typebox'
 import { Value } from 'typebox/value'
 
@@ -9,7 +8,9 @@ import type {
   EvaluationResult,
 } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 
-import { parseSpeechFeedback } from './schemas.js'
+import { EvaluationFeedbackSchema, parseEvaluationFeedback } from './schemas.js'
+import { SpeechMeasurements } from '@/modules/analyses/domain/services/speech-measurements/index.js'
+import type { RhythmMeasurements } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 import { buildUserPrompt, SYSTEM_INSTRUCTION } from './prompt.js'
 
 interface InlineDataPart {
@@ -38,41 +39,10 @@ export interface GeminiGenerateContentClient {
 interface GeminiGenerationConfig {
   readonly abortSignal: AbortSignal
   readonly responseMimeType: 'application/json'
-  readonly responseSchema: typeof FEEDBACK_RESPONSE_SCHEMA
+  readonly responseJsonSchema: typeof EvaluationFeedbackSchema
   readonly systemInstruction: string
   readonly thinkingConfig: { readonly thinkingBudget: 0 }
 }
-
-const FEEDBACK_POINT_SCHEMA = {
-  type: Type.OBJECT,
-  properties: {
-    title: { type: Type.STRING },
-    evidence: { type: Type.STRING },
-  },
-  required: ['title', 'evidence'],
-} as const
-
-const FEEDBACK_RESPONSE_SCHEMA = {
-  type: Type.OBJECT,
-  properties: {
-    summary: { type: Type.STRING },
-    strengths: { type: Type.ARRAY, items: FEEDBACK_POINT_SCHEMA, maxItems: 3 },
-    improvements: {
-      type: Type.ARRAY,
-      maxItems: 3,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          title: { type: Type.STRING },
-          evidence: { type: Type.STRING },
-          action: { type: Type.STRING },
-        },
-        required: ['title', 'evidence', 'action'],
-      },
-    },
-  },
-  required: ['summary', 'strengths', 'improvements'],
-} as const
 
 const GeminiResponseSchema = TypeBox.Object({
   text: TypeBox.String(),
@@ -93,6 +63,7 @@ export class GeminiEvaluationAdapter implements EvaluationPort {
 
   async evaluate(input: Parameters<EvaluationPort['evaluate']>[0]): Promise<EvaluationResult> {
     try {
+      const metrics = SpeechMeasurements.rhythm(input.words, input.audio.durationSeconds)
       const response = await this.client.models.generateContent({
         model: this.model,
         contents: [
@@ -105,27 +76,27 @@ export class GeminiEvaluationAdapter implements EvaluationPort {
                   data: input.audio.bytes.toString('base64'),
                 },
               },
-              { text: buildUserPrompt(input) },
+              { text: buildUserPrompt({ ...input, metrics }) },
             ],
           },
         ],
         config: {
           abortSignal: input.signal,
           responseMimeType: 'application/json',
-          responseSchema: FEEDBACK_RESPONSE_SCHEMA,
+          responseJsonSchema: EvaluationFeedbackSchema,
           systemInstruction: SYSTEM_INSTRUCTION,
           thinkingConfig: { thinkingBudget: 0 },
         },
       })
 
-      return this.parseResponse(response)
+      return this.parseResponse(response, metrics)
     } catch (error: unknown) {
       if (error instanceof MalformedEvaluationError) throw error
       throw new EvaluationFailedError('Gemini request failed', { cause: error })
     }
   }
 
-  private parseResponse(response: unknown): EvaluationResult {
+  private parseResponse(response: unknown, metrics: RhythmMeasurements): EvaluationResult {
     if (!Value.Check(GeminiResponseSchema, response)) {
       throw new MalformedEvaluationError('response')
     }
@@ -139,7 +110,7 @@ export class GeminiEvaluationAdapter implements EvaluationPort {
 
     const usage = response.usageMetadata
     return {
-      feedback: parseSpeechFeedback(rawFeedback),
+      feedback: parseEvaluationFeedback(rawFeedback, metrics, this.model),
       inputTokens: usage?.promptTokenCount ?? 0,
       outputTokens: (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0),
     }

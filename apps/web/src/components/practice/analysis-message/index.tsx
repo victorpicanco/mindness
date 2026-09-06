@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useId } from 'react'
 import type { z } from 'zod'
 
+import { DeliveryFeedback } from '@/components/practice/delivery-feedback'
 import { SessionMessage } from '@/components/practice/session-message'
 import { SplitText } from '@/components/ui/split-text'
 import type { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
@@ -42,6 +43,10 @@ export function AnalysisMessage({ analysis }: AnalysisMessageProps) {
             text={analysis.feedback.summary}
           />
         </section>
+
+        {analysis.feedback.delivery === undefined ? null : (
+          <DeliveryFeedback delivery={analysis.feedback.delivery} />
+        )}
 
         {analysis.feedback.strengths.length > 0 && (
           <section aria-labelledby={strengthsId} className="mt-8">

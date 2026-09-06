@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-slim AS base
+FROM node:26-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm/bin:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
@@ -36,7 +36,7 @@ RUN --mount=type=cache,id=next,target=/app/apps/web/.next/cache \
     pnpm --filter @mindness/web build
 
 
-FROM node:24-slim AS runtime
+FROM node:26-slim AS runtime
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \

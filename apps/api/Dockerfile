@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-slim AS base
+FROM node:26-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm/bin:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
@@ -32,7 +32,7 @@ RUN rm -rf /prod/api/node_modules/.pnpm/prisma@* /prod/api/node_modules/.pnpm/ty
 RUN find /prod/api/node_modules -type f \( -name ffmpeg -o -name ffprobe \) -exec chmod +x {} +
 
 
-FROM node:24-slim AS runtime
+FROM node:26-slim AS runtime
 ENV NODE_ENV=production \
     PORT=3333
 WORKDIR /app

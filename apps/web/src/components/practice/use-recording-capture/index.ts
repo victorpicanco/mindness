@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
+import posthog from 'posthog-js'
 import { useEffect, useRef, useState } from 'react'
 
 import { apiErrorDetails } from '@/lib/api/api-error'
@@ -157,20 +158,23 @@ export function useRecordingCapture({
         throw cause
       }
     },
-    onError: (error) => {
+    onError: (error, sessionId) => {
       if (!(error instanceof MicrophoneUnavailableError)) return
 
       if (error.cause instanceof DOMException && error.cause.name === 'NotAllowedError') {
+        posthog.capture('microphone_permission_denied', { session_id: sessionId })
         setStartFailure('permission-denied')
         expireSession()
 
         return
       }
 
+      posthog.capture('session_expired', { session_id: sessionId, reason: 'microphone_error' })
       setStartFailure('microphone')
     },
-    onSuccess: ({ recording, stream }) => {
+    onSuccess: ({ recording, stream }, sessionId) => {
       setStartFailure(null)
+      posthog.capture('recording_started', { session_id: sessionId })
       openRecording(recording)
 
       captureRef.current = captureRecording(stream).catch((): null => {
@@ -186,15 +190,17 @@ export function useRecordingCapture({
   const submitMutation = useMutation({
     meta: { errorPresentation: 'inline' },
     mutationFn: submitRecording,
-    onError: (error) => {
+    onError: (error, { sessionId }) => {
       const reason = uploadFailureOf(error)
 
+      posthog.capture('recording_upload_failed', { session_id: sessionId, reason })
       setUploadFailure(reason)
       if (reason === 'session-closed') expireSession()
     },
-    onSuccess: () => {
+    onSuccess: (_, { sessionId }) => {
       setUploadFailure(null)
       beginProcessing()
+      posthog.capture('recording_stopped', { session_id: sessionId })
     },
   })
 
@@ -235,6 +241,9 @@ export function useRecordingCapture({
 
   return {
     discard: () => {
+      if (session !== null) {
+        posthog.capture('recording_discarded', { session_id: session.sessionId })
+      }
       discardAudio()
       submitMutation.reset()
     },

@@ -10,6 +10,12 @@ import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
 import { AuthenticatedSessionShellView } from './authenticated-session-shell'
 
+const { identifyMock } = vi.hoisted(() => ({ identifyMock: vi.fn() }))
+
+vi.mock('posthog-js', () => ({
+  default: { capture: vi.fn(), identify: identifyMock },
+}))
+
 const SESSION_ID = '7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
 
 function PracticeSessionStatus() {
@@ -19,7 +25,10 @@ function PracticeSessionStatus() {
 }
 
 describe('AuthenticatedSessionShell', () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
 
   it('resets the practice session store after abandoning the active session', async () => {
     const abandonSession = vi.fn(() => Promise.resolve())
@@ -85,5 +94,50 @@ describe('AuthenticatedSessionShell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abandonar e começar outra' }))
 
     await vi.waitFor(() => expect(screen.getByText('idle')).toBeInTheDocument())
+  })
+
+  it('identifies the signed-in account with PostHog', () => {
+    const router = {
+      back: vi.fn(),
+      forward: vi.fn(),
+      prefetch: vi.fn(),
+      push: vi.fn(),
+      refresh: vi.fn(),
+      replace: vi.fn(),
+    }
+
+    render(
+      <AppRouterContext.Provider value={router}>
+        <PathnameContext.Provider value="/">
+          <NextIntlClientProvider locale="pt-BR" messages={messages}>
+            <ThemeProvider>
+              <AuthenticatedSessionShellView
+                accountProfile={{
+                  accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
+                  authenticationMethod: 'password',
+                  consent: null,
+                  createdAt: '2026-08-01T10:30:00.000Z',
+                  email: 'person@example.com',
+                  name: null,
+                  plan: 'free',
+                  timeZone: 'America/Sao_Paulo',
+                }}
+                abandonSession={() => Promise.resolve()}
+                deleteSession={() => Promise.resolve()}
+                initialIsExpanded
+                preferenceCookieName="mindness-sidebar-expanded"
+                signOut={() => undefined}
+              >
+                <p>Content</p>
+              </AuthenticatedSessionShellView>
+            </ThemeProvider>
+          </NextIntlClientProvider>
+        </PathnameContext.Provider>
+      </AppRouterContext.Provider>,
+    )
+
+    expect(identifyMock).toHaveBeenCalledWith('person@example.com', {
+      email: 'person@example.com',
+    })
   })
 })

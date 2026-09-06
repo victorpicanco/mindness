@@ -10,6 +10,15 @@ import { initialAuthActionState, type AuthActionState } from '@/lib/auth/action-
 
 import { SignUpForm } from './index'
 
+const { captureMock, identifyMock } = vi.hoisted(() => ({
+  captureMock: vi.fn(),
+  identifyMock: vi.fn(),
+}))
+
+vi.mock('posthog-js', () => ({
+  default: { capture: captureMock, identify: identifyMock },
+}))
+
 type SignUpAction = (state: AuthActionState, formData: FormData) => Promise<AuthActionState>
 
 const widgets: TurnstileRenderOptions[] = []
@@ -81,6 +90,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllEnvs()
+  vi.clearAllMocks()
   delete window.turnstile
 })
 
@@ -150,6 +160,20 @@ describe('SignUpForm', () => {
     expect(submittedFormData).toHaveLength(1)
     expect(submittedFormData[0]?.get('email')).toBe('person@example.com')
     expect(submittedFormData[0]?.get('captchaToken')).toBe('captcha-token')
+  })
+
+  it('identifies the submitted email with PostHog once the account is created', async () => {
+    renderSignUpForm(<SignUpForm action={validSignUpAction()} />)
+    await verifyCaptcha()
+    fillCredentials()
+    await submit()
+
+    await waitFor(() => {
+      expect(identifyMock).toHaveBeenCalledWith('person@example.com', {
+        email: 'person@example.com',
+      })
+    })
+    expect(captureMock).toHaveBeenCalledWith('sign_up_submitted')
   })
 
   it('shows the password mismatch returned by the action', async () => {

@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { EventMessage, IdentifyMessage } from 'posthog-node'
 
 import { initialAuthActionState } from '@/lib/auth/action-state'
-import { createEmailRequestAction, createSignOutAction, createUpdatePasswordAction } from './index'
+import type { AnalyticsClient } from '@/lib/analytics/posthog-server'
+import {
+  createEmailRequestAction,
+  createSignInAction,
+  createSignOutAction,
+  createSignUpAction,
+  createUpdatePasswordAction,
+} from './index'
 import { readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
 
 class InMemoryCookieStore {
@@ -23,6 +31,48 @@ class InMemoryCookieStore {
 
 function success(message = 'Check your email'): Response {
   return Response.json({ data: { message } })
+}
+
+interface RecordingAnalytics extends AnalyticsClient {
+  readonly captured: EventMessage[]
+  readonly identified: IdentifyMessage[]
+  readonly flushCount: () => number
+}
+
+function createRecordingAnalytics(): RecordingAnalytics {
+  const captured: EventMessage[] = []
+  const identified: IdentifyMessage[] = []
+  let flushCount = 0
+
+  return {
+    captured,
+    identified,
+    flushCount: () => flushCount,
+    capture: (message) => {
+      captured.push(message)
+    },
+    identify: (message) => {
+      identified.push(message)
+    },
+    flush: () => {
+      flushCount += 1
+
+      return Promise.resolve()
+    },
+  }
+}
+
+function accountsMeResponse(): Response {
+  return Response.json({
+    data: {
+      accountId: 'account-id',
+      consent: {
+        purpose: 'voice_recording_and_analysis',
+        version: '2026-08-15',
+        acceptedAt: '2026-08-24T12:00:00.000Z',
+      },
+    },
+  })
 }
 
 describe('auth flow actions', () => {
@@ -183,5 +233,181 @@ describe('auth flow actions', () => {
       status: 'api-error',
       error: { code: 'web.API_REQUEST_FAILED', issues: null, requestId: null },
     })
+  })
+
+  it('identifies the account and reports sign-in to analytics', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const analytics = createRecordingAnalytics()
+    const action = createSignInAction({
+      cookieStore: new InMemoryCookieStore(),
+      analytics,
+      fetcher: (input) => {
+        const request = new Request(input)
+
+        return Promise.resolve(
+          request.url.endsWith('/accounts/me')
+            ? accountsMeResponse()
+            : Response.json({
+                data: {
+                  accessToken: 'access-token',
+                  refreshToken: 'refresh-token',
+                  expiresAt: '2026-08-23T12:00:00.000Z',
+                },
+              }),
+        )
+      },
+      redirect: (): never => {
+        throw new DOMException('redirected')
+      },
+    })
+    const formData = new FormData()
+    formData.set('email', 'person@example.com')
+    formData.set('password', 'Valid_password1!')
+    formData.set('captchaToken', 'captcha-token')
+
+    await expect(action(initialAuthActionState, formData)).rejects.toThrow('redirected')
+
+    expect(analytics.captured).toEqual([
+      { distinctId: 'person@example.com', event: 'sign_in_server' },
+    ])
+    expect(analytics.identified).toEqual([
+      { distinctId: 'person@example.com', properties: { email: 'person@example.com' } },
+    ])
+    expect(analytics.flushCount()).toBe(1)
+  })
+
+  it('does not report sign-in to analytics when the credentials are rejected', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const analytics = createRecordingAnalytics()
+    const action = createSignInAction({
+      cookieStore: new InMemoryCookieStore(),
+      analytics,
+      fetcher: () =>
+        Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.AUTHENTICATION_REJECTED',
+                message: 'Invalid credentials.',
+                issues: null,
+                requestId: 'request-id',
+              },
+            },
+            { status: 401 },
+          ),
+        ),
+      redirect: (): never => {
+        throw new DOMException('redirected')
+      },
+    })
+    const formData = new FormData()
+    formData.set('email', 'person@example.com')
+    formData.set('password', 'Valid_password1!')
+    formData.set('captchaToken', 'captcha-token')
+
+    await action(initialAuthActionState, formData)
+
+    expect(analytics.captured).toEqual([])
+    expect(analytics.identified).toEqual([])
+    expect(analytics.flushCount()).toBe(0)
+  })
+
+  it('identifies the account and reports sign-up to analytics', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const analytics = createRecordingAnalytics()
+    const action = createSignUpAction({
+      cookieStore: new InMemoryCookieStore(),
+      analytics,
+      fetcher: () => Promise.resolve(success('Check your email')),
+    })
+    const formData = new FormData()
+    formData.set('email', 'person@example.com')
+    formData.set('password', 'Valid_password1!')
+    formData.set('passwordConfirmation', 'Valid_password1!')
+    formData.set('captchaToken', 'captcha-token')
+
+    await expect(action(initialAuthActionState, formData)).resolves.toEqual({ status: 'success' })
+
+    expect(analytics.captured).toEqual([
+      { distinctId: 'person@example.com', event: 'sign_up_server' },
+    ])
+    expect(analytics.identified).toEqual([
+      { distinctId: 'person@example.com', properties: { email: 'person@example.com' } },
+    ])
+    expect(analytics.flushCount()).toBe(1)
+  })
+
+  it('reports a distinct event for a password recovery request', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const analytics = createRecordingAnalytics()
+    const action = createEmailRequestAction({
+      path: '/auth/password/recovery',
+      cookieStore: new InMemoryCookieStore(),
+      analytics,
+      fetcher: () => Promise.resolve(success()),
+    })
+    const formData = new FormData()
+    formData.set('email', 'person@example.com')
+    formData.set('captchaToken', 'captcha-token')
+
+    await action(initialAuthActionState, formData)
+
+    expect(analytics.captured).toEqual([
+      { distinctId: 'person@example.com', event: 'password_recovery_requested' },
+    ])
+    expect(analytics.flushCount()).toBe(1)
+  })
+
+  it('reports a distinct event for a confirmation email resend request', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const analytics = createRecordingAnalytics()
+    const action = createEmailRequestAction({
+      path: '/auth/email/resend',
+      cookieStore: new InMemoryCookieStore(),
+      analytics,
+      fetcher: () => Promise.resolve(success()),
+    })
+    const formData = new FormData()
+    formData.set('email', 'person@example.com')
+    formData.set('captchaToken', 'captcha-token')
+
+    await action(initialAuthActionState, formData)
+
+    expect(analytics.captured).toEqual([
+      { distinctId: 'person@example.com', event: 'email_confirmation_resend_requested' },
+    ])
+    expect(analytics.flushCount()).toBe(1)
+  })
+
+  it('does not report an email request to analytics when it fails', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test')
+    const analytics = createRecordingAnalytics()
+    const action = createEmailRequestAction({
+      path: '/auth/password/recovery',
+      cookieStore: new InMemoryCookieStore(),
+      analytics,
+      fetcher: () =>
+        Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.RATE_LIMITED',
+                message: 'Too many attempts',
+                issues: null,
+                requestId: 'request-id',
+              },
+            },
+            { status: 429 },
+          ),
+        ),
+    })
+    const formData = new FormData()
+    formData.set('email', 'person@example.com')
+    formData.set('captchaToken', 'captcha-token')
+
+    await action(initialAuthActionState, formData)
+
+    expect(analytics.captured).toEqual([])
+    expect(analytics.flushCount()).toBe(0)
   })
 })

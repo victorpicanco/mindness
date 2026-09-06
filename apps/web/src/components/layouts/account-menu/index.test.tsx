@@ -3,6 +3,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { AccountMenu } from './index'
 
+const { captureMock, resetMock } = vi.hoisted(() => ({
+  captureMock: vi.fn(),
+  resetMock: vi.fn(),
+}))
+
+vi.mock('posthog-js', () => ({
+  default: { capture: captureMock, reset: resetMock },
+}))
+
 function renderAccountMenu(
   signOut: () => void = () => undefined,
   onOpenSettings: () => void = () => undefined,
@@ -22,7 +31,10 @@ function renderAccountMenu(
 }
 
 describe('AccountMenu', () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
 
   it('presents the account identity in a compact sidebar footer control', () => {
     renderAccountMenu()
@@ -56,6 +68,16 @@ describe('AccountMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sair' }))
 
     expect(signOut).toHaveBeenCalledOnce()
+  })
+
+  it('reports the sign-out and resets the PostHog identity before submitting', () => {
+    renderAccountMenu()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Conta' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sair' }))
+
+    expect(captureMock).toHaveBeenCalledWith('sign_out')
+    expect(resetMock).toHaveBeenCalledOnce()
   })
 
   it('opens settings and dismisses the account popup', () => {

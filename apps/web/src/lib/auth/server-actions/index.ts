@@ -10,6 +10,7 @@ import {
   type SessionCookieStore,
   writeSessionCookies,
 } from '@/lib/auth/session'
+import { createPostHogClient, type AnalyticsClient } from '@/lib/analytics/posthog-server'
 
 import type { AuthActionState } from '@/lib/auth/action-state'
 import {
@@ -32,11 +33,18 @@ type CookieStore = SessionCookieStore
 type EmailRequestPath = '/auth/email/resend' | '/auth/password/recovery'
 
 type CommonDependencies = {
+  readonly analytics?: AnalyticsClient
   readonly cookieStore: CookieStore
   readonly fetcher: typeof fetch
 }
 
+const EMAIL_REQUEST_ANALYTICS_EVENTS: Readonly<Record<EmailRequestPath, string>> = {
+  '/auth/email/resend': 'email_confirmation_resend_requested',
+  '/auth/password/recovery': 'password_recovery_requested',
+}
+
 export function createSignInAction({
+  analytics = createPostHogClient(),
   cookieStore,
   fetcher,
   redirect: navigate,
@@ -76,11 +84,22 @@ export function createSignInAction({
 
     if (provisionError !== null) return { status: 'api-error', error: provisionError }
 
+    analytics.capture({ distinctId: credentials.email, event: 'sign_in_server' })
+    analytics.identify({
+      distinctId: credentials.email,
+      properties: { email: credentials.email },
+    })
+    await analytics.flush()
+
     return navigate(safeRedirectPath(formFieldValue(formData, REDIRECT_FIELD_NAME)))
   }
 }
 
-export function createSignUpAction({ cookieStore, fetcher }: CommonDependencies) {
+export function createSignUpAction({
+  analytics = createPostHogClient(),
+  cookieStore,
+  fetcher,
+}: CommonDependencies) {
   return async function signUpAction(
     _previousState: AuthActionState,
     formData: FormData,
@@ -110,6 +129,13 @@ export function createSignUpAction({ cookieStore, fetcher }: CommonDependencies)
         schema: messageSchema,
       })
 
+      analytics.capture({ distinctId: credentials.email, event: 'sign_up_server' })
+      analytics.identify({
+        distinctId: credentials.email,
+        properties: { email: credentials.email },
+      })
+      await analytics.flush()
+
       return { status: 'success' }
     } catch (error: unknown) {
       return { status: 'api-error', error: apiErrorDetails(error) }
@@ -118,6 +144,7 @@ export function createSignUpAction({ cookieStore, fetcher }: CommonDependencies)
 }
 
 export function createEmailRequestAction({
+  analytics = createPostHogClient(),
   path,
   cookieStore,
   fetcher,
@@ -146,6 +173,9 @@ export function createEmailRequestAction({
         fetcher,
         schema: messageSchema,
       })
+
+      analytics.capture({ distinctId: email, event: EMAIL_REQUEST_ANALYTICS_EVENTS[path] })
+      await analytics.flush()
 
       return { status: 'success' }
     } catch (error: unknown) {

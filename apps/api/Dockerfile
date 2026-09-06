@@ -39,8 +39,6 @@ WORKDIR /app
 
 COPY --from=build --chown=node:node /prod/api ./
 
-# node-postgres verifies the pooler against the public trust store, which does not carry the
-# private root Supabase signs it with. `DATABASE_URL` points `sslrootcert` here.
 COPY --chown=node:node apps/api/certs/supabase-prod-ca-2021.crt /app/certs/
 
 USER node

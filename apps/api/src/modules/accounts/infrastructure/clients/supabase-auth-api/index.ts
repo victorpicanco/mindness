@@ -188,10 +188,6 @@ export class SupabaseAuthApiClient implements SupabaseAuthApi {
   signOut(accessToken: string): Promise<{ readonly error: unknown }> {
     return this.adminClient().auth.admin.signOut(accessToken, 'global')
   }
-
-  // The secret key bypasses every project-side protection, so it is reserved for
-  // `auth.admin.*`. Everything a signed-out visitor can reach runs on the
-  // publishable key, which is what those endpoints are designed for.
   private client(storage: SupabaseRequestStorage = new SupabaseRequestStorage()) {
     return this.createSupabaseClient(this.config.url, this.config.publishableKey, storage)
   }

@@ -1,4 +1,4 @@
-import 'server-only' // server-only
+import 'server-only'
 
 import { cookies } from 'next/headers'
 import type { z } from 'zod'

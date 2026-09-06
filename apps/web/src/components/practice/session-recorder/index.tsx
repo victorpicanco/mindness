@@ -17,9 +17,6 @@ export interface SessionRecorderProps {
   readonly serverTimeOffsetMs?: number | undefined
   readonly startedAt?: string | undefined
 }
-
-// The captured levels stay in this leaf so the fifteen updates per second of the waveform never
-// re-render the countdown and the mutation that live in the screen above it.
 export function SessionRecorder({
   isDisabled = false,
   isRecording,

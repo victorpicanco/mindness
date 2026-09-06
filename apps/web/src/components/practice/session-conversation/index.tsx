@@ -28,8 +28,6 @@ export function SessionConversation({ analysis }: SessionConversationProps) {
   const format = useFormatter()
   const activeSession = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
-  // The store is reset the moment the analysis lands, so the conversation keeps the session it
-  // opened with: without this the whole transcript would unmount right as the reply arrives.
   const [session] = useState(activeSession)
   const shouldReduceMotion = useReducedMotion()
 

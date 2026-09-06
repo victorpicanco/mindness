@@ -18,10 +18,6 @@ let container: StartedPostgreSqlContainer | undefined
 export async function setup(project: TestProject): Promise<void> {
   container = await new PostgreSqlContainer('postgres:17-alpine').start()
   const databaseUrl = container.getConnectionUri()
-
-  // Roles come first: their default privileges only reach tables created after
-  // they are set, which is how a Supabase database hands `public` to the Data
-  // API roles in the first place.
   for (const file of ['./supabase-roles.sql', './storage-schema.sql']) {
     await run(
       'pnpm',

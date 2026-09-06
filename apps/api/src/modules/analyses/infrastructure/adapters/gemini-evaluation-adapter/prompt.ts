@@ -2,9 +2,6 @@ import type { TranscriptionWord } from '@/modules/analyses/domain/entities/trans
 import type { RhythmMeasurements } from '@/modules/analyses/domain/ports/evaluation-port/index.js'
 
 export const SPEECH_FEEDBACK_PROMPT_VERSION = 'speech-feedback-v2'
-
-// Vertex AI compiles the response schema into a constrained decoder and refuses the whole
-// request above a state budget. Probing the full schema, 16 occurrences pass and 20 do not.
 export const MAX_FILLER_OCCURRENCES = 16
 
 export const SYSTEM_INSTRUCTION = `You are Mindness's evidence-based oral communication coach.

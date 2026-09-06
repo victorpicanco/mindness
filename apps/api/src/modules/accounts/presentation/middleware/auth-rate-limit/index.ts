@@ -16,8 +16,6 @@ export async function registerAuthRateLimit(
     global: false,
     max: options.max,
     timeWindow: options.timeWindowMs,
-    // The plugin throws whatever this builder returns, so returning a BaseError
-    // keeps the shared error handler as the single owner of the HTTP envelope.
     errorResponseBuilder: () => new RateLimitedError('authentication'),
   })
 }

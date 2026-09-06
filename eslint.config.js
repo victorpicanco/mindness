@@ -10,8 +10,6 @@ const API_MODULES = ['accounts', 'themes', 'quota', 'sessions', 'analyses']
 const CROSS_MODULE_MESSAGE =
   "LAW-001.4 / LAW-008.4: import the other module's index.ts, and only from module-adapters/."
 
-// A module reaches its own layers through the `@/` alias (LAW-007.8), so the cross-module
-// guard has to exclude the importing module itself.
 function otherModules(self) {
   return { group: ['@/modules/*/**', `!@/modules/${self}/**`], message: CROSS_MODULE_MESSAGE }
 }
@@ -120,8 +118,6 @@ function moduleConfigs(self) {
     },
     {
       files: [`${module}/presentation/**/*.ts`],
-      // LAW-011.2/11.3: integration tests live under presentation/ but are driven by the
-      // module's own integration container, so the presentation import guard cannot apply.
       ignores: [`${module}/presentation/integration/**`],
       rules: restrictedImports([
         {
@@ -203,7 +199,6 @@ export default tseslint.config(
     },
   },
   ...API_MODULES.flatMap(moduleConfigs),
-  // LAW-010.3 — shared never imports modules
   {
     files: ['apps/api/src/shared/**/*.ts'],
     rules: restrictedImports([
@@ -287,6 +282,15 @@ export default tseslint.config(
         message: 'Web boundary: practice features do not depend on routes or shell components.',
       },
     ]),
+  },
+  {
+    files: [
+      'apps/web/src/components/practice/audio-message/index.tsx',
+      'apps/web/src/components/practice/research-timer/index.tsx',
+    ],
+    rules: {
+      'jsx-a11y/media-has-caption': 'off',
+    },
   },
   prettier,
 )

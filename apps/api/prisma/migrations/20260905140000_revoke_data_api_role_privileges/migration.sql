@@ -1,12 +1,3 @@
--- ADR-003 describes the domain schema as granting no privilege to the Data API
--- roles, but Supabase's default privileges hand every new table in `public` to
--- `anon` and `authenticated`. Only RLS stood between them and the data. This
--- revokes the grants and the defaults that keep reinstating them, so a table
--- added later is not exposed by omission.
---
--- The roles are absent from a plain Postgres (the integration harness seeds
--- them), and the owner of `public` is `postgres` on Supabase but the migration
--- user elsewhere, so both are resolved at run time.
 
 DO $$
 DECLARE

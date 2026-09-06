@@ -9,10 +9,6 @@ import { signOutAction } from '@/lib/auth/sign-out'
 import { sessionPath } from '@/lib/navigation/session-routes'
 
 import { PracticeConfigFormWithNavigation } from '@/components/practice/config-form'
-
-// The theme catalogue is the same for every visitor and changes rarely, but the API still scopes it
-// to the caller's token. A private cache is what reads that token without refetching on every
-// render of the home screen.
 async function readThemeCategories() {
   'use cache: private'
   cacheLife('hours')

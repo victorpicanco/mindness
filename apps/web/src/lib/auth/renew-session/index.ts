@@ -111,9 +111,6 @@ export async function renewSession({
 
     return { status: 'untouched' }
   } catch {
-    // A refresh that never produced an answer says nothing about the session.
-    // Signing the visitor out here would turn an API blip into a forced
-    // sign-out, so the stale cookies are kept and the request fails downstream.
     return { status: 'untouched' }
   }
 }

@@ -11,9 +11,6 @@ type AuthCaptchaFieldProps = {
   readonly form: AuthFormBinding
   readonly siteKey: string | undefined
 }
-
-// Rendered from the binding rather than from five separate props: every auth form wires the widget
-// the same way, and the form is the only thing that knows the token, the reset and the error.
 export function AuthCaptchaField({ form, siteKey }: AuthCaptchaFieldProps) {
   const translate = useTranslations()
   const [widgetFailed, setWidgetFailed] = useState(false)

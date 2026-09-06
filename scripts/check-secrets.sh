@@ -7,10 +7,6 @@ fail() {
 }
 
 ENV_EXAMPLE="apps/api/.env.example"
-
-# NODE_ENV, PORT and HOST are standard Node/Docker runtime variables that any
-# service declares independently; they are not secrets and apps/web owns its
-# own values for them.
 ALLOWED_SHARED_NAMES="NODE_ENV PORT HOST"
 
 if [ -f "$ENV_EXAMPLE" ]; then

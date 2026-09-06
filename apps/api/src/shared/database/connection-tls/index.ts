@@ -1,11 +1,6 @@
 import { accessSync, constants } from 'node:fs'
 
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
-
-// The driver adapter runs on node-postgres, whose `verify-ca` and `verify-full` check the chain
-// against the public trust store unless `sslrootcert` names one. Supabase signs the pooler with a
-// private root, so a string that verifies without naming that root fails on the first query
-// instead of at boot.
 const VERIFYING_SSL_MODES = new Set(['verify-ca', 'verify-full'])
 
 export interface ConnectionTlsDependencies {

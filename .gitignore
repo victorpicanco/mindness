@@ -1,46 +1,29 @@
-# dependencies
 node_modules/
 .pnpm-store/
-
-# build
 dist/
 build/
 .next/
 *.tsbuildinfo
-
-# Prisma client
 apps/api/src/generated/
-
-# secrets
 .env
 .env.*
 !.env.example
 *.pem
 *.key
-
-# tests
 coverage/
 .vitest/
-
-# OS / editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
-
-# documentation — ignore the content, keep the versioned laws
 docs/*
 !docs/architecture/
-
-# local agent instructions
 CLAUDE.md
 CLAUDE.local.md
 .claude/
 .agents/
 .codex/
-
-# MCPs
 .mcp.json
 
 /secrets/

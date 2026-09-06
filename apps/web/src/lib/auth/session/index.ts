@@ -1,10 +1,6 @@
 const ACCESS_TOKEN_COOKIE_NAME = 'mindness_access_token'
 const REFRESH_TOKEN_COOKIE_NAME = 'mindness_refresh_token'
 const ACCESS_TOKEN_REFRESH_MARGIN_SECONDS = 60
-
-// Matches the Supabase refresh token lifetime: the access token inside expires
-// in an hour, but the cookie has to survive a browser restart for the BFF to be
-// able to refresh it.
 const SESSION_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
 
 type SessionCookieOptions = {
@@ -94,10 +90,6 @@ function accessTokenIsLive(accessToken: string, nowInSeconds: number): boolean {
     return false
   }
 }
-
-// A refresh token alone is enough: the BFF renews the access token on the first
-// 401 and clears both cookies when the renewal fails, so an hour of idleness
-// must not read as a sign-out.
 export function hasLiveSession(
   store: SessionCookieReader,
   nowInSeconds = Date.now() / 1000,
@@ -108,9 +100,6 @@ export function hasLiveSession(
 
   return accessToken !== undefined && accessTokenIsLive(accessToken, nowInSeconds)
 }
-
-// The proxy renews the access token before a render reads it, because a Server
-// Component may only read cookies: writing them there throws.
 export function needsAccessTokenRefresh(
   store: SessionCookieReader,
   nowInSeconds = Date.now() / 1000,

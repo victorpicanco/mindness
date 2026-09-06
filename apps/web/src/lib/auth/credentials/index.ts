@@ -4,9 +4,6 @@ import type { AuthActionMessageKey } from '@/lib/auth/form-validation'
 
 export const emailSchema = z.email().max(254)
 export const captchaTokenSchema = z.string().min(1)
-
-// Sign-in only checks the shape Supabase itself accepts: an existing password
-// created before the current policy must still be usable to sign in.
 export const signInPasswordSchema = z.string().min(8).max(64)
 
 type AuthCredentials = {

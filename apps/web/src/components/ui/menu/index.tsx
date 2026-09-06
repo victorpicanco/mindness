@@ -27,9 +27,6 @@ interface MenuPosition {
 }
 
 const MENU_GAP_IN_PIXELS = 4
-
-// The menu is anchored to a trigger inside a scrolling, clipping list, so it is placed in the body
-// against the viewport instead of next to the trigger, and closes whenever that anchor may move.
 export function Menu({ actions, className, triggerIcon, triggerLabel }: MenuProps) {
   const [position, setPosition] = useState<MenuPosition | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)

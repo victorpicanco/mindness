@@ -91,9 +91,6 @@ interface SidebarBodyProps {
   readonly showSessionGroups: boolean
   readonly signOut: SignOutAction
 }
-
-// The rail and the drawer are two presentations of the same navigation, so everything below their
-// headers is rendered from here instead of being written twice.
 function SidebarBody({
   activeHref,
   isExpanded,
@@ -208,8 +205,6 @@ export function AuthenticatedShellView({
 
       return
     }
-
-    // The profile the shell was rendered with comes from the layout's fetch, which only a refresh redoes.
     router.refresh()
   }
 
@@ -328,7 +323,6 @@ export function AuthenticatedShellView({
     onSessionAbandoned?.()
     setIsActiveSessionDialogOpen(false)
     router.push('/')
-    // The shell's session list is fetched by the layout, which push alone would reuse.
     router.refresh()
   }
 
@@ -369,7 +363,6 @@ export function AuthenticatedShellView({
     setSessionPendingDeletion(null)
 
     if (activeHref === href) router.push('/')
-    // The sidebar list is rendered from the layout's fetch, which only a refresh redoes.
     router.refresh()
   }
 

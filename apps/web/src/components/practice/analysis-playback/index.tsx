@@ -17,7 +17,6 @@ interface PlaybackControls {
 
 interface AnalysisPlayback {
   readonly available: boolean
-  // Start of the excerpt currently sounding, so a button knows whether it is the one playing.
   readonly playingFrom: number | null
   readonly register: (controls: PlaybackControls) => () => void
   readonly reportPlaying: (startSeconds: number | null) => void

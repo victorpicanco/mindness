@@ -6,9 +6,6 @@ export const WAVEFORM_SLOT_COUNT = 72
 export const BAR_MIN_HEIGHT = 3
 export const BAR_MAX_HEIGHT = 26
 export const SLOT_PITCH = 6
-
-// The bar scale is fixed instead of derived from the loudest captured level so the waveform
-// does not "dance" while it grows, the same trade-off the wavesurfer.js record plugin makes.
 export function waveformBarHeight(level: number): number {
   const clamped = Math.min(1, Math.max(0, level))
 
@@ -50,9 +47,6 @@ export function WaveformTrack({ levels, slotCount = WAVEFORM_SLOT_COUNT }: Wavef
       observer.disconnect()
     }
   }, [])
-
-  // A slot never shrinks, so a rail narrower than the whole track would clip the newest bars off
-  // its right edge. Rendering only what fits keeps the live end of the waveform visible on a phone.
   const visibleSlotCount =
     railWidth === 0 ? slotCount : Math.min(slotCount, Math.floor(railWidth / SLOT_PITCH))
   const bars = visibleSlotCount === 0 ? [] : levels.slice(-visibleSlotCount)

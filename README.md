@@ -22,8 +22,7 @@ curl localhost:3333/healthz
 `supabase/config.toml` describes a stack that stands alone: Postgres, Auth,
 Storage, Studio and a mailbox. Its `[remotes.*]` blocks configure the cloud
 projects, but only when `supabase config push` is run by hand — no local command
-reaches them, and no cloud project is ever a developer's database. See
-`deploy/README.md`.
+reaches them, and no cloud project is ever a developer's database.
 
 ```bash
 pnpm supabase:start   # boot; prints every URL and key

@@ -117,7 +117,8 @@ describe('theme catalog sync integration', () => {
     expect(created).not.toBeNull()
     if (created === null) return
 
-    await integration.container.useCases.withdrawTheme.execute({ themeId: created.id })
+    created.withdraw()
+    await integration.repositories.themes.save(created)
     integration.reset()
 
     const revisedCatalog: unknown = {
@@ -179,7 +180,8 @@ describe('theme catalog sync integration', () => {
     })
     expect(withdrawn).not.toBeNull()
     if (withdrawn === null) return
-    await integration.container.useCases.withdrawTheme.execute({ themeId: withdrawn.id })
+    withdrawn.withdraw()
+    await integration.repositories.themes.save(withdrawn)
 
     const report = buildCatalogReport(
       await synchronizeThemeCatalog(catalog, integration.container.useCases),

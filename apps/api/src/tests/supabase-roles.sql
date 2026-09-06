@@ -1,7 +1,3 @@
--- Reproduces the Data API roles a Supabase database ships with, and the default
--- privileges that hand every new table in `public` to them. Without this the
--- harness would start from a stricter state than the real target, and the
--- migration that revokes those privileges would have nothing to revoke.
 
 DO $$
 BEGIN

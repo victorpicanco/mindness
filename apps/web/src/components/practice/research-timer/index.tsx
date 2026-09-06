@@ -78,7 +78,6 @@ export function ResearchTimerView({
   return (
     <>
       <ThemeCountdown seconds={seconds} themeTitle={session.themeTitle} />
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- The warning is a non-speech tone with no content to caption. */}
       <audio aria-hidden="true" preload="auto" ref={audioRef} src={WARNING_AUDIO_SOURCE} />
     </>
   )

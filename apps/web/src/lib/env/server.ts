@@ -1,11 +1,8 @@
-import 'server-only' // server-only
+import 'server-only'
 
 import { z } from 'zod'
 
 import { EnvironmentError } from './errors'
-
-// Only the protocol is constrained: the hostname is `localhost` in development,
-// which the stricter z.httpUrl() domain pattern rejects.
 const serverEnvSchema = z.object({
   API_BASE_URL: z.url({ protocol: /^https?$/ }),
 })

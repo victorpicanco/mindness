@@ -139,10 +139,6 @@ export function buildCatalogReport(result: CatalogSyncResult): CatalogReport {
       result.poolReports.some((report) => report.publishedCount < report.minimum),
   }
 }
-
-// The catalog sync reaches only the database, so it validates the three variables
-// it reads instead of the full application config — a migration runner has no
-// reason to carry the Deepgram, Gemini or Supabase credentials.
 function loadSyncEnv(env: NodeJS.ProcessEnv): {
   readonly nodeEnv: string
   readonly logLevel: string

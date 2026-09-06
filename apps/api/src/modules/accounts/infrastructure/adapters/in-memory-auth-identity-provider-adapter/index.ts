@@ -97,9 +97,6 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     }
 
     this.sessionsByRefreshToken.delete(refreshToken)
-    // Supabase chains refresh tokens inside one session: the tokens rotate and
-    // the session id survives. Minting a new one would hide single-session
-    // eviction (ADR-001) from every flow that runs on this adapter.
     return this.storeSession(
       { ...session.identity, issuedAt: this.clock.now() },
       this.idGenerator.generate(),

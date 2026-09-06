@@ -75,9 +75,6 @@ export function ProcessingStatusView({
 
   if (failure !== null) return <ProcessingFailure message={failure} />
   if (!waiting || session === null) return null
-
-  // The steps sit outside the status branch so the same line survives the upload becoming the
-  // analysis: remounting it would restart the sequence and break the sense of one running task.
   return (
     <>
       <ProcessingSteps paused={status === 'uploading'} />

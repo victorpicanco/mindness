@@ -132,9 +132,6 @@ export function PracticeConfigForm({
 
     mutation.mutate(configuration)
   }
-
-  // Only a failure the visitor has to act on stays on the screen; everything else is a retry away
-  // and reaches them through the root toast handler.
   const failureCode = inlineFailureCode(mutation.isError ? mutation.error : null)
   const isConsentPending = failureCode === PRACTICE_NOT_ALLOWED_CODE
 

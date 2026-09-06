@@ -14,11 +14,6 @@ type GoogleCallbackRouteHandlerDependencies = {
 }
 
 const GOOGLE_CALLBACK_FAILED = 'google_callback_failed'
-
-// The standalone server builds request.url from HOSTNAME, which is 0.0.0.0 in
-// the container, so resolving against it sends the browser to an address that
-// only exists inside the network. A relative location resolves against the
-// origin the browser asked for.
 function redirect(path: string): NextResponse {
   return new NextResponse(null, { status: 302, headers: { location: path } })
 }

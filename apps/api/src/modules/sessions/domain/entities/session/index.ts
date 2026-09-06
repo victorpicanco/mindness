@@ -155,8 +155,6 @@ export class Session {
     }
 
     this.recordingStartedAtEpoch = at.getTime()
-    // Until the recording starts, the deadline is the grace to start it; from here on
-    // it is the fifteen-minute bound of DA-11, which covers recording and upload.
     this.expiresAtEpoch = this.createdAtEpoch + SESSION_DURATION_MILLISECONDS
 
     return new Date(this.recordingStartedAtEpoch)

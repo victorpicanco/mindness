@@ -15,9 +15,6 @@ const FIXTURE_AUDIO_PATH = path.resolve(
 )
 
 const TRANSCRIPT = 'Hoje eu quero falar sobre por que ensaiar em voz alta muda o resultado.'
-
-// The rhythm windows only count words that start inside the recording, so the fixture spreads
-// them over the duration ffmpeg actually produced.
 function wordsWithin(durationSeconds: number): readonly TranscriptionWord[] {
   const spoken = TRANSCRIPT.replace('.', '').split(' ')
   const step = durationSeconds / (spoken.length + 1)

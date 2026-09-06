@@ -80,12 +80,13 @@ async function reportDeniedMicrophonePermission(sessionId: string): Promise<void
   })
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await -- The source is an async contract so a test double can defer the recorder.
-async function browserAudioRecordingSource(
+function browserAudioRecordingSource(
   stream: MediaStream | undefined,
 ): Promise<AudioRecordingSession> {
   if (stream === undefined) {
-    throw new MicrophoneUnavailableError('The browser did not return a microphone stream')
+    return Promise.reject(
+      new MicrophoneUnavailableError('The browser did not return a microphone stream'),
+    )
   }
   const chunks: Blob[] = []
   const recorder = new MediaRecorder(stream)
@@ -95,7 +96,7 @@ async function browserAudioRecordingSource(
   })
   recorder.start()
 
-  return {
+  return Promise.resolve({
     stop: () =>
       new Promise((resolve) => {
         recorder.addEventListener(
@@ -108,7 +109,7 @@ async function browserAudioRecordingSource(
         )
         recorder.stop()
       }),
-  }
+  })
 }
 
 export function useRecordingCapture({
@@ -135,8 +136,6 @@ export function useRecordingCapture({
   useSessionDeadline({ onExpired: () => router.refresh() })
 
   const startMutation = useMutation({
-    // The microphone and the server call fail for unrelated reasons, so an open stream is released
-    // before the server failure surfaces and each one keeps its own message.
     mutationFn: async (sessionId: string) => {
       let stream: MediaStream | undefined
 
@@ -158,8 +157,6 @@ export function useRecordingCapture({
         throw cause
       }
     },
-    // Only a microphone that the visitor has to fix stays on the screen; a failed server call is
-    // retried by pressing record again, so the root toast handler owns it.
     onError: (error) => {
       if (!(error instanceof MicrophoneUnavailableError)) return
 
@@ -172,8 +169,6 @@ export function useRecordingCapture({
 
       setStartFailure('microphone')
     },
-    // The pending capture is stored, not its result: stopping before the recorder is ready has to
-    // wait for it instead of silently dropping the recording.
     onSuccess: ({ recording, stream }) => {
       setStartFailure(null)
       openRecording(recording)

@@ -271,8 +271,6 @@ describe('proxy', () => {
   })
 
   describe('prefetch requests', () => {
-    // Next strips the Flight headers from the request the proxy sees, so a
-    // prefetch is indistinguishable here: the matcher is what includes it.
     it('renews an expired access token like any other request', async () => {
       const apiRequests = stubApi(() => refreshedTokensResponse())
 
@@ -292,10 +290,6 @@ describe('proxy', () => {
 
       expect(contentSecurityPolicy).toMatch(/script-src 'self' 'nonce-[^']+'/u)
     })
-
-    // The prerendered shell is built without a request, so Next cannot stamp a
-    // nonce on the script tags it bakes in; 'strict-dynamic' would disable the
-    // 'self' that is the only thing left to authorise them.
     it("keeps 'self' effective for the script tags of the prerendered shell", async () => {
       const response = await proxy(request('/auth/sign-in'))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''

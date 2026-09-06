@@ -29,8 +29,6 @@ const PRACTICE_TRANSLATIONS: Readonly<Record<string, string>> = {
 }
 
 vi.mock('next/cache', () => ({ cacheLife: () => undefined }))
-
-// Vitest cannot execute next-intl's async server translation API in jsdom.
 vi.mock('next-intl/server', () => ({
   getTranslations: () => Promise.resolve((key: string) => PRACTICE_TRANSLATIONS[key] ?? ''),
 }))

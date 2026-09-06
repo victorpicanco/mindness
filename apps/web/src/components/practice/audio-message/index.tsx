@@ -119,7 +119,6 @@ export function AudioMessage({ label, resolveSource, seed }: AudioMessageProps) 
 
   return (
     <article aria-label={label} className="flex flex-col items-end gap-2">
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- The complete transcript is rendered in the adjacent analysis section. */}
       <audio
         aria-label={t('recordingLabel')}
         onEnded={stopPlayback}

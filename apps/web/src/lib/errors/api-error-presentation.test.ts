@@ -93,9 +93,6 @@ describe('describeApiError', () => {
       presentation: 'toast',
     })
   })
-
-  // The recording screen renders each of these next to its own retry and discard controls, so the
-  // toast handler stays out of them.
   it.each([
     ['sessions.AUDIO_SIZE_REJECTED', 'home.research.audioSizeRejected'],
     ['sessions.AUDIO_VALIDATION_REJECTED', 'home.research.audioValidationRejected'],

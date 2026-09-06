@@ -16,9 +16,6 @@ interface TextSegment {
   readonly order: number
   readonly value: string
 }
-
-// Splitting on a captured separator keeps the original whitespace — the transcript is rendered
-// pre-wrapped, so its line breaks have to survive the word reveal.
 function segmentsOf(text: string): readonly TextSegment[] {
   let order = 0
 
@@ -27,10 +24,6 @@ function segmentsOf(text: string): readonly TextSegment[] {
     value,
   }))
 }
-
-// The reduced-motion preference is honoured by CSS on `.mindness-split-word`: reading it here
-// would branch the markup between the server (preference still unknown) and the client, and React
-// would flag the hydration mismatch.
 export function SplitText({ className, delay = 35, text }: SplitTextProps) {
   return (
     <p className={className} data-split-text="words" style={{ textWrap: 'pretty' }}>

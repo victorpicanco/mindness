@@ -8,10 +8,6 @@ const PLAYBACK_SLOT_COUNT = 40
 const MIN_PLAYBACK_LEVEL = 0.2
 const FNV_OFFSET_BASIS = 2166136261
 const FNV_PRIME = 16777619
-
-// The stored recording is only fetched when playback starts, so its real amplitude envelope is not
-// available while the message renders. The bars are derived from the recording identity instead:
-// stable across renders and distinct per recording, which is what this waveform communicates.
 export function playbackLevels(
   seed: string,
   slotCount: number = PLAYBACK_SLOT_COUNT,

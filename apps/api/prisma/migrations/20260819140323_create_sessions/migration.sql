@@ -1,13 +1,6 @@
--- CreateEnum
 CREATE TYPE "session_state" AS ENUM ('in_progress', 'expired', 'processing', 'completed', 'failed', 'deleted');
-
--- CreateEnum
 CREATE TYPE "session_difficulty" AS ENUM ('easy', 'balanced', 'hard');
-
--- CreateEnum
 CREATE TYPE "session_expired_reason" AS ENUM ('timeout', 'abandoned', 'microphone_permission_denied');
-
--- CreateTable
 CREATE TABLE "sessions" (
     "id" UUID NOT NULL,
     "account_id" UUID NOT NULL,
@@ -24,8 +17,6 @@ CREATE TABLE "sessions" (
 
     CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
 );
-
--- CreateTable
 CREATE TABLE "session_audios" (
     "id" UUID NOT NULL,
     "session_id" UUID NOT NULL,
@@ -37,17 +28,9 @@ CREATE TABLE "session_audios" (
 
     CONSTRAINT "session_audios_pkey" PRIMARY KEY ("id")
 );
-
--- CreateIndex
 CREATE INDEX "sessions_account_id_state_idx" ON "sessions"("account_id", "state");
-
--- CreateIndex
 CREATE INDEX "sessions_state_expires_at_idx" ON "sessions"("state", "expires_at");
-
--- CreateIndex
 CREATE UNIQUE INDEX "session_audios_session_id_key" ON "session_audios"("session_id");
-
--- AddForeignKey
 ALTER TABLE "session_audios" ADD CONSTRAINT "session_audios_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "sessions" ENABLE ROW LEVEL SECURITY;

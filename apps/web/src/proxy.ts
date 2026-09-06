@@ -7,10 +7,6 @@ import { clearSessionCookies, hasLiveSession, sessionCookiesToSet } from '@/lib/
 import { clientEnv } from '@/lib/env/client'
 
 const protectedRoutePrefixes = [SESSIONS_ROUTE_PREFIX]
-
-// Routes whose only purpose is to start a session. Reaching them with a live
-// session is always a dead end; /auth/callback and /auth/confirm are
-// deliberately absent because they finish a link that may arrive either way.
 const signedOutOnlyRoutes = [
   '/auth/sign-in',
   '/auth/sign-up',
@@ -33,21 +29,9 @@ function createContentSecurityPolicy(nonce: string): string {
 
   return [
     "default-src 'self'",
-    // 'strict-dynamic' is deliberately absent: cacheComponents serves a shell
-    // prerendered at build time, whose script tags predate the request that
-    // carries the nonce, and the keyword would void the 'self' they rely on.
-    // That same shell carries one inline script of React's own — the reveal
-    // timestamp, `$RT` — which no nonce can reach, so the browser reports a
-    // violation for it on every load. React guards the read (`typeof $RT`) and
-    // reveals on the next frame instead, and admitting its hash here would buy
-    // a quiet console at the price of a pin to React's exact build.
     `script-src 'self' 'nonce-${nonce}' ${CAPTCHA_ORIGIN}${developmentSource}`,
-    // The toast library injects its stylesheet at runtime and cannot carry a
-    // nonce, and a nonce in style-src would make the browser ignore this.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
-    // Recordings are played straight from the signed Storage URL, so the
-    // origin has to be allowed here as well as in connect-src.
     `media-src 'self' data: blob: ${storageOrigin}`,
     "font-src 'self'",
     `connect-src 'self' ${storageOrigin} ${CAPTCHA_ORIGIN}`,
@@ -63,10 +47,6 @@ function createContentSecurityPolicy(nonce: string): string {
 function matchesRoute(pathname: string, prefixes: readonly string[]): boolean {
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
-
-// The update-password form acts on the session /auth/confirm just wrote, so it
-// needs one; its invalid-link notice is the dead end of a recovery that never
-// produced a session and has to stay reachable without one.
 function requiresSession(url: NextRequest['nextUrl']): boolean {
   if (url.pathname === SIGNED_IN_HOME) return true
   if (matchesRoute(url.pathname, protectedRoutePrefixes)) return true
@@ -106,9 +86,6 @@ function setSecurityHeaders(response: NextResponse, contentSecurityPolicy: strin
 
   return response
 }
-
-// Renewing on the incoming request is what lets the render that follows read
-// the fresh access token: a Server Component can only read cookies.
 function applyRenewalToRequest(request: NextRequest, renewal: SessionRenewal): void {
   if (renewal.status === 'renewed') {
     for (const { name, value } of sessionCookiesToSet(renewal.tokens)) {
@@ -172,10 +149,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     renewal,
   )
 }
-
-// Prefetches are deliberately included: they are the only requests that reach a
-// protected render without a proxy pass, and renewing the session is the one
-// thing a Server Component cannot do for itself.
 export const config = {
   matcher: [
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|wav|mp3|woff2?)$).*)',

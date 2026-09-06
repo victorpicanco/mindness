@@ -3,9 +3,6 @@ export const REDIRECT_FIELD_NAME = 'redirectTo'
 export const SIGNED_IN_HOME = '/'
 
 const LOCAL_ORIGIN = 'https://redirect-target.invalid'
-
-// Resolving against a fixed origin is what catches the paths that only look
-// local: '//host' and '/\host' both parse as another origin.
 export function safeRedirectPath(candidate: unknown): string {
   if (typeof candidate !== 'string' || !candidate.startsWith('/')) return SIGNED_IN_HOME
 

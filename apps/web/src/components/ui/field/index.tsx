@@ -9,9 +9,6 @@ interface FieldControl {
 }
 
 const FieldContext = createContext<FieldControl | null>(null)
-
-// The control asks the field for its wiring instead of the field reaching into its child, so a
-// control wrapped in any amount of markup still carries the label, the description and the error.
 export function useFieldControl(): Partial<FieldControl> {
   return useContext(FieldContext) ?? {}
 }

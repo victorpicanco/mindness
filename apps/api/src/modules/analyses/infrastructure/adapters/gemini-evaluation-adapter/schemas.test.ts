@@ -9,8 +9,6 @@ import {
   parseSpeechFeedback,
 } from './schemas.js'
 import { createDetailedFeedback } from './fixtures.js'
-
-// Largest filler inventory Vertex AI accepted when the whole schema was probed; 20 is refused.
 const PROVIDER_OCCURRENCE_CEILING = 16
 
 const validFeedback = {

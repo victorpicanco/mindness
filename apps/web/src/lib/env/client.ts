@@ -48,9 +48,6 @@ export function parseClientEnv(source: ClientEnvSource): ClientEnv {
     parsed.error,
   )
 }
-
-// Next.js inlines a NEXT_PUBLIC_ variable only where the property is read
-// literally, so these two reads cannot be folded into a loop or a helper.
 export function clientEnv(): ClientEnv {
   return parseClientEnv({
     apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,

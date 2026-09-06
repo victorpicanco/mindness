@@ -3,6 +3,7 @@ import type { Theme } from '@/modules/themes/domain/entities/theme/index.js'
 import { ThemeTitleAlreadyUsedError } from '@/modules/themes/domain/errors/theme-title-already-used-error/index.js'
 import type {
   ThemeCombination,
+  ThemePoolCount,
   ThemesRepository,
 } from '@/modules/themes/domain/repositories/themes-repository/index.js'
 import type {
@@ -44,6 +45,31 @@ function isThemeRow(value: unknown): value is ThemeRow {
       value.publicationStatus === 'withdrawn') &&
     value.createdAt instanceof Date
   )
+}
+
+function isThemePoolCount(value: unknown): value is ThemePoolCount {
+  if (typeof value !== 'object' || value === null) return false
+  if (!('categoryId' in value) || !('difficulty' in value) || !('publishedCount' in value)) {
+    return false
+  }
+
+  return (
+    typeof value.categoryId === 'string' &&
+    (value.difficulty === 'easy' ||
+      value.difficulty === 'balanced' ||
+      value.difficulty === 'hard') &&
+    typeof value.publishedCount === 'number' &&
+    Number.isInteger(value.publishedCount) &&
+    value.publishedCount >= 0
+  )
+}
+
+function themePoolCounts(raw: unknown): ThemePoolCount[] {
+  if (!Array.isArray(raw) || !raw.every(isThemePoolCount)) {
+    throw new DatabaseError('Received invalid theme pool counts from the database')
+  }
+
+  return raw
 }
 
 function rawThemeRow(raw: unknown, combination: ThemeCombination): ThemeRow | null {
@@ -104,6 +130,24 @@ export class PrismaThemesRepository implements ThemesRepository {
     return rows.map((row) => this.mapper.toDomain(row))
   }
 
+  async listByCategoryIds(categoryIds: readonly string[]): Promise<Theme[]> {
+    if (categoryIds.length === 0) return []
+
+    let rows
+    try {
+      rows = await this.client().theme.findMany({
+        where: { categoryId: { in: [...categoryIds] } },
+      })
+    } catch (error) {
+      throw new DatabaseError('Failed to read themes by category', {
+        cause: error,
+        context: { categoryIds: [...categoryIds] },
+      })
+    }
+
+    return rows.map((row) => this.mapper.toDomain(row))
+  }
+
   async findByNormalizedTitle(params: {
     categoryId: string
     normalizedTitle: string
@@ -135,6 +179,49 @@ export class PrismaThemesRepository implements ThemesRepository {
     }
   }
 
+  async saveMany(themes: readonly Theme[]): Promise<void> {
+    if (themes.length === 0) return
+    const rows = themes.map((theme) => this.mapper.toPersistence(theme))
+    const values = rows.map(
+      (row) => Prisma.sql`(
+        ${row.id}::uuid,
+        ${row.categoryId}::uuid,
+        ${row.title},
+        ${row.normalizedTitle},
+        ${row.difficulty}::"theme_difficulty",
+        ${row.publicationStatus}::"theme_publication_status",
+        ${row.createdAt}
+      )`,
+    )
+
+    try {
+      await this.client().$executeRaw(
+        Prisma.sql`
+          INSERT INTO "themes" (
+            "id",
+            "category_id",
+            "title",
+            "normalized_title",
+            "difficulty",
+            "publication_status",
+            "created_at"
+          )
+          VALUES ${Prisma.join(values)}
+          ON CONFLICT ("category_id", "normalized_title")
+          DO UPDATE SET
+            "title" = EXCLUDED."title",
+            "difficulty" = EXCLUDED."difficulty",
+            "publication_status" = EXCLUDED."publication_status"
+        `,
+      )
+    } catch (error) {
+      throw new DatabaseError('Failed to save the theme catalog batch', {
+        cause: error,
+        context: { themeCount: themes.length },
+      })
+    }
+  }
+
   async countPublishedBy(combination: ThemeCombination): Promise<number> {
     try {
       return await this.client().theme.count({
@@ -146,6 +233,36 @@ export class PrismaThemesRepository implements ThemesRepository {
         context: { categoryId: combination.categoryId, difficulty: combination.difficulty },
       })
     }
+  }
+
+  async countPublishedByMany(
+    combinations: readonly ThemeCombination[],
+  ): Promise<readonly ThemePoolCount[]> {
+    if (combinations.length === 0) return []
+    const categoryIds = [...new Set(combinations.map((combination) => combination.categoryId))]
+
+    let raw: unknown
+    try {
+      raw = await this.client().$queryRaw(
+        Prisma.sql`
+          SELECT
+            "category_id" AS "categoryId",
+            "difficulty",
+            COUNT(*)::int AS "publishedCount"
+          FROM "themes"
+          WHERE "publication_status" = 'published'::"theme_publication_status"
+            AND "category_id" IN (${Prisma.join(categoryIds)})
+          GROUP BY "category_id", "difficulty"
+        `,
+      )
+    } catch (error) {
+      throw new DatabaseError('Failed to count published theme pools', {
+        cause: error,
+        context: { categoryIds },
+      })
+    }
+
+    return themePoolCounts(raw)
   }
 
   async drawPublished(combination: ThemeCombination): Promise<Theme | null> {

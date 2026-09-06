@@ -57,6 +57,22 @@ export class PrismaThemeCategoriesRepository implements ThemeCategoriesRepositor
     return row === null ? null : this.mapper.toDomain(row)
   }
 
+  async listBySlugs(slugs: readonly string[]): Promise<ThemeCategory[]> {
+    if (slugs.length === 0) return []
+
+    let rows
+    try {
+      rows = await this.client().themeCategory.findMany({ where: { slug: { in: [...slugs] } } })
+    } catch (error) {
+      throw new DatabaseError('Failed to read theme categories by slug', {
+        cause: error,
+        context: { slugs: [...slugs] },
+      })
+    }
+
+    return rows.map((row) => this.mapper.toDomain(row))
+  }
+
   async save(category: ThemeCategory): Promise<void> {
     const row = this.mapper.toPersistence(category)
 
@@ -70,6 +86,30 @@ export class PrismaThemeCategoriesRepository implements ThemeCategoriesRepositor
       throw new DatabaseError('Failed to save the theme category', {
         cause: error,
         context: { categoryId: row.id },
+      })
+    }
+  }
+
+  async saveMany(categories: readonly ThemeCategory[]): Promise<void> {
+    if (categories.length === 0) return
+    const values = categories.map((category) => {
+      const row = this.mapper.toPersistence(category)
+      return Prisma.sql`(${row.id}::uuid, ${row.slug}, ${row.name})`
+    })
+
+    try {
+      await this.client().$executeRaw(
+        Prisma.sql`
+          INSERT INTO "theme_categories" ("id", "slug", "name")
+          VALUES ${Prisma.join(values)}
+          ON CONFLICT ("slug")
+          DO UPDATE SET "name" = EXCLUDED."name"
+        `,
+      )
+    } catch (error) {
+      throw new DatabaseError('Failed to save the theme category catalog batch', {
+        cause: error,
+        context: { categoryCount: categories.length },
       })
     }
   }

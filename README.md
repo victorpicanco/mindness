@@ -12,7 +12,7 @@ pnpm supabase:start                    # local Postgres, Auth, Storage and Mailp
 cp apps/api/.env.example apps/api/.env # fill SUPABASE_SECRET_KEY with the printed secret key
 cp apps/web/.env.example apps/web/.env
 pnpm --filter @mindness/api db:deploy  # schema
-pnpm --filter @mindness/api themes:sync
+pnpm --filter @mindness/api themes:catalog:apply
 pnpm --filter @mindness/api dev
 curl localhost:3333/healthz
 ```

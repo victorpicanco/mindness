@@ -37,17 +37,21 @@ interface FakeClient {
   readonly client: ThemesPrismaClient
   readonly upserts: ThemeUpsertArgs[]
   readonly idQueries: (readonly string[])[]
+  readonly categoryQueries: (readonly string[])[]
+  readonly executions: Prisma.Sql[]
 }
 
 function createFindMany(
   options: FakeClientOptions,
   idQueries: (readonly string[])[],
+  categoryQueries: (readonly string[])[],
 ): ThemesPrismaClient['theme']['findMany'] {
   return (args) => {
-    if (!('id' in args.where)) return Promise.resolve(options.combinations ?? [])
+    if ('publicationStatus' in args.where) return Promise.resolve(options.combinations ?? [])
     if (options.readFailure !== undefined) return Promise.reject(options.readFailure)
 
-    idQueries.push(args.where.id.in)
+    if ('id' in args.where) idQueries.push(args.where.id.in)
+    if ('categoryId' in args.where) categoryQueries.push(args.where.categoryId.in)
 
     return Promise.resolve(options.rows ?? [])
   }
@@ -56,10 +60,14 @@ function createFindMany(
 function createFakeClient(options: FakeClientOptions = {}): FakeClient {
   const upserts: ThemeUpsertArgs[] = []
   const idQueries: (readonly string[])[] = []
+  const categoryQueries: (readonly string[])[] = []
+  const executions: Prisma.Sql[] = []
 
   return {
     upserts,
     idQueries,
+    categoryQueries,
+    executions,
     client: {
       theme: {
         findUnique: () => Promise.resolve(options.row ?? null),
@@ -70,7 +78,7 @@ function createFakeClient(options: FakeClientOptions = {}): FakeClient {
           return Promise.resolve(args.create)
         },
         count: () => Promise.resolve(0),
-        findMany: createFindMany(options, idQueries),
+        findMany: createFindMany(options, idQueries, categoryQueries),
       },
       themeCategory: {
         findUnique: () => Promise.resolve(null),
@@ -78,6 +86,10 @@ function createFakeClient(options: FakeClientOptions = {}): FakeClient {
         findMany: () => Promise.resolve([]),
       },
       $queryRaw: () => Promise.resolve(options.rawResult ?? []),
+      $executeRaw: (query) => {
+        executions.push(query)
+        return Promise.resolve(1)
+      },
     },
   }
 }
@@ -95,6 +107,41 @@ function createRepository(fake: FakeClient): PrismaThemesRepository {
 }
 
 describe('PrismaThemesRepository', () => {
+  it('loads every theme in the requested categories with one query', async () => {
+    const fake = createFakeClient({ rows: [row] })
+    const repository = createRepository(fake)
+
+    await expect(repository.listByCategoryIds([row.categoryId])).resolves.toMatchObject([
+      { id: row.id },
+    ])
+    expect(fake.categoryQueries).toEqual([[row.categoryId]])
+  })
+
+  it('persists a catalog batch with one parameterized statement', async () => {
+    const fake = createFakeClient()
+    const repository = createRepository(fake)
+    const theme = new ThemeMapper().toDomain(row)
+
+    await repository.saveMany([theme, theme])
+
+    expect(fake.executions).toHaveLength(1)
+    expect(fake.executions[0]?.sql).toContain('INSERT INTO "themes"')
+    expect(fake.executions[0]?.values).toHaveLength(14)
+  })
+
+  it('counts every requested published pool with one grouped query', async () => {
+    const fake = createFakeClient({
+      rawResult: [{ categoryId: row.categoryId, difficulty: row.difficulty, publishedCount: 12 }],
+    })
+    const repository = createRepository(fake)
+
+    await expect(
+      repository.countPublishedByMany([{ categoryId: row.categoryId, difficulty: row.difficulty }]),
+    ).resolves.toEqual([
+      { categoryId: row.categoryId, difficulty: row.difficulty, publishedCount: 12 },
+    ])
+  })
+
   it('translates a composite unique violation and preserves its cause', async () => {
     const failure = uniqueViolation()
     const repository = createRepository(createFakeClient({ writeFailure: failure }))

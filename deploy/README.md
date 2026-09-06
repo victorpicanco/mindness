@@ -177,10 +177,11 @@ readable. The `DATABASE_URL` **secret** the `Migrate` workflow uses stays on
 the workflow the runtime string would point `sslrootcert` at a path the runner
 does not have.
 
-That secret carries `migrate deploy` and nothing else. `themes:sync`, which the
-same workflow runs next, goes through the driver adapter and lands in the left
-column of the table — `sslmode=require` fails it. The step rebuilds the string
-onto `sslmode=verify-full` with `sslrootcert` pointing at the certificate in the
+That secret carries `migrate deploy` in the `Migrate` workflow and catalog
+publishing in the separate `Publish Theme Catalog` workflow. Catalog commands
+go through the driver adapter and land in the left column of the table, where
+`sslmode=require` fails. The publishing workflow rebuilds the string onto
+`sslmode=verify-full` with `sslrootcert` pointing at the certificate in the
 checkout, so the root travels with the repository rather than with a secret or
 the image.
 

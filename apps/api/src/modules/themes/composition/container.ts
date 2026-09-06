@@ -13,8 +13,14 @@ import type { EventPublisher } from '@/modules/themes/domain/ports/event-publish
 import type { IdGenerator } from '@/modules/themes/domain/ports/id-generator/index.js'
 import type { ThemePoolAudit } from '@/modules/themes/domain/ports/theme-pool-audit/index.js'
 import type { UnitOfWork } from '@/modules/themes/domain/ports/unit-of-work/index.js'
-import type { ThemeCategoriesRepository } from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
-import type { ThemesRepository } from '@/modules/themes/domain/repositories/themes-repository/index.js'
+import type {
+  ThemeCatalogCategoriesRepository,
+  ThemeCategoriesRepository,
+} from '@/modules/themes/domain/repositories/theme-categories-repository/index.js'
+import type {
+  ThemeCatalogThemesRepository,
+  ThemesRepository,
+} from '@/modules/themes/domain/repositories/themes-repository/index.js'
 import { PrismaUnitOfWorkAdapter } from '@/modules/themes/infrastructure/adapters/prisma-unit-of-work-adapter/index.js'
 import { ThemePoolAuditAdapter } from '@/modules/themes/infrastructure/adapters/theme-pool-audit-adapter/index.js'
 import type {
@@ -30,8 +36,8 @@ import { PrismaThemesRepository } from '@/modules/themes/infrastructure/reposito
 import { createThemesFacade } from './facade.js'
 
 export interface ThemesAdapterOverrides {
-  readonly themes?: ThemesRepository
-  readonly categories?: ThemeCategoriesRepository
+  readonly themes?: ThemesRepository & ThemeCatalogThemesRepository
+  readonly categories?: ThemeCategoriesRepository & ThemeCatalogCategoriesRepository
   readonly unitOfWork?: UnitOfWork
   readonly themePoolAudit?: ThemePoolAudit
 }

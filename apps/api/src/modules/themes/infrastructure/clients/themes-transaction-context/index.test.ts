@@ -19,6 +19,7 @@ function fakeClient(): ThemesPrismaClient {
       findMany: () => Promise.resolve([]),
     },
     $queryRaw: () => Promise.resolve([]),
+    $executeRaw: () => Promise.resolve(0),
   }
 }
 

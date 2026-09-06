@@ -6,3 +6,8 @@ export interface ThemeCategoriesRepository {
   save(category: ThemeCategory): Promise<void>
   listWithPublishedThemes(): Promise<ThemeCategory[]>
 }
+
+export interface ThemeCatalogCategoriesRepository {
+  listBySlugs(slugs: readonly string[]): Promise<ThemeCategory[]>
+  saveMany(categories: readonly ThemeCategory[]): Promise<void>
+}

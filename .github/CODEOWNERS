@@ -1,0 +1,14 @@
+# Every path falls back to the repository owner.
+* @victorpicanco
+
+# Anything that can reach a secret, an environment or the production host.
+/.github/ @victorpicanco
+/.github/workflows/ @victorpicanco
+/scripts/ @victorpicanco
+/compose.yaml @victorpicanco
+/compose.local.yaml @victorpicanco
+/Caddyfile @victorpicanco
+/apps/api/Dockerfile @victorpicanco
+/apps/web/Dockerfile @victorpicanco
+/apps/api/prisma/migrations/ @victorpicanco
+/supabase/ @victorpicanco

@@ -193,11 +193,27 @@ enabled = true
 provider = "turnstile"
 secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
 
+[remotes.staging.auth.email]
+max_frequency = "60s"
+otp_length = 8
+
+[remotes.staging.auth.email.template.confirmation]
+subject = "Confirme seu e-mail"
+content_path = "./supabase/templates/confirmation-pt-br.html"
+
+[remotes.staging.auth.email.template.recovery]
+subject = "Redefinir senha"
+content_path = "./supabase/templates/recovery-pt-br.html"
+
+[remotes.staging.auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
 [remotes.staging.auth.external.google]
 enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
-skip_nonce_check = true
+skip_nonce_check = false
 
 [remotes.production]
 project_id = "puqgzuabondhbkmwbsln"

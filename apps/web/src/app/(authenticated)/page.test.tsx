@@ -61,6 +61,7 @@ vi.mock('@/lib/api/server-client', () => ({
 function renderPage(page: ReactElement) {
   const router = {
     back: () => undefined,
+    bfcacheId: 'test-bfcache-id',
     forward: () => undefined,
     prefetch: () => undefined,
     push: () => undefined,

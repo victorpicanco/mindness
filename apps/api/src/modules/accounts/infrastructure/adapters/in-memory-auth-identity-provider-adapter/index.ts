@@ -3,7 +3,6 @@ import { EmailNotConfirmedError } from '@/modules/accounts/domain/errors/email-n
 import type {
   AuthIdentityProvider,
   AuthSession,
-  AuthenticationMethod,
   EmailOtpVerificationType,
   GoogleAuthorization,
   SignInWithPasswordParams,
@@ -26,6 +25,18 @@ export interface InMemoryGoogleIdentity {
   readonly email: string
   readonly emailVerified: boolean
 }
+
+type SessionIdentity =
+  | {
+      readonly authUserId: string
+      readonly email: null
+      readonly authenticationMethod: 'anonymous'
+    }
+  | {
+      readonly authUserId: string
+      readonly email: string
+      readonly authenticationMethod: 'password' | 'google'
+    }
 
 export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider {
   private readonly passwordUsers = new Map<string, PasswordUser>()
@@ -67,7 +78,21 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       throw new EmailNotConfirmedError()
     }
 
-    return this.createSession(user.authUserId, user.email, 'password')
+    return this.createSession({
+      authUserId: user.authUserId,
+      email: user.email,
+      authenticationMethod: 'password',
+    })
+  }
+
+  async signInAnonymously(): Promise<AuthSession> {
+    await this.ensureNoSimulatedFailure()
+
+    return this.createSession({
+      authUserId: this.idGenerator.generate(),
+      email: null,
+      authenticationMethod: 'anonymous',
+    })
   }
 
   async createGoogleAuthorization(redirectTo: string): Promise<GoogleAuthorization> {
@@ -86,7 +111,11 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       throw new AuthenticationRejectedError('google_failed')
     }
 
-    return this.createSession(identity.authUserId, identity.email, 'google')
+    return this.createSession({
+      authUserId: identity.authUserId,
+      email: identity.email,
+      authenticationMethod: 'google',
+    })
   }
 
   async refreshSession(refreshToken: string): Promise<AuthSession> {
@@ -115,7 +144,11 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     }
     if (type === 'email') user.confirmed = true
 
-    return this.createSession(user.authUserId, user.email, 'password')
+    return this.createSession({
+      authUserId: user.authUserId,
+      email: user.email,
+      authenticationMethod: 'password',
+    })
   }
 
   async resendSignUpConfirmation(params: {
@@ -204,17 +237,10 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
     this.failure = null
   }
 
-  private createSession(
-    authUserId: string,
-    email: string,
-    authenticationMethod: AuthenticationMethod,
-  ): AuthSession {
+  private createSession(identity: SessionIdentity): AuthSession {
     const sessionId = this.idGenerator.generate()
 
-    return this.storeSession(
-      { authUserId, email, issuedAt: this.clock.now(), sessionId, authenticationMethod },
-      sessionId,
-    )
+    return this.storeSession({ ...identity, issuedAt: this.clock.now(), sessionId }, sessionId)
   }
 
   private storeSession(identity: VerifiedAuthIdentity, tokenId: string): AuthSession {

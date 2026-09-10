@@ -13,6 +13,7 @@ const claims = {
   session_id: 'session-1',
   iat: 1_786_795_200,
   amr: [{ method: 'password', timestamp: 1_786_795_200 }],
+  is_anonymous: false,
 }
 
 class FakeSupabaseAuthApi implements SupabaseAuthApi {
@@ -28,6 +29,7 @@ class FakeSupabaseAuthApi implements SupabaseAuthApi {
     error: null,
   }
   googleResult: SupabaseAuthResult = this.signInResult
+  anonymousResult: SupabaseAuthResult = this.signInResult
   refreshResult: SupabaseAuthResult = this.signInResult
   verifyOtpResult: SupabaseAuthResult = this.signInResult
   resendResult: SupabaseAuthResult = { data: {}, error: null }
@@ -44,6 +46,11 @@ class FakeSupabaseAuthApi implements SupabaseAuthApi {
   signIn(): Promise<SupabaseAuthResult> {
     this.calls.push('sign-in')
     return Promise.resolve(this.signInResult)
+  }
+
+  signInAnonymously(): Promise<SupabaseAuthResult> {
+    this.calls.push('sign-in-anonymously')
+    return Promise.resolve(this.anonymousResult)
   }
 
   createGoogleAuthorization() {
@@ -405,6 +412,204 @@ describe('SupabaseAuthIdentityProviderAdapter provider error translation', () =>
     await expect(adapter.updatePassword('auth-user-1', 'Strong_password1!')).rejects.toMatchObject({
       code: 'accounts.INVALID_ACCOUNT_VALUE',
       context: { field: 'password' },
+    })
+  })
+
+  it('accepts an anonymous identity without an email address', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = {
+      data: {
+        claims: {
+          sub: 'auth-user-1',
+          session_id: 'session-1',
+          iat: 1_786_795_200,
+          amr: [{ method: 'anonymous', timestamp: 1_786_795_200 }],
+          is_anonymous: true,
+        },
+      },
+      error: null,
+    }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.validateAccessToken('access-token')).resolves.toEqual({
+      authUserId: 'auth-user-1',
+      email: null,
+      sessionId: 'session-1',
+      issuedAt: new Date(1_786_795_200 * 1000),
+      authenticationMethod: 'anonymous',
+    })
+  })
+
+  it('rejects a claim set without an authentication method reference', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = { data: { claims: { ...claims, amr: [] } }, error: null }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.validateAccessToken('access-token')).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'invalid_token' },
+    })
+  })
+
+  it('rejects an anonymous method contradicted by the is_anonymous claim', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = {
+      data: {
+        claims: {
+          sub: 'auth-user-1',
+          session_id: 'session-1',
+          iat: 1_786_795_200,
+          amr: [{ method: 'anonymous', timestamp: 1_786_795_200 }],
+          is_anonymous: false,
+        },
+      },
+      error: null,
+    }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.validateAccessToken('access-token')).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'invalid_token' },
+    })
+  })
+
+  it('rejects an anonymous identity without the is_anonymous claim', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = {
+      data: {
+        claims: {
+          sub: 'auth-user-1',
+          session_id: 'session-1',
+          iat: 1_786_795_200,
+          amr: [{ method: 'anonymous', timestamp: 1_786_795_200 }],
+        },
+      },
+      error: null,
+    }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.validateAccessToken('access-token')).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'invalid_token' },
+    })
+  })
+
+  it('rejects a malformed is_anonymous claim', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = {
+      data: { claims: { ...claims, is_anonymous: 'false' } },
+      error: null,
+    }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.validateAccessToken('access-token')).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'invalid_token' },
+    })
+  })
+
+  it('rejects a permanent method contradicted by the is_anonymous claim', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = { data: { claims: { ...claims, is_anonymous: true } }, error: null }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.validateAccessToken('access-token')).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'invalid_token' },
+    })
+  })
+
+  it('rejects a permanent identity that carries no email address', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = {
+      data: {
+        claims: {
+          sub: 'auth-user-1',
+          session_id: 'session-1',
+          iat: 1_786_795_200,
+          amr: [{ method: 'password', timestamp: 1_786_795_200 }],
+        },
+      },
+      error: null,
+    }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(adapter.validateAccessToken('access-token')).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'invalid_token' },
+    })
+  })
+
+  it('issues an anonymous session and validates its claims', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.claimsResult = {
+      data: {
+        claims: {
+          sub: 'auth-user-1',
+          session_id: 'session-1',
+          iat: 1_786_795_200,
+          amr: [{ method: 'anonymous', timestamp: 1_786_795_200 }],
+          is_anonymous: true,
+        },
+      },
+      error: null,
+    }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(
+      adapter.signInAnonymously({ captchaToken: 'captcha-token' }),
+    ).resolves.toMatchObject({
+      accessToken: 'access-token',
+      identity: { authenticationMethod: 'anonymous', email: null },
+    })
+    expect(api.calls).toEqual(['sign-in-anonymously', 'get-claims'])
+  })
+
+  it('translates a rejected captcha on anonymous sign-in', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.anonymousResult = { data: null, error: { code: 'captcha_failed' } }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(
+      adapter.signInAnonymously({ captchaToken: 'captcha-token' }),
+    ).rejects.toMatchObject({ code: 'accounts.CAPTCHA_REJECTED', httpStatus: 400 })
+  })
+
+  it('translates the provider rate limit on anonymous sign-in', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.anonymousResult = { data: null, error: { code: 'over_request_rate_limit' } }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(
+      adapter.signInAnonymously({ captchaToken: 'captcha-token' }),
+    ).rejects.toMatchObject({ code: 'accounts.RATE_LIMITED', httpStatus: 429 })
+  })
+
+  it('preserves an unexpected anonymous sign-in provider failure', async () => {
+    const api = new FakeSupabaseAuthApi()
+    const providerFailure = { name: 'AuthRetryableFetchError', status: 503 }
+    api.anonymousResult = { data: null, error: providerFailure }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(
+      adapter.signInAnonymously({ captchaToken: 'captcha-token' }),
+    ).rejects.toMatchObject({
+      code: 'accounts.AUTH_PROVIDER_ERROR',
+      httpStatus: 500,
+      cause: providerFailure,
+    })
+  })
+
+  it('rejects an anonymous sign-in whose provider payload carries no session', async () => {
+    const api = new FakeSupabaseAuthApi()
+    api.anonymousResult = { data: {}, error: null }
+    const adapter = new SupabaseAuthIdentityProviderAdapter(api)
+
+    await expect(
+      adapter.signInAnonymously({ captchaToken: 'captcha-token' }),
+    ).rejects.toMatchObject({
+      code: 'accounts.AUTHENTICATION_REJECTED',
+      context: { reason: 'invalid_token' },
     })
   })
 

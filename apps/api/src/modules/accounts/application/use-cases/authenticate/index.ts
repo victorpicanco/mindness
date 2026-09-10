@@ -21,13 +21,6 @@ export class AuthenticateUseCase {
     const sessionWasReplaced = account !== null && !account.canAuthenticate(identity.sessionId)
     if (sessionWasReplaced) throw new AuthenticationRejectedError('invalid_token')
 
-    return {
-      accountId: account?.id ?? null,
-      authUserId: identity.authUserId,
-      email: identity.email,
-      sessionId: identity.sessionId,
-      issuedAt: identity.issuedAt,
-      authenticationMethod: identity.authenticationMethod,
-    }
+    return { ...identity, accountId: account?.id ?? null }
   }
 }

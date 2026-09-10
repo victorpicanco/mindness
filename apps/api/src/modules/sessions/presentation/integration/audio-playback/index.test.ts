@@ -30,6 +30,7 @@ async function seedCompletedSessionWithAudio(): Promise<void> {
     sessionId: SESSION_ID,
     accountId: ACCOUNT_A,
     themeId: THEME_ID,
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'audio-playback',
@@ -78,7 +79,7 @@ beforeEach(async () => {
   harness.reset()
   harness.accounts.registerIdentity('account-a', ACCOUNT_A)
   harness.accounts.registerIdentity('account-b', ACCOUNT_B)
-  harness.accounts.registerProfile(ACCOUNT_A, { plan: 'free', timeZone: 'UTC' })
+  harness.accounts.registerProfile(ACCOUNT_A, { kind: 'registered', plan: 'free', timeZone: 'UTC' })
   await seedCompletedSessionWithAudio()
 })
 
@@ -140,7 +141,11 @@ describe('audio playback credential integration', () => {
   })
 
   it('responds not found for account B requesting account A audio, and signs nothing', async () => {
-    harness.accounts.registerProfile(ACCOUNT_B, { plan: 'free', timeZone: 'UTC' })
+    harness.accounts.registerProfile(ACCOUNT_B, {
+      kind: 'registered',
+      plan: 'free',
+      timeZone: 'UTC',
+    })
 
     const response = await requestPlaybackUrl('account-b')
 

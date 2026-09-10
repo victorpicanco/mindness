@@ -29,7 +29,7 @@ class InMemoryAccountsRepository implements AccountsRepository {
 }
 
 function account(): Account {
-  return Account.create({
+  return Account.createRegistered({
     id: 'account-1',
     email: EmailAddress.create('person@example.com'),
     authUserId: 'auth-user-1',

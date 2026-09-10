@@ -25,11 +25,13 @@ function createRunner(failures: Error[] = []): FakeRunner {
       findUnique: () => Promise.resolve(null),
       findFirst: () => Promise.resolve(null),
       findMany: () => Promise.resolve([]),
+      count: () => Promise.resolve(0),
       upsert: () =>
         Promise.resolve({
           id: 'session-id',
           accountId: 'account-id',
           themeId: 'theme-id',
+          accessMode: 'account',
           difficulty: 'balanced',
           categorySlug: 'self-awareness',
           searchWindowMinutes: 4,

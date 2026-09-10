@@ -4,6 +4,7 @@ import type { ConfirmEmailController } from '@/modules/accounts/presentation/con
 import type { CreateAccountController } from '@/modules/accounts/presentation/controllers/create-account-controller/index.js'
 import type { DeleteAccountController } from '@/modules/accounts/presentation/controllers/delete-account-controller/index.js'
 import type { GetAccountProfileController } from '@/modules/accounts/presentation/controllers/get-account-profile-controller/index.js'
+import type { SignInAnonymouslyController } from '@/modules/accounts/presentation/controllers/sign-in-anonymously-controller/index.js'
 import type { SignInController } from '@/modules/accounts/presentation/controllers/sign-in-controller/index.js'
 import type { RefreshSessionController } from '@/modules/accounts/presentation/controllers/refresh-session-controller/index.js'
 import type { RequestPasswordRecoveryController } from '@/modules/accounts/presentation/controllers/request-password-recovery-controller/index.js'
@@ -23,6 +24,7 @@ export interface AccountsControllers {
   readonly deleteAccount: DeleteAccountController
   readonly getAccountProfile: GetAccountProfileController
   readonly signIn: SignInController
+  readonly signInAnonymously: SignInAnonymouslyController
   readonly refreshSession: RefreshSessionController
   readonly requestPasswordRecovery: RequestPasswordRecoveryController
   readonly resendSignUpConfirmation: ResendSignUpConfirmationController
@@ -37,6 +39,7 @@ export interface AccountsControllers {
 export const ACCOUNTS_ROUTE_PATHS = {
   signUp: '/auth/sign-up',
   signIn: '/auth/sign-in',
+  signInAnonymously: '/auth/anonymous',
   refresh: '/auth/refresh',
   confirmEmail: '/auth/email/confirm',
   resendSignUpConfirmation: '/auth/email/resend',

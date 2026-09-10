@@ -16,6 +16,7 @@ export class SessionMapper {
       sessionId: row.id,
       accountId: row.accountId,
       themeId: row.themeId,
+      accessMode: row.accessMode,
       configuration: SessionConfiguration.create({
         difficulty: row.difficulty,
         categorySlug: row.categorySlug,
@@ -71,6 +72,7 @@ export class SessionMapper {
       id: session.id,
       accountId: session.accountId,
       themeId: session.themeId,
+      accessMode: session.accessMode,
       difficulty: session.configuration.difficulty,
       categorySlug: session.configuration.categorySlug,
       searchWindowMinutes: session.configuration.searchWindowMinutes,

@@ -1,13 +1,17 @@
-export type AuthenticationMethod = 'password' | 'google'
+export type AuthenticationMethod = 'password' | 'google' | 'anonymous'
 export type EmailOtpVerificationType = 'email' | 'recovery'
 
-export interface VerifiedAuthIdentity {
+interface VerifiedAuthIdentityFields {
   readonly authUserId: string
-  readonly email: string
   readonly sessionId: string
   readonly issuedAt: Date
-  readonly authenticationMethod: AuthenticationMethod
 }
+
+export type VerifiedAuthIdentity = VerifiedAuthIdentityFields &
+  (
+    | { readonly authenticationMethod: 'anonymous'; readonly email: null }
+    | { readonly authenticationMethod: 'password' | 'google'; readonly email: string }
+  )
 
 export interface AuthSession {
   readonly accessToken: string
@@ -23,6 +27,10 @@ export interface SignUpWithPasswordParams {
 }
 
 export type SignInWithPasswordParams = SignUpWithPasswordParams
+
+export interface SignInAnonymouslyParams {
+  readonly captchaToken: string
+}
 
 export interface GoogleAuthorization {
   readonly authorizationUrl: string
@@ -43,6 +51,10 @@ export interface IdentityRegistrar {
 
 export interface PasswordAuthenticator {
   signInWithPassword(params: SignInWithPasswordParams): Promise<AuthSession>
+}
+
+export interface AnonymousAuthenticator {
+  signInAnonymously(params: SignInAnonymouslyParams): Promise<AuthSession>
 }
 
 export interface RefreshTokenAuthenticator {
@@ -82,6 +94,7 @@ export interface AuthIdentityProvider
     SessionRevoker,
     IdentityRegistrar,
     PasswordAuthenticator,
+    AnonymousAuthenticator,
     RefreshTokenAuthenticator,
     EmailOtpVerifier,
     ConfirmationResender,

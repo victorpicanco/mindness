@@ -12,6 +12,7 @@ export class GetAccountSnapshotUseCase {
 
     return {
       accountId: account.id,
+      kind: account.kind,
       plan: account.plan,
       createdAt: account.createdAt,
       timeZone: account.timeZone.value,

@@ -11,6 +11,7 @@ function createSessionWithAudio(): Session {
     sessionId: 'session-id',
     accountId: 'account-id',
     themeId: 'theme-id',
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'communication',
@@ -55,6 +56,7 @@ describe('DownloadSessionAudioUseCase', () => {
       sessionId: 'session-id',
       accountId: 'account-id',
       themeId: 'theme-id',
+      accessMode: 'account',
       configuration: SessionConfiguration.create({
         difficulty: 'balanced',
         categorySlug: 'communication',

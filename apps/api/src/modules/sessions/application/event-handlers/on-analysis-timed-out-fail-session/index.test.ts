@@ -34,6 +34,7 @@ function createProcessingSession(): Session {
     sessionId: 'session-id',
     accountId: 'account-id',
     themeId: 'theme-id',
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'general',
@@ -61,6 +62,7 @@ function createRepository(session: Session): SessionsRepository {
     listByAccount: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    hasGuestTrial: () => Promise.resolve(false),
     markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }

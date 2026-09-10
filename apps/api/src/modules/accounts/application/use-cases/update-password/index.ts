@@ -1,3 +1,4 @@
+import { GuestAccountNotAllowedError } from '@/modules/accounts/domain/errors/guest-account-not-allowed-error/index.js'
 import type { PasswordUpdater } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 import { Password } from '@/modules/accounts/domain/value-objects/password/index.js'
 
@@ -11,6 +12,10 @@ export class UpdatePasswordUseCase {
   ) {}
 
   async execute(input: UpdatePasswordInput): Promise<UpdatePasswordOutput> {
+    if (input.authenticationMethod === 'anonymous') {
+      throw new GuestAccountNotAllowedError('update_password')
+    }
+
     const password = Password.create(input.password)
     await this.dependencies.authIdentityProvider.updatePassword(input.authUserId, password.value)
     return { message: 'Password updated' }

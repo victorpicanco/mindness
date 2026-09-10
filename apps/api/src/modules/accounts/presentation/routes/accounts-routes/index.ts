@@ -25,6 +25,10 @@ import {
   type SignInBody,
 } from '@/modules/accounts/presentation/controllers/sign-in-controller/schemas.js'
 import {
+  SignInAnonymouslyBodySchema,
+  type SignInAnonymouslyBody,
+} from '@/modules/accounts/presentation/controllers/sign-in-anonymously-controller/schemas.js'
+import {
   RefreshSessionBodySchema,
   type RefreshSessionBody,
 } from '@/modules/accounts/presentation/controllers/refresh-session-controller/schemas.js'
@@ -120,6 +124,18 @@ export async function registerAccountsRoutes(
       },
     },
     (request, reply) => controllers.signIn.handle(request, reply),
+  )
+
+  publicRoutes.post<{ Body: SignInAnonymouslyBody }>(
+    ACCOUNTS_ROUTE_PATHS.signInAnonymously,
+    {
+      config: THROTTLED,
+      schema: {
+        body: SignInAnonymouslyBodySchema,
+        response: { 200: SessionResponseSchema, ...ERROR_RESPONSES },
+      },
+    },
+    (request, reply) => controllers.signInAnonymously.handle(request, reply),
   )
 
   publicRoutes.post<{ Body: RefreshSessionBody }>(

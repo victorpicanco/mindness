@@ -43,6 +43,7 @@ async function seedSession(input: {
     sessionId: input.sessionId,
     accountId: input.accountId,
     themeId: THEME_ID,
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'history',
@@ -106,7 +107,7 @@ beforeEach(async () => {
 describe('session history integration', () => {
   it('returns the account history ordered by most recent, matching the account time zone', async () => {
     const timeZone = 'America/Sao_Paulo'
-    harness.accounts.registerProfile(ACCOUNT_A, { plan: 'free', timeZone })
+    harness.accounts.registerProfile(ACCOUNT_A, { kind: 'registered', plan: 'free', timeZone })
 
     const now = new Date('2026-08-19T15:30:00.000Z')
     const oldest = {
@@ -157,7 +158,11 @@ describe('session history integration', () => {
   })
 
   it('paginates in descending order without repeats or gaps, hiding deleted sessions from every page', async () => {
-    harness.accounts.registerProfile(ACCOUNT_A, { plan: 'free', timeZone: 'UTC' })
+    harness.accounts.registerProfile(ACCOUNT_A, {
+      kind: 'registered',
+      plan: 'free',
+      timeZone: 'UTC',
+    })
 
     const base = new Date('2026-08-01T00:00:00.000Z')
     const visibleIds: string[] = []
@@ -207,8 +212,16 @@ describe('session history integration', () => {
   })
 
   it('never exposes account A history to account B and rejects a cross-account cursor', async () => {
-    harness.accounts.registerProfile(ACCOUNT_A, { plan: 'free', timeZone: 'UTC' })
-    harness.accounts.registerProfile(ACCOUNT_B, { plan: 'free', timeZone: 'UTC' })
+    harness.accounts.registerProfile(ACCOUNT_A, {
+      kind: 'registered',
+      plan: 'free',
+      timeZone: 'UTC',
+    })
+    harness.accounts.registerProfile(ACCOUNT_B, {
+      kind: 'registered',
+      plan: 'free',
+      timeZone: 'UTC',
+    })
 
     const accountASessionId = sessionId(1)
     await seedSession({

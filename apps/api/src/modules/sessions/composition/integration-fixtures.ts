@@ -7,10 +7,11 @@ import { readFile } from 'node:fs/promises'
 
 import type { PrismaClient } from '@/generated/prisma/client.js'
 import type {
-  AccountPlan,
+  AccountProfile,
   AccountsPort,
 } from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { SupabaseAudioStorageClient } from '@/modules/sessions/infrastructure/adapters/supabase-audio-storage-adapter/index.js'
+import { OperationFailedError } from '@/shared/errors/operation-failed-error/index.js'
 
 import { FakeStorageObjectNotFoundError } from './errors.js'
 
@@ -20,10 +21,8 @@ const SESSIONS_TABLES = ['session_audios', 'sessions']
 
 export interface FakeAccountsPort extends AccountsPort {
   registerIdentity(accessToken: string, accountId: string | null): void
-  registerProfile(
-    accountId: string,
-    profile: { readonly plan: AccountPlan; readonly timeZone: string },
-  ): void
+  registerProfile(accountId: string, profile: AccountProfile): void
+  registerGuest(accountId: string): void
   denyPractice(accountId: string): void
   reset(): void
 }
@@ -89,23 +88,30 @@ export function createFakeThemesPort(): FakeThemesPort {
   }
 }
 
+const DEFAULT_ACCOUNT_PROFILE: AccountProfile = {
+  kind: 'registered',
+  plan: 'free',
+  timeZone: 'America/Sao_Paulo',
+}
+
 export function createFakeAccountsPort(): FakeAccountsPort {
   const accountsByToken = new Map<string, string | null>()
-  const profilesByAccountId = new Map<
-    string,
-    { readonly plan: AccountPlan; readonly timeZone: string }
-  >()
+  const profilesByAccountId = new Map<string, AccountProfile>()
   const deniedPracticeAccountIds = new Set<string>()
 
   return {
     resolveAccountId: (accessToken) => Promise.resolve(accountsByToken.get(accessToken) ?? null),
-    findProfile: (accountId) => Promise.resolve(profilesByAccountId.get(accountId) ?? null),
+    findProfile: (accountId) =>
+      Promise.resolve(profilesByAccountId.get(accountId) ?? DEFAULT_ACCOUNT_PROFILE),
     canStartPractice: (accountId) => Promise.resolve(!deniedPracticeAccountIds.has(accountId)),
     registerIdentity: (accessToken, accountId) => {
       accountsByToken.set(accessToken, accountId)
     },
     registerProfile: (accountId, profile) => {
       profilesByAccountId.set(accountId, profile)
+    },
+    registerGuest: (accountId) => {
+      profilesByAccountId.set(accountId, { ...DEFAULT_ACCOUNT_PROFILE, kind: 'guest' })
     },
     denyPractice: (accountId) => {
       deniedPracticeAccountIds.add(accountId)
@@ -206,6 +212,80 @@ export function clearSessionsData(prisma: PrismaClient): Promise<number> {
   return prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${SESSIONS_TABLES.join(', ')} RESTART IDENTITY CASCADE`,
   )
+}
+
+export async function setPersistedSessionState(
+  prisma: PrismaClient,
+  sessionId: string,
+  state: 'expired' | 'completed' | 'failed' | 'deleted',
+): Promise<void> {
+  await prisma.session.update({ where: { id: sessionId }, data: { state } })
+}
+
+interface SessionMigrationRow {
+  readonly accessMode: string
+  readonly accountId: string
+}
+
+function isSessionMigrationRows(value: unknown): value is SessionMigrationRow[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (row: unknown) =>
+        typeof row === 'object' &&
+        row !== null &&
+        'accessMode' in row &&
+        typeof row.accessMode === 'string' &&
+        'accountId' in row &&
+        typeof row.accountId === 'string',
+    )
+  )
+}
+
+export async function applySessionAccessModeMigrationToLegacyRows(
+  prisma: PrismaClient,
+): Promise<readonly SessionMigrationRow[]> {
+  const migration = await readFile(
+    new URL(
+      '../../../../prisma/migrations/20260910130000_add_session_access_mode/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  )
+  const statements = migration
+    .split(';')
+    .map((statement) => statement.trim())
+    .filter((statement) => statement.length > 0)
+
+  return prisma.$transaction(async (transaction) => {
+    await transaction.$executeRawUnsafe('DROP SCHEMA IF EXISTS sessions_migration_test CASCADE')
+    await transaction.$executeRawUnsafe('CREATE SCHEMA sessions_migration_test')
+    await transaction.$executeRawUnsafe('SET LOCAL search_path TO sessions_migration_test')
+    await transaction.$executeRawUnsafe(`
+      CREATE TABLE sessions (
+        id UUID PRIMARY KEY,
+        account_id UUID NOT NULL
+      )
+    `)
+    await transaction.$executeRawUnsafe(`
+      INSERT INTO sessions (id, account_id)
+      VALUES
+        ('00000000-0000-4000-8000-000000000091', '00000000-0000-4000-8000-000000000081'),
+        ('00000000-0000-4000-8000-000000000092', '00000000-0000-4000-8000-000000000082')
+    `)
+    for (const statement of statements) await transaction.$executeRawUnsafe(statement)
+
+    const rows: unknown = await transaction.$queryRawUnsafe(
+      'SELECT account_id::text AS "accountId", access_mode::text AS "accessMode" FROM sessions ORDER BY id',
+    )
+    if (!isSessionMigrationRows(rows)) {
+      throw new OperationFailedError('validate-session-migration-result')
+    }
+
+    await transaction.$executeRawUnsafe('SET LOCAL search_path TO public')
+    await transaction.$executeRawUnsafe('DROP SCHEMA sessions_migration_test CASCADE')
+    return rows
+  })
 }
 
 export {

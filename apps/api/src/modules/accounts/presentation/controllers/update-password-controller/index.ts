@@ -16,6 +16,7 @@ export class UpdatePasswordController {
     const identity = requireAuthenticatedIdentity(request)
     const output = await this.useCase.execute({
       authUserId: identity.authUserId,
+      authenticationMethod: identity.authenticationMethod,
       password: request.body.password,
     })
     await reply.code(200).send(ok(output))

@@ -28,6 +28,7 @@ async function seedSession(input: {
     sessionId: input.sessionId,
     accountId: input.accountId,
     themeId: THEME_ID,
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'session-deletion',
@@ -69,7 +70,7 @@ beforeEach(async () => {
   harness.reset()
   harness.accounts.registerIdentity('account-a', ACCOUNT_A)
   harness.accounts.registerIdentity('account-b', ACCOUNT_B)
-  harness.accounts.registerProfile(ACCOUNT_A, { plan: 'free', timeZone: 'UTC' })
+  harness.accounts.registerProfile(ACCOUNT_A, { kind: 'registered', plan: 'free', timeZone: 'UTC' })
 })
 
 describe('session deletion integration', () => {
@@ -148,7 +149,11 @@ describe('session deletion integration', () => {
   })
 
   it('never lets account B delete account A session, which stays intact', async () => {
-    harness.accounts.registerProfile(ACCOUNT_B, { plan: 'free', timeZone: 'UTC' })
+    harness.accounts.registerProfile(ACCOUNT_B, {
+      kind: 'registered',
+      plan: 'free',
+      timeZone: 'UTC',
+    })
     const sessionId = '00000000-0000-4000-8000-000000000093'
     await seedSession({ sessionId, accountId: ACCOUNT_A, state: 'completed' })
 

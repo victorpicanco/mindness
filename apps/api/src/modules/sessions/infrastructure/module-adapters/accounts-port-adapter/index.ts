@@ -19,7 +19,9 @@ export class AccountsPortAdapter implements AccountsPort {
 
   async findProfile(accountId: string): Promise<AccountProfile | null> {
     const snapshot = await this.accountsFacade.getAccountSnapshot(accountId)
-    return snapshot === null ? null : { plan: snapshot.plan, timeZone: snapshot.timeZone }
+    return snapshot === null
+      ? null
+      : { kind: snapshot.kind, plan: snapshot.plan, timeZone: snapshot.timeZone }
   }
 
   canStartPractice(accountId: string): Promise<boolean> {

@@ -11,6 +11,7 @@ const row: SessionRow = {
   id: '6f3a143d-6853-48f0-b414-a57d8b65f101',
   accountId: '97784f56-9b46-44a4-a0d2-52e97d2fe201',
   themeId: 'c674e9e3-807e-4516-8471-43b0c392f701',
+  accessMode: 'account',
   difficulty: 'balanced',
   categorySlug: 'self-awareness',
   searchWindowMinutes: 4,

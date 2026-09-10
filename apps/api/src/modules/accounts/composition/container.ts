@@ -7,6 +7,7 @@ import { CreateAccountUseCase } from '@/modules/accounts/application/use-cases/c
 import { DeleteAccountUseCase } from '@/modules/accounts/application/use-cases/delete-account/index.js'
 import { GetAccountProfileUseCase } from '@/modules/accounts/application/use-cases/get-account-profile/index.js'
 import { GetAccountSnapshotUseCase } from '@/modules/accounts/application/use-cases/get-account-snapshot/index.js'
+import { SignInAnonymouslyUseCase } from '@/modules/accounts/application/use-cases/sign-in-anonymously/index.js'
 import { SignInUseCase } from '@/modules/accounts/application/use-cases/sign-in/index.js'
 import { RefreshSessionUseCase } from '@/modules/accounts/application/use-cases/refresh-session/index.js'
 import { RequestPasswordRecoveryUseCase } from '@/modules/accounts/application/use-cases/request-password-recovery/index.js'
@@ -42,6 +43,7 @@ import { ConfirmEmailController } from '@/modules/accounts/presentation/controll
 import { CreateAccountController } from '@/modules/accounts/presentation/controllers/create-account-controller/index.js'
 import { DeleteAccountController } from '@/modules/accounts/presentation/controllers/delete-account-controller/index.js'
 import { GetAccountProfileController } from '@/modules/accounts/presentation/controllers/get-account-profile-controller/index.js'
+import { SignInAnonymouslyController } from '@/modules/accounts/presentation/controllers/sign-in-anonymously-controller/index.js'
 import { SignInController } from '@/modules/accounts/presentation/controllers/sign-in-controller/index.js'
 import { RefreshSessionController } from '@/modules/accounts/presentation/controllers/refresh-session-controller/index.js'
 import { RequestPasswordRecoveryController } from '@/modules/accounts/presentation/controllers/request-password-recovery-controller/index.js'
@@ -147,6 +149,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     getAccountProfile: new GetAccountProfileUseCase({ accounts, authIdentityProvider }),
     getAccountSnapshot: new GetAccountSnapshotUseCase(accounts),
     signIn: new SignInUseCase(shared),
+    signInAnonymously: new SignInAnonymouslyUseCase({ authIdentityProvider }),
     refreshSession: new RefreshSessionUseCase({ accounts, authIdentityProvider }),
     requestPasswordRecovery: new RequestPasswordRecoveryUseCase({ authIdentityProvider }),
     resendSignUpConfirmation: new ResendSignUpConfirmationUseCase({ authIdentityProvider }),
@@ -173,6 +176,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     deleteAccount: new DeleteAccountController(useCases.deleteAccount),
     getAccountProfile: new GetAccountProfileController(useCases.getAccountProfile),
     signIn: new SignInController(useCases.signIn),
+    signInAnonymously: new SignInAnonymouslyController(useCases.signInAnonymously),
     refreshSession: new RefreshSessionController(useCases.refreshSession),
     requestPasswordRecovery: new RequestPasswordRecoveryController(
       useCases.requestPasswordRecovery,

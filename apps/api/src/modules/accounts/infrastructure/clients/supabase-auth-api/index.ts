@@ -22,6 +22,7 @@ export interface SupabaseAuthApi {
     readonly password: string
     readonly captchaToken: string
   }): Promise<SupabaseAuthResult>
+  signInAnonymously(params: { readonly captchaToken: string }): Promise<SupabaseAuthResult>
   createGoogleAuthorization(redirectTo: string): Promise<SupabaseGoogleAuthorizationResult>
   exchangeGoogleCode(code: string, pkceState: string): Promise<SupabaseAuthResult>
   refreshSession(refreshToken: string): Promise<SupabaseAuthResult>
@@ -119,6 +120,12 @@ export class SupabaseAuthApiClient implements SupabaseAuthApi {
     return this.client().auth.signInWithPassword({
       email: params.email,
       password: params.password,
+      options: { captchaToken: params.captchaToken },
+    })
+  }
+
+  signInAnonymously(params: { readonly captchaToken: string }): Promise<SupabaseAuthResult> {
+    return this.client().auth.signInAnonymously({
       options: { captchaToken: params.captchaToken },
     })
   }

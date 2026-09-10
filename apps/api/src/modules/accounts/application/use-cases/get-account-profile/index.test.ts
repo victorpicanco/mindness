@@ -14,9 +14,18 @@ import { GetAccountProfileUseCase } from './index.js'
 const NOW = new Date('2026-08-15T12:00:00.000Z')
 
 function accountFor(authUserId = 'auth-user-1'): Account {
-  return Account.create({
+  return Account.createRegistered({
     id: 'account-1',
     email: EmailAddress.create('person@example.com'),
+    authUserId,
+    timeZone: TimeZone.create('America/Sao_Paulo'),
+    createdAt: NOW,
+  })
+}
+
+function guestAccountFor(authUserId = 'auth-user-1'): Account {
+  return Account.createGuest({
+    id: 'account-1',
     authUserId,
     timeZone: TimeZone.create('America/Sao_Paulo'),
     createdAt: NOW,
@@ -35,7 +44,7 @@ class InMemoryAccountsRepository implements AccountsRepository {
   }
 
   findByEmail(email: string): Promise<Account | null> {
-    return Promise.resolve(this.existing?.email.value === email ? this.existing : null)
+    return Promise.resolve(this.existing?.email?.value === email ? this.existing : null)
   }
 
   save(): Promise<void> {
@@ -43,22 +52,30 @@ class InMemoryAccountsRepository implements AccountsRepository {
   }
 }
 
-const authIdentityProvider = {
-  validateAccessToken(): Promise<VerifiedAuthIdentity> {
-    return Promise.resolve({
-      authUserId: 'auth-user-1',
-      email: 'person@example.com',
-      sessionId: 'session-1',
-      issuedAt: NOW,
-      authenticationMethod: 'password',
-    })
-  },
+function identityProviderFor(authenticationMethod: 'password' | 'anonymous') {
+  return {
+    validateAccessToken(): Promise<VerifiedAuthIdentity> {
+      const identityFields = {
+        authUserId: 'auth-user-1',
+        sessionId: 'session-1',
+        issuedAt: NOW,
+      }
+      return Promise.resolve(
+        authenticationMethod === 'anonymous'
+          ? { ...identityFields, email: null, authenticationMethod }
+          : { ...identityFields, email: 'person@example.com', authenticationMethod },
+      )
+    },
+  }
 }
 
-function createUseCase(existing: Account | null = null): GetAccountProfileUseCase {
+function createUseCase(
+  existing: Account | null = null,
+  authenticationMethod: 'password' | 'anonymous' = 'password',
+): GetAccountProfileUseCase {
   return new GetAccountProfileUseCase({
     accounts: new InMemoryAccountsRepository(existing),
-    authIdentityProvider,
+    authIdentityProvider: identityProviderFor(authenticationMethod),
   })
 }
 
@@ -68,6 +85,7 @@ describe('GetAccountProfileUseCase', () => {
       createUseCase(accountFor()).execute({ accessToken: 'access-token' }),
     ).resolves.toEqual({
       accountId: 'account-1',
+      accountKind: 'registered',
       authenticationMethod: 'password',
       createdAt: NOW.toISOString(),
       email: 'person@example.com',
@@ -76,6 +94,34 @@ describe('GetAccountProfileUseCase', () => {
       plan: 'free',
       consent: null,
     })
+  })
+
+  it('describes a guest account as such and without an email address', async () => {
+    await expect(
+      createUseCase(guestAccountFor(), 'anonymous').execute({ accessToken: 'access-token' }),
+    ).resolves.toEqual({
+      accountId: 'account-1',
+      accountKind: 'guest',
+      authenticationMethod: 'anonymous',
+      createdAt: NOW.toISOString(),
+      email: null,
+      name: null,
+      timeZone: 'America/Sao_Paulo',
+      plan: 'free',
+      consent: null,
+    })
+  })
+
+  it('rejects a permanent identity attached to a guest account', async () => {
+    await expect(
+      createUseCase(guestAccountFor(), 'password').execute({ accessToken: 'access-token' }),
+    ).rejects.toBeInstanceOf(AccountNotFoundError)
+  })
+
+  it('rejects an anonymous identity attached to a registered account', async () => {
+    await expect(
+      createUseCase(accountFor(), 'anonymous').execute({ accessToken: 'access-token' }),
+    ).rejects.toBeInstanceOf(AccountNotFoundError)
   })
 
   it('exposes the name of an account that has one', async () => {

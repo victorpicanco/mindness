@@ -10,6 +10,7 @@ export interface SessionsRepository {
   }): Promise<Session[]>
   findExpiredInProgress(before: Date, limit: number): Promise<Session[]>
   findStuckProcessing(before: Date, limit: number): Promise<Session[]>
+  hasGuestTrial(accountId: string): Promise<boolean>
   markDeleted(session: Session): Promise<boolean>
   save(session: Session): Promise<void>
 }

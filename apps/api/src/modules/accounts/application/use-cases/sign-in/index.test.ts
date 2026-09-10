@@ -25,7 +25,7 @@ const credentials = {
 }
 
 function accountFor(authUserId = 'auth-user-1'): Account {
-  return Account.create({
+  return Account.createRegistered({
     id: 'account-1',
     email: EmailAddress.create('person@example.com'),
     authUserId,
@@ -48,7 +48,7 @@ class InMemoryAccountsRepository implements AccountsRepository {
   }
 
   findByEmail(email: string): Promise<Account | null> {
-    return Promise.resolve(this.existing?.email.value === email ? this.existing : null)
+    return Promise.resolve(this.existing?.email?.value === email ? this.existing : null)
   }
 
   save(account: Account): Promise<void> {

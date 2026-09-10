@@ -6,4 +6,4 @@ export interface AccountsPort {
   canStartPractice(accountId: string): Promise<boolean>
 }
 
-export type { AccountPlan, AccountProfile } from './types.js'
+export type { AccountKind, AccountPlan, AccountProfile } from './types.js'

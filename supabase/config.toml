@@ -75,7 +75,7 @@ jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true
-enable_anonymous_sign_ins = false
+enable_anonymous_sign_ins = true
 enable_manual_linking = false
 minimum_password_length = 8
 password_requirements = "lower_upper_letters_digits_symbols"
@@ -83,7 +83,7 @@ password_requirements = "lower_upper_letters_digits_symbols"
 [auth.rate_limit]
 email_sent = 2
 sms_sent = 30
-anonymous_users = 30
+anonymous_users = 1000
 token_refresh = 150
 sign_in_sign_ups = 30
 token_verifications = 30
@@ -212,6 +212,7 @@ enabled = true
 enabled = false
 
 [remotes.production.auth]
+enable_anonymous_sign_ins = false
 site_url = "https://mindness.app"
 additional_redirect_urls = [
   "https://mindness.app/auth/confirm",

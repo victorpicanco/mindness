@@ -5,10 +5,12 @@ import type { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone
 import type { VoiceConsent } from '@/modules/accounts/domain/value-objects/voice-consent/index.js'
 
 import type {
+  AccountKind,
   AccountPlan,
   AccountStatus,
   AcceptVoiceConsentResult,
-  CreateAccountParams,
+  CreateGuestAccountParams,
+  CreateRegisteredAccountParams,
   ReconstituteAccountParams,
 } from './types.js'
 
@@ -23,10 +25,20 @@ function requireIdentifier(value: string, field: string): string {
   return value
 }
 
+function requireEmailMatchingKind(
+  kind: AccountKind,
+  email: EmailAddress | null,
+): EmailAddress | null {
+  if ((kind === 'guest') !== (email === null)) throw new InvalidAccountValueError('email')
+
+  return email
+}
+
 export class Account {
   private constructor(
     readonly id: string,
-    readonly email: EmailAddress,
+    readonly kind: AccountKind,
+    readonly email: EmailAddress | null,
     readonly authUserId: string,
     private _timeZone: TimeZone,
     readonly plan: AccountPlan,
@@ -61,25 +73,19 @@ export class Account {
     return new Date(this.createdAtEpoch)
   }
 
-  static create(params: CreateAccountParams): Account {
-    return new Account(
-      requireIdentifier(params.id, 'id'),
-      params.email,
-      requireIdentifier(params.authUserId, 'authUserId'),
-      params.timeZone,
-      INITIAL_PLAN,
-      INITIAL_STATUS,
-      params.createdAt.getTime(),
-      null,
-      null,
-      null,
-    )
+  static createGuest(params: CreateGuestAccountParams): Account {
+    return Account.build('guest', null, params)
+  }
+
+  static createRegistered(params: CreateRegisteredAccountParams): Account {
+    return Account.build('registered', params.email, params)
   }
 
   static reconstitute(params: ReconstituteAccountParams): Account {
     return new Account(
       requireIdentifier(params.id, 'id'),
-      params.email,
+      params.kind,
+      requireEmailMatchingKind(params.kind, params.email),
       requireIdentifier(params.authUserId, 'authUserId'),
       params.timeZone,
       params.plan,
@@ -88,6 +94,26 @@ export class Account {
       params.voiceConsent,
       params.currentSessionId,
       params.name,
+    )
+  }
+
+  private static build(
+    kind: AccountKind,
+    email: EmailAddress | null,
+    params: CreateGuestAccountParams,
+  ): Account {
+    return new Account(
+      requireIdentifier(params.id, 'id'),
+      kind,
+      requireEmailMatchingKind(kind, email),
+      requireIdentifier(params.authUserId, 'authUserId'),
+      params.timeZone,
+      INITIAL_PLAN,
+      INITIAL_STATUS,
+      params.createdAt.getTime(),
+      null,
+      null,
+      null,
     )
   }
 

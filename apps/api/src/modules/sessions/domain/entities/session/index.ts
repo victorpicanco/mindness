@@ -6,6 +6,7 @@ import { RecordingWindowNotOpenError } from '@/modules/sessions/domain/errors/re
 
 import type {
   ReconstituteSessionParams,
+  SessionAccessMode,
   SessionExpiredReason,
   SessionFailureReason,
   SessionState,
@@ -26,6 +27,7 @@ export class Session {
     readonly accountId: string,
     readonly themeId: string,
     readonly configuration: SessionConfiguration,
+    readonly accessMode: SessionAccessMode,
     private _state: SessionState,
     private readonly createdAtEpoch: number,
     private expiresAtEpoch: number,
@@ -100,6 +102,7 @@ export class Session {
       params.accountId,
       params.themeId,
       params.configuration,
+      params.accessMode,
       'in_progress',
       createdAtEpoch,
       researchEndsAtEpoch(createdAtEpoch, params.configuration) +
@@ -122,6 +125,7 @@ export class Session {
       params.accountId,
       params.themeId,
       params.configuration,
+      params.accessMode,
       params.state,
       params.createdAt.getTime(),
       params.expiresAt.getTime(),
@@ -211,6 +215,7 @@ export class Session {
 
 export type {
   ReconstituteSessionParams,
+  SessionAccessMode,
   SessionExpiredReason,
   SessionFailureReason,
   SessionState,

@@ -9,7 +9,8 @@ export class AccountMapper {
   toDomain(row: AccountRow): Account {
     return Account.reconstitute({
       id: row.id,
-      email: EmailAddress.create(row.email),
+      kind: row.kind,
+      email: row.email === null ? null : EmailAddress.create(row.email),
       authUserId: row.authUserId,
       timeZone: TimeZone.create(row.timeZone),
       name: row.name === null ? null : DisplayName.create(row.name),
@@ -32,7 +33,8 @@ export class AccountMapper {
   toPersistence(account: Account): AccountRow {
     return {
       id: account.id,
-      email: account.email.value,
+      kind: account.kind,
+      email: account.email?.value ?? null,
       authUserId: account.authUserId,
       timeZone: account.timeZone.value,
       name: account.name?.value ?? null,

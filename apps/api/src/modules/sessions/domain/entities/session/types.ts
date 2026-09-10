@@ -4,11 +4,14 @@ import type { SessionAudio } from '@/modules/sessions/domain/value-objects/sessi
 export type SessionState =
   'in_progress' | 'expired' | 'processing' | 'completed' | 'failed' | 'deleted'
 
+export type SessionAccessMode = 'guest_trial' | 'account'
+
 export interface StartSessionParams {
   readonly sessionId: string
   readonly accountId: string
   readonly themeId: string
   readonly configuration: SessionConfiguration
+  readonly accessMode: SessionAccessMode
   readonly createdAt: Date
 }
 

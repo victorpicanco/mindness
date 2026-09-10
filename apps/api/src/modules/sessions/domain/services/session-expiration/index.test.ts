@@ -81,6 +81,7 @@ describe('SessionExpiration', () => {
         sessionId: 'session-id',
         accountId: 'account-id',
         themeId: 'theme-id',
+        accessMode: 'account',
         configuration: createConfiguration(),
         state,
         createdAt: CREATED_AT,
@@ -117,6 +118,7 @@ function createSession(): Session {
     sessionId: 'session-id',
     accountId: 'account-id',
     themeId: 'theme-id',
+    accessMode: 'account',
     configuration: createConfiguration(),
     createdAt: CREATED_AT,
   })

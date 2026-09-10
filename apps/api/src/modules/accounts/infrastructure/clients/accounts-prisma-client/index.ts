@@ -1,9 +1,10 @@
 import type { PrismaClient } from '@/generated/prisma/client.js'
-import type { AccountPlan, AccountStatus } from '@/generated/prisma/enums.js'
+import type { AccountKind, AccountPlan, AccountStatus } from '@/generated/prisma/enums.js'
 
 export interface AccountRow {
   readonly id: string
-  readonly email: string
+  readonly kind: AccountKind
+  readonly email: string | null
   readonly authUserId: string
   readonly timeZone: string
   readonly name: string | null

@@ -1,5 +1,6 @@
 import { Prisma } from '@/generated/prisma/client.js'
 import type { Session } from '@/modules/sessions/domain/entities/session/index.js'
+import { GuestTrialConsumedError } from '@/modules/sessions/domain/errors/guest-trial-consumed-error/index.js'
 import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/session-already-running-error/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import type { SessionsPrismaClient } from '@/modules/sessions/infrastructure/clients/sessions-prisma-client/index.js'
@@ -9,12 +10,13 @@ import { DatabaseError } from '@/shared/errors/database-error/index.js'
 
 const UNIQUE_VIOLATION_CODE = 'P2002'
 const ACTIVE_SESSION_INDEX = 'sessions_account_id_active_key'
+const GUEST_TRIAL_INDEX = 'sessions_account_id_guest_trial_key'
 
-function isInProgressUniquenessViolation(error: unknown): boolean {
+function violatesIndex(error: unknown, index: string): boolean {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
   if (error.code !== UNIQUE_VIOLATION_CODE) return false
 
-  return JSON.stringify(error.meta ?? {}).includes(ACTIVE_SESSION_INDEX)
+  return JSON.stringify(error.meta ?? {}).includes(index)
 }
 
 export class PrismaSessionsRepository implements SessionsRepository {
@@ -113,6 +115,21 @@ export class PrismaSessionsRepository implements SessionsRepository {
     }
   }
 
+  async hasGuestTrial(accountId: string): Promise<boolean> {
+    try {
+      const count = await this.client().session.count({
+        where: { accountId, accessMode: 'guest_trial' },
+      })
+
+      return count > 0
+    } catch (error) {
+      throw new DatabaseError('Failed to count the guest trials of the account', {
+        cause: error,
+        context: { accountId },
+      })
+    }
+  }
+
   async markDeleted(session: Session): Promise<boolean> {
     const deletedAt = session.deletedAt
     if (deletedAt === null) {
@@ -144,7 +161,10 @@ export class PrismaSessionsRepository implements SessionsRepository {
         update: this.mapper.toUpdateData(session),
       })
     } catch (error) {
-      if (isInProgressUniquenessViolation(error)) {
+      if (violatesIndex(error, GUEST_TRIAL_INDEX)) {
+        throw new GuestTrialConsumedError(session.accountId, { cause: error })
+      }
+      if (violatesIndex(error, ACTIVE_SESSION_INDEX)) {
         throw new SessionAlreadyRunningError(session.id)
       }
 

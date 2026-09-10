@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { Account } from '@/modules/accounts/domain/entities/account/index.js'
-import type { AccessTokenValidator } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
+import type {
+  AccessTokenValidator,
+  VerifiedAuthIdentity,
+} from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 import type { EventPublisher } from '@/modules/accounts/domain/ports/event-publisher/index.js'
 import type { AccountsRepository } from '@/modules/accounts/domain/repositories/accounts-repository/index.js'
 import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-address/index.js'
@@ -16,6 +19,7 @@ const NEUTRAL_MESSAGE =
 
 class InMemoryAccountsRepository implements AccountsRepository {
   readonly saved: Account[] = []
+  readonly emailLookups: string[] = []
 
   constructor(private readonly existing: Account | null = null) {}
 
@@ -34,9 +38,11 @@ class InMemoryAccountsRepository implements AccountsRepository {
   }
 
   findByEmail(email: string): Promise<Account | null> {
+    this.emailLookups.push(email)
+
     return Promise.resolve(
-      this.saved.find((account) => account.email.value === email) ??
-        (this.existing?.email.value === email ? this.existing : null),
+      this.saved.find((account) => account.email?.value === email) ??
+        (this.existing?.email?.value === email ? this.existing : null),
     )
   }
 
@@ -49,17 +55,30 @@ class InMemoryAccountsRepository implements AccountsRepository {
 class FixedAuthIdentityProvider implements AccessTokenValidator {
   readonly validatedTokens: string[] = []
 
-  constructor(private readonly authUserId = 'auth-user-1') {}
+  constructor(
+    private readonly authUserId = 'auth-user-1',
+    private readonly anonymous = false,
+  ) {}
 
-  validateAccessToken(accessToken: string) {
+  validateAccessToken(accessToken: string): Promise<VerifiedAuthIdentity> {
     this.validatedTokens.push(accessToken)
-    return Promise.resolve({
-      authUserId: this.authUserId,
-      email: 'person@example.com',
-      issuedAt: NOW,
-      sessionId: 'session-1',
-      authenticationMethod: 'password' as const,
-    })
+    return Promise.resolve(
+      this.anonymous
+        ? {
+            authUserId: this.authUserId,
+            email: null,
+            issuedAt: NOW,
+            sessionId: 'session-1',
+            authenticationMethod: 'anonymous' as const,
+          }
+        : {
+            authUserId: this.authUserId,
+            email: 'person@example.com',
+            issuedAt: NOW,
+            sessionId: 'session-1',
+            authenticationMethod: 'password' as const,
+          },
+    )
   }
 }
 
@@ -73,7 +92,7 @@ class RecordingEventPublisher implements EventPublisher {
 }
 
 function existingAccount(): Account {
-  return Account.create({
+  return Account.createRegistered({
     id: 'account-existing',
     email: EmailAddress.create('person@example.com'),
     authUserId: 'auth-user-1',
@@ -82,9 +101,13 @@ function existingAccount(): Account {
   })
 }
 
-function createHarness(existing: Account | null = null, authUserId = 'auth-user-1') {
+function createHarness(
+  existing: Account | null = null,
+  authUserId = 'auth-user-1',
+  anonymous = false,
+) {
   const accounts = new InMemoryAccountsRepository(existing)
-  const authIdentityProvider = new FixedAuthIdentityProvider(authUserId)
+  const authIdentityProvider = new FixedAuthIdentityProvider(authUserId, anonymous)
   const eventPublisher = new RecordingEventPublisher()
   let generatedIds = 0
 
@@ -120,7 +143,7 @@ describe('CreateAccountUseCase', () => {
       plan: 'free',
       status: 'accessible',
     })
-    expect(harness.accounts.saved[0]?.email.value).toBe('person@example.com')
+    expect(harness.accounts.saved[0]?.email?.value).toBe('person@example.com')
     expect(harness.accounts.saved[0]?.timeZone.value).toBe('Europe/Lisbon')
   })
 
@@ -174,6 +197,66 @@ describe('CreateAccountUseCase', () => {
     await harness.useCase.execute({ accessToken: 'verified-token', timeZone: null })
 
     expect(harness.accounts.saved[0]?.timeZone.value).toBe('America/Sao_Paulo')
+  })
+
+  it('provisions a guest account without an email from an anonymous identity', async () => {
+    const harness = createHarness(null, 'anonymous-user-1', true)
+
+    await expect(
+      harness.useCase.execute({ accessToken: 'anonymous-token', timeZone: 'Europe/Lisbon' }),
+    ).resolves.toEqual({ message: NEUTRAL_MESSAGE })
+
+    expect(harness.accounts.saved).toHaveLength(1)
+    expect(harness.accounts.saved[0]).toMatchObject({
+      kind: 'guest',
+      email: null,
+      authUserId: 'anonymous-user-1',
+      plan: 'free',
+    })
+    expect(harness.accounts.saved[0]?.hasCurrentSession('session-1')).toBe(true)
+  })
+
+  it('never looks an anonymous identity up by email', async () => {
+    const harness = createHarness(null, 'anonymous-user-1', true)
+
+    await harness.useCase.execute({ accessToken: 'anonymous-token', timeZone: null })
+
+    expect(harness.accounts.emailLookups).toEqual([])
+  })
+
+  it('does not hand a second guest the account of the first one', async () => {
+    const first = createHarness(null, 'anonymous-user-1', true)
+    await first.useCase.execute({ accessToken: 'anonymous-token', timeZone: null })
+
+    const second = createHarness(first.accounts.saved[0] ?? null, 'anonymous-user-2', true)
+    await second.useCase.execute({ accessToken: 'another-anonymous-token', timeZone: null })
+
+    expect(second.accounts.saved).toHaveLength(1)
+    expect(second.accounts.saved[0]?.authUserId).toBe('anonymous-user-2')
+    expect(second.eventPublisher.published).toContainEqual(
+      expect.objectContaining({ eventName: 'account_created' }),
+    )
+    expect(second.eventPublisher.published).not.toContainEqual(
+      expect.objectContaining({ eventName: 'account_creation_rejected' }),
+    )
+  })
+
+  it('publishes account_created with the anonymous authentication method for a guest', async () => {
+    const harness = createHarness(null, 'anonymous-user-1', true)
+
+    await harness.useCase.execute({ accessToken: 'anonymous-token', timeZone: null })
+
+    expect(harness.eventPublisher.published).toContainEqual(
+      expect.objectContaining({
+        eventName: 'account_created',
+        payload: {
+          accountId: 'generated-1',
+          plan: 'free',
+          origin: 'api',
+          authenticationMethod: 'anonymous',
+        },
+      }),
+    )
   })
 
   it('does not reveal an existing email linked to another external identity', async () => {

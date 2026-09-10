@@ -23,7 +23,11 @@ import {
   SessionHistoryResponseSchema,
   type SessionHistoryQuery,
 } from '@/modules/sessions/presentation/controllers/list-session-history-controller/schemas.js'
-import { SessionThemeCategoriesResponseSchema } from '@/modules/sessions/presentation/controllers/list-theme-categories-controller/schemas.js'
+import {
+  SessionThemeCategoriesQuerySchema,
+  SessionThemeCategoriesResponseSchema,
+  type SessionThemeCategoriesQuery,
+} from '@/modules/sessions/presentation/controllers/list-theme-categories-controller/schemas.js'
 import {
   ReportMicrophonePermissionDeniedResponseSchema,
   SessionIdParamsSchema as ReportMicrophonePermissionDeniedParamsSchema,
@@ -75,6 +79,19 @@ export async function registerSessionsRoutes(
 ): Promise<void> {
   const { controllers } = deps
 
+  const publicRoutes = app.withTypeProvider<TypeBoxTypeProvider>()
+
+  publicRoutes.get<{ Querystring: SessionThemeCategoriesQuery }>(
+    SESSIONS_ROUTE_PATHS.themeCategories,
+    {
+      schema: {
+        querystring: SessionThemeCategoriesQuerySchema,
+        response: { 200: SessionThemeCategoriesResponseSchema, ...ERROR_RESPONSES },
+      },
+    },
+    (request, reply) => controllers.listThemeCategories.handle(request, reply),
+  )
+
   await app.register((scope, _options, done) => {
     registerAuthenticatedIdentityGuard(scope, deps.resolveAccountIdentity)
     const authenticated = scope.withTypeProvider<TypeBoxTypeProvider>()
@@ -105,12 +122,6 @@ export async function registerSessionsRoutes(
       SESSIONS_ROUTE_PATHS.activeSession,
       { schema: { response: { 200: ActiveSessionResponseSchema, ...ERROR_RESPONSES } } },
       (request, reply) => controllers.getActiveSession.handle(request, reply),
-    )
-
-    authenticated.get(
-      SESSIONS_ROUTE_PATHS.themeCategories,
-      { schema: { response: { 200: SessionThemeCategoriesResponseSchema, ...ERROR_RESPONSES } } },
-      (request, reply) => controllers.listThemeCategories.handle(request, reply),
     )
 
     authenticated.post<{ Params: AbandonSessionIdParams }>(

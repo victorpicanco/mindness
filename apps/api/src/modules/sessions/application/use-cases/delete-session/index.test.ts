@@ -21,6 +21,7 @@ function createSession(
     sessionId: 'session-1',
     accountId,
     themeId: 'theme-1',
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'easy',
       categorySlug: 'self-awareness',
@@ -47,6 +48,7 @@ function createHarness(session: Session | null, profileExists = true, wonTheRace
     listByAccount: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    hasGuestTrial: () => Promise.resolve(false),
     markDeleted: (value) => {
       calls.push('markDeleted')
       deleted.push(value)
@@ -57,7 +59,9 @@ function createHarness(session: Session | null, profileExists = true, wonTheRace
   const accounts: AccountsPort = {
     resolveAccountId: () => Promise.resolve(null),
     findProfile: () =>
-      Promise.resolve(profileExists ? { plan: 'free', timeZone: 'America/Sao_Paulo' } : null),
+      Promise.resolve(
+        profileExists ? { kind: 'registered', plan: 'free', timeZone: 'America/Sao_Paulo' } : null,
+      ),
     canStartPractice: () => Promise.resolve(true),
   }
   const eventPublisher: EventPublisher = {

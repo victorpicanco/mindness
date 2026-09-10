@@ -23,6 +23,7 @@ function createProcessingSession(): Session {
     sessionId: 'session-id',
     accountId: 'account-id',
     themeId: 'theme-id',
+    accessMode: 'account',
     configuration: createConfiguration(),
     createdAt: CREATED_AT,
   })
@@ -72,6 +73,7 @@ describe('FindSessionProcessingContextUseCase', () => {
         sessionId: session.id,
         accountId: session.accountId,
         themeId: session.themeId,
+        accessMode: 'account',
         configuration: createConfiguration(),
         state,
         createdAt: CREATED_AT,

@@ -8,9 +8,12 @@ import type { AccountRow } from '@/modules/accounts/infrastructure/clients/accou
 
 import { AccountMapper } from './index.js'
 
+const EMAIL = 'person@example.com'
+
 const row: AccountRow = {
   id: '2f1a3c2e-7b64-4f4a-9a1e-6f6a2c9b7d10',
-  email: 'person@example.com',
+  kind: 'registered',
+  email: EMAIL,
   authUserId: 'auth-user-1',
   timeZone: 'America/Sao_Paulo',
   name: null,
@@ -41,7 +44,7 @@ describe('AccountMapper', () => {
     const account = new AccountMapper().toDomain(row)
 
     expect(account.email).toBeInstanceOf(EmailAddress)
-    expect(account.email.equals(EmailAddress.create(row.email))).toBe(true)
+    expect(account.email?.equals(EmailAddress.create(EMAIL))).toBe(true)
     expect(account.timeZone).toBeInstanceOf(TimeZone)
     expect(account.timeZone.equals(TimeZone.create(row.timeZone))).toBe(true)
   })
@@ -53,15 +56,39 @@ describe('AccountMapper', () => {
   })
 
   it('maps a freshly created aggregate to its persisted row', () => {
-    const account = Account.create({
+    const account = Account.createRegistered({
       id: row.id,
-      email: EmailAddress.create(row.email),
+      email: EmailAddress.create(EMAIL),
       authUserId: row.authUserId,
       timeZone: TimeZone.create(row.timeZone),
       createdAt: row.createdAt,
     })
 
     expect(new AccountMapper().toPersistence(account)).toEqual(row)
+  })
+
+  it('round-trips a guest row that carries no email address', () => {
+    const mapper = new AccountMapper()
+    const guestRow: AccountRow = { ...row, kind: 'guest', email: null }
+    const account = mapper.toDomain(guestRow)
+
+    expect(account).toMatchObject({ kind: 'guest', email: null })
+    expect(mapper.toPersistence(account)).toEqual(guestRow)
+  })
+
+  it('maps a freshly created guest aggregate to its persisted row', () => {
+    const account = Account.createGuest({
+      id: row.id,
+      authUserId: row.authUserId,
+      timeZone: TimeZone.create(row.timeZone),
+      createdAt: row.createdAt,
+    })
+
+    expect(new AccountMapper().toPersistence(account)).toEqual({
+      ...row,
+      kind: 'guest',
+      email: null,
+    })
   })
 
   it('round-trips the name as a validated value object', () => {

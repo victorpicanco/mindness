@@ -38,3 +38,11 @@ O `errorResponseBuilder` devolve uma instância de `RateLimitedError`. O plugin 
 - **Confiar apenas no rate limit do Supabase:** ele é global por projeto. Um atacante consumindo a cota derruba o login de todos os usuários; um limite por IP no `apps/api` contém o dano antes de chegar lá.
 - **Store Redis desde já:** acopla o caminho de login à disponibilidade do Redis sem ganho real enquanto houver uma instância só.
 - **Limite global (`global: true`) em toda a API:** penalizaria rotas autenticadas de uso legítimo intenso (polling do processamento de sessão, definido no Bloco 11) com um limite desenhado para o fluxo de identidade.
+
+## Adendo de 2026-09-10 — `/auth/anonymous`
+
+O Bloco 14 adiciona `POST /auth/anonymous`, que emite uma identidade anônima do Supabase para a pessoa conhecer o produto antes de criar conta (ADR-010). A rota **opta pelo plugin**, e a lista nominal de rotas limitadas passa a ser: `sign-up`, `sign-in`, `refresh`, `email/confirm`, `email/resend`, `password/recovery`, `google` (start) e `anonymous`.
+
+O motivo é o mesmo que originou este ADR, agravado. `[auth.rate_limit] anonymous_users` do Supabase é contado por hora e por IP de origem; como `apps/api` encapsula o Supabase, todo `signInAnonymously()` sai do IP único do servidor, e o valor configurado é o teto de trials por hora do **produto inteiro**, não por pessoa. Sem o limite por IP daqui, um único consumidor esgota esse contador e derruba o funil de aquisição para todos.
+
+Consequência prática: `anonymous_users` é dimensionado como capacidade do funil, e a defesa por pessoa fica com Turnstile mais este rate limit, que enxerga o IP real do visitante. `accounts.RATE_LIMITED` (429) — já declarado em `ERROR_RESPONSES` desde este ADR — cobre tanto o limite próprio quanto o `over_request_rate_limit` do provider, e o cliente trata os dois como falha recuperável, sem consumir o trial.

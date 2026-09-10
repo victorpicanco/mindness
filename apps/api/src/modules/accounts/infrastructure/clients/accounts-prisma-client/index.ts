@@ -37,7 +37,6 @@ export interface AccountDeletionRequestUpsertArgs {
 
 export interface AccountsPrismaClient {
   readonly account: {
-    count(): Promise<number>
     findUnique(args: {
       where: { readonly id: string } | { readonly authUserId: string } | { readonly email: string }
     }): Promise<AccountRow | null>

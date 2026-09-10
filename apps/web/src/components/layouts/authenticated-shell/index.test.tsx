@@ -73,6 +73,7 @@ function renderShell(
 ) {
   const router = {
     back: vi.fn(),
+    bfcacheId: 'test-bfcache-id',
     forward: vi.fn(),
     prefetch: vi.fn(),
     push: vi.fn(),
@@ -757,6 +758,7 @@ describe('AuthenticatedShell', () => {
       <AppRouterContext.Provider
         value={{
           back: vi.fn(),
+          bfcacheId: 'test-bfcache-id',
           forward: vi.fn(),
           prefetch: vi.fn(),
           push: vi.fn(),

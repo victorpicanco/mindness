@@ -63,7 +63,7 @@ Consequência aceita: nenhuma conta existente vê uma nova tela de aceite por ca
 
 - **Pré-requisito de ativação:** desativar, no nível do projeto, o armazenamento de entradas e saídas por 24 horas (zero data retention). É a única alavanca de retenção inteiramente sob controle do time e é a que reduz de fato o tempo em que a voz permanece no fornecedor.
 - **Aceito no padrão:** o registro de prompts por monitoramento de abuso, com retenção de até 90 dias na região selecionada e sem uso para treinamento.
-- **Divergência declarada:** o PRD §12.1 promete remoção dos dados "inclusive dos serviços de §9" em até 30 dias. A janela de até 90 dias do monitoramento de abuso não cabe nessa promessa. A divergência fica registrada aqui e deve ser resolvida por pedido de exceção de monitoramento de abuso **antes de o produto sair do beta fechado**. Ela não bloqueia o beta de 100 contas.
+- **Divergência declarada:** o PRD §12.1 promete remoção dos dados "inclusive dos serviços de §9" em até 30 dias. A janela de até 90 dias do monitoramento de abuso não cabe nessa promessa. A divergência fica registrada aqui e deve ser resolvida por pedido de exceção de monitoramento de abuso **antes de o produto sair do beta fechado**. Ela não bloqueia a ativação atual.
 
 ### 5. Treinamento: proibido, e confirmado no ambiente real
 
@@ -94,7 +94,7 @@ A ativação de `ANALYSIS_PIPELINE_VERSION=v2` em produção depende deste check
 - **Nova versão de consentimento com reaceite obrigatório.** É a leitura mais conservadora, e seria a escolha se a finalidade mudasse. Foi rejeitada por duas razões: a finalidade consentida não muda, apenas o fornecedor que a executa; e o fluxo existente não bloqueia prática por versão desatualizada, de modo que "exigir reaceite pelo fluxo existente" exigiria código novo, fora do escopo da T-001 e sem tarefa correspondente no Bloco 13. Escolher esta alternativa pararia o bloco até que essa tarefa existisse.
 - **Nova versão sem bloqueio de prática.** Subir a versão só para novos cadastros produz o pior dos dois mundos: cria um marco de auditoria que sugere reaceite e não entrega nenhum, e contas existentes — justamente as afetadas pela mudança — nunca leem o texto novo.
 - **Migrar para `southamerica-east1` antes de ativar.** Elimina a transferência internacional, mas condiciona o rollout a confirmar disponibilidade dos modelos escolhidos na região e a um benchmark novo de latência e custo. Fica como melhoria posterior, com a transferência declarada enquanto isso.
-- **Exigir a exceção de monitoramento de abuso aprovada antes da ativação.** Elimina a janela de 90 dias, mas amarra o rollout de um beta fechado de 100 contas a uma fila de aprovação de terceiro, com prazo que o time não controla.
+- **Exigir a exceção de monitoramento de abuso aprovada antes da ativação.** Elimina a janela de 90 dias, mas amarra o rollout atual a uma fila de aprovação de terceiro, com prazo que o time não controla.
 - **Aceitar todos os padrões do fornecedor sem configurar nada.** Deixaria o cache de 24 horas ligado sem necessidade, sendo ele desativável por configuração própria e sem custo.
 
 ## Referências

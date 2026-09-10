@@ -57,12 +57,12 @@ describe('SignInScreen', () => {
     renderSignInScreen(
       <SignInScreen
         action={signInAction}
-        initialError={{ messageKey: 'auth.errors.betaCapacityReached', presentation: 'inline' }}
+        initialError={{ messageKey: 'auth.errors.accountBlocked', presentation: 'inline' }}
       />,
     )
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'O beta atingiu o limite de contas. Avisaremos quando abrirem novas vagas.',
+      'Esta conta está bloqueada. Fale com o suporte para reativá-la.',
     )
   })
 })

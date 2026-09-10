@@ -32,6 +32,7 @@ function PracticeStatus() {
 function renderProcessingStatus(fetchAnalysis: FetchSessionAnalysis) {
   const router = {
     back: vi.fn(),
+    bfcacheId: 'test-bfcache-id',
     forward: vi.fn(),
     prefetch: vi.fn(),
     push: vi.fn(),

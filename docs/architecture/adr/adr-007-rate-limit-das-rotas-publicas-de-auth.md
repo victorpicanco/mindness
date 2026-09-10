@@ -27,7 +27,7 @@ O `errorResponseBuilder` devolve uma instância de `RateLimitedError`. O plugin 
 
 ## Consequências
 
-- **O limite é por instância, não por cluster.** Com N instâncias atrás de um balanceador, o teto efetivo é `N × AUTH_RATE_LIMIT_MAX`. Para o beta (100 contas, instância única) isso é suficiente e evita introduzir o Redis como dependência de disponibilidade do caminho de login — hoje o Redis só serve à fila de análise, e uma falha dele não derruba a autenticação. Quando houver mais de uma instância, trocar para o store Redis do próprio plugin é mudança de uma opção, sem tocar em rota ou erro.
+- **O limite é por instância, não por cluster.** Com N instâncias atrás de um balanceador, o teto efetivo é `N × AUTH_RATE_LIMIT_MAX`. Enquanto houver uma única instância, o store em memória evita introduzir o Redis como dependência de disponibilidade do caminho de login — hoje o Redis só serve à fila de análise, e uma falha dele não derruba a autenticação. Quando houver mais de uma instância, trocar para o store Redis do próprio plugin é mudança de uma opção, sem tocar em rota ou erro.
 - O container de integração (`integration-container.ts`) fixa `max: 10_000` para que nenhum fluxo de teste esbarre no limite. O comportamento do limite em si é coberto pelo teste unitário de `auth-rate-limit`.
 - Qualquer módulo futuro pode herdar de `TooManyRequestsError`. Adicionar uma **oitava** categoria continua exigindo ADR.
 - `ERROR_RESPONSES` das rotas de `accounts` passa a declarar 403 e 429, para que a resposta continue batendo com o schema OpenAPI da rota (exigência de LAW-011).

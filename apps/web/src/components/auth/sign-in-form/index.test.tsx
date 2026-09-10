@@ -264,13 +264,13 @@ describe('SignInForm', () => {
     })
   })
 
-  it('raises the beta capacity limit as a toast', async () => {
+  it('raises a blocked account as a toast', async () => {
     const { toast } = await import('sonner')
     const signInAction: SignInAction = () =>
       Promise.resolve({
         status: 'api-error',
         error: {
-          code: 'accounts.BETA_CAPACITY_REACHED',
+          code: 'accounts.ACCOUNT_BLOCKED',
           issues: null,
           requestId: 'request-id',
         },
@@ -283,7 +283,7 @@ describe('SignInForm', () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        'O beta atingiu o limite de contas. Avisaremos quando abrirem novas vagas.',
+        'Esta conta está bloqueada. Fale com o suporte para reativá-la.',
         { id: 'request-id' },
       )
     })

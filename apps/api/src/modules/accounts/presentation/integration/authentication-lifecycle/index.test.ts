@@ -273,7 +273,7 @@ describe('authentication lifecycle', () => {
     expect(response.headers.location).toBe(
       'https://app.test/auth/sign-in?error=google_callback_failed',
     )
-    await expect(harness.repositories.accounts.count()).resolves.toBe(0)
+    await expect(harness.prisma.account.count()).resolves.toBe(0)
     expect(harness.eventBus.published).toContainEqual(
       expect.objectContaining({
         eventName: 'google_login_rejected',
@@ -292,7 +292,7 @@ describe('authentication lifecycle', () => {
     expect(response.headers.location).toBe(
       'https://app.test/auth/sign-in?error=google_callback_failed',
     )
-    await expect(harness.repositories.accounts.count()).resolves.toBe(0)
+    await expect(harness.prisma.account.count()).resolves.toBe(0)
     expect(harness.eventBus.published).toContainEqual(
       expect.objectContaining({
         eventName: 'google_login_rejected',

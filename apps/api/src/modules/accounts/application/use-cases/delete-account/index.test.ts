@@ -19,10 +19,6 @@ class InMemoryAccountsRepository implements AccountsRepository {
     private readonly calls: string[],
   ) {}
 
-  count(): Promise<number> {
-    return Promise.resolve(1)
-  }
-
   findById(): Promise<Account | null> {
     return Promise.resolve(null)
   }

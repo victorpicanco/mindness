@@ -191,8 +191,8 @@ describe('signInAction', () => {
               : Response.json(
                   {
                     error: {
-                      code: 'accounts.BETA_CAPACITY_REACHED',
-                      message: 'The beta has reached 100 accounts',
+                      code: 'accounts.ACCOUNT_ALREADY_EXISTS',
+                      message: 'An account already exists',
                       issues: null,
                       requestId: 'request-id',
                     },
@@ -217,7 +217,7 @@ describe('signInAction', () => {
 
     expect(result).toEqual({
       status: 'api-error',
-      error: { code: 'accounts.BETA_CAPACITY_REACHED', issues: null, requestId: 'request-id' },
+      error: { code: 'accounts.ACCOUNT_ALREADY_EXISTS', issues: null, requestId: 'request-id' },
     })
     expect(cookieStore.values.size).toBe(0)
   })

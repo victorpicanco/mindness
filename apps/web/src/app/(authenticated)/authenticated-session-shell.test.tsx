@@ -34,6 +34,7 @@ describe('AuthenticatedSessionShell', () => {
     const abandonSession = vi.fn(() => Promise.resolve())
     const router = {
       back: vi.fn(),
+      bfcacheId: 'test-bfcache-id',
       forward: vi.fn(),
       prefetch: vi.fn(),
       push: vi.fn(),
@@ -99,6 +100,7 @@ describe('AuthenticatedSessionShell', () => {
   it('identifies the signed-in account with PostHog', () => {
     const router = {
       back: vi.fn(),
+      bfcacheId: 'test-bfcache-id',
       forward: vi.fn(),
       prefetch: vi.fn(),
       push: vi.fn(),

@@ -7,7 +7,6 @@ import { AccountsTransactionContext } from './index.js'
 function fakeClient(id: string): AccountsPrismaClient {
   return {
     account: {
-      count: () => Promise.resolve(0),
       findUnique: () => Promise.resolve(null),
       upsert: (args) => Promise.resolve({ ...args.create, authUserId: id }),
     },

@@ -27,10 +27,6 @@ function accountFor(): Account {
 class InMemoryAccountsRepository implements AccountsRepository {
   constructor(private readonly existing: Account | null = null) {}
 
-  count(): Promise<number> {
-    return Promise.resolve(this.existing === null ? 0 : 1)
-  }
-
   findById(accountId: string): Promise<Account | null> {
     return Promise.resolve(this.existing?.id === accountId ? this.existing : null)
   }

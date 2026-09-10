@@ -15,10 +15,6 @@ class InMemoryAccountsRepository implements AccountsRepository {
 
   constructor(private readonly account: Account) {}
 
-  count(): Promise<number> {
-    return Promise.resolve(1)
-  }
-
   findByAuthUserId(authUserId: string): Promise<Account | null> {
     return Promise.resolve(this.account.authUserId === authUserId ? this.account : null)
   }

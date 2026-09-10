@@ -13,7 +13,7 @@ A ADR-002 desenhou a cota da conta free como um módulo próprio (`quota`) cuja 
 2. **O acoplamento subiu até a entidade.** `Session` carregava `quotaReservationId` como campo obrigatório, e `sessions.quota_reservation_id` era `NOT NULL` no banco. A sessão não conseguia nascer sem uma reserva, o que fazia da cota uma dependência estrutural do agregado central do produto, não uma política aplicada sobre ele.
 3. **A regra de negócio ainda não está fechada.** O modelo implementado (ciclo de 30 dias com `carried_usage`, reabertura de ciclo na volta ao plano pago, reserva `held`/`consumed`/`released`) foi derivado do PRD antes de qualquer evidência de uso. Manter uma implementação de sete casos de uso, cinco fluxos de integração e duas tabelas para uma política que será redesenhada é pagar juros sobre uma decisão não tomada.
 
-O beta é fechado e limitado a 100 contas: o risco de custo de uma prática sem limite é conhecido e contido. Não há motivo para carregar a exceção da ADR-002 enquanto a política que a justificava não existir de fato.
+O risco de custo de uma prática sem limite é conhecido, mas manter uma política sem regra de negócio fechada não o contém. Não há motivo para carregar a exceção da ADR-002 enquanto a política que a justificava não existir de fato.
 
 ## Decisão
 
@@ -41,7 +41,7 @@ Enquanto não houver uma nova política, iniciar uma sessão depende apenas do c
 
 - A exceção escopada da ADR-002 à LAW-008.5 deixa de existir. Não há mais nenhuma escrita síncrona atravessando fronteira de módulo no sistema.
 - `Session` volta a ser um agregado sobre configuração, gravação e análise. Expirar uma sessão é uma transação local do próprio módulo, sem compensação externa.
-- **A prática deixa de ter limite.** Toda conta pode iniciar quantas sessões quiser, e cada análise concluída tem custo de transcrição e avaliação. A contenção passa a ser o tamanho do beta, não o produto. O registro de custo por análise (`analysis_cost_entries`) continua de pé e é a fonte para dimensionar a política futura.
+- **A prática deixa de ter limite.** Toda conta pode iniciar quantas sessões quiser, e cada análise concluída tem custo de transcrição e avaliação. O produto não aplica contenção automática desse custo. O registro de custo por análise (`analysis_cost_entries`) continua de pé e é a fonte para dimensionar a política futura.
 - CA-006.1 a CA-006.7 do PRD ficam **sem implementação** até que a nova política seja decidida. O PRD não é reescrito por esta ADR: ele descreve o produto pretendido, e a lacuna é deliberada e datada.
 - Os dados de ciclo e reserva já gravados são perdidos na migração. Isso é aceito: são dados de beta fechado, e a política que os produziu não será a mesma que os leria.
 

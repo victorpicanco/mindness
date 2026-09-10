@@ -12,7 +12,7 @@ O Bloco 1 exige identidade por e-mail/senha e Google OAuth, confirmação de e-m
 
 O módulo `accounts` será o bounded context dono dos registros de conta, consentimento e pedido de exclusão. Ele guardará uma referência única e imutável ao `authUserId` do Supabase Auth, mas usará seu próprio `accountId` em dados e eventos de domínio. O Supabase Auth será acessado exclusivamente por ports do domínio e adapters da infraestrutura: um adapter valida o JWT em cada requisição autenticada e outro inicia os fluxos de cadastro e login. O middleware de apresentação anexará apenas a identidade validada à requisição; rotas nunca aceitarão `accountId` como autoridade.
 
-A vaga beta será representada pela própria conta criada no módulo `accounts`. A criação ocorrerá numa transação serializável com tentativa limitada para conflito de serialização, garantindo que no máximo 100 contas sejam persistidas. A exclusão revogará acesso imediatamente e registrará um pedido de remoção para o Bloco 10 executar fisicamente.
+Cada identidade elegível poderá criar uma conta no módulo `accounts`, sem um teto global de contas. Restrições únicas de e-mail e `authUserId` protegem o cadastro concorrente contra duplicatas. A exclusão revogará acesso imediatamente e registrará um pedido de remoção para o Bloco 10 executar fisicamente.
 
 ## Consequências
 
@@ -30,7 +30,6 @@ A vaga beta será representada pela própria conta criada no módulo `accounts`.
 ## Referências
 
 - Supabase Auth — "Summary of the methods" e "JWT session_id validation against auth.sessions", consultados em 2026-08-15.
-- Prisma — "Transactions" e "P2034 retry loop for Serializable isolation level", consultados em 2026-08-15.
 - `docs/prd/2026-08-15-mindness-mvp.md` §10 e §12.1.
 
 ## Adendo — desenvolvimento no plano Free

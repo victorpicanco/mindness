@@ -143,6 +143,7 @@ function analysis() {
 function createRouter() {
   return {
     back: vi.fn(),
+    bfcacheId: 'test-bfcache-id',
     forward: vi.fn(),
     prefetch: vi.fn(),
     push: vi.fn(),

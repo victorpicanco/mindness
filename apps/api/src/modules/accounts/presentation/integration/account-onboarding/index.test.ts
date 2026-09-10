@@ -63,7 +63,7 @@ describe('account onboarding', () => {
       },
     })
     assertResponseMatchesSchema(harness.app, 'POST', '/auth/sign-up', response, 202)
-    await expect(harness.repositories.accounts.count()).resolves.toBe(0)
+    await expect(harness.prisma.account.count()).resolves.toBe(0)
     expect(harness.eventBus.published).toHaveLength(0)
   })
 
@@ -114,6 +114,60 @@ describe('account onboarding', () => {
     )
   })
 
+  it('provisions every identity that arrives at the same time, without a ceiling', async () => {
+    const tokens = await Promise.all(
+      Array.from({ length: 6 }, (_, index) => confirmedSession(`racer-${index}@example.com`)),
+    )
+
+    const responses = await Promise.all(
+      tokens.map((accessToken) =>
+        harness.app.inject({
+          method: 'POST',
+          url: '/accounts',
+          headers: { authorization: `Bearer ${accessToken}` },
+          payload: { timeZone: null },
+        }),
+      ),
+    )
+
+    expect(responses.map((response) => response.statusCode)).toEqual([200, 200, 200, 200, 200, 200])
+    await expect(harness.prisma.account.count()).resolves.toBe(6)
+    expect(
+      harness.eventBus.published.filter((event) => event.eventName === 'account_created'),
+    ).toHaveLength(6)
+  })
+
+  it('provisions the one hundred and first account without a ceiling', async () => {
+    await harness.prisma.account.createMany({
+      data: Array.from({ length: 100 }, (_, index) => ({
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        email: `seed-${index}@example.com`,
+        authUserId: `seed-auth-user-${index}`,
+        timeZone: 'America/Sao_Paulo',
+        name: null,
+        plan: 'free' as const,
+        status: 'accessible' as const,
+        consentPurpose: null,
+        consentVersion: null,
+        consentAcceptedAt: null,
+        currentSessionId: null,
+        createdAt: harness.clock.now(),
+      })),
+    })
+    const accessToken = await confirmedSession('one-hundred-first@example.com')
+
+    const response = await harness.app.inject({
+      method: 'POST',
+      url: '/accounts',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { timeZone: null },
+    })
+
+    expect(response.statusCode).toBe(200)
+    await expect(harness.prisma.account.count()).resolves.toBe(101)
+    expect(harness.eventBus.published.map((event) => event.eventName)).toEqual(['account_created'])
+  })
+
   it('answers the same neutral message when the identity already has an account', async () => {
     const accessToken = await confirmedSession()
     const headers = { authorization: `Bearer ${accessToken}` }
@@ -133,7 +187,7 @@ describe('account onboarding', () => {
 
     expect(second.statusCode).toBe(200)
     expect(second.json()).toEqual(first.json())
-    await expect(harness.repositories.accounts.count()).resolves.toBe(1)
+    await expect(harness.prisma.account.count()).resolves.toBe(1)
     expect(harness.eventBus.published.map((event) => event.eventName)).toContain(
       'account_creation_rejected',
     )
@@ -152,7 +206,7 @@ describe('account onboarding', () => {
     expect(response.statusCode).toBe(400)
     expect(response.json()).toMatchObject({ error: { code: 'shared.VALIDATION_FAILED' } })
     assertResponseMatchesSchema(harness.app, 'POST', '/accounts', response, 400)
-    await expect(harness.repositories.accounts.count()).resolves.toBe(0)
+    await expect(harness.prisma.account.count()).resolves.toBe(0)
   })
 
   it('shows each account only the profile behind its own token', async () => {

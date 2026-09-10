@@ -24,7 +24,7 @@ class InMemoryAccountsRepository implements AccountsRepository {
   }
 
   findByEmail(email: string): Promise<Account | null> {
-    return Promise.resolve(this.account.email.value === email ? this.account : null)
+    return Promise.resolve(this.account.email?.value === email ? this.account : null)
   }
 
   save(account: Account): Promise<void> {
@@ -34,7 +34,7 @@ class InMemoryAccountsRepository implements AccountsRepository {
 }
 
 function createHarness() {
-  const account = Account.create({
+  const account = Account.createRegistered({
     id: 'account-1',
     email: EmailAddress.create('person@example.com'),
     authUserId: 'auth-user-1',

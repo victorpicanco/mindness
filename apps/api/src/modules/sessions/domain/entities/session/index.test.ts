@@ -20,6 +20,19 @@ const COMPLETED_AT = new Date('2026-08-18T12:08:00.000Z')
 const STALE_STATES = ['processing', 'expired', 'completed', 'failed', 'deleted'] as const
 
 describe('Session', () => {
+  it('keeps the access mode it was started with', () => {
+    const session = Session.start({
+      sessionId: 'session-id',
+      accountId: 'account-id',
+      themeId: 'theme-id',
+      configuration: createConfiguration(),
+      accessMode: 'guest_trial',
+      createdAt: CREATED_AT,
+    })
+
+    expect(session.accessMode).toBe('guest_trial')
+  })
+
   it('starts an in-progress session that expires two minutes after the research window', () => {
     const configuration = createConfiguration()
 
@@ -28,10 +41,12 @@ describe('Session', () => {
       accountId: 'account-id',
       themeId: 'theme-id',
       configuration,
+      accessMode: 'account',
       createdAt: CREATED_AT,
     })
 
     expect(session.id).toBe('session-id')
+    expect(session.accessMode).toBe('account')
     expect(session.accountId).toBe('account-id')
     expect(session.themeId).toBe('theme-id')
     expect(session.configuration).toBe(configuration)
@@ -95,6 +110,7 @@ describe('Session', () => {
       sessionId: 'session-id',
       accountId: 'account-id',
       themeId: 'theme-id',
+      accessMode: 'account',
       configuration: createConfiguration(),
       state: 'in_progress',
       createdAt: CREATED_AT,
@@ -143,6 +159,7 @@ describe('Session', () => {
       sessionId: 'session-id',
       accountId: 'account-id',
       themeId: 'theme-id',
+      accessMode: 'account',
       configuration: createConfiguration(),
       state: 'processing',
       createdAt: CREATED_AT,
@@ -251,6 +268,7 @@ describe('Session', () => {
       sessionId: 'session-id',
       accountId: 'account-id',
       themeId: 'theme-id',
+      accessMode: 'account',
       configuration: createConfiguration(),
       state: 'deleted',
       createdAt: CREATED_AT,
@@ -290,6 +308,7 @@ function createSession(): Session {
     accountId: 'account-id',
     themeId: 'theme-id',
     configuration: createConfiguration(),
+    accessMode: 'account',
     createdAt: CREATED_AT,
   })
 }
@@ -299,6 +318,7 @@ function reconstituteWithState(state: SessionState): Session {
     sessionId: 'session-id',
     accountId: 'account-id',
     themeId: 'theme-id',
+    accessMode: 'account',
     configuration: createConfiguration(),
     state,
     createdAt: CREATED_AT,

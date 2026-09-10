@@ -1,3 +1,4 @@
+import { GuestTrialConsumedError } from '@/modules/sessions/domain/errors/guest-trial-consumed-error/index.js'
 import { PracticeNotAllowedError } from '@/modules/sessions/domain/errors/practice-not-allowed-error/index.js'
 import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/session-already-running-error/index.js'
 import { ThemeUnavailableError } from '@/modules/sessions/domain/errors/theme-unavailable-error/index.js'
@@ -5,6 +6,7 @@ import { SessionStarted } from '@/modules/sessions/domain/events/session-started
 import { ThemeUnavailable } from '@/modules/sessions/domain/events/theme-unavailable/index.js'
 import { SessionExpiration } from '@/modules/sessions/domain/services/session-expiration/index.js'
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
+import type { SessionAccessMode } from '@/modules/sessions/domain/entities/session/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
 
 import type { StartSessionDependencies, StartSessionInput, StartSessionOutput } from './types.js'
@@ -21,6 +23,17 @@ export class StartSessionUseCase {
 
     const allowed = await this.dependencies.accounts.canStartPractice(input.accountId)
     if (!allowed) throw new PracticeNotAllowedError(input.accountId)
+
+    const profile = await this.dependencies.accounts.findProfile(input.accountId)
+    if (profile === null) throw new PracticeNotAllowedError(input.accountId)
+
+    const accessMode: SessionAccessMode = profile.kind === 'guest' ? 'guest_trial' : 'account'
+    if (
+      accessMode === 'guest_trial' &&
+      (await this.dependencies.sessions.hasGuestTrial(input.accountId))
+    ) {
+      throw new GuestTrialConsumedError(input.accountId)
+    }
 
     const activeSession = await this.dependencies.sessions.findActiveByAccountId(input.accountId)
     const now = this.dependencies.clock.now()
@@ -53,6 +66,7 @@ export class StartSessionUseCase {
       accountId: input.accountId,
       themeId: theme.themeId,
       configuration,
+      accessMode,
       createdAt: now,
     })
 

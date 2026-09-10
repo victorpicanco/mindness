@@ -141,6 +141,7 @@ describe('account onboarding', () => {
     await harness.prisma.account.createMany({
       data: Array.from({ length: 100 }, (_, index) => ({
         id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        kind: 'registered' as const,
         email: `seed-${index}@example.com`,
         authUserId: `seed-auth-user-${index}`,
         timeZone: 'America/Sao_Paulo',

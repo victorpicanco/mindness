@@ -5,17 +5,24 @@ import type { VoiceConsent } from '@/modules/accounts/domain/value-objects/voice
 
 export type AccountPlan = 'free'
 
+export type AccountKind = 'guest' | 'registered'
+
 export type AccountStatus = 'accessible' | 'deletion_pending'
 
-export interface CreateAccountParams {
+export interface CreateGuestAccountParams {
   readonly id: string
-  readonly email: EmailAddress
   readonly authUserId: string
   readonly timeZone: TimeZone
   readonly createdAt: Date
 }
 
-export interface ReconstituteAccountParams extends CreateAccountParams {
+export interface CreateRegisteredAccountParams extends CreateGuestAccountParams {
+  readonly email: EmailAddress
+}
+
+export interface ReconstituteAccountParams extends CreateGuestAccountParams {
+  readonly kind: AccountKind
+  readonly email: EmailAddress | null
   readonly plan: AccountPlan
   readonly status: AccountStatus
   readonly name: DisplayName | null

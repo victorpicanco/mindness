@@ -74,6 +74,12 @@ describe('SupabaseAuthApiClient', () => {
       expect(usedKeys).toEqual([PUBLISHABLE_KEY])
     })
 
+    it('signs in anonymously with the publishable key', async () => {
+      await createSubject().signInAnonymously({ captchaToken: 'captcha' })
+
+      expect(usedKeys).toEqual([PUBLISHABLE_KEY])
+    })
+
     it('creates a google authorization with the publishable key', async () => {
       await createSubject().createGoogleAuthorization('http://localhost:3333/auth/google/callback')
 

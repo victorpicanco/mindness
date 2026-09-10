@@ -51,7 +51,7 @@ class InMemoryDeletionRequestsRepository implements AccountDeletionRequestsRepos
 
 function createHarness(issuedAt = new Date(NOW.getTime() - 4 * 60 * 1000)) {
   const calls: string[] = []
-  const account = Account.create({
+  const account = Account.createRegistered({
     id: 'account-1',
     email: EmailAddress.create('person@example.com'),
     authUserId: 'auth-user-1',

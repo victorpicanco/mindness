@@ -4,6 +4,13 @@ enum AccountPlan {
   @@map("account_plan")
 }
 
+enum AccountKind {
+  guest
+  registered
+
+  @@map("account_kind")
+}
+
 enum AccountStatus {
   accessible
   deletion_pending
@@ -13,7 +20,8 @@ enum AccountStatus {
 
 model Account {
   id         String        @id @db.Uuid
-  email      String        @unique
+  kind       AccountKind
+  email      String?       @unique
   authUserId String        @unique @map("auth_user_id")
   timeZone   String        @map("time_zone")
   name       String?

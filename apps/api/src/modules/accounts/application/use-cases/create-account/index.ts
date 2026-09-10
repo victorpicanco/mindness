@@ -3,7 +3,11 @@ import { Account } from '@/modules/accounts/domain/entities/account/index.js'
 import { AccountCreated } from '@/modules/accounts/domain/events/account-created/index.js'
 import { AccountCreationRejected } from '@/modules/accounts/domain/events/account-creation-rejected/index.js'
 import { AccountAlreadyExistsError } from '@/modules/accounts/domain/errors/account-already-exists-error/index.js'
-import type { AccessTokenValidator } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
+import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
+import type {
+  AccessTokenValidator,
+  VerifiedAuthIdentity,
+} from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 import type { Clock } from '@/modules/accounts/domain/ports/clock/index.js'
 import type { EventPublisher } from '@/modules/accounts/domain/ports/event-publisher/index.js'
 import type { IdGenerator } from '@/modules/accounts/domain/ports/id-generator/index.js'
@@ -12,6 +16,10 @@ import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-addr
 import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 
 import type { CreateAccountInput, CreateAccountOutput } from './types.js'
+
+function isAnonymous(identity: VerifiedAuthIdentity): boolean {
+  return identity.authenticationMethod === 'anonymous'
+}
 
 export interface CreateAccountDependencies {
   readonly accounts: AccountsRepository
@@ -36,8 +44,7 @@ export class CreateAccountUseCase {
       const existingByIdentity = await this.dependencies.accounts.findByAuthUserId(
         identity.authUserId,
       )
-      const existing =
-        existingByIdentity ?? (await this.dependencies.accounts.findByEmail(identity.email))
+      const existing = existingByIdentity ?? (await this.findExistingByEmail(identity))
 
       if (existing !== null) {
         event = AccountCreationRejected.create({
@@ -47,13 +54,7 @@ export class CreateAccountUseCase {
           plan: existing.plan,
         })
       } else {
-        const account = Account.create({
-          id: this.dependencies.idGenerator.generate(),
-          email: EmailAddress.create(identity.email),
-          authUserId: identity.authUserId,
-          timeZone: TimeZone.fromOptional(input.timeZone ?? undefined),
-          createdAt: this.dependencies.clock.now(),
-        })
+        const account = this.newAccountFor(identity, input.timeZone)
         account.startSession(identity.sessionId)
 
         await this.dependencies.accounts.save(account)
@@ -79,5 +80,27 @@ export class CreateAccountUseCase {
     if (event !== null) await this.dependencies.eventPublisher.publish(event)
 
     return { message: NEUTRAL_ACCOUNT_MESSAGE }
+  }
+
+  private findExistingByEmail(identity: VerifiedAuthIdentity): Promise<Account | null> {
+    const email = identity.email
+    if (isAnonymous(identity) || email === null) return Promise.resolve(null)
+
+    return this.dependencies.accounts.findByEmail(email)
+  }
+
+  private newAccountFor(identity: VerifiedAuthIdentity, timeZone: string | null): Account {
+    const identifiers = {
+      id: this.dependencies.idGenerator.generate(),
+      authUserId: identity.authUserId,
+      timeZone: TimeZone.fromOptional(timeZone ?? undefined),
+      createdAt: this.dependencies.clock.now(),
+    }
+    if (isAnonymous(identity)) return Account.createGuest(identifiers)
+
+    const email = identity.email
+    if (email === null) throw new InvalidAccountValueError('email')
+
+    return Account.createRegistered({ ...identifiers, email: EmailAddress.create(email) })
   }
 }

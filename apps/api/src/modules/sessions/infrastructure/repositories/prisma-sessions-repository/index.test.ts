@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
+import { Prisma } from '@/generated/prisma/client.js'
 import { DatabaseError } from '@/shared/errors/database-error/index.js'
 import type {
+  SessionCountGuestTrialArgs,
   SessionDeleteArgs,
   SessionFindActiveArgs,
   SessionFindManyArgs,
@@ -13,12 +15,15 @@ import { SessionsTransactionContext } from '@/modules/sessions/infrastructure/cl
 import { SessionAudioMapper } from '@/modules/sessions/infrastructure/mappers/session-audio-mapper/index.js'
 import { SessionMapper } from '@/modules/sessions/infrastructure/mappers/session-mapper/index.js'
 
+import type { Session } from '@/modules/sessions/domain/entities/session/index.js'
+
 import { PrismaSessionsRepository } from './index.js'
 
 const row: SessionRow = {
   id: '6f3a143d-6853-48f0-b414-a57d8b65f101',
   accountId: '97784f56-9b46-44a4-a0d2-52e97d2fe201',
   themeId: 'c674e9e3-807e-4516-8471-43b0c392f701',
+  accessMode: 'account',
   difficulty: 'balanced',
   categorySlug: 'self-awareness',
   searchWindowMinutes: 4,
@@ -36,6 +41,7 @@ interface FakeClient {
   readonly client: SessionsPrismaClient
   readonly activeQueries: SessionFindActiveArgs[]
   readonly findManyQueries: SessionFindManyArgs[]
+  readonly countQueries: SessionCountGuestTrialArgs[]
   readonly upserts: SessionUpsertArgs[]
   readonly deletions: SessionDeleteArgs[]
 }
@@ -47,16 +53,21 @@ function createFakeClient(
     findManyError?: Error
     deletedCount?: number
     updateManyError?: Error
+    guestTrialCount?: number
+    countError?: Error
+    upsertError?: Error
   } = {},
 ): FakeClient {
   const activeQueries: SessionFindActiveArgs[] = []
   const findManyQueries: SessionFindManyArgs[] = []
   const upserts: SessionUpsertArgs[] = []
   const deletions: SessionDeleteArgs[] = []
+  const countQueries: SessionCountGuestTrialArgs[] = []
 
   return {
     activeQueries,
     findManyQueries,
+    countQueries,
     upserts,
     deletions,
     client: {
@@ -71,8 +82,14 @@ function createFakeClient(
           if (options.findManyError !== undefined) return Promise.reject(options.findManyError)
           return Promise.resolve(options.findMany ?? [])
         },
+        count: (args) => {
+          countQueries.push(args)
+          if (options.countError !== undefined) return Promise.reject(options.countError)
+          return Promise.resolve(options.guestTrialCount ?? 0)
+        },
         upsert: (args) => {
           upserts.push(args)
+          if (options.upsertError !== undefined) return Promise.reject(options.upsertError)
           return Promise.resolve(row)
         },
         updateMany: (args) => {
@@ -93,7 +110,69 @@ function createRepository(fake: FakeClient): PrismaSessionsRepository {
   )
 }
 
+function aGuestTrialSession(): Session {
+  return new SessionMapper(new SessionAudioMapper()).toDomain({
+    ...row,
+    accountId: 'account-id',
+    accessMode: 'guest_trial',
+  })
+}
+
+function uniqueViolation(index: string): Prisma.PrismaClientKnownRequestError {
+  return new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+    code: 'P2002',
+    clientVersion: '7.9.1',
+    meta: { driverAdapterError: { cause: { constraint: index } } },
+  })
+}
+
 describe('PrismaSessionsRepository', () => {
+  it('reports whether the account already holds a guest trial, whatever its state', async () => {
+    const withTrial = createFakeClient({ guestTrialCount: 1 })
+
+    await expect(createRepository(withTrial).hasGuestTrial('account-1')).resolves.toBe(true)
+    expect(withTrial.countQueries).toEqual([
+      { where: { accountId: 'account-1', accessMode: 'guest_trial' } },
+    ])
+
+    await expect(
+      createRepository(createFakeClient({ guestTrialCount: 0 })).hasGuestTrial('account-1'),
+    ).resolves.toBe(false)
+  })
+
+  it('translates a failed guest trial count into a database error', async () => {
+    const repository = createRepository(
+      createFakeClient({ countError: new DatabaseError('connection lost') }),
+    )
+
+    await expect(repository.hasGuestTrial('account-1')).rejects.toMatchObject({
+      code: 'shared.DATABASE_ERROR',
+      context: { accountId: 'account-1' },
+    })
+  })
+
+  it('translates a concurrent second guest trial into a domain rejection', async () => {
+    const repository = createRepository(
+      createFakeClient({ upsertError: uniqueViolation('sessions_account_id_guest_trial_key') }),
+    )
+
+    await expect(repository.save(aGuestTrialSession())).rejects.toMatchObject({
+      code: 'sessions.GUEST_TRIAL_CONSUMED',
+      httpStatus: 403,
+      context: { accountId: 'account-id' },
+    })
+  })
+
+  it('keeps translating a concurrent second active session into its own rejection', async () => {
+    const repository = createRepository(
+      createFakeClient({ upsertError: uniqueViolation('sessions_account_id_active_key') }),
+    )
+
+    await expect(repository.save(aGuestTrialSession())).rejects.toMatchObject({
+      code: 'sessions.SESSION_ALREADY_RUNNING',
+    })
+  })
+
   it('marks a session deleted only while it is still visible, and reports whether it won', async () => {
     const deletedAt = new Date('2026-08-22T12:00:00.000Z')
     const session = new SessionMapper(new SessionAudioMapper()).toDomain({

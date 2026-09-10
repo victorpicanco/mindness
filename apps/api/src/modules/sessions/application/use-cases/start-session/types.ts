@@ -26,7 +26,7 @@ export interface StartSessionOutput {
 export interface StartSessionDependencies {
   readonly sessions: SessionsRepository
   readonly themes: ThemesPort
-  readonly accounts: Pick<AccountsPort, 'canStartPractice'>
+  readonly accounts: Pick<AccountsPort, 'canStartPractice' | 'findProfile'>
   readonly clock: Clock
   readonly eventPublisher: EventPublisher
   readonly idGenerator: IdGenerator

@@ -64,6 +64,7 @@ describe('registerAnalysisPipelineModules', () => {
           getAccountSnapshot: () =>
             Promise.resolve({
               accountId: 'account',
+              kind: 'registered' as const,
               plan: 'free' as const,
               createdAt: new Date(),
               timeZone: 'America/Sao_Paulo',
@@ -110,6 +111,7 @@ function createSessionsPrismaStub(): SessionsPrismaClient & SessionsPrismaTransa
       findUnique: () => Promise.resolve(null),
       findFirst: () => Promise.resolve(null),
       findMany: () => Promise.resolve([]),
+      count: () => Promise.resolve(0),
       upsert: () => Promise.resolve(createSessionRow()),
       updateMany: () => Promise.resolve({ count: 1 }),
     },
@@ -124,6 +126,7 @@ function createSessionRow(): SessionRow {
     id: 'session-id',
     accountId: 'account-id',
     themeId: 'theme-id',
+    accessMode: 'account',
     difficulty: 'balanced',
     categorySlug: 'general',
     searchWindowMinutes: 4,

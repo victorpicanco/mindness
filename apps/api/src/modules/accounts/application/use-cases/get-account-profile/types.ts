@@ -1,7 +1,4 @@
-import type {
-  AuthenticationMethod,
-  VerifiedAuthIdentity,
-} from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
+import type { VerifiedAuthIdentity } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
 
 export interface GetAccountProfileInput {
   readonly identity?: VerifiedAuthIdentity
@@ -14,13 +11,25 @@ export interface AccountConsentView {
   readonly acceptedAt: string
 }
 
-export interface GetAccountProfileOutput {
+interface AccountProfileFields {
   readonly accountId: string
-  readonly authenticationMethod: AuthenticationMethod
-  readonly email: string
   readonly name: string | null
   readonly createdAt: string
   readonly timeZone: string
   readonly plan: 'free'
   readonly consent: AccountConsentView | null
 }
+
+export type GetAccountProfileOutput = AccountProfileFields &
+  (
+    | {
+        readonly accountKind: 'guest'
+        readonly authenticationMethod: 'anonymous'
+        readonly email: null
+      }
+    | {
+        readonly accountKind: 'registered'
+        readonly authenticationMethod: 'password' | 'google'
+        readonly email: string
+      }
+  )

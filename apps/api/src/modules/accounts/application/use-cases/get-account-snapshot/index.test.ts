@@ -30,7 +30,7 @@ class InMemoryAccountsRepository implements AccountsRepository {
 }
 
 function createAccount(): Account {
-  return Account.create({
+  return Account.createRegistered({
     id: 'account-1',
     email: EmailAddress.create('person@example.com'),
     authUserId: 'auth-user-1',
@@ -45,6 +45,7 @@ describe('GetAccountSnapshotUseCase', () => {
 
     await expect(useCase.execute({ accountId: 'account-1' })).resolves.toEqual({
       accountId: 'account-1',
+      kind: 'registered',
       plan: 'free',
       createdAt: CREATED_AT,
       timeZone: 'America/Sao_Paulo',

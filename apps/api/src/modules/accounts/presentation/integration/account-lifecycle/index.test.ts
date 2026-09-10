@@ -93,6 +93,7 @@ describe('account lifecycle', () => {
 
     expect(snapshot).toEqual({
       accountId: account?.id,
+      kind: 'registered',
       plan: 'free',
       createdAt: account?.createdAt,
       timeZone: account?.timeZone.value,

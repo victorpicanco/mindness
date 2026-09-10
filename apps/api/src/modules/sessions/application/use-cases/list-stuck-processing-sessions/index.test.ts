@@ -12,6 +12,7 @@ function createProcessingSession(sessionId: string, recordedAt: Date): Session {
     sessionId,
     accountId: `account-${sessionId}`,
     themeId: `theme-${sessionId}`,
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'communication',

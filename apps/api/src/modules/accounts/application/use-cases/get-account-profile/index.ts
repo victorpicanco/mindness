@@ -24,11 +24,9 @@ export class GetAccountProfileUseCase {
 
     const consent = account.voiceConsent
 
-    return {
+    const profileFields = {
       accountId: account.id,
-      authenticationMethod: identity.authenticationMethod,
       createdAt: account.createdAt.toISOString(),
-      email: account.email.value,
       name: account.name?.value ?? null,
       timeZone: account.timeZone.value,
       plan: account.plan,
@@ -40,6 +38,29 @@ export class GetAccountProfileUseCase {
               version: consent.version,
               acceptedAt: consent.acceptedAt.toISOString(),
             },
+    }
+
+    if (account.kind === 'guest') {
+      if (identity.authenticationMethod !== 'anonymous') throw new AccountNotFoundError()
+
+      return {
+        ...profileFields,
+        accountKind: 'guest',
+        authenticationMethod: 'anonymous',
+        email: null,
+      }
+    }
+
+    const email = account.email
+    if (identity.authenticationMethod === 'anonymous' || email === null) {
+      throw new AccountNotFoundError()
+    }
+
+    return {
+      ...profileFields,
+      accountKind: 'registered',
+      authenticationMethod: identity.authenticationMethod,
+      email: email.value,
     }
   }
 }

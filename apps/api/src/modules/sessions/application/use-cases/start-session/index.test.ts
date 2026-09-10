@@ -30,6 +30,7 @@ function createSession(sessionId: string, createdAt: Date = NOW): Session {
     sessionId,
     accountId: 'account-1',
     themeId: 'theme-1',
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'easy',
       categorySlug: 'self-awareness',
@@ -44,18 +45,30 @@ function createDependencies(input?: {
   readonly eligibleTheme?: { readonly themeId: string; readonly title?: string } | null
   readonly saveError?: Error
   readonly practiceAllowed?: boolean
+  readonly accountKind?: 'guest' | 'registered'
+  readonly guestTrialUsed?: boolean
 }) {
   const saved: Session[] = []
   const events = new FakeEventBus()
   const operations: string[] = []
   const themeCalls: string[] = []
   const accountsCalls: string[] = []
+  const profileCalls: string[] = []
+  const guestTrialCalls: string[] = []
   let transactionRuns = 0
   let nextId = 0
-  const accounts: Pick<AccountsPort, 'canStartPractice'> = {
+  const accounts: Pick<AccountsPort, 'canStartPractice' | 'findProfile'> = {
     canStartPractice: (accountId) => {
       accountsCalls.push(accountId)
       return Promise.resolve(input?.practiceAllowed ?? true)
+    },
+    findProfile: (accountId) => {
+      profileCalls.push(accountId)
+      return Promise.resolve({
+        kind: input?.accountKind ?? 'registered',
+        plan: 'free',
+        timeZone: 'America/Sao_Paulo',
+      })
     },
   }
   const sessions: SessionsRepository = {
@@ -65,6 +78,10 @@ function createDependencies(input?: {
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
     markDeleted: () => Promise.resolve(true),
+    hasGuestTrial: (accountId) => {
+      guestTrialCalls.push(accountId)
+      return Promise.resolve(input?.guestTrialUsed ?? false)
+    },
     save: (session) => {
       operations.push('save')
       if (input?.saveError !== undefined) return Promise.reject(input.saveError)
@@ -100,6 +117,8 @@ function createDependencies(input?: {
     operations,
     themeCalls,
     accountsCalls,
+    profileCalls,
+    guestTrialCalls,
     saved,
     transactionRuns: () => transactionRuns,
     dependencies: {
@@ -115,6 +134,99 @@ function createDependencies(input?: {
 }
 
 describe('StartSessionUseCase', () => {
+  it('rejects a second trial for a guest account that already used one', async () => {
+    const harness = createDependencies({
+      eligibleTheme: { themeId: 'theme-1' },
+      accountKind: 'guest',
+      guestTrialUsed: true,
+    })
+
+    await expect(
+      new StartSessionUseCase(harness.dependencies).execute(VALID_INPUT),
+    ).rejects.toMatchObject({ code: 'sessions.GUEST_TRIAL_CONSUMED', httpStatus: 403 })
+
+    expect(harness.guestTrialCalls).toEqual(['account-1'])
+    expect(harness.saved).toEqual([])
+  })
+
+  it('rejects the blocked guest before drawing a theme or expiring the previous session', async () => {
+    const stale = createSession('session-stale', new Date('2026-08-18T00:00:00.000Z'))
+    const harness = createDependencies({
+      eligibleTheme: { themeId: 'theme-1' },
+      accountKind: 'guest',
+      guestTrialUsed: true,
+      activeSession: stale,
+    })
+
+    await expect(
+      new StartSessionUseCase(harness.dependencies).execute(VALID_INPUT),
+    ).rejects.toMatchObject({ code: 'sessions.GUEST_TRIAL_CONSUMED' })
+
+    expect(harness.themeCalls).toEqual([])
+    expect(harness.operations).toEqual([])
+    expect(harness.events.published).toEqual([])
+    expect(stale.state).toBe('in_progress')
+  })
+
+  it('never asks about the guest trial for a registered account', async () => {
+    const harness = createDependencies({
+      eligibleTheme: { themeId: 'theme-1' },
+      accountKind: 'registered',
+      guestTrialUsed: true,
+    })
+
+    await new StartSessionUseCase(harness.dependencies).execute(VALID_INPUT)
+
+    expect(harness.guestTrialCalls).toEqual([])
+    expect(harness.saved).toHaveLength(1)
+  })
+
+  it('lets a guest that never practised start its trial', async () => {
+    const harness = createDependencies({
+      eligibleTheme: { themeId: 'theme-1' },
+      accountKind: 'guest',
+      guestTrialUsed: false,
+    })
+
+    await new StartSessionUseCase(harness.dependencies).execute(VALID_INPUT)
+
+    expect(harness.saved[0]?.accessMode).toBe('guest_trial')
+  })
+
+  it('marks a session started by a guest account as a guest trial', async () => {
+    const harness = createDependencies({
+      eligibleTheme: { themeId: 'theme-1' },
+      accountKind: 'guest',
+    })
+
+    await new StartSessionUseCase(harness.dependencies).execute(VALID_INPUT)
+
+    expect(harness.saved[0]?.accessMode).toBe('guest_trial')
+    expect(harness.profileCalls).toEqual(['account-1'])
+  })
+
+  it('marks a session started by a registered account as an account session', async () => {
+    const harness = createDependencies({
+      eligibleTheme: { themeId: 'theme-1' },
+      accountKind: 'registered',
+    })
+
+    await new StartSessionUseCase(harness.dependencies).execute(VALID_INPUT)
+
+    expect(harness.saved[0]?.accessMode).toBe('account')
+  })
+
+  it('rejects starting a session for an account the port cannot describe', async () => {
+    const harness = createDependencies({ eligibleTheme: { themeId: 'theme-1' } })
+    harness.dependencies.accounts.findProfile = () => Promise.resolve(null)
+
+    await expect(
+      new StartSessionUseCase(harness.dependencies).execute(VALID_INPUT),
+    ).rejects.toEqual(new PracticeNotAllowedError('account-1'))
+
+    expect(harness.themeCalls).toEqual([])
+  })
+
   it('rejects starting a session without a current consent, before drawing a theme', async () => {
     const harness = createDependencies({
       eligibleTheme: { themeId: 'theme-2' },

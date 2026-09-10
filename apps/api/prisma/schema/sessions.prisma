@@ -9,6 +9,13 @@ enum SessionState {
   @@map("session_state")
 }
 
+enum SessionAccessMode {
+  guest_trial
+  account
+
+  @@map("session_access_mode")
+}
+
 enum SessionDifficulty {
   easy
   balanced
@@ -36,6 +43,7 @@ model Session {
   id                 String                @id @db.Uuid
   accountId          String                @map("account_id") @db.Uuid
   themeId            String                @map("theme_id") @db.Uuid
+  accessMode         SessionAccessMode     @map("access_mode")
   difficulty         SessionDifficulty
   categorySlug       String                @map("category_slug")
   searchWindowMinutes Int                  @map("search_window_minutes")

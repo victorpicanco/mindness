@@ -15,6 +15,7 @@ function createSession(
     sessionId: 'session-1',
     accountId: params.accountId ?? 'account-1',
     themeId: 'theme-1',
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'easy',
       categorySlug: 'self-awareness',

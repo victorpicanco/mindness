@@ -14,6 +14,7 @@ import type {
   AuthenticationMethod,
   EmailOtpVerificationType,
   GoogleAuthorization,
+  SignInAnonymouslyParams,
   SignInWithPasswordParams,
   SignUpWithPasswordParams,
   VerifiedAuthIdentity,
@@ -174,9 +175,19 @@ function readAuthenticationMethod(claims: Record<string, unknown>): Authenticati
       return 'password'
     }
     if (method === 'oauth') return 'google'
+    if (method === 'anonymous') return 'anonymous'
   }
 
   return null
+}
+
+function matchesAnonymityClaim(
+  claims: Record<string, unknown>,
+  authenticationMethod: AuthenticationMethod,
+): boolean {
+  const declared = claims.is_anonymous
+
+  return typeof declared === 'boolean' && declared === (authenticationMethod === 'anonymous')
 }
 
 function translateProviderError(error: unknown): void {
@@ -221,15 +232,22 @@ function readIdentity(data: unknown): VerifiedAuthIdentity | null {
   const authenticationMethod = readAuthenticationMethod(claims)
   if (
     authUserId === null ||
-    email === null ||
     sessionId === null ||
     issuedAt === null ||
     authenticationMethod === null
   ) {
     return null
   }
+  if (!matchesAnonymityClaim(claims, authenticationMethod)) return null
 
-  return { authUserId, email, sessionId, issuedAt, authenticationMethod }
+  const identityFields = { authUserId, sessionId, issuedAt }
+  if (authenticationMethod === 'anonymous') {
+    if (email !== null) return null
+    return { ...identityFields, email: null, authenticationMethod }
+  }
+  if (email === null) return null
+
+  return { ...identityFields, email, authenticationMethod }
 }
 
 export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider {
@@ -245,6 +263,16 @@ export class SupabaseAuthIdentityProviderAdapter implements AuthIdentityProvider
     if (result.error !== null) rejectionFrom(result.error, 'invalid_credentials')
 
     return this.sessionFrom(result.data, 'invalid_credentials')
+  }
+
+  async signInAnonymously(params: SignInAnonymouslyParams): Promise<AuthSession> {
+    const result = await this.call(() => this.api.signInAnonymously(params))
+    if (result.error !== null) {
+      translateProviderError(result.error)
+      throw new AuthProviderError({ cause: result.error })
+    }
+
+    return this.sessionFrom(result.data, 'invalid_token')
   }
 
   async createGoogleAuthorization(redirectTo: string): Promise<GoogleAuthorization> {

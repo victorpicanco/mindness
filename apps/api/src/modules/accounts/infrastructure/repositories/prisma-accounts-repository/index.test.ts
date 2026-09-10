@@ -15,9 +15,12 @@ import { AccountMapper } from '@/modules/accounts/infrastructure/mappers/account
 
 import { PrismaAccountsRepository } from './index.js'
 
+const EMAIL = 'person@example.com'
+
 const row: AccountRow = {
   id: '2f1a3c2e-7b64-4f4a-9a1e-6f6a2c9b7d10',
-  email: 'person@example.com',
+  kind: 'registered',
+  email: EMAIL,
   authUserId: 'auth-user-1',
   timeZone: 'America/Sao_Paulo',
   name: null,
@@ -100,9 +103,9 @@ function writeConflict(): Prisma.PrismaClientKnownRequestError {
 }
 
 function anAccount(): Account {
-  return Account.create({
+  return Account.createRegistered({
     id: row.id,
-    email: EmailAddress.create(row.email),
+    email: EmailAddress.create(EMAIL),
     authUserId: row.authUserId,
     timeZone: TimeZone.create(row.timeZone),
     createdAt: row.createdAt,
@@ -146,7 +149,7 @@ describe('PrismaAccountsRepository', () => {
   it('reconstitutes the aggregate persisted for an email address', async () => {
     const repository = createRepository(createFakeClient({ rows: [row] }))
 
-    await expect(repository.findByEmail(row.email)).resolves.toMatchObject({ id: row.id })
+    await expect(repository.findByEmail(EMAIL)).resolves.toMatchObject({ id: row.id })
   })
 
   it('persists the whole aggregate under its own identifier', async () => {

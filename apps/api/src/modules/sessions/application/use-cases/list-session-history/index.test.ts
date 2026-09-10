@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import { Session } from '@/modules/sessions/domain/entities/session/index.js'
 import { SessionAuthenticationRejectedError } from '@/modules/sessions/domain/errors/session-authentication-rejected-error/index.js'
-import type { AccountsPort } from '@/modules/sessions/domain/ports/accounts-port/index.js'
+import type {
+  AccountProfile,
+  AccountsPort,
+} from '@/modules/sessions/domain/ports/accounts-port/index.js'
 import type { ThemesPort } from '@/modules/sessions/domain/ports/themes-port/index.js'
 import type { SessionsRepository } from '@/modules/sessions/domain/repositories/sessions-repository/index.js'
 import { SessionConfiguration } from '@/modules/sessions/domain/value-objects/session-configuration/index.js'
@@ -21,6 +24,7 @@ function createSession(params: {
     sessionId: params.id,
     accountId: params.accountId ?? 'account-1',
     themeId: params.themeId ?? 'theme-1',
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'communication',
@@ -40,7 +44,7 @@ function createSession(params: {
 
 function createHarness(params: {
   readonly page: readonly Session[]
-  readonly profile?: { readonly plan: 'free'; readonly timeZone: string } | null
+  readonly profile?: AccountProfile | null
   readonly cursorSession?: Session | null
   readonly themeTitles?: Readonly<Record<string, string>>
 }) {
@@ -52,6 +56,7 @@ function createHarness(params: {
     listByAccount: () => Promise.resolve([...params.page]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    hasGuestTrial: () => Promise.resolve(false),
     markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }
@@ -60,7 +65,7 @@ function createHarness(params: {
     findProfile: () =>
       Promise.resolve(
         params.profile === undefined
-          ? { plan: 'free', timeZone: 'America/Sao_Paulo' }
+          ? { kind: 'registered', plan: 'free', timeZone: 'America/Sao_Paulo' }
           : params.profile,
       ),
     canStartPractice: () => Promise.resolve(true),

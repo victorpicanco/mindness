@@ -15,6 +15,7 @@ function createSession(createdAt: Date): Session {
     sessionId: 'session-1',
     accountId: 'account-1',
     themeId: 'theme-1',
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'balanced',
       categorySlug: 'communication',
@@ -35,6 +36,7 @@ function createHarness(activeSession: Session | null) {
     listByAccount: () => Promise.resolve([]),
     findExpiredInProgress: () => Promise.resolve([]),
     findStuckProcessing: () => Promise.resolve([]),
+    hasGuestTrial: () => Promise.resolve(false),
     markDeleted: () => Promise.resolve(true),
     save: (session) => {
       saved.push(session)

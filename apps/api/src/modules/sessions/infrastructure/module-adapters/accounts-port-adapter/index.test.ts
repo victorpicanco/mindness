@@ -44,12 +44,32 @@ describe('AccountsPortAdapter', () => {
     await expect(adapter.resolveAccountId('token-1')).rejects.toBe(error)
   })
 
+  it('carries the guest kind through to the session profile', async () => {
+    const accountsFacade: AccountsIdentityReader = {
+      authenticate: () => Promise.resolve({ accountId: null }),
+      getAccountSnapshot: () =>
+        Promise.resolve({
+          accountId: 'account-1',
+          kind: 'guest',
+          plan: 'free',
+          createdAt: new Date('2026-08-22T00:00:00.000Z'),
+          timeZone: 'America/Sao_Paulo',
+        }),
+      canStartPractice: () => Promise.resolve(true),
+    }
+
+    await expect(
+      new AccountsPortAdapter(accountsFacade).findProfile('account-1'),
+    ).resolves.toMatchObject({ kind: 'guest' })
+  })
+
   it('translates the account snapshot into a profile with plan and time zone', async () => {
     const accountsFacade: AccountsIdentityReader = {
       authenticate: () => Promise.resolve({ accountId: null }),
       getAccountSnapshot: () =>
         Promise.resolve({
           accountId: 'account-1',
+          kind: 'registered',
           plan: 'free',
           createdAt: new Date('2026-08-22T00:00:00.000Z'),
           timeZone: 'America/Sao_Paulo',
@@ -59,6 +79,7 @@ describe('AccountsPortAdapter', () => {
     const adapter = new AccountsPortAdapter(accountsFacade)
 
     await expect(adapter.findProfile('account-1')).resolves.toStrictEqual({
+      kind: 'registered',
       plan: 'free',
       timeZone: 'America/Sao_Paulo',
     })

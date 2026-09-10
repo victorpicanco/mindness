@@ -14,6 +14,7 @@ function createSession(sessionId: string, accountId: string, createdAt: Date): S
     sessionId,
     accountId,
     themeId: `theme-${sessionId}`,
+    accessMode: 'account',
     configuration: SessionConfiguration.create({
       difficulty: 'easy',
       categorySlug: 'self-awareness',
@@ -45,6 +46,7 @@ function createHarness(initialSessions: Session[]) {
           .slice(0, limit),
       )
     },
+    hasGuestTrial: () => Promise.resolve(false),
     markDeleted: () => Promise.resolve(true),
     save: () => Promise.resolve(),
   }

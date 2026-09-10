@@ -14,7 +14,7 @@ import { CompleteGoogleSignInUseCase } from './index.js'
 const NOW = new Date('2026-08-15T12:00:00.000Z')
 
 function accountFor(): Account {
-  return Account.create({
+  return Account.createRegistered({
     id: 'account-1',
     email: EmailAddress.create('person@example.com'),
     authUserId: 'auth-user-1',
@@ -37,7 +37,7 @@ class InMemoryAccountsRepository implements AccountsRepository {
   }
 
   findByEmail(email: string): Promise<Account | null> {
-    return Promise.resolve(this.existing?.email.value === email ? this.existing : null)
+    return Promise.resolve(this.existing?.email?.value === email ? this.existing : null)
   }
 
   save(account: Account): Promise<void> {

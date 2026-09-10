@@ -1,4 +1,5 @@
 import type {
+  SessionAccessMode,
   SessionDifficulty,
   SessionExpiredReason,
   SessionFailureReason,
@@ -19,6 +20,7 @@ export interface SessionRow {
   readonly id: string
   readonly accountId: string
   readonly themeId: string
+  readonly accessMode: SessionAccessMode
   readonly difficulty: SessionDifficulty
   readonly categorySlug: string
   readonly searchWindowMinutes: number
@@ -40,6 +42,7 @@ export interface SessionScalars {
   readonly id: string
   readonly accountId: string
   readonly themeId: string
+  readonly accessMode: SessionAccessMode
   readonly difficulty: SessionDifficulty
   readonly categorySlug: string
   readonly searchWindowMinutes: number
@@ -64,6 +67,10 @@ export interface SessionFindByIdArgs {
 export interface SessionFindActiveArgs {
   readonly where: { readonly accountId: string; readonly state: 'in_progress' }
   readonly include: { readonly audio: true }
+}
+
+export interface SessionCountGuestTrialArgs {
+  readonly where: { readonly accountId: string; readonly accessMode: 'guest_trial' }
 }
 
 export interface SessionFindExpiredArgs {
@@ -141,6 +148,7 @@ export interface SessionsPrismaClient {
     findUnique(args: SessionFindByIdArgs): Promise<SessionRow | null>
     findFirst(args: SessionFindActiveArgs): Promise<SessionRow | null>
     findMany(args: SessionFindManyArgs): Promise<SessionRow[]>
+    count(args: SessionCountGuestTrialArgs): Promise<number>
     upsert(args: SessionUpsertArgs): Promise<SessionRow>
     updateMany(args: SessionDeleteArgs): Promise<{ count: number }>
   }

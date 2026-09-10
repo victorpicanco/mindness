@@ -1,12 +1,9 @@
+import type { VerifiedAuthIdentity } from '@/modules/accounts/domain/ports/auth-identity-provider/index.js'
+
 export interface AuthenticateInput {
   readonly accessToken: string
 }
 
-export interface AuthenticateOutput {
+export type AuthenticateOutput = VerifiedAuthIdentity & {
   readonly accountId: string | null
-  readonly authUserId: string
-  readonly email: string
-  readonly sessionId: string
-  readonly issuedAt: Date
-  readonly authenticationMethod: 'password' | 'google'
 }

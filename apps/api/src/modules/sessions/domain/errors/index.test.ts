@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { AudioSizeRejectedError } from '@/modules/sessions/domain/errors/audio-size-rejected-error/index.js'
 import { AudioUploadFailedError } from '@/modules/sessions/domain/errors/audio-upload-failed-error/index.js'
 import { AudioValidationRejectedError } from '@/modules/sessions/domain/errors/audio-validation-rejected-error/index.js'
+import { GuestTrialConsumedError } from '@/modules/sessions/domain/errors/guest-trial-consumed-error/index.js'
 import { PracticeNotAllowedError } from '@/modules/sessions/domain/errors/practice-not-allowed-error/index.js'
 import { SessionAlreadyRunningError } from '@/modules/sessions/domain/errors/session-already-running-error/index.js'
 import { SessionAuthenticationRejectedError } from '@/modules/sessions/domain/errors/session-authentication-rejected-error/index.js'
@@ -15,6 +16,12 @@ import { BaseError } from '@/shared/errors/base-error/index.js'
 
 describe('session domain errors', () => {
   it.each([
+    [
+      new GuestTrialConsumedError('account-1'),
+      'sessions.GUEST_TRIAL_CONSUMED',
+      403,
+      { accountId: 'account-1' },
+    ],
     [
       new SessionAlreadyRunningError('session-1'),
       'sessions.SESSION_ALREADY_RUNNING',

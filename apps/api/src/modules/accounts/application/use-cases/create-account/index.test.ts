@@ -17,14 +17,7 @@ const NEUTRAL_MESSAGE =
 class InMemoryAccountsRepository implements AccountsRepository {
   readonly saved: Account[] = []
 
-  constructor(
-    private readonly existing: Account | null = null,
-    private readonly accountCount = existing === null ? 0 : 1,
-  ) {}
-
-  count(): Promise<number> {
-    return Promise.resolve(this.accountCount + this.saved.length)
-  }
+  constructor(private readonly existing: Account | null = null) {}
 
   findByAuthUserId(authUserId: string): Promise<Account | null> {
     return Promise.resolve(
@@ -89,15 +82,10 @@ function existingAccount(): Account {
   })
 }
 
-function createHarness(
-  existing: Account | null = null,
-  authUserId = 'auth-user-1',
-  accountCount?: number,
-) {
-  const accounts = new InMemoryAccountsRepository(existing, accountCount)
+function createHarness(existing: Account | null = null, authUserId = 'auth-user-1') {
+  const accounts = new InMemoryAccountsRepository(existing)
   const authIdentityProvider = new FixedAuthIdentityProvider(authUserId)
   const eventPublisher = new RecordingEventPublisher()
-  let transactionRuns = 0
   let generatedIds = 0
 
   const useCase = new CreateAccountUseCase({
@@ -106,19 +94,12 @@ function createHarness(
     clock: { now: () => NOW },
     eventPublisher,
     idGenerator: { generate: () => `generated-${(generatedIds += 1)}` },
-    unitOfWork: {
-      run: async (operation) => {
-        transactionRuns += 1
-        return operation()
-      },
-    },
   })
 
   return {
     accounts,
     authIdentityProvider,
     eventPublisher,
-    transactionRuns: () => transactionRuns,
     useCase,
   }
 }
@@ -141,7 +122,6 @@ describe('CreateAccountUseCase', () => {
     })
     expect(harness.accounts.saved[0]?.email.value).toBe('person@example.com')
     expect(harness.accounts.saved[0]?.timeZone.value).toBe('Europe/Lisbon')
-    expect(harness.transactionRuns()).toBe(1)
   })
 
   it('binds the account to the session that provisioned it', async () => {
@@ -208,26 +188,6 @@ describe('CreateAccountUseCase', () => {
       expect.objectContaining({
         eventName: 'account_creation_rejected',
         payload: { accountId: 'account-existing', plan: 'free', reason: 'duplicate' },
-      }),
-    )
-  })
-
-  it('rejects the one hundred and first account inside the reservation transaction', async () => {
-    const harness = createHarness(null, 'auth-user-101', 100)
-
-    await expect(
-      harness.useCase.execute({ accessToken: 'verified-token', timeZone: 'America/Sao_Paulo' }),
-    ).rejects.toMatchObject({
-      code: 'accounts.BETA_CAPACITY_REACHED',
-      context: { capacity: 100, accountCount: 100 },
-    })
-
-    expect(harness.accounts.saved).toHaveLength(0)
-    expect(harness.transactionRuns()).toBe(1)
-    expect(harness.eventPublisher.published).toContainEqual(
-      expect.objectContaining({
-        eventName: 'beta_capacity_reached',
-        payload: { accountId: null, plan: 'free', capacity: 100 },
       }),
     )
   })

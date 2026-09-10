@@ -5,7 +5,6 @@ export type ApiErrorMessageKey =
   | 'auth.errors.accountBlocked'
   | 'auth.errors.accountNotFound'
   | 'auth.errors.authenticationRejected'
-  | 'auth.errors.betaCapacityReached'
   | 'auth.errors.captchaFailed'
   | 'auth.errors.captchaRequired'
   | 'auth.errors.emailNotConfirmed'
@@ -53,10 +52,6 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   },
   'accounts.AUTHENTICATION_REJECTED': {
     messageKey: 'auth.errors.authenticationRejected',
-    presentation: 'toast',
-  },
-  'accounts.BETA_CAPACITY_REACHED': {
-    messageKey: 'auth.errors.betaCapacityReached',
     presentation: 'toast',
   },
   'accounts.EMAIL_NOT_CONFIRMED': {

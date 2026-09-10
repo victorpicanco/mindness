@@ -22,7 +22,6 @@ function createRunner(failures: Error[] = []): FakeRunner {
   const pending = [...failures]
   const client: AccountsPrismaClient = {
     account: {
-      count: () => Promise.resolve(0),
       findUnique: () => Promise.resolve(null),
       upsert: (args) => Promise.resolve(args.create),
     },

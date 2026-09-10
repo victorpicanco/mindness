@@ -12,10 +12,6 @@ const CREATED_AT = new Date('2026-08-15T00:00:00.000Z')
 class InMemoryAccountsRepository implements AccountsRepository {
   constructor(private readonly account: Account | null) {}
 
-  count(): Promise<number> {
-    return Promise.resolve(this.account === null ? 0 : 1)
-  }
-
   findById(accountId: string): Promise<Account | null> {
     return Promise.resolve(this.account?.id === accountId ? this.account : null)
   }

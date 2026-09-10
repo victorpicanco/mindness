@@ -132,7 +132,13 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     checkPracticeEligibility: new CheckPracticeEligibilityUseCase(accounts),
     confirmEmail: new ConfirmEmailUseCase({ accounts, authIdentityProvider, unitOfWork }),
     completeGoogleSignIn: new CompleteGoogleSignInUseCase(shared),
-    createAccount: new CreateAccountUseCase(shared),
+    createAccount: new CreateAccountUseCase({
+      accounts,
+      authIdentityProvider,
+      clock,
+      eventPublisher: deps.eventPublisher,
+      idGenerator,
+    }),
     deleteAccount: new DeleteAccountUseCase({
       ...shared,
       deletionRequests,

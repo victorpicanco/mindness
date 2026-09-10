@@ -94,7 +94,7 @@ describe('email confirmation route', () => {
     const store = new InMemoryCookieStore()
     const { fetcher } = fetcherFor({
       ...provisioningResponses,
-      '/accounts': () => errorResponse('accounts.BETA_CAPACITY_REACHED', 403),
+      '/accounts': () => errorResponse('accounts.ACCOUNT_BLOCKED', 403),
     })
     const handler = createEmailConfirmationRouteHandler({ cookieStore: store, fetcher })
 
@@ -102,9 +102,7 @@ describe('email confirmation route', () => {
       new Request('https://web.test/auth/confirm?token_hash=secret-hash&type=email'),
     )
 
-    expect(response.headers.get('location')).toBe(
-      '/auth/sign-in?error=accounts.BETA_CAPACITY_REACHED',
-    )
+    expect(response.headers.get('location')).toBe('/auth/sign-in?error=accounts.ACCOUNT_BLOCKED')
     expect(store.values.get('mindness_access_token')).toBeUndefined()
   })
 

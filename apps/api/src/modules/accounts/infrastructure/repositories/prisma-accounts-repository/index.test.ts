@@ -49,7 +49,6 @@ function createFakeClient(options: FakeClientOptions = {}): FakeClient {
     upserts,
     client: {
       account: {
-        count: () => Promise.resolve(rows.length),
         findUnique: ({ where }) => {
           if (options.readFailure !== undefined) return Promise.reject(options.readFailure)
           return Promise.resolve(

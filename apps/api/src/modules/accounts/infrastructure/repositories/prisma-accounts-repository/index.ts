@@ -66,14 +66,6 @@ export class PrismaAccountsRepository implements AccountsRepository {
     private readonly mapper: AccountMapper,
   ) {}
 
-  async count(): Promise<number> {
-    try {
-      return await this.client().account.count()
-    } catch (error) {
-      throw new DatabaseError('Failed to count accounts', { cause: error })
-    }
-  }
-
   async findByAuthUserId(authUserId: string): Promise<Account | null> {
     const row = await this.readByAuthUserId(authUserId)
 

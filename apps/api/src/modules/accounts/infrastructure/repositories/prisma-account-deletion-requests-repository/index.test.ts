@@ -15,7 +15,6 @@ describe('PrismaAccountDeletionRequestsRepository', () => {
     const upserts: AccountDeletionRequestUpsertArgs[] = []
     const client: AccountsPrismaClient = {
       account: {
-        count: () => Promise.resolve(0),
         findUnique: () => Promise.resolve(null),
         upsert: (args) => Promise.resolve(args.create),
       },

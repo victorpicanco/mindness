@@ -15,8 +15,8 @@ describe('describeSignInRedirectError', () => {
   })
 
   it('describes an API error code carried by the callback', () => {
-    expect(describeSignInRedirectError('accounts.BETA_CAPACITY_REACHED')).toEqual({
-      messageKey: 'auth.errors.betaCapacityReached',
+    expect(describeSignInRedirectError('accounts.ACCOUNT_BLOCKED')).toEqual({
+      messageKey: 'auth.errors.accountBlocked',
       presentation: 'toast',
     })
   })

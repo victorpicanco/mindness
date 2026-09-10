@@ -11,10 +11,6 @@ import { CheckPracticeEligibilityUseCase } from './index.js'
 class InMemoryAccountsRepository implements AccountsRepository {
   constructor(private readonly account: Account) {}
 
-  count(): Promise<number> {
-    return Promise.resolve(1)
-  }
-
   findById(accountId: string): Promise<Account | null> {
     return Promise.resolve(this.account.id === accountId ? this.account : null)
   }

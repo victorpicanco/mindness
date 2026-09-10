@@ -148,8 +148,8 @@ describe('Google callback route', () => {
             : Response.json(
                 {
                   error: {
-                    code: 'accounts.BETA_CAPACITY_REACHED',
-                    message: 'The beta has reached 100 accounts',
+                    code: 'accounts.ACCOUNT_ALREADY_EXISTS',
+                    message: 'An account already exists',
                     issues: null,
                     requestId: 'request-id',
                   },
@@ -164,7 +164,7 @@ describe('Google callback route', () => {
 
     expect(response.status).toBe(302)
     expect(response.headers.get('location')).toBe(
-      '/auth/sign-in?error=accounts.BETA_CAPACITY_REACHED',
+      '/auth/sign-in?error=accounts.ACCOUNT_ALREADY_EXISTS',
     )
     expect(cookieStore.values).toEqual(new Map())
   })

@@ -66,13 +66,6 @@ describe('describeApiError', () => {
     })
   })
 
-  it('raises the beta capacity limit as a toast', () => {
-    expect(describeApiError('accounts.BETA_CAPACITY_REACHED')).toEqual({
-      messageKey: 'auth.errors.betaCapacityReached',
-      presentation: 'toast',
-    })
-  })
-
   it('keeps a duplicated email next to the field that has to change', () => {
     expect(describeApiError('accounts.ACCOUNT_ALREADY_EXISTS')).toEqual({
       messageKey: 'auth.errors.accountAlreadyExists',

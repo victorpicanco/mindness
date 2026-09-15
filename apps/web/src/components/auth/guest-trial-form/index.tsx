@@ -94,7 +94,6 @@ export function GuestTrialForm({
       >
         {failure === undefined ? t('continueWithoutAccount') : t('retry')}
       </Button>
-      <p className="text-xs text-text-muted">{t('guestNote')}</p>
       {failure === undefined ? null : (
         <p className="text-sm text-error" role="alert">
           {failure}

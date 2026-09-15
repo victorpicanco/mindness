@@ -22,13 +22,7 @@ describe('client message catalogs', () => {
 
   it('gives each route group only the catalog its screens render', () => {
     expect(publicClientMessages.auth).toBe(messages.auth)
-    expect(publicClientMessages.home).toEqual({
-      practice: {
-        accountEntryDialog: {
-          guestNote: messages.home.practice.accountEntryDialog.guestNote,
-        },
-      },
-    })
+    expect(publicClientMessages).not.toHaveProperty('home')
 
     expect(authenticatedClientMessages.home).toBe(messages.home)
     expect(authenticatedClientMessages.auth).not.toBe(messages.auth)

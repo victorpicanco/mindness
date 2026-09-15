@@ -7,13 +7,6 @@ export const rootClientMessages = {
 export const publicClientMessages = {
   auth: messages.auth,
   common: messages.common,
-  home: {
-    practice: {
-      accountEntryDialog: {
-        guestNote: messages.home.practice.accountEntryDialog.guestNote,
-      },
-    },
-  },
 }
 
 export const authenticatedClientMessages = {

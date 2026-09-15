@@ -277,13 +277,26 @@ describe('AuthenticatedShell', () => {
     fireEvent.click(within(sidebar).getByRole('button', { name: 'Entrar' }))
     expect(screen.getByRole('dialog', { name: 'É bom ter você de volta.' })).toBeInTheDocument()
 
-    fireEvent.click(within(sidebar).getByRole('button', { name: 'Criar conta' }))
-    expect(screen.getByRole('dialog', { name: 'Crie sua conta' })).toBeInTheDocument()
-
-    expect(events).toEqual(['guest_account_sign_in_started', 'guest_account_sign_up_started'])
+    expect(events).toEqual(['guest_account_sign_in_started'])
   })
 
-  it('presents a focused login invitation to a visitor in every sidebar mode', () => {
+  it.each([
+    ['visitor', { accountKind: 'visitor' } satisfies ShellViewer],
+    [
+      'guest',
+      {
+        accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a86',
+        accountKind: 'guest',
+        authenticationMethod: 'anonymous',
+        consent: null,
+        createdAt: '2026-09-10T10:30:00.000Z',
+        email: null,
+        name: null,
+        plan: 'free',
+        timeZone: 'America/Sao_Paulo',
+      } satisfies ShellViewer,
+    ],
+  ])('presents a focused login invitation to a %s in every sidebar mode', (_state, viewer) => {
     renderShell(
       <p>Content</p>,
       true,
@@ -296,9 +309,7 @@ describe('AuthenticatedShell', () => {
       undefined,
       undefined,
       undefined,
-      {
-        viewer: { accountKind: 'visitor' },
-      },
+      { viewer },
     )
 
     const railSidebar = screen.getByRole('complementary')
@@ -327,7 +338,23 @@ describe('AuthenticatedShell', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('offers account entry actions at the right end of the visitor top bar', () => {
+  it.each([
+    ['visitor', { accountKind: 'visitor' } satisfies ShellViewer],
+    [
+      'guest',
+      {
+        accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a86',
+        accountKind: 'guest',
+        authenticationMethod: 'anonymous',
+        consent: null,
+        createdAt: '2026-09-10T10:30:00.000Z',
+        email: null,
+        name: null,
+        plan: 'free',
+        timeZone: 'America/Sao_Paulo',
+      } satisfies ShellViewer,
+    ],
+  ])('offers account entry actions at the right end of the %s top bar', (_state, viewer) => {
     renderShell(
       <p>Content</p>,
       true,
@@ -340,7 +367,7 @@ describe('AuthenticatedShell', () => {
       undefined,
       undefined,
       undefined,
-      { viewer: { accountKind: 'visitor' } },
+      { viewer },
     )
 
     const header = screen.getByRole('banner')

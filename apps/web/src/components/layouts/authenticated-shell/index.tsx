@@ -250,7 +250,7 @@ export function AuthenticatedShellView({
     signOut: t('signOut'),
   }
   const headerContent =
-    viewer.accountKind === 'visitor' ? (
+    viewer.accountKind === 'visitor' || viewer.accountKind === 'guest' ? (
       <div className="flex items-center gap-3">
         {header === undefined ? null : <div>{header}</div>}
         <VisitorTopBarAccountEntry

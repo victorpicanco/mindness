@@ -3,6 +3,20 @@
   "practice": {
     "title": "Qual será o assunto de hoje?",
     "startSession": "Iniciar sessão",
+    "accountEntryDialog": {
+      "title": "Antes de começar",
+      "description": "Com uma conta suas sessões ficam salvas. Ou experimente uma agora, sem conta.",
+      "signUp": "Criar conta",
+      "signIn": "Entrar",
+      "continueWithoutAccount": "Continuar sem conta",
+      "guestNote": "Ela fica só neste navegador e não entra no histórico depois.",
+      "retry": "Tentar novamente",
+      "close": "Fechar",
+      "accountRequired": {
+        "title": "Crie uma conta para continuar",
+        "description": "Você já usou a sessão gratuita deste navegador."
+      }
+    },
     "difficultyLabel": "Dificuldade",
     "difficultyPlaceholder": "Escolha a dificuldade",
     "categoryLabel": "Categoria",

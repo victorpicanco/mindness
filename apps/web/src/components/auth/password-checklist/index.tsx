@@ -14,7 +14,7 @@ export function PasswordChecklist({ password }: PasswordChecklistProps) {
   const t = useTranslations('auth.password.requirements')
 
   return (
-    <ul aria-label={t('title')} className="grid gap-1.5 text-sm">
+    <ul aria-label={t('title')} className="flex flex-wrap gap-2">
       {passwordRequirements.map((requirement) => {
         const isSatisfied = requirement.isSatisfied(password)
 
@@ -22,14 +22,16 @@ export function PasswordChecklist({ password }: PasswordChecklistProps) {
           <li
             className={
               isSatisfied
-                ? 'flex items-center gap-2 text-text'
-                : 'flex items-center gap-2 text-text-muted'
+                ? 'inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[11px] leading-none text-text'
+                : 'inline-flex items-center gap-1 rounded-full bg-surface-raised px-2 py-0.5 text-[11px] leading-none text-text-muted'
             }
             data-satisfied={isSatisfied}
             key={requirement.key}
           >
             <Icon
-              className={isSatisfied ? 'text-success' : 'text-text-muted'}
+              className={
+                isSatisfied ? 'shrink-0 text-xs text-success' : 'shrink-0 text-xs text-text-muted'
+              }
               name={isSatisfied ? 'checkmark-circle-02' : 'circle'}
             />
             {t(requirement.key)}

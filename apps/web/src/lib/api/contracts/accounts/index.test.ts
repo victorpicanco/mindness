@@ -4,6 +4,7 @@ import { accountProfileSchema } from './index'
 
 const profile = {
   accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
+  accountKind: 'registered',
   authenticationMethod: 'password',
   consent: {
     acceptedAt: '2026-08-15T12:00:00.000Z',
@@ -24,6 +25,21 @@ describe('accountProfileSchema', () => {
 
   it('accepts an account that was never named', () => {
     expect(accountProfileSchema.parse({ ...profile, name: null }).name).toBeNull()
+  })
+
+  it('validates a guest profile without an email address', () => {
+    const guest = {
+      ...profile,
+      accountKind: 'guest',
+      authenticationMethod: 'anonymous',
+      email: null,
+    }
+
+    expect(accountProfileSchema.parse(guest)).toEqual(guest)
+  })
+
+  it('rejects a registered profile without an email address', () => {
+    expect(() => accountProfileSchema.parse({ ...profile, email: null })).toThrow()
   })
 
   it('rejects unknown fields and invalid account values', () => {

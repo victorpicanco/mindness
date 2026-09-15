@@ -3,7 +3,12 @@ import { z } from 'zod'
 
 import type { ApiClientError } from '@/lib/api/client-error'
 
-import { apiFetch, apiFetchWithMeta } from './server-client'
+import {
+  apiFetch,
+  apiFetchIfAuthenticated,
+  apiFetchWithMeta,
+  publicApiFetch,
+} from './server-client'
 
 class InMemoryCookieStore {
   private readonly values = new Map<string, string>()
@@ -163,6 +168,66 @@ describe('apiFetch', () => {
 
     await expect(request).rejects.toMatchObject({ code: 'accounts.AUTHENTICATION_REJECTED' })
     expect(requests.map((item) => item.url)).toEqual(['https://api.mindness.test/sessions/active'])
+  })
+})
+
+describe('publicApiFetch', () => {
+  it('fetches public data without an authorization header or cookie store', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+
+    const data = await publicApiFetch('/sessions/theme-categories', {
+      schema: z.array(z.object({ slug: z.string() })),
+      fetcher: (input, init) => {
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(Response.json({ data: [{ slug: 'focus' }] }))
+      },
+    })
+
+    expect(data).toEqual([{ slug: 'focus' }])
+    expect(requests[0]?.headers.has('authorization')).toBe(false)
+  })
+})
+
+describe('apiFetchIfAuthenticated', () => {
+  it('does not call an authenticated endpoint when there is no access token', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const fetcher = vi.fn<typeof fetch>()
+
+    const data = await apiFetchIfAuthenticated('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
+      cookieStore: new InMemoryCookieStore(undefined),
+      fetcher,
+    })
+
+    expect(data).toBeNull()
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('degrades a rejected access token to an unauthenticated result', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+
+    const data = await apiFetchIfAuthenticated('/sessions/active', {
+      schema: z.object({ sessionId: z.string() }),
+      cookieStore: new InMemoryCookieStore('expired-token'),
+      fetcher: () =>
+        Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.AUTHENTICATION_REJECTED',
+                message: 'Authentication rejected',
+                issues: null,
+                requestId: 'request-id',
+              },
+            },
+            { status: 401 },
+          ),
+        ),
+    })
+
+    expect(data).toBeNull()
   })
 })
 

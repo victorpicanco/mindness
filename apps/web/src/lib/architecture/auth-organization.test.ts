@@ -14,8 +14,15 @@ async function pathExists(path: string): Promise<boolean> {
 }
 
 describe('auth organization', () => {
+  it('has no standalone sign-in/sign-up screens, only the in-app authentication dialog', async () => {
+    await expect(pathExists('app/(public)/auth/sign-in')).resolves.toBe(false)
+    await expect(pathExists('app/(public)/auth/sign-up')).resolves.toBe(false)
+    await expect(pathExists('components/auth/sign-in-screen')).resolves.toBe(false)
+    await expect(pathExists('components/auth/sign-up-screen')).resolves.toBe(false)
+    await expect(pathExists('components/auth/authentication-dialog/index.tsx')).resolves.toBe(true)
+  })
+
   it('keeps public auth routes separate from shared auth code', async () => {
-    await expect(pathExists('app/(public)/auth/sign-in/page.tsx')).resolves.toBe(true)
     await expect(pathExists('app/auth')).resolves.toBe(false)
     await expect(pathExists('components/auth/page-shell/index.tsx')).resolves.toBe(true)
     await expect(pathExists('lib/auth/form-validation/index.ts')).resolves.toBe(true)

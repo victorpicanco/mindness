@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import posthog from 'posthog-js'
 
 import { AuthCaptchaField } from '@/components/auth/captcha-field'
@@ -17,14 +17,15 @@ import { clientEnv } from '@/lib/env/client'
 
 type SignUpFormProps = {
   readonly action: AuthFormAction
+  readonly appearance?: 'dialog' | 'page' | undefined
   readonly onSuccess?: () => void
 }
 
-export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
+export function SignUpForm({ action, appearance = 'page', onSuccess }: SignUpFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const hasReportedSuccessRef = useRef(false)
   const siteKey = clientEnv().turnstileSiteKey
   const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined })
 
@@ -32,21 +33,22 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
     siteKey === undefined ? 'auth.errors.captchaUnavailable' : form.inlineMessageKey
 
   const hasSucceeded = form.state.status === 'success'
+  const isDialog = appearance === 'dialog'
 
   useEffect(() => {
-    if (hasSucceeded) {
-      posthog.identify(email, { email })
-      posthog.capture('sign_up_submitted')
-      onSuccess?.()
-    }
-  }, [email, hasSucceeded, onSuccess])
+    if (!hasSucceeded || hasReportedSuccessRef.current) return
+
+    hasReportedSuccessRef.current = true
+    posthog.capture('sign_up_submitted')
+    onSuccess?.()
+  }, [hasSucceeded, onSuccess])
 
   if (hasSucceeded) {
     return null
   }
 
   return (
-    <form action={form.formAction} className="grid gap-8" noValidate>
+    <form action={form.formAction} className={isDialog ? 'grid gap-5' : 'grid gap-8'} noValidate>
       <div className="grid gap-4">
         <Field
           error={
@@ -57,9 +59,6 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
           <Input
             autoComplete="email"
             name="email"
-            onChange={(event) => {
-              setEmail(event.target.value)
-            }}
             placeholder={t('signIn.emailPlaceholder')}
             type="email"
           />
@@ -84,22 +83,26 @@ export function SignUpForm({ action, onSuccess }: SignUpFormProps) {
           />
         </Field>
         <PasswordChecklist password={password} />
-        <Field
-          error={
-            form.fieldErrors.passwordConfirmation === undefined
-              ? undefined
-              : translate(form.fieldErrors.passwordConfirmation)
-          }
-          label={t('signUp.passwordConfirmationLabel')}
-        >
-          <PasswordInput
-            autoComplete="new-password"
-            hidePasswordLabel={t('password.hide')}
-            name="passwordConfirmation"
-            placeholder={t('signIn.passwordPlaceholder')}
-            showPasswordLabel={t('password.show')}
-          />
-        </Field>
+        {isDialog ? (
+          <input name="passwordConfirmation" type="hidden" value={password} />
+        ) : (
+          <Field
+            error={
+              form.fieldErrors.passwordConfirmation === undefined
+                ? undefined
+                : translate(form.fieldErrors.passwordConfirmation)
+            }
+            label={t('signUp.passwordConfirmationLabel')}
+          >
+            <PasswordInput
+              autoComplete="new-password"
+              hidePasswordLabel={t('password.hide')}
+              name="passwordConfirmation"
+              placeholder={t('signIn.passwordPlaceholder')}
+              showPasswordLabel={t('password.show')}
+            />
+          </Field>
+        )}
         <AuthCaptchaField form={form} siteKey={siteKey} />
         <AuthFormAlert
           message={alertMessageKey === undefined ? undefined : translate(alertMessageKey)}

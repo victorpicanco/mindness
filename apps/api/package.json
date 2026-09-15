@@ -13,6 +13,7 @@
     "test": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "test:e2e": "vitest run --config vitest.config.e2e.ts",
+    "test:e2e:server": "tsx src/tests/e2e/server.ts",
     "test:providers": "vitest run --config vitest.config.providers.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

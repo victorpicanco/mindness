@@ -20,7 +20,7 @@ const sidebarStyles = cva('flex-col overflow-hidden border-divider p-3', {
   },
 })
 
-const navigationLinkStyles = cva(
+export const navigationLinkStyles = cva(
   'relative z-10 grid h-10 grid-cols-[2.25rem_minmax(0,1fr)] items-center overflow-hidden rounded-xl text-text transition-colors hover:bg-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text',
   {
     variants: {

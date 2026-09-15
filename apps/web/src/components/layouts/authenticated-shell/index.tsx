@@ -7,13 +7,24 @@ import { useEffect, useRef, useState } from 'react'
 
 import { BrandLink } from '@/components/layouts/brand-link'
 import { AccountMenu } from '@/components/layouts/account-menu'
+import {
+  AccountEntry,
+  VisitorTopBarAccountEntry,
+  type AccountEntryLabels,
+} from '@/components/layouts/account-entry'
+import {
+  AuthenticationDialog,
+  type AuthenticationMode,
+} from '@/components/auth/authentication-dialog'
 import { Header } from '@/components/layouts/header'
 import { SettingsDialog } from '@/components/layouts/settings-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { IconButton } from '@/components/ui/icon-button'
+import { Icon } from '@/components/ui/icon'
 import { Menu } from '@/components/ui/menu'
 import {
+  navigationLinkStyles,
   Sidebar,
   SidebarHeader,
   SidebarNavigation,
@@ -32,12 +43,21 @@ import { apiErrorDetails } from '@/lib/api/api-error'
 import { accountDisplayName } from '@/lib/accounts/account-display-name'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
 import type { AccountProfile } from '@/lib/api/contracts/accounts'
+import { browserAnalyticsClient, type BrowserAnalyticsClient } from '@/lib/analytics/browser-client'
+import type { AuthFormAction } from '@/lib/auth/action-state'
 import { cn } from '@/lib/ui/class-names'
 import type { Theme } from '@/lib/ui/theme'
 
+type RegisteredAccountProfile = Extract<AccountProfile, { readonly accountKind: 'registered' }>
+
+export type ShellViewer = { readonly accountKind: 'visitor' } | AccountProfile
+
 export interface AuthenticatedShellProps {
-  readonly accountProfile: AccountProfile
+  readonly analytics?: BrowserAnalyticsClient | undefined
   readonly activeSessionId?: string | undefined
+  readonly isTrialConsumed?: boolean | undefined
+  readonly signInAction?: AuthFormAction | undefined
+  readonly signUpAction?: AuthFormAction | undefined
   readonly children: ReactNode
   readonly header?: ReactNode | undefined
   readonly initialIsExpanded: boolean
@@ -48,6 +68,7 @@ export interface AuthenticatedShellProps {
   readonly shouldConfirmSessionNavigation?: boolean | undefined
   readonly signOut: SignOutAction
   readonly theme: Theme
+  readonly viewer: ShellViewer
 }
 
 type AuthenticatedShellViewProps = AuthenticatedShellProps & {
@@ -64,6 +85,7 @@ type SignOutAction = () => void | Promise<void>
 
 interface SidebarLabels {
   readonly account: string
+  readonly accountEntry: AccountEntryLabels
   readonly accountDisplayName: string
   readonly accountPlan: string
   readonly accountSettings: string
@@ -72,12 +94,42 @@ interface SidebarLabels {
   readonly signOut: string
 }
 
+interface SidebarSettingsEntryProps {
+  readonly isExpanded: boolean
+  readonly label: string
+  readonly onOpenSettings: () => void
+}
+
+function SidebarSettingsEntry({ isExpanded, label, onOpenSettings }: SidebarSettingsEntryProps) {
+  return (
+    <button
+      aria-label={isExpanded ? undefined : label}
+      className={navigationLinkStyles({ isActive: false })}
+      onClick={onOpenSettings}
+      type="button"
+    >
+      <span className="grid size-9 place-items-center">
+        <Icon className="text-lg" name="settings-01" />
+      </span>
+      <span
+        aria-hidden={!isExpanded}
+        className={cn(
+          'min-w-0 whitespace-nowrap text-left text-[0.9375rem] font-normal transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none',
+          isExpanded ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-1 opacity-0',
+        )}
+      >
+        {label}
+      </span>
+    </button>
+  )
+}
+
 interface SidebarBodyProps {
+  readonly accountMenu?: ReactNode | undefined
   readonly activeHref: string | null
   readonly isExpanded: boolean
   readonly labels: SidebarLabels
   readonly navigationItems: readonly SidebarNavigationItem[]
-  readonly onOpenSettings: () => void
   readonly onPrimaryNavigate: (
     item: SidebarNavigationItem,
     event: MouseEvent<HTMLAnchorElement>,
@@ -89,20 +141,18 @@ interface SidebarBodyProps {
   readonly renderSessionAction: (item: SidebarSessionItem) => ReactNode
   readonly sessionGroups: readonly SidebarSessionGroup[]
   readonly showSessionGroups: boolean
-  readonly signOut: SignOutAction
 }
 function SidebarBody({
+  accountMenu,
   activeHref,
   isExpanded,
   labels,
   navigationItems,
-  onOpenSettings,
   onPrimaryNavigate,
   onSessionNavigate,
   renderSessionAction,
   sessionGroups,
   showSessionGroups,
-  signOut,
 }: SidebarBodyProps) {
   return (
     <>
@@ -122,18 +172,7 @@ function SidebarBody({
           renderItemAction={renderSessionAction}
         />
       ) : null}
-      <div className="mt-auto">
-        <AccountMenu
-          isExpanded={isExpanded}
-          name={labels.accountDisplayName}
-          onOpenSettings={onOpenSettings}
-          plan={labels.accountPlan}
-          popupLabel={labels.account}
-          settingsLabel={labels.accountSettings}
-          signOut={signOut}
-          signOutLabel={labels.signOut}
-        />
-      </div>
+      <div className="mt-auto">{accountMenu}</div>
     </>
   )
 }
@@ -151,19 +190,23 @@ export function AuthenticatedShell({ ...props }: AuthenticatedShellProps) {
 
 export function AuthenticatedShellView({
   abandonSession,
-  accountProfile,
+  analytics = browserAnalyticsClient,
   activeSessionId,
   children,
   deleteSession,
   header,
   initialIsExpanded,
+  isTrialConsumed = false,
   onSessionAbandoned,
   onThemeChange,
   preferenceCookieName,
   sessionGroups = [],
   signOut,
+  signInAction,
+  signUpAction,
   theme,
   updateAccountName,
+  viewer,
   shouldConfirmSessionNavigation = false,
 }: AuthenticatedShellViewProps) {
   const t = useTranslations('common.authenticatedShell')
@@ -174,8 +217,11 @@ export function AuthenticatedShellView({
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(initialIsExpanded)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isActiveSessionDialogOpen, setIsActiveSessionDialogOpen] = useState(false)
+  const [authenticationMode, setAuthenticationMode] = useState<AuthenticationMode | null>(null)
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
-  const [accountName, setAccountName] = useState(accountProfile.name)
+  const registeredAccount: RegisteredAccountProfile | null =
+    viewer.accountKind === 'registered' ? viewer : null
+  const [accountName, setAccountName] = useState(registeredAccount?.name ?? null)
   const [sessionPendingDeletion, setSessionPendingDeletion] = useState<SidebarSessionItem | null>(
     null,
   )
@@ -186,13 +232,35 @@ export function AuthenticatedShellView({
   const controlLabel = isSidebarExpanded ? t('collapseSidebar') : t('expandSidebar')
   const sidebarLabels = {
     account: t('account.label'),
-    accountDisplayName: accountDisplayName({ email: accountProfile.email, name: accountName }),
+    accountEntry: {
+      description: t('accountEntry.description'),
+      label: t('accountEntry.label'),
+      signIn: t('accountEntry.signIn'),
+      signUp: t('accountEntry.signUp'),
+      title: t('accountEntry.title'),
+    },
+    accountDisplayName:
+      registeredAccount === null
+        ? ''
+        : accountDisplayName({ email: registeredAccount.email, name: accountName }),
     accountPlan: t('account.plan'),
     accountSettings: t('account.settings'),
     primaryNavigation: t('primaryNavigationLabel'),
     sessions: t('sessionsLabel'),
     signOut: t('signOut'),
   }
+  const headerContent =
+    viewer.accountKind === 'visitor' ? (
+      <div className="flex items-center gap-3">
+        {header === undefined ? null : <div>{header}</div>}
+        <VisitorTopBarAccountEntry
+          labels={sidebarLabels.accountEntry}
+          onSelectAuthentication={setAuthenticationMode}
+        />
+      </div>
+    ) : (
+      header
+    )
   const navigationItems: readonly SidebarNavigationItem[] = AUTHENTICATED_NAVIGATION_ITEMS.map(
     (item) => ({ href: item.href, icon: item.icon, label: t(item.labelKey) }),
   )
@@ -215,15 +283,18 @@ export function AuthenticatedShellView({
     return heading.value
   }
 
-  const sessionSidebarGroups: readonly SidebarSessionGroup[] = sessionGroups.map((group) => ({
-    key: group.localDate,
-    heading: headingLabel(group.heading),
-    items: group.items.map((item) => ({
-      href: item.href,
-      label: item.title ?? t('untitledSession'),
-      sessionId: item.sessionId,
-    })),
-  }))
+  const sessionSidebarGroups: readonly SidebarSessionGroup[] =
+    viewer.accountKind === 'registered'
+      ? sessionGroups.map((group) => ({
+          key: group.localDate,
+          heading: headingLabel(group.heading),
+          items: group.items.map((item) => ({
+            href: item.href,
+            label: item.title ?? t('untitledSession'),
+            sessionId: item.sessionId,
+          })),
+        }))
+      : []
 
   useEffect(() => {
     if (!isMobileSidebarOpen) return
@@ -366,6 +437,36 @@ export function AuthenticatedShellView({
     router.refresh()
   }
 
+  function renderAccountMenu(isExpanded: boolean) {
+    return registeredAccount === null ? (
+      <div className="grid gap-1">
+        <SidebarSettingsEntry
+          isExpanded={isExpanded}
+          label={sidebarLabels.accountSettings}
+          onOpenSettings={openSettingsDialog}
+        />
+        <AccountEntry
+          analytics={analytics}
+          fromGuest={viewer.accountKind === 'guest'}
+          isExpanded={isExpanded}
+          labels={sidebarLabels.accountEntry}
+          onSelectAuthentication={setAuthenticationMode}
+        />
+      </div>
+    ) : (
+      <AccountMenu
+        isExpanded={isExpanded}
+        name={sidebarLabels.accountDisplayName}
+        onOpenSettings={openSettingsDialog}
+        plan={sidebarLabels.accountPlan}
+        popupLabel={sidebarLabels.account}
+        settingsLabel={sidebarLabels.accountSettings}
+        signOut={signOut}
+        signOutLabel={sidebarLabels.signOut}
+      />
+    )
+  }
+
   return (
     <div className="flex h-dvh bg-surface text-text">
       <div
@@ -410,17 +511,16 @@ export function AuthenticatedShellView({
           )}
 
           <SidebarBody
+            accountMenu={renderAccountMenu(isSidebarExpanded)}
             activeHref={activeHref}
             isExpanded={isSidebarExpanded}
             labels={sidebarLabels}
             navigationItems={navigationItems}
-            onOpenSettings={openSettingsDialog}
             onPrimaryNavigate={handlePrimaryNavigation}
             onSessionNavigate={handleSessionNavigation}
             renderSessionAction={renderSessionAction}
             sessionGroups={sessionSidebarGroups}
             showSessionGroups={isSidebarExpanded}
-            signOut={signOut}
           />
         </Sidebar>
 
@@ -436,7 +536,7 @@ export function AuthenticatedShellView({
                 ref={mobileToggleRef}
               />
             }
-            rightItem={header}
+            rightItem={headerContent}
           />
 
           <main className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</main>
@@ -481,11 +581,11 @@ export function AuthenticatedShellView({
           </SidebarHeader>
 
           <SidebarBody
+            accountMenu={renderAccountMenu(true)}
             activeHref={activeHref}
             isExpanded
             labels={sidebarLabels}
             navigationItems={navigationItems}
-            onOpenSettings={openSettingsDialog}
             onPrimaryNavigate={(item, event) => {
               handlePrimaryNavigation(item, event)
               closeMobileSidebar()
@@ -497,7 +597,6 @@ export function AuthenticatedShellView({
             renderSessionAction={renderSessionAction}
             sessionGroups={sessionSidebarGroups}
             showSessionGroups
-            signOut={signOut}
           />
         </Sidebar>
       </div>
@@ -525,7 +624,9 @@ export function AuthenticatedShellView({
           timeZone: t('settingsDialog.accountDetails.timeZone'),
         }}
         accountLabel={t('settingsDialog.account')}
-        accountProfile={{ ...accountProfile, name: accountName }}
+        accountProfile={
+          registeredAccount === null ? undefined : { ...registeredAccount, name: accountName }
+        }
         closeLabel={t('settingsDialog.close')}
         generalLabel={t('settingsDialog.general')}
         formatDateTime={formatAccountDateTime}
@@ -551,6 +652,17 @@ export function AuthenticatedShellView({
         title={t('settingsDialog.title')}
         updatedAtLabel={translate('auth.legal.updatedAt')}
       />
+
+      {registeredAccount !== null ? null : (
+        <AuthenticationDialog
+          canContinueWithoutAccount={!isTrialConsumed}
+          mode={authenticationMode}
+          onClose={() => setAuthenticationMode(null)}
+          onModeChange={setAuthenticationMode}
+          signInAction={signInAction}
+          signUpAction={signUpAction}
+        />
+      )}
 
       <Dialog
         description={t('activeSessionDialog.description')}

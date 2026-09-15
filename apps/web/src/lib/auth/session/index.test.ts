@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  accessTokenClaims,
   clearSessionCookies,
+  hasGuestSession,
   hasLiveSession,
+  isAnonymousAccessToken,
   needsAccessTokenRefresh,
   readSessionCookies,
   sessionCookiesToSet,
@@ -252,6 +255,66 @@ describe('needsAccessTokenRefresh', () => {
     })
 
     expect(needsAccessTokenRefresh(store, nowInSeconds)).toBe(false)
+  })
+})
+
+describe('isAnonymousAccessToken', () => {
+  function accessTokenWithClaims(claims: Readonly<Record<string, unknown>>): string {
+    const payload = Buffer.from(JSON.stringify(claims), 'utf8').toString('base64url')
+
+    return `header.${payload}.signature`
+  }
+
+  it('projects only validated session hints from the provider payload', () => {
+    expect(
+      accessTokenClaims(accessTokenWithClaims({ exp: 123, is_anonymous: true, sub: 'user' })),
+    ).toEqual({ exp: 123, is_anonymous: true })
+    expect(accessTokenClaims(accessTokenWithClaims({ exp: '123', is_anonymous: 'true' }))).toEqual({
+      exp: undefined,
+      is_anonymous: false,
+    })
+  })
+
+  it('classifies an anonymous access token by its provider claim', () => {
+    expect(isAnonymousAccessToken(accessTokenWithClaims({ is_anonymous: true, sub: 'user' }))).toBe(
+      true,
+    )
+  })
+
+  it('does not classify a permanent access token as anonymous', () => {
+    expect(
+      isAnonymousAccessToken(accessTokenWithClaims({ is_anonymous: false, sub: 'user' })),
+    ).toBe(false)
+    expect(isAnonymousAccessToken(accessTokenWithClaims({ sub: 'user' }))).toBe(false)
+  })
+
+  it('fails closed on an access token whose payload cannot be read', () => {
+    expect(isAnonymousAccessToken('not-a-token')).toBe(false)
+    expect(isAnonymousAccessToken('header..signature')).toBe(false)
+  })
+
+  it('recognises a guest session from the access token cookie', () => {
+    const store = new InMemoryCookieStore()
+
+    writeSessionCookies(store, {
+      accessToken: accessTokenWithClaims({ is_anonymous: true, sub: 'provider-user-id' }),
+      refreshToken: 'refresh-token',
+    })
+
+    expect(hasGuestSession(store)).toBe(true)
+  })
+
+  it('does not treat a permanent session or a token-less browser as a guest', () => {
+    const store = new InMemoryCookieStore()
+
+    expect(hasGuestSession(store)).toBe(false)
+
+    writeSessionCookies(store, {
+      accessToken: accessTokenWithClaims({ is_anonymous: false, sub: 'provider-user-id' }),
+      refreshToken: 'refresh-token',
+    })
+
+    expect(hasGuestSession(store)).toBe(false)
   })
 })
 

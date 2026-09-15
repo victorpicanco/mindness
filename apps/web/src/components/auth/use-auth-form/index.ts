@@ -3,7 +3,11 @@
 import { useTranslations } from 'next-intl'
 import { useActionState, useEffect } from 'react'
 
-import { initialAuthActionState, type AuthActionState } from '@/lib/auth/action-state'
+import {
+  initialAuthActionState,
+  type AuthActionState,
+  type AuthFormAction,
+} from '@/lib/auth/action-state'
 import { describeApiError } from '@/lib/errors/api-error-presentation'
 import { describeApiFieldIssues } from '@/lib/errors/api-field-issues'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
@@ -16,10 +20,7 @@ import {
 
 export type AuthFieldErrors = Partial<Readonly<Record<AuthFieldName, AuthFormMessageKey>>>
 
-export type AuthFormAction = (
-  state: AuthActionState,
-  formData: FormData,
-) => Promise<AuthActionState>
+export type { AuthFormAction } from '@/lib/auth/action-state'
 
 type UseAuthFormOptions = {
   readonly action: AuthFormAction

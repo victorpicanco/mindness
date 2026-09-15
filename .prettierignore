@@ -8,3 +8,4 @@ docs/architecture/laws
 apps/web/next-env.d.ts
 apps/web/test-results
 supabase/.temp
+.claude/worktrees

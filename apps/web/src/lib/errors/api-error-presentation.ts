@@ -19,6 +19,7 @@ export type ApiErrorMessageKey =
   | 'common.errors.sessionNotDeletable'
   | 'common.errors.unknown'
   | 'common.errors.validationFailed'
+  | 'home.practice.accountEntryDialog.accountRequired.description'
   | 'home.practice.errors.practiceNotAllowed'
   | 'home.practice.errors.themeUnavailable'
   | 'home.research.audioSizeRejected'
@@ -89,6 +90,10 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   'sessions.AUDIO_VALIDATION_REJECTED': {
     messageKey: 'home.research.audioValidationRejected',
     presentation: 'inline',
+  },
+  'sessions.GUEST_TRIAL_CONSUMED': {
+    messageKey: 'home.practice.accountEntryDialog.accountRequired.description',
+    presentation: 'silent',
   },
   'sessions.PRACTICE_NOT_ALLOWED': {
     messageKey: 'home.practice.errors.practiceNotAllowed',

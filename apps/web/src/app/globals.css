@@ -39,6 +39,23 @@
   --color-info: oklch(0.72 0.12 250);
 }
 
+.mindness-input:-webkit-autofill,
+.mindness-input:-webkit-autofill:hover,
+.mindness-input:-webkit-autofill:focus,
+.mindness-input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--color-text);
+  border-color: transparent;
+  caret-color: var(--color-text);
+  outline: none;
+  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset;
+  box-shadow: 0 0 0 1000px var(--color-input) inset;
+}
+
+.mindness-input:-webkit-autofill:focus-visible {
+  outline: 2px solid var(--color-border);
+  outline-offset: 2px;
+}
+
 .mindness-toast {
   animation: mindness-toast-enter 180ms ease-out;
 }

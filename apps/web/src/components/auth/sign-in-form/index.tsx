@@ -21,6 +21,7 @@ const EMAIL_NOT_CONFIRMED_CODE = 'accounts.EMAIL_NOT_CONFIRMED'
 
 type SignInFormProps = {
   readonly action: AuthFormAction
+  readonly appearance?: 'dialog' | 'page' | undefined
   readonly initialError?: ApiErrorDescription | undefined
   readonly redirectTo?: string | undefined
 }
@@ -31,7 +32,12 @@ function googleAuthorizationUrl(): string {
   return apiBaseUrl === undefined ? '/auth/google' : `${apiBaseUrl}/auth/google`
 }
 
-export function SignInForm({ action, initialError, redirectTo }: SignInFormProps) {
+export function SignInForm({
+  action,
+  appearance = 'page',
+  initialError,
+  redirectTo,
+}: SignInFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
   const siteKey = clientEnv().turnstileSiteKey
@@ -57,9 +63,10 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
 
   const needsEmailConfirmation =
     form.state.status === 'api-error' && form.state.error.code === EMAIL_NOT_CONFIRMED_CODE
+  const isDialog = appearance === 'dialog'
 
   return (
-    <form action={form.formAction} className="grid gap-8" noValidate>
+    <form action={form.formAction} className={isDialog ? 'grid gap-5' : 'grid gap-8'} noValidate>
       {redirectTo === undefined ? null : (
         <input name={REDIRECT_FIELD_NAME} type="hidden" value={redirectTo} />
       )}
@@ -70,7 +77,7 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
         >
           {t('signIn.google')}
         </a>
-        <LegalNotice />
+        {isDialog ? null : <LegalNotice />}
         <div className="flex items-center gap-3 text-xs text-text-muted" role="separator">
           <span className="h-px flex-1 bg-divider" />
           {t('signIn.divider')}
@@ -91,7 +98,7 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
             type="email"
           />
         </Field>
-        <div className="grid gap-1">
+        <div className={isDialog ? undefined : 'grid gap-1'}>
           <Field
             error={
               form.fieldErrors.password === undefined
@@ -108,12 +115,14 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
               showPasswordLabel={t('password.show')}
             />
           </Field>
-          <Link
-            className="justify-self-end text-sm font-medium text-text underline-offset-2 hover:underline"
-            href="/auth/password-recovery"
-          >
-            {t('signIn.forgotPassword')}
-          </Link>
+          {isDialog ? null : (
+            <Link
+              className="justify-self-end text-sm font-medium text-text underline-offset-2 hover:underline"
+              href="/auth/password-recovery"
+            >
+              {t('signIn.forgotPassword')}
+            </Link>
+          )}
         </div>
       </div>
       <AuthCaptchaField form={form} siteKey={siteKey} />
@@ -136,7 +145,7 @@ export function SignInForm({ action, initialError, redirectTo }: SignInFormProps
           size="lg"
           type="submit"
         >
-          {t('signIn.submit')}
+          {isDialog ? t('authenticationDialog.signIn.submit') : t('signIn.submit')}
         </Button>
       </div>
     </form>

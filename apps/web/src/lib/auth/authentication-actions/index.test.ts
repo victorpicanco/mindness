@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createSignInAction } from '@/lib/auth/server-actions'
+import { createSignInAction, createSignUpAction } from '@/lib/auth/server-actions'
 import { initialAuthActionState } from '@/lib/auth/action-state'
 
-class RedirectSignal extends Error {
+class RedirectSignal extends DOMException {
   constructor(readonly path: string) {
     super(path)
   }
@@ -331,5 +331,155 @@ describe('signInAction redirect target', () => {
     )
 
     await expect(result).rejects.toMatchObject({ path: '/' })
+  })
+})
+
+describe('signUpAction', () => {
+  it('validates the email and password before calling the API', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+    const signUpAction = createSignUpAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: (input, init) => {
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(Response.json({ data: { message: 'unexpected' } }))
+      },
+    })
+
+    const result = await signUpAction(
+      initialAuthActionState,
+      createFormData({ email: 'invalid', password: 'short', captchaToken: 'captcha-token' }),
+    )
+
+    expect(result).toEqual({
+      status: 'validation-error',
+      messageKey: 'errors.invalidEmail',
+    })
+    expect(requests).toEqual([])
+  })
+
+  it('requires a captcha token before calling the API', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+    const signUpAction = createSignUpAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: (input, init) => {
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(Response.json({ data: {} }))
+      },
+    })
+
+    const result = await signUpAction(
+      initialAuthActionState,
+      createFormData({
+        email: 'person@example.com',
+        password: 'Valid_password1!',
+        captchaToken: '',
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'validation-error',
+      messageKey: 'errors.captchaRequired',
+    })
+    expect(requests).toEqual([])
+  })
+
+  it('rejects passwords that do not meet the required character sets before calling the API', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const requests: Request[] = []
+    const signUpAction = createSignUpAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: (input, init) => {
+        requests.push(new Request(input, init))
+
+        return Promise.resolve(Response.json({ data: { message: 'unexpected' } }))
+      },
+    })
+
+    const result = await signUpAction(
+      initialAuthActionState,
+      createFormData({
+        email: 'person@example.com',
+        password: 'valid-password',
+        captchaToken: 'captcha-token',
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'validation-error',
+      messageKey: 'errors.invalidPassword',
+    })
+    expect(requests).toEqual([])
+  })
+
+  it('returns the email confirmation state without writing a session', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const signUpAction = createSignUpAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: () =>
+        Promise.resolve(
+          Response.json({
+            data: {
+              message:
+                'Check your email to continue if an eligible account exists for this address.',
+            },
+          }),
+        ),
+    })
+
+    const result = await signUpAction(
+      initialAuthActionState,
+      createFormData({
+        email: 'person@example.com',
+        password: 'Valid_password1!',
+        passwordConfirmation: 'Valid_password1!',
+        captchaToken: 'captcha-token',
+      }),
+    )
+
+    expect(result).toEqual({ status: 'success' })
+  })
+
+  it('turns backend account creation rejections into an actionable state', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.mindness.test')
+    const signUpAction = createSignUpAction({
+      cookieStore: new InMemoryCookieStore(),
+      fetcher: () =>
+        Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'accounts.ACCOUNT_CREATION_REJECTED',
+                message: 'Account creation was rejected.',
+                issues: null,
+                requestId: 'request-id',
+              },
+            },
+            { status: 409 },
+          ),
+        ),
+    })
+
+    const result = await signUpAction(
+      initialAuthActionState,
+      createFormData({
+        email: 'person@example.com',
+        password: 'Valid_password1!',
+        passwordConfirmation: 'Valid_password1!',
+        captchaToken: 'captcha-token',
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'api-error',
+      error: {
+        code: 'accounts.ACCOUNT_CREATION_REJECTED',
+        issues: null,
+        requestId: 'request-id',
+      },
+    })
   })
 })

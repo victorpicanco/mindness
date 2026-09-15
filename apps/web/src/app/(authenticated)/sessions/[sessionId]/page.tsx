@@ -12,6 +12,8 @@ import { SessionSummary } from '@/components/practice/session-summary'
 
 import { Analysis } from './analysis'
 
+export const instant = false
+
 interface SessionPageProps {
   readonly params: Promise<{ readonly sessionId: string }>
 }

@@ -8,12 +8,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '@/i18n/messages'
 import { ApiClientError } from '@/lib/api/client-error'
 import type { AccountProfile } from '@/lib/api/contracts/accounts'
+import type { BrowserAnalyticsClient } from '@/lib/analytics/browser-client'
+import { initialAuthActionState } from '@/lib/auth/action-state'
 import type { SessionDayGroup } from '@/lib/sessions/session-day-groups'
 
-import { AuthenticatedShellView } from './index'
+import { AuthenticatedShellView, type ShellViewer } from './index'
 
 const ACCOUNT_PROFILE: AccountProfile = {
   accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
+  accountKind: 'registered',
   authenticationMethod: 'password',
   consent: {
     acceptedAt: '2026-08-15T12:00:00.000Z',
@@ -30,7 +33,9 @@ const ACCOUNT_PROFILE: AccountProfile = {
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
 interface ShellOverrides {
-  readonly accountProfile?: AccountProfile
+  readonly analytics?: BrowserAnalyticsClient
+  readonly isTrialConsumed?: boolean
+  readonly viewer?: ShellViewer
   readonly updateAccountName?: (name: string) => Promise<string>
 }
 
@@ -86,18 +91,22 @@ function renderShell(
       <PathnameContext.Provider value={pathname}>
         <NextIntlClientProvider locale="pt-BR" messages={messages}>
           <AuthenticatedShellView
-            accountProfile={overrides.accountProfile ?? ACCOUNT_PROFILE}
             abandonSession={abandonSession}
+            analytics={overrides.analytics}
             deleteSession={deleteSession}
             updateAccountName={overrides.updateAccountName ?? ((name) => Promise.resolve(name))}
             {...(activeSessionId === undefined ? {} : { activeSessionId })}
             initialIsExpanded={isInitiallyExpanded}
+            isTrialConsumed={overrides.isTrialConsumed ?? false}
             onThemeChange={onThemeChange}
             preferenceCookieName="mindness-sidebar-expanded"
             sessionGroups={sessionGroups}
             shouldConfirmSessionNavigation={shouldConfirmSessionNavigation}
+            signInAction={() => Promise.resolve(initialAuthActionState)}
             signOut={signOut}
+            signUpAction={() => Promise.resolve(initialAuthActionState)}
             theme="light"
+            viewer={overrides.viewer ?? ACCOUNT_PROFILE}
             {...(header === undefined ? {} : { header })}
           >
             {children}
@@ -128,6 +137,278 @@ describe('AuthenticatedShell', () => {
     expect(screen.getByRole('main')).toHaveTextContent('Dashboard')
     expect(screen.getByLabelText('Recolher barra lateral')).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('complementary')).toHaveClass('w-64')
+  })
+
+  it.each([
+    ['visitor', { accountKind: 'visitor' } satisfies ShellViewer],
+    [
+      'guest',
+      {
+        accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a86',
+        accountKind: 'guest',
+        authenticationMethod: 'anonymous',
+        consent: null,
+        createdAt: '2026-09-10T10:30:00.000Z',
+        email: null,
+        name: null,
+        plan: 'free',
+        timeZone: 'America/Sao_Paulo',
+      } satisfies ShellViewer,
+    ],
+  ])('keeps registered-only controls out of the %s shell', (_state, viewer) => {
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      { viewer },
+    )
+
+    const sidebar = screen.getByRole('complementary')
+
+    expect(within(sidebar).queryByRole('button', { name: 'Conta' })).not.toBeInTheDocument()
+    expect(within(sidebar).queryByRole('navigation', { name: 'Sessões' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Configurações' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['visitor', { accountKind: 'visitor' } satisfies ShellViewer],
+    [
+      'guest',
+      {
+        accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a86',
+        accountKind: 'guest',
+        authenticationMethod: 'anonymous',
+        consent: null,
+        createdAt: '2026-09-10T10:30:00.000Z',
+        email: null,
+        name: null,
+        plan: 'free',
+        timeZone: 'America/Sao_Paulo',
+      } satisfies ShellViewer,
+    ],
+  ])(
+    'offers a settings entry above the account entry, outside its divider, in the %s sidebar',
+    (_state, viewer) => {
+      renderShell(
+        <p>Content</p>,
+        true,
+        '/',
+        undefined,
+        [],
+        undefined,
+        undefined,
+        false,
+        undefined,
+        undefined,
+        undefined,
+        { viewer },
+      )
+
+      const sidebar = screen.getByRole('complementary')
+      const settingsEntry = within(sidebar).getByRole('button', { name: 'Configurações' })
+      const accountEntry = within(sidebar).getByRole('navigation', { name: 'Acesso à conta' })
+
+      expect(accountEntry).not.toContainElement(settingsEntry)
+      expect(
+        settingsEntry.compareDocumentPosition(accountEntry) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+
+      fireEvent.click(settingsEntry)
+
+      const settingsDialog = screen.getByRole('dialog', { name: 'Configurações' })
+      const settingsNavigation = within(settingsDialog).getByRole('navigation', {
+        name: 'Configurações',
+      })
+
+      expect(
+        within(settingsNavigation)
+          .getAllByRole('button')
+          .map((item) => item.textContent),
+      ).toEqual(['Geral', 'Política de Privacidade', 'Termos de Uso'])
+
+      fireEvent.click(within(settingsDialog).getByRole('button', { name: 'Fechar configurações' }))
+      expect(screen.queryByRole('dialog', { name: 'Configurações' })).not.toBeInTheDocument()
+    },
+  )
+
+  it('tracks account entry started from the guest sidebar', () => {
+    const events: string[] = []
+    const analytics: BrowserAnalyticsClient = {
+      capture: (event) => events.push(event),
+      getDistinctId: () => 'browser-anonymous-id',
+      reset: () => undefined,
+    }
+    const guest = {
+      accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a86',
+      accountKind: 'guest',
+      authenticationMethod: 'anonymous',
+      consent: null,
+      createdAt: '2026-09-10T10:30:00.000Z',
+      email: null,
+      name: null,
+      plan: 'free',
+      timeZone: 'America/Sao_Paulo',
+    } satisfies ShellViewer
+
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      { analytics, viewer: guest },
+    )
+
+    const sidebar = screen.getByRole('complementary')
+    fireEvent.click(within(sidebar).getByRole('button', { name: 'Entrar' }))
+    expect(screen.getByRole('dialog', { name: 'É bom ter você de volta.' })).toBeInTheDocument()
+
+    fireEvent.click(within(sidebar).getByRole('button', { name: 'Criar conta' }))
+    expect(screen.getByRole('dialog', { name: 'Crie sua conta' })).toBeInTheDocument()
+
+    expect(events).toEqual(['guest_account_sign_in_started', 'guest_account_sign_up_started'])
+  })
+
+  it('presents a focused login invitation to a visitor in every sidebar mode', () => {
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      undefined,
+      [],
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      {
+        viewer: { accountKind: 'visitor' },
+      },
+    )
+
+    const railSidebar = screen.getByRole('complementary')
+
+    expect(within(railSidebar).getByText('Uma prática que continua com você')).toBeVisible()
+    expect(
+      within(railSidebar).getByText(
+        'Entre para salvar suas sessões, acompanhar sua evolução e retomar sua prática quando quiser.',
+      ),
+    ).toBeVisible()
+    fireEvent.click(within(railSidebar).getByRole('button', { name: 'Entrar' }))
+    expect(screen.getByRole('dialog', { name: 'É bom ter você de volta.' })).toBeInTheDocument()
+    expect(
+      within(railSidebar).queryByRole('button', { name: 'Criar conta' }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }))
+
+    const mobileSidebar = screen.getByRole('dialog', { name: 'Navegação do aplicativo' })
+
+    fireEvent.click(within(mobileSidebar).getByRole('button', { name: 'Entrar' }))
+    expect(screen.getByRole('dialog', { name: 'É bom ter você de volta.' })).toBeInTheDocument()
+    expect(within(mobileSidebar).getByText('Uma prática que continua com você')).toBeVisible()
+    expect(
+      within(mobileSidebar).queryByRole('button', { name: 'Criar conta' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('offers account entry actions at the right end of the visitor top bar', () => {
+    renderShell(
+      <p>Content</p>,
+      true,
+      '/',
+      <output>Header content</output>,
+      [],
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      { viewer: { accountKind: 'visitor' } },
+    )
+
+    const header = screen.getByRole('banner')
+
+    fireEvent.click(within(header).getByRole('button', { name: 'Entrar' }))
+    expect(screen.getByRole('dialog', { name: 'É bom ter você de volta.' })).toBeInTheDocument()
+
+    fireEvent.click(within(header).getByRole('button', { name: 'Criar conta' }))
+    expect(screen.getByRole('dialog', { name: 'Crie sua conta' })).toBeInTheDocument()
+    expect(header).toHaveTextContent('Header content')
+  })
+
+  it.each([false, true])(
+    'keeps visitor sidebar and top bar entries unchanged when the trial is consumed: %s',
+    (isTrialConsumed) => {
+      renderShell(
+        <p>Content</p>,
+        true,
+        '/',
+        <output>Header content</output>,
+        [],
+        undefined,
+        undefined,
+        false,
+        undefined,
+        undefined,
+        undefined,
+        { isTrialConsumed, viewer: { accountKind: 'visitor' } },
+      )
+
+      const sidebar = screen.getByRole('complementary')
+      const header = screen.getByRole('banner')
+
+      expect(within(sidebar).getByRole('button', { name: 'Entrar' })).toBeVisible()
+      expect(within(header).getByRole('button', { name: 'Entrar' })).toBeVisible()
+      expect(within(header).getByRole('button', { name: 'Criar conta' })).toBeVisible()
+
+      fireEvent.click(within(sidebar).getByRole('button', { name: 'Entrar' }))
+
+      if (isTrialConsumed) {
+        expect(
+          screen.queryByRole('button', { name: 'Continuar sem conta' }),
+        ).not.toBeInTheDocument()
+      } else {
+        expect(screen.getByRole('button', { name: 'Continuar sem conta' })).toBeVisible()
+      }
+
+      fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }))
+      fireEvent.click(within(header).getByRole('button', { name: 'Entrar' }))
+
+      if (isTrialConsumed) {
+        expect(
+          screen.queryByRole('button', { name: 'Continuar sem conta' }),
+        ).not.toBeInTheDocument()
+      } else {
+        expect(screen.getByRole('button', { name: 'Continuar sem conta' })).toBeVisible()
+      }
+    },
+  )
+
+  it('keeps the current account menu instead of account entry links for a registered viewer', () => {
+    renderShell(<p>Content</p>)
+
+    const sidebar = screen.getByRole('complementary')
+
+    expect(within(sidebar).queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument()
+    expect(within(sidebar).queryByRole('link', { name: 'Criar conta' })).not.toBeInTheDocument()
+    expect(within(sidebar).getByRole('button', { name: 'Conta' })).toBeInTheDocument()
   })
 
   it('renders the configured navigation items in the sidebar', () => {
@@ -531,7 +812,7 @@ describe('AuthenticatedShell', () => {
       () => Promise.resolve(),
       () => Promise.resolve(),
       () => undefined,
-      { accountProfile: { ...ACCOUNT_PROFILE, name: 'Maria Silva' } },
+      { viewer: { ...ACCOUNT_PROFILE, name: 'Maria Silva' } },
     )
 
     const account = within(screen.getByRole('complementary')).getByRole('button', { name: 'Conta' })
@@ -769,7 +1050,6 @@ describe('AuthenticatedShell', () => {
         <PathnameContext.Provider value="/">
           <NextIntlClientProvider locale="pt-BR" messages={messages}>
             <AuthenticatedShellView
-              accountProfile={ACCOUNT_PROFILE}
               abandonSession={() => Promise.resolve()}
               deleteSession={() => Promise.resolve()}
               updateAccountName={(name) => Promise.resolve(name)}
@@ -778,6 +1058,7 @@ describe('AuthenticatedShell', () => {
               preferenceCookieName="mindness-sidebar-expanded"
               signOut={() => undefined}
               theme="light"
+              viewer={ACCOUNT_PROFILE}
             >
               <p>Content</p>
             </AuthenticatedShellView>

@@ -45,9 +45,11 @@ function SessionNavigationShell({
   const reset = usePracticeSessionStore((state) => state.reset)
   const { setTheme, theme } = useTheme()
   const shouldConfirmSessionNavigation = status === 'recording' || status === 'uploading'
-  const accountEmail = props.accountProfile.email
+  const accountEmail = props.viewer.accountKind === 'registered' ? props.viewer.email : null
 
   useEffect(() => {
+    if (accountEmail === null) return
+
     posthog.identify(accountEmail, { email: accountEmail })
   }, [accountEmail])
 

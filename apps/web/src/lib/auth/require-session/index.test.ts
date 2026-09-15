@@ -31,14 +31,14 @@ function recordingRedirect(): { paths: string[]; redirect: (path: string) => nev
 }
 
 describe('createRequireSession', () => {
-  it('sends a visitor without a session to sign-in', () => {
+  it('sends a visitor without a session home', () => {
     const { paths, redirect } = recordingRedirect()
     const requireSession = createRequireSession({ cookieStore: new StubCookieStore(), redirect })
 
     expect(() => {
       requireSession()
     }).toThrow(RedirectSignal)
-    expect(paths).toEqual(['/auth/sign-in'])
+    expect(paths).toEqual(['/'])
   })
 
   it('lets a visitor with a renewable session through', () => {
@@ -54,7 +54,7 @@ describe('createRequireSession', () => {
     expect(paths).toEqual([])
   })
 
-  it('sends a visitor carrying an unreadable access token to sign-in', () => {
+  it('sends a visitor carrying an unreadable access token home', () => {
     const { paths, redirect } = recordingRedirect()
     const requireSession = createRequireSession({
       cookieStore: new StubCookieStore({ mindness_access_token: 'not-a-jwt' }),
@@ -64,6 +64,6 @@ describe('createRequireSession', () => {
     expect(() => {
       requireSession()
     }).toThrow(RedirectSignal)
-    expect(paths).toEqual(['/auth/sign-in'])
+    expect(paths).toEqual(['/'])
   })
 })

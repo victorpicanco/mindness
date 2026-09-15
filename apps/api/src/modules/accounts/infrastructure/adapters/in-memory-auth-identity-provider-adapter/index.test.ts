@@ -20,6 +20,17 @@ function createAdapter(): InMemoryAuthIdentityProviderAdapter {
 }
 
 describe('InMemoryAuthIdentityProviderAdapter', () => {
+  it('issues browser-readable anonymous claims in its in-memory access token', async () => {
+    const adapter = createAdapter()
+
+    const session = await adapter.signInAnonymously()
+    const payload = session.accessToken.split('.')[1]
+    const claims: unknown =
+      payload === undefined ? null : JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+
+    expect(claims).toEqual({ exp: 1_786_798_800, is_anonymous: true })
+  })
+
   it('requires email confirmation before password sign-in', async () => {
     const adapter = createAdapter()
 

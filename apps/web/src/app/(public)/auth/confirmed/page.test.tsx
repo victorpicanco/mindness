@@ -21,10 +21,7 @@ describe('ConfirmedPage', () => {
     )
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('E-mail confirmado.')
-    expect(screen.getByRole('link', { name: 'Ir para o login' })).toHaveAttribute(
-      'href',
-      '/auth/sign-in',
-    )
+    expect(screen.getByRole('link', { name: 'Ir para o login' })).toHaveAttribute('href', '/')
   })
 
   it('explains an expired or already-used link without claiming success', () => {

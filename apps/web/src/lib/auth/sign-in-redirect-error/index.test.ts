@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { describeSignInRedirectError } from './sign-in-error'
+import { describeSignInRedirectError } from './index'
 
 describe('describeSignInRedirectError', () => {
   it('has no message when the visitor did not come back from a failure', () => {

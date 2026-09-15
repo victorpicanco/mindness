@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createEmailConfirmationRouteHandler } from './route'
+import { markGuestTrialUsed } from '@/lib/auth/guest-trial'
+import { writeSessionCookies } from '@/lib/auth/session'
 
 class InMemoryCookieStore {
   readonly values = new Map<string, string>()
@@ -90,6 +92,34 @@ describe('email confirmation route', () => {
     ])
   })
 
+  it('replaces only guest auth cookies and never links or migrates the trial on sign-up confirmation', async () => {
+    const store = new InMemoryCookieStore()
+    markGuestTrialUsed(store)
+    writeSessionCookies(store, {
+      accessToken: 'guest-access-token',
+      refreshToken: 'guest-refresh-token',
+    })
+    const { fetcher, calls } = fetcherFor(provisioningResponses)
+    const handler = createEmailConfirmationRouteHandler({ cookieStore: store, fetcher })
+
+    await handler(new Request('https://web.test/auth/confirm?token_hash=secret-hash&type=email'))
+
+    expect(store.values).toEqual(
+      new Map([
+        ['mindness_guest_trial_used', 'true'],
+        ['mindness_access_token', 'access-token'],
+        ['mindness_refresh_token', 'refresh-token'],
+      ]),
+    )
+    expect(calls).toEqual([
+      '/auth/email/confirm',
+      '/accounts/me',
+      '/accounts',
+      '/accounts/me/consent',
+    ])
+    expect(calls.every((path) => !path.includes('link') && !path.includes('migrat'))).toBe(true)
+  })
+
   it('sends a confirmed account that cannot be provisioned back to sign-in', async () => {
     const store = new InMemoryCookieStore()
     const { fetcher } = fetcherFor({
@@ -102,7 +132,7 @@ describe('email confirmation route', () => {
       new Request('https://web.test/auth/confirm?token_hash=secret-hash&type=email'),
     )
 
-    expect(response.headers.get('location')).toBe('/auth/sign-in?error=accounts.ACCOUNT_BLOCKED')
+    expect(response.headers.get('location')).toBe('/?error=accounts.ACCOUNT_BLOCKED')
     expect(store.values.get('mindness_access_token')).toBeUndefined()
   })
 

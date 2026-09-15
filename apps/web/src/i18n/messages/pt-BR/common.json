@@ -45,6 +45,13 @@
       "plan": "Plano gratuito",
       "settings": "Configurações"
     },
+    "accountEntry": {
+      "label": "Acesso à conta",
+      "title": "Uma prática que continua com você",
+      "description": "Entre para salvar suas sessões, acompanhar sua evolução e retomar sua prática quando quiser.",
+      "signIn": "Entrar",
+      "signUp": "Criar conta"
+    },
     "activeSessionDialog": {
       "title": "Você tem uma sessão em andamento",
       "description": "Para começar uma nova sessão, a atual será encerrada e não poderá ser retomada.",

@@ -6,10 +6,17 @@ import {
   sessionHistorySchema,
 } from '@/lib/api/contracts/sessions'
 import { accountProfileSchema } from '@/lib/api/contracts/accounts'
-import { apiFetch, apiFetchWithMeta } from '@/lib/api/server-client'
+import { apiFetch, apiFetchIfAuthenticated, apiFetchWithMeta } from '@/lib/api/server-client'
 
 export const getActiveSession = cache(() =>
   apiFetch('/sessions/active', { cache: 'no-store', schema: activeSessionSchema }),
+)
+
+export const getActiveSessionIfAuthenticated = cache(() =>
+  apiFetchIfAuthenticated('/sessions/active', {
+    cache: 'no-store',
+    schema: activeSessionSchema,
+  }),
 )
 
 export const getSessionHistory = cache(() =>
@@ -22,4 +29,11 @@ export const getSessionHistory = cache(() =>
 
 export const getAccountProfile = cache(() =>
   apiFetch('/accounts/me', { cache: 'no-store', schema: accountProfileSchema }),
+)
+
+export const getAccountProfileIfAuthenticated = cache(() =>
+  apiFetchIfAuthenticated('/accounts/me', {
+    cache: 'no-store',
+    schema: accountProfileSchema,
+  }),
 )

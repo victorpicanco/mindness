@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { REDIRECT_FIELD_NAME, REDIRECT_PARAM_NAME, SIGNED_IN_HOME, safeRedirectPath } from './index'
+import { REDIRECT_FIELD_NAME, SIGNED_IN_HOME, safeRedirectPath } from './index'
 
 describe('safeRedirectPath', () => {
   it('keeps a local path and its query', () => {
@@ -25,8 +25,7 @@ describe('safeRedirectPath', () => {
     expect(safeRedirectPath('/auth/update-password')).toBe(SIGNED_IN_HOME)
   })
 
-  it('names the query parameter and the form field the sign-in flow shares', () => {
-    expect(REDIRECT_PARAM_NAME).toBe('redirect')
+  it('names the form field the sign-in flow shares', () => {
     expect(REDIRECT_FIELD_NAME).toBe('redirectTo')
   })
 })

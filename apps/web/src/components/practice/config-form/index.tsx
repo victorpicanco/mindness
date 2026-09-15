@@ -4,13 +4,19 @@ import { useMutation } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import posthog from 'posthog-js'
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 
+import {
+  AuthenticationDialog,
+  type AuthenticationMode,
+} from '@/components/auth/authentication-dialog'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
 import { apiErrorDetails } from '@/lib/api/api-error'
-import { describeApiError } from '@/lib/errors/api-error-presentation'
+import type { AuthFormAction, StartGuestTrialAction } from '@/lib/auth/action-state'
+import { startGuestTrialAction } from '@/lib/auth/start-guest-trial'
+import { describeApiError, type ApiErrorDescription } from '@/lib/errors/api-error-presentation'
 import { sessionPath } from '@/lib/navigation/session-routes'
 import { bffFetch } from '@/lib/api/bff-client'
 import { startedSessionSchema } from '@/lib/api/contracts/sessions'
@@ -19,6 +25,7 @@ import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 const DIFFICULTIES = ['easy', 'balanced', 'hard'] as const
 const SEARCH_WINDOWS = [3, 4, 5] as const
 
+const GUEST_TRIAL_CONSUMED_CODE = 'sessions.GUEST_TRIAL_CONSUMED'
 const PRACTICE_NOT_ALLOWED_CODE = 'sessions.PRACTICE_NOT_ALLOWED'
 
 type SessionDifficulty = (typeof DIFFICULTIES)[number]
@@ -50,6 +57,8 @@ export type StartSessionRequest = (input: StartSessionInput) => Promise<StartedS
 
 export type SignOutAction = () => void | Promise<void>
 
+export type PracticeViewer = 'guest' | 'registered' | 'visitor'
+
 async function requestSessionStart(input: StartSessionInput): Promise<StartedSession> {
   return bffFetch('/sessions', {
     body: JSON.stringify(input),
@@ -77,13 +86,32 @@ function toSearchWindowMinutes(value: string): SearchWindowMinutes | null {
 
 interface PracticeConfigFormProps {
   readonly categories: readonly PracticeCategory[]
+  readonly initialAuthenticationError?: ApiErrorDescription | undefined
+  readonly initialAuthenticationMode?: AuthenticationMode | null
+  readonly isTrialConsumed?: boolean
   readonly onSessionStarted?: (sessionId: string) => void
+  readonly passwordUpdated?: boolean
+  readonly signInAction?: AuthFormAction
   readonly signOut: SignOutAction
+  readonly signUpAction?: AuthFormAction
+  readonly startGuestTrial?: StartGuestTrialAction
   readonly startSession?: StartSessionRequest
+  readonly viewer: PracticeViewer
 }
 
 export function PracticeConfigFormWithNavigation(
-  props: Pick<PracticeConfigFormProps, 'categories' | 'signOut'>,
+  props: Pick<
+    PracticeConfigFormProps,
+    | 'categories'
+    | 'initialAuthenticationError'
+    | 'initialAuthenticationMode'
+    | 'isTrialConsumed'
+    | 'passwordUpdated'
+    | 'signInAction'
+    | 'signOut'
+    | 'signUpAction'
+    | 'viewer'
+  >,
 ) {
   const router = useRouter()
 
@@ -97,9 +125,17 @@ export function PracticeConfigFormWithNavigation(
 
 export function PracticeConfigForm({
   categories,
+  initialAuthenticationError,
+  initialAuthenticationMode = null,
+  isTrialConsumed = false,
   onSessionStarted,
+  passwordUpdated = false,
+  signInAction,
   signOut,
+  signUpAction,
+  startGuestTrial = startGuestTrialAction,
   startSession = requestSessionStart,
+  viewer,
 }: PracticeConfigFormProps) {
   const t = useTranslations('home.practice')
   const translate = useTranslations()
@@ -107,10 +143,24 @@ export function PracticeConfigForm({
   const [difficulty, setDifficulty] = useState<SessionDifficulty | null>(null)
   const [categorySlug, setCategorySlug] = useState('')
   const [searchWindowMinutes, setSearchWindowMinutes] = useState<SearchWindowMinutes | null>(null)
+  const [authenticationMode, setAuthenticationMode] = useState<AuthenticationMode | null>(
+    initialAuthenticationMode,
+  )
+  const [hasConsumedTrial, setHasConsumedTrial] = useState(isTrialConsumed)
+  const startControlRef = useRef<HTMLButtonElement>(null)
+  const startsAnonymousTrialRef = useRef(viewer === 'guest')
 
   const mutation = useMutation({
     mutationFn: startSession,
     onError: (error) => {
+      if (apiErrorDetails(error).code === GUEST_TRIAL_CONSUMED_CODE) {
+        posthog.capture('anonymous_trial_blocked')
+        setHasConsumedTrial(true)
+        setAuthenticationMode('sign-in')
+
+        return
+      }
+
       if (inlineFailureCode(error) === PRACTICE_NOT_ALLOWED_CODE) {
         posthog.capture('practice_not_allowed')
       }
@@ -124,6 +174,7 @@ export function PracticeConfigForm({
         search_window_minutes: startedConfiguration.searchWindowMinutes,
         session_id: session.sessionId,
       })
+      if (startsAnonymousTrialRef.current) posthog.capture('anonymous_trial_started')
 
       startResearching(
         { ...practiceSession, configuration: startedConfiguration, recordingStartedAt: null },
@@ -143,8 +194,27 @@ export function PracticeConfigForm({
 
     if (configuration === null) return
 
+    if (viewer === 'visitor') {
+      setAuthenticationMode('sign-in')
+
+      return
+    }
+
     mutation.mutate(configuration)
   }
+
+  function startPracticeAsGuest() {
+    startsAnonymousTrialRef.current = true
+    setAuthenticationMode(null)
+
+    if (configuration !== null) mutation.mutate(configuration)
+  }
+
+  function closeAuthentication() {
+    setAuthenticationMode(null)
+    startControlRef.current?.focus()
+  }
+
   const failureCode = inlineFailureCode(mutation.isError ? mutation.error : null)
   const isConsentPending = failureCode === PRACTICE_NOT_ALLOWED_CODE
 
@@ -211,12 +281,26 @@ export function PracticeConfigForm({
           className="w-full shrink-0 sm:w-auto"
           disabled={configuration === null}
           isLoading={mutation.isPending}
+          ref={startControlRef}
           size="lg"
           type="submit"
         >
           {t('startSession')}
         </Button>
       </form>
+      <AuthenticationDialog
+        canContinueWithoutAccount={!hasConsumedTrial}
+        initialError={initialAuthenticationError}
+        mode={authenticationMode}
+        onClose={closeAuthentication}
+        onGuestTrialAccountRequired={() => setHasConsumedTrial(true)}
+        onGuestTrialStarted={startPracticeAsGuest}
+        onModeChange={setAuthenticationMode}
+        passwordUpdated={passwordUpdated}
+        signInAction={signInAction}
+        signUpAction={signUpAction}
+        startGuestTrial={startGuestTrial}
+      />
       {failureCode === null ? null : (
         <div className="flex flex-col items-start gap-3 text-sm text-error" role="alert">
           <p>{translate(describeApiError(failureCode).messageKey)}</p>

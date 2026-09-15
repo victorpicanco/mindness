@@ -72,7 +72,7 @@ function AccountDetail({ children, label, valueClassName }: AccountDetailProps) 
 interface SettingsDialogProps {
   readonly accountLabels: AccountLabels
   readonly accountLabel: string
-  readonly accountProfile: AccountProfile
+  readonly accountProfile?: AccountProfile | undefined
   readonly closeLabel: string
   readonly generalLabel: string
   readonly formatDateTime: (value: string, timeZone: string) => string
@@ -113,7 +113,7 @@ export function SettingsDialog({
   updatedAtLabel,
 }: SettingsDialogProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('general')
-  const [name, setName] = useState(accountProfile.name ?? '')
+  const [name, setName] = useState(accountProfile?.name ?? '')
   const [isSavingName, setIsSavingName] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -123,9 +123,9 @@ export function SettingsDialog({
   const privacyPanelId = useId()
   const termsPanelId = useId()
   const trimmedName = name.trim()
-  const canSaveName = trimmedName.length > 0 && trimmedName !== (accountProfile.name ?? '')
+  const canSaveName = trimmedName.length > 0 && trimmedName !== (accountProfile?.name ?? '')
   const authenticationMethodLabel =
-    accountProfile.authenticationMethod === 'google'
+    accountProfile?.authenticationMethod === 'google'
       ? accountLabels.authenticationMethodGoogle
       : accountLabels.authenticationMethodPassword
 
@@ -195,27 +195,31 @@ export function SettingsDialog({
               {generalLabel}
             </button>
 
-            <button
-              aria-controls={accountPanelId}
-              aria-current={activeSection === 'account' ? 'page' : undefined}
-              className={navigationItemClassName(activeSection === 'account')}
-              onClick={() => setActiveSection('account')}
-              type="button"
-            >
-              <Icon className="text-lg" name="user-01" />
-              {accountLabel}
-            </button>
+            {accountProfile === undefined ? null : (
+              <button
+                aria-controls={accountPanelId}
+                aria-current={activeSection === 'account' ? 'page' : undefined}
+                className={navigationItemClassName(activeSection === 'account')}
+                onClick={() => setActiveSection('account')}
+                type="button"
+              >
+                <Icon className="text-lg" name="user-01" />
+                {accountLabel}
+              </button>
+            )}
 
-            <button
-              aria-controls={profilePanelId}
-              aria-current={activeSection === 'profile' ? 'page' : undefined}
-              className={navigationItemClassName(activeSection === 'profile')}
-              onClick={() => setActiveSection('profile')}
-              type="button"
-            >
-              <Icon className="text-lg" name="user-circle" />
-              {profileLabel}
-            </button>
+            {accountProfile === undefined ? null : (
+              <button
+                aria-controls={profilePanelId}
+                aria-current={activeSection === 'profile' ? 'page' : undefined}
+                className={navigationItemClassName(activeSection === 'profile')}
+                onClick={() => setActiveSection('profile')}
+                type="button"
+              >
+                <Icon className="text-lg" name="user-circle" />
+                {profileLabel}
+              </button>
+            )}
 
             <button
               aria-controls={privacyPanelId}
@@ -289,7 +293,7 @@ export function SettingsDialog({
           </section>
         ) : null}
 
-        {activeSection === 'account' ? (
+        {activeSection === 'account' && accountProfile !== undefined ? (
           <section
             aria-label={accountLabel}
             className="min-h-0 overflow-y-auto bg-surface px-4 py-5 md:px-6"
@@ -337,7 +341,7 @@ export function SettingsDialog({
           </section>
         ) : null}
 
-        {activeSection === 'profile' ? (
+        {activeSection === 'profile' && accountProfile !== undefined ? (
           <section
             aria-label={profileLabel}
             className="min-h-0 overflow-y-auto bg-surface px-4 py-5 md:px-6"

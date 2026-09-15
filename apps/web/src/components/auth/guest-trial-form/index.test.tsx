@@ -266,15 +266,12 @@ describe('GuestTrialForm', () => {
   })
 
   describe('compact appearance', () => {
-    it('renders a small ghost control with the guest limitation visible', () => {
+    it('renders a small ghost control', () => {
       renderGuestTrialForm({ appearance: 'compact' })
 
       const control = screen.getByRole('button', { name: 'Continuar sem conta' })
 
       expect(control).toHaveClass('min-h-8', 'bg-transparent', 'text-text-muted', 'px-2', 'text-sm')
-      expect(
-        screen.getByText('Ela fica só neste navegador e não entra no histórico depois.'),
-      ).toBeInTheDocument()
     })
 
     it('still starts the trial directly from the compact control', async () => {

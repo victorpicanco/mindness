@@ -1,8 +1,16 @@
 import { cookies } from 'next/headers'
-import { clearSessionCookies, readSessionCookies, writeSessionCookies } from '@/lib/auth/session'
+import { markGuestTrialUsed } from '@/lib/auth/guest-trial'
+import {
+  clearSessionCookies,
+  isAnonymousAccessToken,
+  readSessionCookies,
+  writeSessionCookies,
+} from '@/lib/auth/session'
 import { requestRefreshedTokens } from '@/lib/auth/renew-session'
 import { EnvironmentError } from '@/lib/env/errors'
 import { readServerEnv } from '@/lib/env/server'
+
+const GUEST_TRIAL_CONSUMED_CODE = 'sessions.GUEST_TRIAL_CONSUMED'
 
 type CookieStore = Parameters<typeof writeSessionCookies>[0]
 type Fetcher = typeof fetch
@@ -53,6 +61,38 @@ function requestBody(method: string, body: ArrayBuffer): ArrayBuffer | undefined
   return method === 'GET' || method === 'HEAD' ? undefined : body
 }
 
+async function refusedAsConsumedTrial(response: Response): Promise<boolean> {
+  const body: unknown = await response
+    .clone()
+    .json()
+    .catch(() => null)
+
+  if (typeof body !== 'object' || body === null || !('error' in body)) return false
+
+  const { error } = body
+
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === GUEST_TRIAL_CONSUMED_CODE
+  )
+}
+
+async function consumesGuestTrial(
+  method: string,
+  path: string[],
+  response: Response,
+  accessToken: string | undefined,
+): Promise<boolean> {
+  if (method !== 'POST') return false
+  if (path.length !== 1 || path[0] !== 'sessions') return false
+  if (accessToken === undefined || !isAnonymousAccessToken(accessToken)) return false
+  if (response.status === 201) return true
+
+  return response.status === 403 && (await refusedAsConsumedTrial(response))
+}
+
 export function createBffRouteHandler({
   apiBaseUrl,
   cookieStore,
@@ -64,13 +104,21 @@ export function createBffRouteHandler({
     const body = await request.arrayBuffer()
     const apiUrl = createApiUrl(apiBaseUrl, path, request.url)
 
-    const forwardRequest = (token: string | undefined): Promise<Response> => {
+    const forwardRequest = async (token: string | undefined): Promise<Response> => {
       const headers = createHeaders(request, token)
       const forwardedBody = requestBody(request.method, body)
 
-      return forwardedBody === undefined
-        ? fetcher(apiUrl, { headers, method: request.method })
-        : fetcher(apiUrl, { body: forwardedBody, headers, method: request.method })
+      const response = await fetcher(apiUrl, {
+        ...(forwardedBody === undefined ? {} : { body: forwardedBody }),
+        headers,
+        method: request.method,
+      })
+
+      if (await consumesGuestTrial(request.method, path, response, token)) {
+        markGuestTrialUsed(cookieStore)
+      }
+
+      return response
     }
 
     const response = await forwardRequest(accessToken)

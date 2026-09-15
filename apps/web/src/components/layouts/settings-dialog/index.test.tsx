@@ -3,10 +3,31 @@ import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
+import type { AccountProfile } from '@/lib/api/contracts/accounts'
 
 import { SettingsDialog } from './index'
 
+function registeredAccountProfile(name: string | null): AccountProfile {
+  return {
+    accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
+    accountKind: 'registered',
+    authenticationMethod: 'password',
+    consent: {
+      acceptedAt: '2026-08-15T12:00:00.000Z',
+      purpose: 'voice_recording_and_analysis',
+      version: '2026-08-15',
+    },
+    createdAt: '2026-08-01T10:30:00.000Z',
+    email: 'person@example.com',
+    name,
+    plan: 'free',
+    timeZone: 'America/Sao_Paulo',
+  }
+}
+
 interface RenderOptions {
+  /** `null` renders the dialog without a signed-in profile; omit it to use the default registered one. */
+  readonly accountProfile?: AccountProfile | null
   readonly name?: string | null
   readonly onClose?: () => void
   readonly onSaveName?: (name: string) => Promise<void>
@@ -14,6 +35,7 @@ interface RenderOptions {
 }
 
 function renderSettingsDialog({
+  accountProfile,
   name = null,
   onClose = () => undefined,
   onSaveName = () => Promise.resolve(),
@@ -40,20 +62,9 @@ function renderSettingsDialog({
           timeZone: 'Fuso horário',
         }}
         accountLabel="Conta"
-        accountProfile={{
-          accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
-          authenticationMethod: 'password',
-          consent: {
-            acceptedAt: '2026-08-15T12:00:00.000Z',
-            purpose: 'voice_recording_and_analysis',
-            version: '2026-08-15',
-          },
-          createdAt: '2026-08-01T10:30:00.000Z',
-          email: 'person@example.com',
-          name,
-          plan: 'free',
-          timeZone: 'America/Sao_Paulo',
-        }}
+        accountProfile={
+          accountProfile === null ? undefined : (accountProfile ?? registeredAccountProfile(name))
+        }
         closeLabel="Fechar configurações"
         generalLabel="Geral"
         formatDateTime={(value) => `formatted:${value}`}
@@ -237,6 +248,26 @@ describe('SettingsDialog', () => {
     })
 
     expect(within(profilePanel).getByRole('button', { name: 'Salvar' })).toBeDisabled()
+  })
+
+  it('hides the account and profile sections without a signed-in profile', () => {
+    renderSettingsDialog({ accountProfile: null })
+
+    const dialog = screen.getByRole('dialog', { name: 'Configurações' })
+    const navigation = within(dialog).getByRole('navigation', { name: 'Configurações' })
+    const items = within(navigation).getAllByRole('button')
+
+    expect(items.map((item) => item.textContent)).toEqual([
+      'Geral',
+      'Política de Privacidade',
+      'Termos de Uso',
+    ])
+    expect(within(navigation).queryByRole('button', { name: 'Conta' })).not.toBeInTheDocument()
+    expect(within(navigation).queryByRole('button', { name: 'Perfil' })).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Geral' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
   })
 
   it('closes from its close control and Escape', () => {

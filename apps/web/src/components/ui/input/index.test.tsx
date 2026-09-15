@@ -14,6 +14,13 @@ describe('Input', () => {
 
     expect(ref.current).toBe(screen.getByPlaceholderText('Email'))
     expect(ref.current).toHaveAttribute('type', 'email')
-    expect(ref.current).toHaveClass('rounded-full', 'border-transparent', 'bg-input', 'px-6')
+    expect(ref.current).toHaveClass(
+      'mindness-input',
+      'rounded-full',
+      'border-transparent',
+      'bg-input',
+      'px-6',
+      'focus-visible:ring-border',
+    )
   })
 })

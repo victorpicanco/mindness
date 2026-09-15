@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import type { ButtonHTMLAttributes } from 'react'
+import type { ComponentPropsWithRef } from 'react'
 
 import { Spinner } from '@/components/ui/spinner'
 
@@ -11,6 +11,7 @@ export const buttonStyles = cva(
         primary: 'bg-text text-surface hover:opacity-85',
         secondary:
           'border border-border bg-transparent text-text hover:-translate-y-px hover:border-text-muted hover:bg-surface-raised hover:shadow-sm',
+        ghost: 'bg-transparent text-text-muted hover:bg-surface-raised hover:text-text',
         destructive: 'bg-error text-surface hover:opacity-85',
       },
       size: {
@@ -26,7 +27,7 @@ export const buttonStyles = cva(
   },
 )
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+type ButtonProps = ComponentPropsWithRef<'button'> &
   VariantProps<typeof buttonStyles> & {
     isLoading?: boolean
   }

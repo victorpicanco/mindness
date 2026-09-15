@@ -1,4 +1,3 @@
-export const REDIRECT_PARAM_NAME = 'redirect'
 export const REDIRECT_FIELD_NAME = 'redirectTo'
 export const SIGNED_IN_HOME = '/'
 

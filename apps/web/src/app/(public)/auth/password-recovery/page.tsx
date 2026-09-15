@@ -14,7 +14,7 @@ export default function PasswordRecoveryPage() {
         submitLabel={t('submit')}
         successMessage={t('success')}
       />
-      <Link className="text-center text-sm underline" href="/auth/sign-in">
+      <Link className="text-center text-sm underline" href="/">
         {t('back')}
       </Link>
     </AuthPageShell>

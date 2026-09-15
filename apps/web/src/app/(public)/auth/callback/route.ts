@@ -19,7 +19,7 @@ function redirect(path: string): NextResponse {
 }
 
 function signInWithError(code: string): NextResponse {
-  return redirect(`/auth/sign-in?error=${encodeURIComponent(code)}`)
+  return redirect(`${SIGNED_IN_HOME}?error=${encodeURIComponent(code)}`)
 }
 
 export function createGoogleCallbackRouteHandler({

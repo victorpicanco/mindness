@@ -8,7 +8,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider'
 import { messages } from '@/i18n/messages'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
-import { AuthenticatedSessionShellView } from './authenticated-session-shell'
+import { AuthenticatedSessionShellView } from './index'
 
 const { identifyMock } = vi.hoisted(() => ({ identifyMock: vi.fn() }))
 
@@ -48,8 +48,9 @@ describe('AuthenticatedSessionShell', () => {
           <NextIntlClientProvider locale="pt-BR" messages={messages}>
             <ThemeProvider>
               <AuthenticatedSessionShellView
-                accountProfile={{
+                viewer={{
                   accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
+                  accountKind: 'registered',
                   authenticationMethod: 'password',
                   consent: null,
                   createdAt: '2026-08-01T10:30:00.000Z',
@@ -114,8 +115,9 @@ describe('AuthenticatedSessionShell', () => {
           <NextIntlClientProvider locale="pt-BR" messages={messages}>
             <ThemeProvider>
               <AuthenticatedSessionShellView
-                accountProfile={{
+                viewer={{
                   accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
+                  accountKind: 'registered',
                   authenticationMethod: 'password',
                   consent: null,
                   createdAt: '2026-08-01T10:30:00.000Z',

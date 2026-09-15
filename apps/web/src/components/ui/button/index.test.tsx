@@ -33,6 +33,7 @@ describe('Button', () => {
   it.each([
     ['primary', 'bg-text'],
     ['secondary', 'border-border'],
+    ['ghost', 'bg-transparent'],
     ['destructive', 'bg-error'],
   ] as const)('applies the static %s variant class', (variant, expectedClass) => {
     renderButton(<Button variant={variant}>Continue</Button>)

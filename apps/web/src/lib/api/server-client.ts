@@ -22,6 +22,11 @@ type ApiFetchOptions<TSchema extends z.ZodType> = ApiRequestOptions & {
   readonly schema: TSchema
 }
 
+type PublicApiFetchOptions<TSchema extends z.ZodType> = Omit<
+  ApiFetchOptions<TSchema>,
+  'cookieStore'
+>
+
 function apiUrl(path: string): string {
   return new URL(path, readServerEnv().API_BASE_URL).toString()
 }
@@ -65,7 +70,7 @@ export async function apiFetchWithMeta<TSchema extends z.ZodType, TMetaSchema ex
   path: string,
   { metaSchema, schema, ...request }: ApiFetchWithMetaOptions<TSchema, TMetaSchema>,
 ): Promise<ApiResponse<z.output<TSchema>, z.output<TMetaSchema>>> {
-  const envelope = await requestEnvelope(path, request)
+  const envelope = await authenticatedRequestEnvelope(path, request)
 
   return parseEnvelope(() => ({
     data: schema.parse(envelope.data),
@@ -77,7 +82,36 @@ export async function apiFetch<TSchema extends z.ZodType>(
   path: string,
   { schema, ...request }: ApiFetchOptions<TSchema>,
 ): Promise<z.output<TSchema>> {
-  const envelope = await requestEnvelope(path, request)
+  const envelope = await authenticatedRequestEnvelope(path, request)
+
+  return parseEnvelope(() => schema.parse(envelope.data))
+}
+
+export async function apiFetchIfAuthenticated<TSchema extends z.ZodType>(
+  path: string,
+  { schema, cookieStore, ...request }: ApiFetchOptions<TSchema>,
+): Promise<z.output<TSchema> | null> {
+  const store = cookieStore ?? (await cookies())
+  const { accessToken } = readSessionCookies(store)
+
+  if (accessToken === undefined) return null
+
+  try {
+    return await apiFetch(path, { ...request, cookieStore: store, schema })
+  } catch (cause: unknown) {
+    if (cause instanceof ApiClientError && cause.code === 'accounts.AUTHENTICATION_REJECTED') {
+      return null
+    }
+
+    throw cause
+  }
+}
+
+export async function publicApiFetch<TSchema extends z.ZodType>(
+  path: string,
+  { schema, ...request }: PublicApiFetchOptions<TSchema>,
+): Promise<z.output<TSchema>> {
+  const envelope = await requestEnvelope(path, request, undefined)
 
   return parseEnvelope(() => schema.parse(envelope.data))
 }
@@ -96,12 +130,20 @@ function parseEnvelope<TResult>(parse: () => TResult): TResult {
   }
 }
 
-async function requestEnvelope(
+async function authenticatedRequestEnvelope(
   path: string,
-  { cookieStore, fetcher = fetch, headers, ...init }: ApiRequestOptions,
+  { cookieStore, ...request }: ApiRequestOptions,
 ): Promise<z.output<typeof successEnvelopeSchema>> {
   const store = cookieStore ?? (await cookies())
-  const { accessToken } = readSessionCookies(store)
+
+  return requestEnvelope(path, request, readSessionCookies(store).accessToken)
+}
+
+async function requestEnvelope(
+  path: string,
+  { fetcher = fetch, headers, ...init }: Omit<ApiRequestOptions, 'cookieStore'>,
+  accessToken: string | undefined,
+): Promise<z.output<typeof successEnvelopeSchema>> {
   let response: Response
   const requestInit: RequestInit = headers === undefined ? init : { ...init, headers }
 

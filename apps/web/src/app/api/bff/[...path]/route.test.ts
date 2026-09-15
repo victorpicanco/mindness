@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { hasUsedGuestTrial } from '@/lib/auth/guest-trial'
+
 import { createBffRouteHandler } from './route'
 
 class InMemoryCookieStore {
@@ -180,5 +182,188 @@ describe('BFF proxy route', () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: 'web.AUTHENTICATION_UNAVAILABLE' },
     })
+  })
+})
+
+describe('BFF guest trial marker', () => {
+  function anonymousToken(isAnonymous: boolean): string {
+    const payload = Buffer.from(
+      JSON.stringify({ exp: 4_102_444_800, is_anonymous: isAnonymous, sub: 'user' }),
+    ).toString('base64url')
+
+    return `header.${payload}.signature`
+  }
+
+  function startSessionRequest(): Request {
+    return new Request('https://web.mindness.test/api/bff/sessions', {
+      body: JSON.stringify({ difficulty: 'balanced' }),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+    })
+  }
+
+  function createHandler(cookieStore: InMemoryCookieStore, response: () => Response) {
+    return createBffRouteHandler({
+      apiBaseUrl: 'https://api.mindness.test',
+      cookieStore,
+      fetcher: () => Promise.resolve(response()),
+    })
+  }
+
+  it('remembers the consumed trial after a guest session is created', async () => {
+    const cookieStore = new InMemoryCookieStore({
+      accessToken: anonymousToken(true),
+      refreshToken: 'refresh-token',
+    })
+    const handler = createHandler(cookieStore, () =>
+      Response.json({ data: { sessionId: 'session-id' } }, { status: 201 }),
+    )
+
+    await handler(startSessionRequest(), context(['sessions']))
+
+    expect(hasUsedGuestTrial(cookieStore)).toBe(true)
+  })
+
+  it('leaves the marker alone for a session created by a permanent account', async () => {
+    const cookieStore = new InMemoryCookieStore({
+      accessToken: anonymousToken(false),
+      refreshToken: 'refresh-token',
+    })
+    const handler = createHandler(cookieStore, () =>
+      Response.json({ data: { sessionId: 'session-id' } }, { status: 201 }),
+    )
+
+    await handler(startSessionRequest(), context(['sessions']))
+
+    expect(hasUsedGuestTrial(cookieStore)).toBe(false)
+  })
+
+  it('does not consume the trial when the session is refused', async () => {
+    const cookieStore = new InMemoryCookieStore({
+      accessToken: anonymousToken(true),
+      refreshToken: 'refresh-token',
+    })
+    const handler = createHandler(cookieStore, () =>
+      Response.json(
+        {
+          error: {
+            code: 'sessions.THEME_UNAVAILABLE',
+            message: 'No theme',
+            issues: null,
+            requestId: 'request-id',
+          },
+        },
+        { status: 422 },
+      ),
+    )
+
+    await handler(startSessionRequest(), context(['sessions']))
+
+    expect(hasUsedGuestTrial(cookieStore)).toBe(false)
+  })
+
+  it('synchronises the marker when the API reports the trial as already consumed', async () => {
+    const cookieStore = new InMemoryCookieStore({
+      accessToken: anonymousToken(true),
+      refreshToken: 'refresh-token',
+    })
+    const handler = createHandler(cookieStore, () =>
+      Response.json(
+        {
+          error: {
+            code: 'sessions.GUEST_TRIAL_CONSUMED',
+            message: 'The guest trial of this account was already used',
+            issues: null,
+            requestId: 'request-id',
+          },
+        },
+        { status: 403 },
+      ),
+    )
+
+    const response = await handler(startSessionRequest(), context(['sessions']))
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'sessions.GUEST_TRIAL_CONSUMED' },
+    })
+    expect(hasUsedGuestTrial(cookieStore)).toBe(true)
+  })
+
+  it('keeps the trial available when another rule refuses the session', async () => {
+    const cookieStore = new InMemoryCookieStore({
+      accessToken: anonymousToken(true),
+      refreshToken: 'refresh-token',
+    })
+    const handler = createHandler(cookieStore, () =>
+      Response.json(
+        {
+          error: {
+            code: 'sessions.PRACTICE_NOT_ALLOWED',
+            message: 'Consent is required',
+            issues: null,
+            requestId: 'request-id',
+          },
+        },
+        { status: 403 },
+      ),
+    )
+
+    await handler(startSessionRequest(), context(['sessions']))
+
+    expect(hasUsedGuestTrial(cookieStore)).toBe(false)
+  })
+
+  it('only marks the trial for the session creation route', async () => {
+    const cookieStore = new InMemoryCookieStore({
+      accessToken: anonymousToken(true),
+      refreshToken: 'refresh-token',
+    })
+    const handler = createHandler(cookieStore, () =>
+      Response.json({ data: { recordingId: 'recording-id' } }, { status: 201 }),
+    )
+
+    await handler(
+      new Request('https://web.mindness.test/api/bff/sessions/session-id/recordings', {
+        method: 'POST',
+      }),
+      context(['sessions', 'session-id', 'recordings']),
+    )
+
+    expect(hasUsedGuestTrial(cookieStore)).toBe(false)
+  })
+
+  it('marks the trial with the token the request was retried with', async () => {
+    const cookieStore = new InMemoryCookieStore({
+      accessToken: 'expired-access-token',
+      refreshToken: 'refresh-token',
+    })
+    const responses = [
+      () => Response.json({ error: { code: 'x', message: 'x', issues: null } }, { status: 401 }),
+      () =>
+        Response.json({
+          data: {
+            accessToken: anonymousToken(true),
+            expiresAt: '2100-01-01T00:00:00.000Z',
+            refreshToken: 'next-refresh-token',
+          },
+        }),
+      () => Response.json({ data: { sessionId: 'session-id' } }, { status: 201 }),
+    ]
+    let attempt = 0
+    const handler = createBffRouteHandler({
+      apiBaseUrl: 'https://api.mindness.test',
+      cookieStore,
+      fetcher: () => {
+        const respond = responses[attempt]
+        attempt += 1
+
+        return Promise.resolve(respond === undefined ? new Response(null) : respond())
+      },
+    })
+
+    await handler(startSessionRequest(), context(['sessions']))
+
+    expect(hasUsedGuestTrial(cookieStore)).toBe(true)
   })
 })

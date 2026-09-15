@@ -8,16 +8,33 @@ const accountConsentSchema = z.strictObject({
   version: z.string().min(1),
 })
 
-export const accountProfileSchema = z.strictObject({
+const sharedAccountProfile = {
   accountId: z.uuid(),
-  authenticationMethod: z.enum(['google', 'password']),
   consent: accountConsentSchema.nullable(),
   createdAt: z.iso.datetime(),
-  email: z.email(),
   name: z.string().min(1).max(ACCOUNT_NAME_MAX_LENGTH).nullable(),
   plan: z.literal('free'),
   timeZone: z.string().min(1),
+}
+
+const guestAccountProfileSchema = z.strictObject({
+  ...sharedAccountProfile,
+  accountKind: z.literal('guest'),
+  authenticationMethod: z.literal('anonymous'),
+  email: z.null(),
 })
+
+const registeredAccountProfileSchema = z.strictObject({
+  ...sharedAccountProfile,
+  accountKind: z.literal('registered'),
+  authenticationMethod: z.enum(['google', 'password']),
+  email: z.email(),
+})
+
+export const accountProfileSchema = z.discriminatedUnion('accountKind', [
+  guestAccountProfileSchema,
+  registeredAccountProfileSchema,
+])
 
 export type AccountProfile = z.output<typeof accountProfileSchema>
 

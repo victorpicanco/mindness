@@ -3,7 +3,6 @@ import { Account } from '@/modules/accounts/domain/entities/account/index.js'
 import { AccountCreated } from '@/modules/accounts/domain/events/account-created/index.js'
 import { AccountCreationRejected } from '@/modules/accounts/domain/events/account-creation-rejected/index.js'
 import { AccountAlreadyExistsError } from '@/modules/accounts/domain/errors/account-already-exists-error/index.js'
-import { InvalidAccountValueError } from '@/modules/accounts/domain/errors/invalid-account-value-error/index.js'
 import type {
   AccessTokenValidator,
   VerifiedAuthIdentity,
@@ -16,10 +15,6 @@ import { EmailAddress } from '@/modules/accounts/domain/value-objects/email-addr
 import { TimeZone } from '@/modules/accounts/domain/value-objects/time-zone/index.js'
 
 import type { CreateAccountInput, CreateAccountOutput } from './types.js'
-
-function isAnonymous(identity: VerifiedAuthIdentity): boolean {
-  return identity.authenticationMethod === 'anonymous'
-}
 
 export interface CreateAccountDependencies {
   readonly accounts: AccountsRepository
@@ -83,10 +78,11 @@ export class CreateAccountUseCase {
   }
 
   private findExistingByEmail(identity: VerifiedAuthIdentity): Promise<Account | null> {
-    const email = identity.email
-    if (isAnonymous(identity) || email === null) return Promise.resolve(null)
+    // An anonymous identity has no e-mail, and matching on a null one would return another
+    // guest's account. ADR-010 §6: the second deduplication path does not exist for guests.
+    if (identity.email === null) return Promise.resolve(null)
 
-    return this.dependencies.accounts.findByEmail(email)
+    return this.dependencies.accounts.findByEmail(identity.email)
   }
 
   private newAccountFor(identity: VerifiedAuthIdentity, timeZone: string | null): Account {
@@ -96,11 +92,11 @@ export class CreateAccountUseCase {
       timeZone: TimeZone.fromOptional(timeZone ?? undefined),
       createdAt: this.dependencies.clock.now(),
     }
-    if (isAnonymous(identity)) return Account.createGuest(identifiers)
+    if (identity.authenticationMethod === 'anonymous') return Account.createGuest(identifiers)
 
-    const email = identity.email
-    if (email === null) throw new InvalidAccountValueError('email')
-
-    return Account.createRegistered({ ...identifiers, email: EmailAddress.create(email) })
+    return Account.createRegistered({
+      ...identifiers,
+      email: EmailAddress.create(identity.email),
+    })
   }
 }

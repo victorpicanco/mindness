@@ -46,7 +46,7 @@ export function createEmailConfirmationRouteHandler({ cookieStore, fetcher }: De
 
       const provisionError = await provisionAccount({ cookieStore, fetcher })
       if (provisionError !== null) {
-        return redirect(`/auth/sign-in?error=${encodeURIComponent(provisionError.code)}`)
+        return redirect(`${SIGNED_IN_HOME}?error=${encodeURIComponent(provisionError.code)}`)
       }
 
       return redirect(SIGNED_IN_HOME)

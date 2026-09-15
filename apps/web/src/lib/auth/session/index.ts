@@ -77,18 +77,42 @@ export function clearSessionCookies(store: SessionCookieEraser): void {
   store.delete(REFRESH_TOKEN_COOKIE_NAME)
 }
 
-function accessTokenIsLive(accessToken: string, nowInSeconds: number): boolean {
+interface AccessTokenClaims {
+  readonly exp: number | undefined
+  readonly is_anonymous: boolean
+}
+
+export function accessTokenClaims(accessToken: string): AccessTokenClaims | null {
   const payload = accessToken.split('.')[1]
-  if (payload === undefined || payload === '') return false
+  if (payload === undefined || payload === '') return null
 
   try {
     const decoded: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
-    if (typeof decoded !== 'object' || decoded === null || !('exp' in decoded)) return false
+    if (typeof decoded !== 'object' || decoded === null || Array.isArray(decoded)) return null
 
-    return typeof decoded.exp === 'number' && decoded.exp > nowInSeconds
+    return {
+      exp: 'exp' in decoded && typeof decoded.exp === 'number' ? decoded.exp : undefined,
+      is_anonymous: 'is_anonymous' in decoded && decoded.is_anonymous === true,
+    }
   } catch {
-    return false
+    return null
   }
+}
+
+export function isAnonymousAccessToken(accessToken: string): boolean {
+  return accessTokenClaims(accessToken)?.is_anonymous === true
+}
+
+export function hasGuestSession(store: SessionCookieReader): boolean {
+  const { accessToken } = readSessionCookies(store)
+
+  return accessToken !== undefined && isAnonymousAccessToken(accessToken)
+}
+
+function accessTokenIsLive(accessToken: string, nowInSeconds: number): boolean {
+  const claims = accessTokenClaims(accessToken)
+
+  return claims?.exp !== undefined && claims.exp > nowInSeconds
 }
 export function hasLiveSession(
   store: SessionCookieReader,

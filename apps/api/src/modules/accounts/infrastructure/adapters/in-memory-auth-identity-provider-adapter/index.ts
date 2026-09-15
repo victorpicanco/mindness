@@ -253,11 +253,18 @@ export class InMemoryAuthIdentityProviderAdapter implements AuthIdentityProvider
       }
     }
 
-    const accessToken = `access-${tokenId}`
+    const expiresAt = new Date(identity.issuedAt.getTime() + 60 * 60 * 1000)
+    const claims = Buffer.from(
+      JSON.stringify({
+        exp: Math.floor(expiresAt.getTime() / 1_000),
+        is_anonymous: identity.authenticationMethod === 'anonymous',
+      }),
+    ).toString('base64url')
+    const accessToken = `access-${tokenId}.${claims}.signature`
     const session: AuthSession = {
       accessToken,
       refreshToken: `refresh-${tokenId}`,
-      expiresAt: new Date(identity.issuedAt.getTime() + 60 * 60 * 1000),
+      expiresAt,
       identity,
     }
     this.sessionsByToken.set(accessToken, session)

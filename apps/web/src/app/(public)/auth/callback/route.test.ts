@@ -120,7 +120,7 @@ describe('Google callback route', () => {
     )
 
     expect(response.status).toBe(302)
-    expect(response.headers.get('location')).toBe('/auth/sign-in?error=google_callback_failed')
+    expect(response.headers.get('location')).toBe('/?error=google_callback_failed')
     expect(cookieStore.values).toEqual(new Map())
   })
 
@@ -163,9 +163,7 @@ describe('Google callback route', () => {
     const response = await handler(new Request(callbackUrl))
 
     expect(response.status).toBe(302)
-    expect(response.headers.get('location')).toBe(
-      '/auth/sign-in?error=accounts.ACCOUNT_ALREADY_EXISTS',
-    )
+    expect(response.headers.get('location')).toBe('/?error=accounts.ACCOUNT_ALREADY_EXISTS')
     expect(cookieStore.values).toEqual(new Map())
   })
 })

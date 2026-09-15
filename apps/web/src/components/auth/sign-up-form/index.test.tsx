@@ -116,20 +116,63 @@ describe('SignUpForm', () => {
     })
   })
 
+  it('keeps the consent notice visible in the authentication dialog', () => {
+    renderSignUpForm(<SignUpForm action={validSignUpAction()} appearance="dialog" />)
+
+    expect(screen.getByRole('button', { name: 'Termos de Uso e Privacidade' })).toBeInTheDocument()
+  })
+
   it('shows the Supabase password requirements and marks satisfied requirements', () => {
     renderSignUpForm(<SignUpForm action={validSignUpAction()} />)
 
     const requirementList = screen.getByRole('list', { name: 'Requisitos da senha' })
 
+    expect(requirementList).toHaveClass('flex', 'flex-wrap', 'gap-2')
     expect(requirementList).toHaveTextContent('Pelo menos 8 caracteres')
     expect(requirementList).toHaveTextContent('Uma letra minúscula')
     expect(requirementList).toHaveTextContent('Uma letra maiúscula')
     expect(requirementList).toHaveTextContent('Um número')
     expect(requirementList).toHaveTextContent('Um símbolo')
+    expect(requirementList.querySelector('[data-satisfied="false"]')).toHaveClass(
+      'rounded-full',
+      'px-2',
+      'py-0.5',
+      'text-[11px]',
+    )
+    expect(requirementList.querySelector('[data-satisfied="false"]')).not.toHaveClass('border')
+    expect(requirementList.querySelectorAll('[data-icon="circle"]')).toHaveLength(5)
 
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Abcdef1!' } })
 
     expect(requirementList.querySelectorAll('[data-satisfied="true"]')).toHaveLength(5)
+    expect(requirementList.querySelectorAll('[data-icon="checkmark-circle-02"]')).toHaveLength(5)
+  })
+
+  it('uses one visible password field in the dialog while preserving the action contract', async () => {
+    const submittedFormData: FormData[] = []
+    const signUpAction: SignUpAction = (_state, formData) => {
+      submittedFormData.push(formData)
+
+      return Promise.resolve(initialAuthActionState)
+    }
+
+    renderSignUpForm(<SignUpForm action={signUpAction} appearance="dialog" />)
+
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Confirme sua senha')).not.toBeInTheDocument()
+
+    await verifyCaptcha()
+    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'Valid_password1!' },
+    })
+    await submit()
+
+    await waitFor(() => {
+      expect(submittedFormData).toHaveLength(1)
+    })
+    expect(submittedFormData[0]?.get('password')).toBe('Valid_password1!')
+    expect(submittedFormData[0]?.get('passwordConfirmation')).toBe('Valid_password1!')
   })
 
   it('submits valid credentials and notifies the page of the email confirmation state', async () => {
@@ -162,18 +205,46 @@ describe('SignUpForm', () => {
     expect(submittedFormData[0]?.get('captchaToken')).toBe('captcha-token')
   })
 
-  it('identifies the submitted email with PostHog once the account is created', async () => {
+  it('reports the submitted sign-up without identifying the browser before authentication', async () => {
     renderSignUpForm(<SignUpForm action={validSignUpAction()} />)
     await verifyCaptcha()
     fillCredentials()
     await submit()
 
-    await waitFor(() => {
-      expect(identifyMock).toHaveBeenCalledWith('person@example.com', {
-        email: 'person@example.com',
-      })
-    })
-    expect(captureMock).toHaveBeenCalledWith('sign_up_submitted')
+    await waitFor(() => expect(captureMock).toHaveBeenCalledWith('sign_up_submitted'))
+    expect(identifyMock).not.toHaveBeenCalled()
+  })
+
+  it('reports success only once when the parent replaces its callback', async () => {
+    const action = validSignUpAction()
+    const onSuccess = vi.fn()
+    const nextOnSuccess = vi.fn()
+    const view = (callback: () => void) => (
+      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <SignUpForm action={action} onSuccess={callback} />
+      </NextIntlClientProvider>
+    )
+    const { rerender } = render(view(onSuccess))
+    await verifyCaptcha()
+    fillCredentials()
+    await submit()
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce())
+
+    rerender(view(nextOnSuccess))
+
+    expect(nextOnSuccess).not.toHaveBeenCalled()
+    expect(captureMock).toHaveBeenCalledExactlyOnceWith('sign_up_submitted')
+  })
+
+  it('does not duplicate the guest conversion event already emitted by account entry', async () => {
+    renderSignUpForm(<SignUpForm action={validSignUpAction()} />)
+    await verifyCaptcha()
+    fillCredentials()
+    await submit()
+
+    await waitFor(() => expect(captureMock).toHaveBeenCalledWith('sign_up_submitted'))
+    expect(captureMock).not.toHaveBeenCalledWith('guest_account_sign_up_started')
+    expect(identifyMock).not.toHaveBeenCalled()
   })
 
   it('shows the password mismatch returned by the action', async () => {

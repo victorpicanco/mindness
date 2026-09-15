@@ -17,16 +17,16 @@ describe('Next.js rendering features', () => {
   })
 
   it('caches the theme catalogue instead of refetching it on every home render', async () => {
-    const homePage = await readWebFile('src/app/(authenticated)/page.tsx')
+    const homePage = await readWebFile('src/app/(practice)/page.tsx')
 
-    expect(homePage).toContain("'use cache: private'")
+    expect(homePage).toContain("'use cache'")
     expect(homePage).toMatch(/cacheLife\('hours'\)/u)
     expect(homePage).not.toMatch(/theme-categories[\s\S]{0,120}no-store/u)
   })
 
   it('deduplicates authenticated session data through shared request helpers', async () => {
-    const layout = await readWebFile('src/app/(authenticated)/layout.tsx')
-    const homePage = await readWebFile('src/app/(authenticated)/page.tsx')
+    const layout = await readWebFile('src/app/_components/application-layout/index.tsx')
+    const homePage = await readWebFile('src/app/(practice)/page.tsx')
     const sessionPage = await readWebFile('src/app/(authenticated)/sessions/[sessionId]/page.tsx')
 
     for (const source of [layout, homePage, sessionPage]) {

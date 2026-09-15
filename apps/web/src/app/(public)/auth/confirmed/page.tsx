@@ -17,7 +17,7 @@ export function ConfirmedScreen({ status }: { readonly status: ConfirmationStatu
     >
       <Link
         className={buttonStyles({ size: 'lg' })}
-        href={isConfirmed ? '/auth/sign-in' : '/auth/resend-confirmation'}
+        href={isConfirmed ? '/' : '/auth/resend-confirmation'}
       >
         {t(isConfirmed ? 'signInLink' : 'resendLink')}
       </Link>

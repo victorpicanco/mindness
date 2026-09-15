@@ -5,8 +5,7 @@ import { config, proxy } from './proxy'
 
 const FAR_FUTURE_EXPIRY_IN_SECONDS = 4_102_444_800
 const PROTECTED_ROUTE = '/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
-const PROTECTED_ROUTE_SIGN_IN_REDIRECT =
-  '/auth/sign-in?redirect=%2Fsessions%2F7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'
+const PROTECTED_ROUTE_REDIRECT = '/'
 
 function accessTokenExpiringAt(expiresAtInSeconds: number): string {
   const payload = Buffer.from(JSON.stringify({ exp: expiresAtInSeconds }), 'utf8').toString(
@@ -22,6 +21,17 @@ function signedIn(): { cookie: string } {
   }
 }
 
+function guestSignedIn(): { cookie: string } {
+  const payload = Buffer.from(
+    JSON.stringify({ exp: FAR_FUTURE_EXPIRY_IN_SECONDS, is_anonymous: true }),
+    'utf8',
+  ).toString('base64url')
+
+  return {
+    cookie: `mindness_access_token=header.${payload}.signature; mindness_refresh_token=refresh-token`,
+  }
+}
+
 function staleAccessToken(): { cookie: string } {
   return {
     cookie: `mindness_access_token=${accessTokenExpiringAt(1)}; mindness_refresh_token=refresh-token`,
@@ -30,6 +40,10 @@ function staleAccessToken(): { cookie: string } {
 
 function expiredSession(): { cookie: string } {
   return { cookie: `mindness_access_token=${accessTokenExpiringAt(1)}` }
+}
+
+function refreshTokenOnly(): { cookie: string } {
+  return { cookie: 'mindness_refresh_token=refresh-token' }
 }
 
 function request(path: string, headers: Record<string, string> = {}): NextRequest {
@@ -83,11 +97,10 @@ afterEach(() => {
 
 describe('proxy', () => {
   describe('routes that need a session', () => {
-    it('redirects an unauthenticated request to the home route to sign-in', async () => {
+    it('lets an unauthenticated visitor reach the home route', async () => {
       const response = await proxy(request('/'))
 
-      expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe('/auth/sign-in?redirect=%2F')
+      expect(response.headers.get('x-middleware-next')).toBe('1')
     })
 
     it('does not redirect an unauthenticated request to the removed practice route', async () => {
@@ -96,13 +109,11 @@ describe('proxy', () => {
       expect(response.headers.get('x-middleware-next')).toBe('1')
     })
 
-    it('redirects an unauthenticated request to a session route to sign-in', async () => {
+    it('redirects an unauthenticated request to a session route to the home route', async () => {
       const response = await proxy(request('/sessions/7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa'))
 
       expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe(
-        '/auth/sign-in?redirect=%2Fsessions%2F7d5f46c9-3cbd-4c6d-84aa-66b8148a91aa',
-      )
+      expect(redirectTarget(response)).toBe('/')
     })
 
     it('does not redirect an unauthenticated request to the removed history route', async () => {
@@ -127,7 +138,7 @@ describe('proxy', () => {
       const response = await proxy(request(PROTECTED_ROUTE, expiredSession()))
 
       expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe(PROTECTED_ROUTE_SIGN_IN_REDIRECT)
+      expect(redirectTarget(response)).toBe(PROTECTED_ROUTE_REDIRECT)
     })
 
     it('redirects a protected request carrying an unreadable access token', async () => {
@@ -136,14 +147,14 @@ describe('proxy', () => {
       )
 
       expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe(PROTECTED_ROUTE_SIGN_IN_REDIRECT)
+      expect(redirectTarget(response)).toBe(PROTECTED_ROUTE_REDIRECT)
     })
 
     it('redirects an unauthenticated visitor away from the update-password form', async () => {
       const response = await proxy(request('/auth/update-password'))
 
       expect(response.status).toBe(307)
-      expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/auth/sign-in')
+      expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/')
     })
 
     it('keeps an authenticated visitor on the update-password form', async () => {
@@ -160,31 +171,43 @@ describe('proxy', () => {
   })
 
   describe('routes that only make sense signed out', () => {
-    it.each([
-      '/auth/sign-in',
-      '/auth/sign-up',
-      '/auth/password-recovery',
-      '/auth/resend-confirmation',
-      '/auth/confirmed',
-    ])('sends an authenticated visitor away from %s', async (path) => {
-      const response = await proxy(request(path, signedIn()))
+    it.each(['/auth/password-recovery', '/auth/resend-confirmation', '/auth/confirmed'])(
+      'sends an authenticated visitor away from %s',
+      async (path) => {
+        const response = await proxy(request(path, signedIn()))
+
+        expect(response.status).toBe(307)
+        expect(redirectTarget(response)).toBe('/')
+      },
+    )
+
+    it('sends a visitor whose access token is merely stale away from password-recovery', async () => {
+      const response = await proxy(request('/auth/password-recovery', staleAccessToken()))
 
       expect(response.status).toBe(307)
       expect(redirectTarget(response)).toBe('/')
     })
 
-    it('sends a visitor whose access token is merely stale away from sign-in', async () => {
-      const response = await proxy(request('/auth/sign-in', staleAccessToken()))
-
-      expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe('/')
-    })
-
-    it('lets an expired session reach the sign-in route instead of looping', async () => {
-      const response = await proxy(request('/auth/sign-in', expiredSession()))
+    it('lets an expired session reach the password-recovery route instead of looping', async () => {
+      const response = await proxy(request('/auth/password-recovery', expiredSession()))
 
       expect(response.headers.get('x-middleware-next')).toBe('1')
     })
+
+    it('keeps password-recovery accessible when only the refresh token is available', async () => {
+      const response = await proxy(request('/auth/password-recovery', refreshTokenOnly()))
+
+      expect(response.headers.get('x-middleware-next')).toBe('1')
+    })
+
+    it.each(['/auth/password-recovery', '/auth/resend-confirmation'])(
+      'keeps %s accessible to a guest replacing the anonymous identity',
+      async (path) => {
+        const response = await proxy(request(path, guestSignedIn()))
+
+        expect(response.headers.get('x-middleware-next')).toBe('1')
+      },
+    )
 
     it('lets a signed-in visitor finish an email or recovery link', async () => {
       for (const path of ['/auth/callback?access_token=a&refresh_token=b', '/auth/confirm']) {
@@ -227,7 +250,7 @@ describe('proxy', () => {
       expect(apiRequests).toHaveLength(0)
     })
 
-    it('signs the visitor out when the refresh token is no longer accepted', async () => {
+    it('clears a rejected session without redirecting the public home route', async () => {
       stubApi(() =>
         Response.json(
           {
@@ -244,8 +267,7 @@ describe('proxy', () => {
 
       const response = await proxy(request('/', staleAccessToken()))
 
-      expect(response.status).toBe(307)
-      expect(redirectTarget(response)).toBe('/auth/sign-in?redirect=%2F')
+      expect(response.headers.get('x-middleware-next')).toBe('1')
       expect(setCookieFor(response, 'mindness_access_token')).toContain('Expires=Thu, 01 Jan 1970')
       expect(setCookieFor(response, 'mindness_refresh_token')).toContain('Expires=Thu, 01 Jan 1970')
     })
@@ -261,12 +283,18 @@ describe('proxy', () => {
       expect(response.headers.getSetCookie()).toEqual([])
     })
 
-    it('does not renew a session on a route that no longer needs one', async () => {
+    it('renews a session independently of whether the route is protected', async () => {
       const apiRequests = stubApi(() => refreshedTokensResponse())
 
-      await proxy(request('/auth/sign-up'))
+      await proxy(request('/'))
 
-      expect(apiRequests).toHaveLength(0)
+      expect(apiRequests.map((apiRequest) => apiRequest.url)).toEqual([])
+
+      await proxy(request('/', staleAccessToken()))
+
+      expect(apiRequests.map((apiRequest) => apiRequest.url)).toEqual([
+        'https://api.mindness.test/auth/refresh',
+      ])
     })
   })
 
@@ -284,14 +312,44 @@ describe('proxy', () => {
   })
 
   describe('security headers', () => {
+    it('keeps local HTTP assets usable during development', async () => {
+      vi.stubEnv('NODE_ENV', 'development')
+
+      const response = await proxy(request('/'))
+
+      expect(response.headers.get('content-security-policy')).not.toContain(
+        'upgrade-insecure-requests',
+      )
+    })
+
+    it('keeps local HTTP assets usable in a production build served without TLS', async () => {
+      vi.stubEnv('NODE_ENV', 'production')
+
+      const response = await proxy(new NextRequest('http://127.0.0.1:3100/'))
+
+      expect(response.headers.get('content-security-policy')).not.toContain(
+        'upgrade-insecure-requests',
+      )
+      expect(response.headers.get('strict-transport-security')).toBeNull()
+    })
+
     it('sets a CSP containing a per-request nonce', async () => {
       const response = await proxy(request('/'))
       const contentSecurityPolicy = response.headers.get('content-security-policy')
 
       expect(contentSecurityPolicy).toMatch(/script-src 'self' 'nonce-[^']+'/u)
     })
+
+    it('allows the fixed Next.js streaming timing script without allowing arbitrary inline code', async () => {
+      const response = await proxy(request('/'))
+      const contentSecurityPolicy = response.headers.get('content-security-policy')
+
+      expect(contentSecurityPolicy).toContain(
+        "'sha256-7mu4H06fwDCjmnxxr/xNHyuQC6pLTHr4M2E4jXw5WZs='",
+      )
+    })
     it("keeps 'self' effective for the script tags of the prerendered shell", async () => {
-      const response = await proxy(request('/auth/sign-in'))
+      const response = await proxy(request('/'))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
       const scriptSource = /script-src ([^;]*)/u.exec(contentSecurityPolicy)?.[1] ?? ''
 
@@ -300,7 +358,7 @@ describe('proxy', () => {
     })
 
     it('lets the toast library inject its runtime stylesheet', async () => {
-      const response = await proxy(request('/auth/sign-in'))
+      const response = await proxy(request('/'))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
 
       expect(contentSecurityPolicy).toMatch(/style-src [^;]*'unsafe-inline'/u)
@@ -308,7 +366,7 @@ describe('proxy', () => {
     })
 
     it('does not allow the removed external icon font origin', async () => {
-      const response = await proxy(request('/auth/sign-in'))
+      const response = await proxy(request('/'))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
 
       expect(contentSecurityPolicy).not.toContain('use.hugeicons.com')
@@ -325,7 +383,7 @@ describe('proxy', () => {
     })
 
     it('allows the captcha widget to load, call home and frame its challenge', async () => {
-      const response = await proxy(request('/auth/sign-in'))
+      const response = await proxy(request('/'))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
 
       expect(contentSecurityPolicy).toMatch(
@@ -338,7 +396,7 @@ describe('proxy', () => {
     })
 
     it('allows direct uploads to the Supabase Storage origin', async () => {
-      const response = await proxy(request('/auth/sign-in'))
+      const response = await proxy(request('/'))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
 
       expect(contentSecurityPolicy).toContain(
@@ -347,7 +405,7 @@ describe('proxy', () => {
     })
 
     it('lets the audio element load a recording from the Supabase Storage origin', async () => {
-      const response = await proxy(request('/auth/sign-in'))
+      const response = await proxy(request('/'))
       const contentSecurityPolicy = response.headers.get('content-security-policy') ?? ''
 
       expect(contentSecurityPolicy).toContain(
@@ -356,7 +414,9 @@ describe('proxy', () => {
     })
 
     it('keeps the security headers on a redirect', async () => {
-      const response = await proxy(request('/practice'))
+      const response = await proxy(request('/sessions/session-id'))
+
+      expect(response.status).toBe(307)
 
       expect(response.headers.get('x-frame-options')).toBe('DENY')
       expect(response.headers.get('content-security-policy')).toBeTruthy()
@@ -365,8 +425,9 @@ describe('proxy', () => {
 })
 
 describe('proxy matcher', () => {
-  it('runs on prefetch requests so a stale session is renewed before the render', () => {
-    expect(JSON.stringify(config.matcher)).not.toContain('next-router-prefetch')
-    expect(JSON.stringify(config.matcher)).not.toContain('prefetch')
+  it('excludes router prefetches from session renewal', () => {
+    expect(JSON.stringify(config.matcher)).toContain('next-router-prefetch')
+    expect(JSON.stringify(config.matcher)).toContain('purpose')
+    expect(JSON.stringify(config.matcher)).toContain('prefetch')
   })
 })

@@ -7,6 +7,11 @@ import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { messages } from '@/i18n/messages'
+import {
+  alertDialogStore,
+  dismissAlertDialog,
+  type AlertDialogRequest,
+} from '@/lib/feedback/alert-dialog'
 import { AudioUploadFailedError } from '@/lib/api/audio-upload-failed-error'
 import { ApiClientError } from '@/lib/api/client-error'
 import { createQueryClient } from '@/lib/api/query-client'
@@ -124,6 +129,21 @@ function renderRecordingStart(props: RecordingStartHarnessProps = {}) {
   )
 }
 
+function announcedAlert(): AlertDialogRequest | null {
+  return alertDialogStore.getState().request
+}
+
+function selectAlertAction(label: string): void {
+  const action = announcedAlert()?.actions?.find((candidate) => candidate.label === label)
+
+  expect(action).toBeDefined()
+
+  act(() => {
+    dismissAlertDialog()
+    action?.onSelect()
+  })
+}
+
 function recordingButton(): HTMLElement {
   return screen.getByRole('button', { name: 'Iniciar gravação' })
 }
@@ -210,6 +230,9 @@ describe('RecordingStart', () => {
   })
 
   afterEach(() => {
+    act(() => {
+      dismissAlertDialog()
+    })
     cleanup()
     vi.clearAllMocks()
     vi.restoreAllMocks()
@@ -405,9 +428,8 @@ describe('RecordingStart', () => {
     await clickRecordingButton()
 
     expect(reports).toEqual([SESSION_ID])
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Autorize o microfone para gravar sua apresentação.',
-    )
+    expect(announcedAlert()?.description).toBe('Autorize o microfone para gravar sua apresentação.')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByLabelText('practice status')).toHaveTextContent('expired')
     expect(recordingButton()).toBeDisabled()
   })
@@ -456,7 +478,8 @@ describe('RecordingStart', () => {
     await settleMutation()
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('expired')
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível acessar o microfone.')
+    expect(announcedAlert()?.description).toBe('Não foi possível acessar o microfone.')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('uploads the audio when the recording is stopped before the recorder is ready', async () => {
@@ -521,11 +544,12 @@ describe('RecordingStart', () => {
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('uploading')
     expect(screen.getByLabelText('captured audio')).toHaveTextContent('retained')
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Não foi possível enviar o áudio. Tente novamente.',
-    )
-    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Descartar gravação' })).toBeInTheDocument()
+    expect(announcedAlert()?.description).toBe('Não foi possível enviar o áudio. Tente novamente.')
+    expect(announcedAlert()?.actions?.map((action) => action.label)).toEqual([
+      'Descartar gravação',
+      'Tentar novamente',
+    ])
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(toast.error).not.toHaveBeenCalled()
   })
 
@@ -547,13 +571,11 @@ describe('RecordingStart', () => {
     await advanceBySeconds(MAX_RECORDING_SECONDS)
     await settleMutation()
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(announcedAlert()?.description).toBe(
       'O áudio ficou grande demais para enviar. Grave novamente em uma conexão mais estável.',
     )
 
-    act(() => {
-      screen.getByRole('button', { name: 'Descartar gravação' }).click()
-    })
+    selectAlertAction('Descartar gravação')
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
   })
@@ -576,13 +598,11 @@ describe('RecordingStart', () => {
     await advanceBySeconds(MAX_RECORDING_SECONDS)
     await settleMutation()
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(announcedAlert()?.description).toBe(
       'Não foi possível validar este áudio. Grave novamente e tente enviar.',
     )
 
-    act(() => {
-      screen.getByRole('button', { name: 'Descartar gravação' }).click()
-    })
+    selectAlertAction('Descartar gravação')
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
   })
@@ -605,13 +625,9 @@ describe('RecordingStart', () => {
     await advanceBySeconds(MAX_RECORDING_SECONDS)
     await settleMutation()
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Não foi possível enviar o áudio. Tente novamente.',
-    )
+    expect(announcedAlert()?.description).toBe('Não foi possível enviar o áudio. Tente novamente.')
 
-    act(() => {
-      screen.getByRole('button', { name: 'Descartar gravação' }).click()
-    })
+    selectAlertAction('Descartar gravação')
 
     expect(screen.getByLabelText('practice status')).toHaveTextContent('recording')
   })

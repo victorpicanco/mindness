@@ -5,6 +5,11 @@
     "validationFailed": "Confira os dados informados e tente novamente.",
     "sessionNotDeletable": "Não é possível excluir uma sessão em processamento. Tente de novo quando a análise terminar."
   },
+  "alerts": {
+    "failureTitle": "Não foi possível continuar",
+    "successTitle": "Tudo certo",
+    "dismiss": "Entendi"
+  },
   "toasts": {
     "label": "Notificações do sistema"
   },

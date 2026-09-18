@@ -10,6 +10,7 @@ import {
 } from '@/lib/auth/action-state'
 import { describeApiError } from '@/lib/errors/api-error-presentation'
 import { describeApiFieldIssues } from '@/lib/errors/api-field-issues'
+import { showApiErrorAlert } from '@/lib/errors/show-api-error-alert'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
 
 import {
@@ -32,15 +33,14 @@ function fieldErrorsOf(state: AuthActionState): AuthFieldErrors {
     return { [fieldOfActionMessageKey(state.messageKey)]: `auth.${state.messageKey}` }
   }
 
-  return state.status === 'api-error' ? describeApiFieldIssues(state.error.issues) : {}
-}
+  if (state.status !== 'api-error') return {}
 
-function inlineMessageKeyOf(state: AuthActionState): AuthFormMessageKey | undefined {
-  if (state.status !== 'api-error') return undefined
-
+  const issues = describeApiFieldIssues(state.error.issues)
   const description = describeApiError(state.error.code)
 
-  return description.presentation === 'inline' ? description.messageKey : undefined
+  return description.presentation === 'inline'
+    ? { ...issues, [description.field]: description.messageKey }
+    : issues
 }
 
 export type AuthFormBinding = ReturnType<typeof useAuthForm>
@@ -50,14 +50,16 @@ export function useAuthForm({ action, requiresCaptcha }: UseAuthFormOptions) {
   const [state, formAction, isSubmitting] = useActionState(action, initialAuthActionState)
 
   useEffect(() => {
-    if (state.status === 'api-error') showApiErrorToast(state.error, translate)
+    if (state.status !== 'api-error') return
+
+    showApiErrorToast(state.error, translate)
+    showApiErrorAlert(state.error, translate)
   }, [state, translate])
 
   return {
     captchaResetSignal: requiresCaptcha ? state : initialAuthActionState,
     fieldErrors: fieldErrorsOf(state),
     formAction,
-    inlineMessageKey: inlineMessageKeyOf(state),
     isSubmitting,
     state,
   }

@@ -7,6 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { TurnstileApi, TurnstileRenderOptions } from '@/components/ui/turnstile/types'
 import {
+  alertDialogStore,
+  dismissAlertDialog,
+  type AlertDialogRequest,
+} from '@/lib/feedback/alert-dialog'
+import {
   initialAuthActionState,
   initialStartGuestTrialState,
   type StartGuestTrialAction,
@@ -15,7 +20,7 @@ import {
 import { messages } from '@/i18n/messages'
 import { DEFAULT_TIME_ZONE } from '@/i18n/request'
 
-vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
 const { captureMock, resetMock } = vi.hoisted(() => ({
   captureMock: vi.fn(),
@@ -161,6 +166,26 @@ function submitConfiguration() {
   fireEvent.click(screen.getByRole('button', { name: 'Iniciar sessão' }))
 }
 
+async function announcedAlert(): Promise<AlertDialogRequest | null> {
+  await waitFor(() => {
+    expect(alertDialogStore.getState().request).not.toBeNull()
+  })
+
+  return alertDialogStore.getState().request
+}
+
+async function selectAlertAction(label: string): Promise<void> {
+  const alert = await announcedAlert()
+  const action = alert?.actions?.find((candidate) => candidate.label === label)
+
+  expect(action).toBeDefined()
+
+  act(() => {
+    dismissAlertDialog()
+    action?.onSelect()
+  })
+}
+
 function rejectingRequest(code: string): StartSessionRequest {
   return () =>
     Promise.reject(
@@ -181,6 +206,9 @@ beforeEach(() => {
 
 describe('PracticeConfigForm', () => {
   afterEach(() => {
+    act(() => {
+      dismissAlertDialog()
+    })
     cleanup()
     vi.clearAllMocks()
     vi.unstubAllEnvs()
@@ -274,7 +302,9 @@ describe('PracticeConfigForm', () => {
     expect(toast.error).toHaveBeenCalledTimes(1)
   })
 
-  it('opens the authentication dialog with the password-updated confirmation', () => {
+  it('opens the authentication dialog and toasts the password-updated confirmation', async () => {
+    const { toast } = await import('sonner')
+
     renderPracticeConfigForm(() => Promise.resolve(STARTED_SESSION), undefined, undefined, {
       initialAuthenticationMode: 'sign-in',
       passwordUpdated: true,
@@ -282,9 +312,8 @@ describe('PracticeConfigForm', () => {
     })
 
     expect(screen.getByRole('dialog', { name: 'É bom ter você de volta.' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Senha atualizada. Entre novamente para continuar.',
-    )
+    expect(toast.success).toHaveBeenCalledWith('Senha atualizada. Entre novamente para continuar.')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it.each<PracticeViewer>(['guest', 'registered'])(
@@ -368,7 +397,7 @@ describe('PracticeConfigForm', () => {
     renderPracticeConfigForm(rejectingRequest('sessions.PRACTICE_NOT_ALLOWED'))
     submitConfiguration()
 
-    await screen.findByRole('alert')
+    await announcedAlert()
 
     expect(captureMock).toHaveBeenCalledWith('practice_not_allowed')
   })
@@ -378,7 +407,7 @@ describe('PracticeConfigForm', () => {
     renderPracticeConfigForm(rejectingRequest('sessions.PRACTICE_NOT_ALLOWED'), undefined, signOut)
     submitConfiguration()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Sair e entrar de novo' }))
+    await selectAlertAction('Sair e entrar de novo')
 
     expect(captureMock).toHaveBeenCalledWith('sign_out')
     expect(resetMock).toHaveBeenCalledOnce()
@@ -407,24 +436,30 @@ describe('PracticeConfigForm', () => {
     expect(openedSessions).toEqual([STARTED_SESSION.sessionId])
   })
 
-  it('explains that no theme is available for the chosen configuration', async () => {
+  it('explains that no theme is available for the chosen configuration as a toast', async () => {
+    const { toast } = await import('sonner')
+
     renderPracticeConfigForm(rejectingRequest('sessions.THEME_UNAVAILABLE'))
     submitConfiguration()
 
-    const alert = await screen.findByRole('alert')
-
-    expect(alert).toHaveTextContent('Não há tema disponível nessa combinação. Escolha outra opção.')
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Não há tema disponível nessa combinação. Escolha outra opção.',
+      ),
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByText('idle')).toBeInTheDocument()
   })
 
-  it('asks for the voice consent again without starting the session', async () => {
+  it('asks for the voice consent again in a dialog, without starting the session', async () => {
     renderPracticeConfigForm(rejectingRequest('sessions.PRACTICE_NOT_ALLOWED'))
     submitConfiguration()
 
-    const alert = await screen.findByRole('alert')
+    const alert = await announcedAlert()
 
-    expect(alert).toHaveTextContent('Autorize a gravação e análise de voz para iniciar.')
-    expect(screen.getByRole('button', { name: 'Sair e entrar de novo' })).toBeInTheDocument()
+    expect(alert?.description).toBe('Autorize a gravação e análise de voz para iniciar.')
+    expect(alert?.actions?.map((action) => action.label)).toEqual(['Sair e entrar de novo'])
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByText('idle')).toBeInTheDocument()
     expect(screen.getByText('none')).toBeInTheDocument()
   })
@@ -444,13 +479,13 @@ describe('PracticeConfigForm', () => {
     expect(screen.getByText('idle')).toBeInTheDocument()
   })
 
-  it('keeps a blocking failure inline instead of toasting it', async () => {
+  it('keeps a blocking failure out of the toast channel', async () => {
     const { toast } = await import('sonner')
 
-    renderPracticeConfigForm(rejectingRequest('sessions.THEME_UNAVAILABLE'))
+    renderPracticeConfigForm(rejectingRequest('sessions.PRACTICE_NOT_ALLOWED'))
     submitConfiguration()
 
-    await screen.findByRole('alert')
+    await announcedAlert()
 
     expect(toast.error).not.toHaveBeenCalled()
   })
@@ -461,7 +496,7 @@ describe('PracticeConfigForm', () => {
     renderPracticeConfigForm(rejectingRequest('sessions.PRACTICE_NOT_ALLOWED'), undefined, signOut)
     submitConfiguration()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Sair e entrar de novo' }))
+    await selectAlertAction('Sair e entrar de novo')
 
     expect(signOut).toHaveBeenCalledOnce()
   })

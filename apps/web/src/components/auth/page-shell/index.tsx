@@ -4,8 +4,6 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 
-import { SignInShowcase } from '@/components/auth/sign-in-showcase'
-
 const buenard = Buenard({
   display: 'swap',
   subsets: ['latin'],
@@ -44,9 +42,6 @@ export function AuthPageShell({
           {children}
         </div>
       </section>
-      <aside className="hidden lg:block">
-        <SignInShowcase />
-      </aside>
     </main>
   )
 }

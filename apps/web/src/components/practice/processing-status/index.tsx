@@ -99,7 +99,7 @@ function ProcessingFailure({ message }: { readonly message: TerminalFailureMessa
     <div className="pt-6">
       <SessionMessage label={conversationT('assistantMessageLabel')} sender="assistant">
         <section className="flex max-w-md flex-col items-start gap-4">
-          <p role="alert">{t(message)}</p>
+          <p role="status">{t(message)}</p>
           <Link className={buttonStyles()} href="/">
             {t('newSessionLink')}
           </Link>

@@ -1,19 +1,32 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { useEffect } from 'react'
 
-import { Button } from '@/components/ui/button'
 import { ShinyText } from '@/components/ui/shiny-text'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
+import { showAlertDialog, type AlertDialogAction } from '@/lib/feedback/alert-dialog'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
 
 import { SessionRecorder } from '@/components/practice/session-recorder'
 import type { AudioLevelSource } from '@/components/practice/use-audio-levels'
 import {
   useRecordingCapture,
-  type StartFailure,
   type UploadFailure,
 } from '@/components/practice/use-recording-capture'
+
+type UploadFailureTranslator = (
+  key:
+    'audioSizeRejected' | 'audioUploadFailed' | 'audioValidationRejected' | 'sessionNotInProgress',
+) => string
+
+function uploadFailureMessage(reason: UploadFailure, t: UploadFailureTranslator): string {
+  if (reason === 'audio-size') return t('audioSizeRejected')
+  if (reason === 'audio-validation') return t('audioValidationRejected')
+  if (reason === 'session-closed') return t('sessionNotInProgress')
+
+  return t('audioUploadFailed')
+}
 
 type RecordingStartViewProps = {
   readonly audioLevelSource?: AudioLevelSource
@@ -28,21 +41,41 @@ export function RecordingStart() {
 
 export function RecordingStartView({ audioLevelSource, capture }: RecordingStartViewProps) {
   const t = useTranslations('home.research')
+  const alerts = useTranslations('common.alerts')
   const session = usePracticeSessionStore((state) => state.session)
   const status = usePracticeSessionStore((state) => state.status)
   const serverTimeOffsetMs = usePracticeSessionStore((state) => state.serverTimeOffsetMs)
+  const { discard, hasUploadFailed, retry, startFailure, uploadFailure } = capture
 
-  function startFailureMessage(reason: StartFailure): string {
-    return reason === 'permission-denied' ? t('microphonePermissionDenied') : t('microphoneError')
-  }
+  useEffect(() => {
+    if (startFailure === null) return
 
-  function uploadFailureMessage(reason: UploadFailure): string {
-    if (reason === 'audio-size') return t('audioSizeRejected')
-    if (reason === 'audio-validation') return t('audioValidationRejected')
-    if (reason === 'session-closed') return t('sessionNotInProgress')
+    showAlertDialog({
+      description:
+        startFailure === 'permission-denied'
+          ? t('microphonePermissionDenied')
+          : t('microphoneError'),
+      title: alerts('failureTitle'),
+    })
+  }, [alerts, startFailure, t])
 
-    return t('audioUploadFailed')
-  }
+  useEffect(() => {
+    if (!hasUploadFailed || uploadFailure === null) return
+
+    const actions: readonly AlertDialogAction[] =
+      uploadFailure === 'audio-upload'
+        ? [
+            { label: t('discardRecording'), onSelect: discard },
+            { label: t('retryUpload'), onSelect: retry },
+          ]
+        : [{ label: t('discardRecording'), onSelect: discard }]
+
+    showAlertDialog({
+      actions,
+      description: uploadFailureMessage(uploadFailure, t),
+      title: alerts('failureTitle'),
+    })
+  }, [alerts, discard, hasUploadFailed, retry, t, uploadFailure])
 
   if (session === null) return null
 
@@ -66,11 +99,6 @@ export function RecordingStartView({ audioLevelSource, capture }: RecordingStart
   if (status === 'awaiting-recording') {
     return (
       <section>
-        {capture.startFailure === null ? null : (
-          <p className="mb-3 text-center text-sm text-error" role="alert">
-            {startFailureMessage(capture.startFailure)}
-          </p>
-        )}
         {capture.isStarting ? (
           <p className="mb-1.5 text-xs" role="status">
             <ShinyText text={t('preparingMicrophone')} />
@@ -84,23 +112,6 @@ export function RecordingStartView({ audioLevelSource, capture }: RecordingStart
   if (status === 'uploading') {
     return (
       <section aria-label={t('uploadingLabel')} className="text-center">
-        {capture.hasUploadFailed && capture.uploadFailure !== null ? (
-          <div className="mb-3 flex flex-col items-center gap-3">
-            <p className="text-sm text-error" role="alert">
-              {uploadFailureMessage(capture.uploadFailure)}
-            </p>
-            <div className="flex gap-3">
-              {capture.uploadFailure === 'audio-upload' ? (
-                <Button onClick={capture.retry} type="button">
-                  {t('retryUpload')}
-                </Button>
-              ) : null}
-              <Button onClick={capture.discard} type="button" variant="secondary">
-                {t('discardRecording')}
-              </Button>
-            </div>
-          </div>
-        ) : null}
         <IdleRecorder />
       </section>
     )
@@ -109,11 +120,6 @@ export function RecordingStartView({ audioLevelSource, capture }: RecordingStart
   if (status === 'expired') {
     return (
       <div>
-        {capture.startFailure === null ? null : (
-          <p className="mb-3 text-center text-sm text-error" role="alert">
-            {startFailureMessage(capture.startFailure)}
-          </p>
-        )}
         <IdleRecorder />
       </div>
     )

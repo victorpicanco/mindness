@@ -290,7 +290,7 @@ describe('SessionPage', () => {
       'data-recording-state',
       'idle',
     )
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(screen.getByRole('status')).toHaveTextContent(
       'Sua sessão expirou porque a gravação não começou a tempo.',
     )
     vi.useRealTimers()

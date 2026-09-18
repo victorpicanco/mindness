@@ -1,23 +1,28 @@
 import { MutationCache, QueryClient } from '@tanstack/react-query'
 
 import { apiErrorDetails } from '@/lib/api/api-error'
-import { showApiErrorToast, type ApiErrorTranslator } from '@/lib/errors/show-api-error-toast'
-function rendersErrorsInline(meta: unknown): boolean {
+import { showApiErrorAlert, type AlertTranslator } from '@/lib/errors/show-api-error-alert'
+import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
+
+function announcesOwnFailure(meta: unknown): boolean {
   return (
     typeof meta === 'object' &&
     meta !== null &&
-    'errorPresentation' in meta &&
-    meta.errorPresentation === 'inline'
+    'announcesOwnFailure' in meta &&
+    meta.announcesOwnFailure === true
   )
 }
 
-export function createQueryClient(translate: ApiErrorTranslator): QueryClient {
+export function createQueryClient(translate: AlertTranslator): QueryClient {
   return new QueryClient({
     mutationCache: new MutationCache({
       onError: (error, _variables, _context, mutation) => {
-        if (rendersErrorsInline(mutation.meta)) return
+        if (announcesOwnFailure(mutation.meta)) return
 
-        showApiErrorToast(apiErrorDetails(error), translate)
+        const details = apiErrorDetails(error)
+
+        showApiErrorToast(details, translate)
+        showApiErrorAlert(details, translate)
       },
     }),
   })

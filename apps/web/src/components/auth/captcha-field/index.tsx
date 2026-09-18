@@ -1,9 +1,10 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Turnstile } from '@/components/ui/turnstile'
+import { showAlertDialog } from '@/lib/feedback/alert-dialog'
 
 import type { AuthFormBinding } from '@/components/auth/use-auth-form'
 
@@ -15,6 +16,16 @@ export function AuthCaptchaField({ form, siteKey }: AuthCaptchaFieldProps) {
   const translate = useTranslations()
   const [widgetFailed, setWidgetFailed] = useState(false)
   const errorKey = widgetFailed ? 'auth.errors.captchaUnavailable' : form.fieldErrors.captchaToken
+  const isMissing = siteKey === undefined
+
+  useEffect(() => {
+    if (!isMissing) return
+
+    showAlertDialog({
+      description: translate('auth.errors.captchaUnavailable'),
+      title: translate('common.alerts.failureTitle'),
+    })
+  }, [isMissing, translate])
 
   if (siteKey === undefined) return null
 

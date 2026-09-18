@@ -6,9 +6,11 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 
 import { AuthCaptchaField } from '@/components/auth/captcha-field'
-import { AuthFormAlert } from '@/components/auth/form-alert'
-import { LegalNotice } from '@/components/auth/legal-notice'
-import { useAuthForm, type AuthFormAction } from '@/components/auth/use-auth-form'
+import {
+  useAuthForm,
+  type AuthFieldErrors,
+  type AuthFormAction,
+} from '@/components/auth/use-auth-form'
 import { Button, buttonStyles } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -16,12 +18,12 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { REDIRECT_FIELD_NAME } from '@/lib/auth/redirect-target'
 import type { ApiErrorDescription } from '@/lib/errors/api-error-presentation'
 import { clientEnv } from '@/lib/env/client'
+import { showAlertDialog } from '@/lib/feedback/alert-dialog'
 
 const EMAIL_NOT_CONFIRMED_CODE = 'accounts.EMAIL_NOT_CONFIRMED'
 
 type SignInFormProps = {
   readonly action: AuthFormAction
-  readonly appearance?: 'dialog' | 'page' | undefined
   readonly initialError?: ApiErrorDescription | undefined
   readonly redirectTo?: string | undefined
 }
@@ -32,12 +34,7 @@ function googleAuthorizationUrl(): string {
   return apiBaseUrl === undefined ? '/auth/google' : `${apiBaseUrl}/auth/google`
 }
 
-export function SignInForm({
-  action,
-  appearance = 'page',
-  initialError,
-  redirectTo,
-}: SignInFormProps) {
+export function SignInForm({ action, initialError, redirectTo }: SignInFormProps) {
   const t = useTranslations('auth')
   const translate = useTranslations()
   const siteKey = clientEnv().turnstileSiteKey
@@ -45,28 +42,33 @@ export function SignInForm({
   const announcedInitialError = useRef(false)
 
   useEffect(() => {
-    if (announcedInitialError.current) return
-    if (initialError === undefined || initialError.presentation !== 'toast') return
+    if (announcedInitialError.current || initialError === undefined) return
+    if (initialError.presentation === 'toast') {
+      announcedInitialError.current = true
+      toast.error(translate(initialError.messageKey))
+
+      return
+    }
+
+    if (initialError.presentation !== 'dialog') return
 
     announcedInitialError.current = true
-    toast.error(translate(initialError.messageKey))
+    showAlertDialog({
+      description: translate(initialError.messageKey),
+      title: translate('common.alerts.failureTitle'),
+    })
   }, [initialError, translate])
 
-  const alertMessageKey = ((): typeof form.inlineMessageKey => {
-    if (siteKey === undefined) return 'auth.errors.captchaUnavailable'
-    if (form.inlineMessageKey !== undefined) return form.inlineMessageKey
-
-    return form.state.status === 'idle' && initialError?.presentation === 'inline'
-      ? initialError.messageKey
-      : undefined
-  })()
+  const fieldErrors: AuthFieldErrors =
+    form.state.status === 'idle' && initialError?.presentation === 'inline'
+      ? { [initialError.field]: initialError.messageKey }
+      : form.fieldErrors
 
   const needsEmailConfirmation =
     form.state.status === 'api-error' && form.state.error.code === EMAIL_NOT_CONFIRMED_CODE
-  const isDialog = appearance === 'dialog'
 
   return (
-    <form action={form.formAction} className={isDialog ? 'grid gap-5' : 'grid gap-8'} noValidate>
+    <form action={form.formAction} className="grid gap-5" noValidate>
       {redirectTo === undefined ? null : (
         <input name={REDIRECT_FIELD_NAME} type="hidden" value={redirectTo} />
       )}
@@ -77,7 +79,6 @@ export function SignInForm({
         >
           {t('signIn.google')}
         </a>
-        {isDialog ? null : <LegalNotice />}
         <div className="flex items-center gap-3 text-xs text-text-muted" role="separator">
           <span className="h-px flex-1 bg-divider" />
           {t('signIn.divider')}
@@ -86,9 +87,7 @@ export function SignInForm({
       </div>
       <div className="grid gap-4">
         <Field
-          error={
-            form.fieldErrors.email === undefined ? undefined : translate(form.fieldErrors.email)
-          }
+          error={fieldErrors.email === undefined ? undefined : translate(fieldErrors.email)}
           label={t('signIn.emailLabel')}
         >
           <Input
@@ -98,13 +97,9 @@ export function SignInForm({
             type="email"
           />
         </Field>
-        <div className={isDialog ? undefined : 'grid gap-1'}>
+        <div className="grid gap-1">
           <Field
-            error={
-              form.fieldErrors.password === undefined
-                ? undefined
-                : translate(form.fieldErrors.password)
-            }
+            error={fieldErrors.password === undefined ? undefined : translate(fieldErrors.password)}
             label={t('signIn.passwordLabel')}
           >
             <PasswordInput
@@ -115,21 +110,16 @@ export function SignInForm({
               showPasswordLabel={t('password.show')}
             />
           </Field>
-          {isDialog ? null : (
-            <Link
-              className="justify-self-end text-sm font-medium text-text underline-offset-2 hover:underline"
-              href="/auth/password-recovery"
-            >
-              {t('signIn.forgotPassword')}
-            </Link>
-          )}
+          <Link
+            className="justify-self-end text-sm font-medium text-text underline-offset-2 hover:underline"
+            href="/auth/password-recovery"
+          >
+            {t('signIn.forgotPassword')}
+          </Link>
         </div>
       </div>
       <AuthCaptchaField form={form} siteKey={siteKey} />
       <div className="grid gap-4">
-        <AuthFormAlert
-          message={alertMessageKey === undefined ? undefined : translate(alertMessageKey)}
-        />
         {needsEmailConfirmation ? (
           <Link
             className="text-center text-sm font-medium text-text underline-offset-2 hover:underline"
@@ -145,7 +135,7 @@ export function SignInForm({
           size="lg"
           type="submit"
         >
-          {isDialog ? t('authenticationDialog.signIn.submit') : t('signIn.submit')}
+          {t('signIn.submit')}
         </Button>
       </div>
     </form>

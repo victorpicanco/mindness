@@ -1,4 +1,4 @@
-type ApiErrorPresentation = 'inline' | 'silent' | 'toast'
+export type ApiErrorField = 'captchaToken' | 'email' | 'password'
 
 export type ApiErrorMessageKey =
   | 'auth.errors.accountAlreadyExists'
@@ -28,18 +28,25 @@ export type ApiErrorMessageKey =
   | 'home.research.microphoneError'
   | 'home.research.sessionNotInProgress'
 
-export type ApiErrorDescription = {
-  readonly messageKey: ApiErrorMessageKey
-  readonly presentation: ApiErrorPresentation
-}
+export type ApiErrorDescription =
+  | {
+      readonly field: ApiErrorField
+      readonly messageKey: ApiErrorMessageKey
+      readonly presentation: 'inline'
+    }
+  | {
+      readonly messageKey: ApiErrorMessageKey
+      readonly presentation: 'dialog' | 'silent' | 'toast'
+    }
 
 const UNKNOWN_API_ERROR: ApiErrorDescription = {
   messageKey: 'common.errors.unknown',
   presentation: 'toast',
 }
 
-const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
+const API_ERROR_DESCRIPTIONS = {
   'accounts.ACCOUNT_ALREADY_EXISTS': {
+    field: 'email',
     messageKey: 'auth.errors.accountAlreadyExists',
     presentation: 'inline',
   },
@@ -68,10 +75,12 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
     presentation: 'toast',
   },
   'accounts.CAPTCHA_REJECTED': {
+    field: 'captchaToken',
     messageKey: 'auth.errors.captchaFailed',
     presentation: 'inline',
   },
   'accounts.INVALID_ACCOUNT_VALUE': {
+    field: 'password',
     messageKey: 'auth.errors.invalidPassword',
     presentation: 'inline',
   },
@@ -81,15 +90,15 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   },
   'sessions.AUDIO_SIZE_REJECTED': {
     messageKey: 'home.research.audioSizeRejected',
-    presentation: 'inline',
+    presentation: 'dialog',
   },
   'sessions.AUDIO_UPLOAD_FAILED': {
     messageKey: 'home.research.audioUploadFailed',
-    presentation: 'inline',
+    presentation: 'dialog',
   },
   'sessions.AUDIO_VALIDATION_REJECTED': {
     messageKey: 'home.research.audioValidationRejected',
-    presentation: 'inline',
+    presentation: 'dialog',
   },
   'sessions.GUEST_TRIAL_CONSUMED': {
     messageKey: 'home.practice.accountEntryDialog.accountRequired.description',
@@ -97,7 +106,7 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   },
   'sessions.PRACTICE_NOT_ALLOWED': {
     messageKey: 'home.practice.errors.practiceNotAllowed',
-    presentation: 'inline',
+    presentation: 'dialog',
   },
   'sessions.SESSION_NOT_DELETABLE': {
     messageKey: 'common.errors.sessionNotDeletable',
@@ -105,16 +114,16 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   },
   'sessions.SESSION_NOT_IN_PROGRESS': {
     messageKey: 'home.research.sessionNotInProgress',
-    presentation: 'inline',
+    presentation: 'dialog',
   },
   'sessions.THEME_UNAVAILABLE': {
     messageKey: 'home.practice.errors.themeUnavailable',
-    presentation: 'inline',
+    presentation: 'toast',
   },
   'shared.INTERNAL_ERROR': UNKNOWN_API_ERROR,
   'shared.VALIDATION_FAILED': {
     messageKey: 'common.errors.validationFailed',
-    presentation: 'inline',
+    presentation: 'toast',
   },
   'web.ENVIRONMENT_INVALID': UNKNOWN_API_ERROR,
   'web.API_REQUEST_FAILED': {
@@ -132,15 +141,19 @@ const API_ERROR_DESCRIPTIONS: Readonly<Record<string, ApiErrorDescription>> = {
   },
   'web.AUDIO_UPLOAD_FAILED': {
     messageKey: 'home.research.audioUploadFailed',
-    presentation: 'inline',
+    presentation: 'dialog',
   },
   'web.MICROPHONE_UNAVAILABLE': {
     messageKey: 'home.research.microphoneError',
-    presentation: 'inline',
+    presentation: 'dialog',
   },
   'web.UNEXPECTED_ERROR': UNKNOWN_API_ERROR,
-}
+} as const satisfies Readonly<Record<string, ApiErrorDescription>>
+
+export const API_ERROR_CODES: readonly string[] = Object.keys(API_ERROR_DESCRIPTIONS)
 
 export function describeApiError(code: string): ApiErrorDescription {
-  return API_ERROR_DESCRIPTIONS[code] ?? UNKNOWN_API_ERROR
+  const descriptions: Readonly<Record<string, ApiErrorDescription>> = API_ERROR_DESCRIPTIONS
+
+  return descriptions[code] ?? UNKNOWN_API_ERROR
 }

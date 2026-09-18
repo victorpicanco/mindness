@@ -188,7 +188,7 @@ export function useRecordingCapture({
   })
 
   const submitMutation = useMutation({
-    meta: { errorPresentation: 'inline' },
+    meta: { announcesOwnFailure: true },
     mutationFn: submitRecording,
     onError: (error, { sessionId }) => {
       const reason = uploadFailureOf(error)

@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AlertDialogProvider } from '@/components/providers/alert-dialog-provider'
 import type { TurnstileApi, TurnstileRenderOptions } from '@/components/ui/turnstile/types'
 import type {
   BrowserAnalyticsClient,
@@ -15,6 +16,8 @@ import {
 } from '@/lib/auth/action-state'
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+
+import { dismissAlertDialog } from '@/lib/feedback/alert-dialog'
 
 import { GuestTrialForm } from './index'
 
@@ -82,6 +85,7 @@ function renderGuestTrialForm(overrides: FormOverrides = {}) {
           overrides.startGuestTrial ?? (() => Promise.resolve(initialStartGuestTrialState))
         }
       />
+      <AlertDialogProvider />
     </NextIntlClientProvider>,
   )
 }
@@ -99,6 +103,9 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
+  act(() => {
+    dismissAlertDialog()
+  })
   cleanup()
   vi.unstubAllEnvs()
   delete window.turnstile
@@ -207,6 +214,40 @@ describe('GuestTrialForm', () => {
       'Conclua a verificação de segurança para continuar.',
     )
     expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('raises a blocking failure as a dialog, not next to the control', async () => {
+    renderGuestTrialForm({
+      startGuestTrial: respondWith({
+        status: 'api-error',
+        error: { code: 'sessions.SESSION_NOT_IN_PROGRESS', issues: null, requestId: null },
+      }),
+    })
+
+    await verifyCaptcha()
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar sem conta' }))
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Não foi possível continuar' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('never renders an inline error bound to a field this control does not have', async () => {
+    renderGuestTrialForm({
+      startGuestTrial: respondWith({
+        status: 'api-error',
+        error: { code: 'accounts.ACCOUNT_ALREADY_EXISTS', issues: null, requestId: null },
+      }),
+    })
+
+    await verifyCaptcha()
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar sem conta' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('asks for an account when the action finds the trial already consumed', async () => {

@@ -2,9 +2,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AlertDialogProvider } from '@/components/providers/alert-dialog-provider'
 import type { TurnstileApi, TurnstileRenderOptions } from '@/components/ui/turnstile/types'
 import { messages } from '@/i18n/messages'
 import { initialAuthActionState, type AuthActionState } from '@/lib/auth/action-state'
+import { dismissAlertDialog } from '@/lib/feedback/alert-dialog'
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
@@ -45,6 +47,7 @@ function renderForm(action: EmailRequestAction) {
         submitLabel="Enviar link de recuperação"
         successMessage="Se houver uma conta elegível, o link chegará por e-mail."
       />
+      <AlertDialogProvider />
     </NextIntlClientProvider>,
   )
 }
@@ -62,12 +65,21 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
+  act(() => {
+    dismissAlertDialog()
+  })
   cleanup()
   vi.unstubAllEnvs()
   delete window.turnstile
 })
 
 describe('EmailRequestForm', () => {
+  it('hints the expected email format in the field', () => {
+    renderForm(() => Promise.resolve(initialAuthActionState))
+
+    expect(screen.getByLabelText('E-mail')).toHaveAttribute('placeholder', 'email@exemplo.com')
+  })
+
   it('shows the invalid email returned by the action', async () => {
     const calls: FormData[] = []
 
@@ -107,7 +119,7 @@ describe('EmailRequestForm', () => {
     })
   })
 
-  it('announces the neutral success message', async () => {
+  it('announces the neutral success message as a dialog the user has to acknowledge', async () => {
     renderForm(() => Promise.resolve<AuthActionState>({ status: 'success' }))
     await verifyCaptcha()
     fireEvent.change(screen.getByLabelText('E-mail'), {
@@ -115,9 +127,22 @@ describe('EmailRequestForm', () => {
     })
     submit()
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Tudo certo' })).toHaveAccessibleDescription(
       'Se houver uma conta elegível, o link chegará por e-mail.',
     )
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('keeps the unusable security verification off the form and in a dialog', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TURNSTILE_SITE_KEY', '')
+    renderForm(() => Promise.resolve(initialAuthActionState))
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Não foi possível continuar' }),
+    ).toHaveAccessibleDescription(
+      'A verificação de segurança não carregou. Recarregue a página e tente novamente.',
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('submits the current security verification value without polling', async () => {

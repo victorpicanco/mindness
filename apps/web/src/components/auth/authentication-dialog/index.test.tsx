@@ -3,13 +3,15 @@ import { NextIntlClientProvider } from 'next-intl'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AlertDialogProvider } from '@/components/providers/alert-dialog-provider'
 import type { TurnstileApi, TurnstileRenderOptions } from '@/components/ui/turnstile/types'
 import { messages } from '@/i18n/messages'
 import { initialAuthActionState, type StartGuestTrialAction } from '@/lib/auth/action-state'
+import { dismissAlertDialog } from '@/lib/feedback/alert-dialog'
 
 import { AuthenticationDialog, type AuthenticationMode } from './index'
 
-vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
 const signInAction = () => Promise.resolve(initialAuthActionState)
 const signUpAction = () => Promise.resolve(initialAuthActionState)
@@ -89,7 +91,12 @@ function renderAuthenticationDialogHarness() {
 }
 
 describe('AuthenticationDialog', () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    act(() => {
+      dismissAlertDialog()
+    })
+    cleanup()
+  })
 
   it('uses a compact panel on mobile and a smaller clean hero split on desktop', () => {
     renderAuthenticationDialog()
@@ -268,7 +275,9 @@ describe('AuthenticationDialog', () => {
     expect(toast.error).toHaveBeenCalledTimes(1)
   })
 
-  it('shows the password-updated confirmation on the sign-in tab', () => {
+  it('raises the password-updated confirmation as a toast, not next to the sign-in form', async () => {
+    const { toast } = await import('sonner')
+
     render(
       <NextIntlClientProvider locale="pt-BR" messages={messages}>
         <AuthenticationDialog
@@ -282,9 +291,48 @@ describe('AuthenticationDialog', () => {
       </NextIntlClientProvider>,
     )
 
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Senha atualizada. Entre novamente para continuar.',
+    expect(toast.success).toHaveBeenCalledWith('Senha atualizada. Entre novamente para continuar.')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('announces the sign-up confirmation as a dialog and leaves the form behind', async () => {
+    const onClose = vi.fn()
+
+    widgets.length = 0
+    vi.stubEnv('NEXT_PUBLIC_TURNSTILE_SITE_KEY', 'site-key')
+    installTurnstile()
+    render(
+      <NextIntlClientProvider locale="pt-BR" messages={messages}>
+        <AuthenticationDialog
+          mode="sign-up"
+          onClose={onClose}
+          onModeChange={() => undefined}
+          signInAction={signInAction}
+          signUpAction={() => Promise.resolve({ status: 'success' })}
+        />
+        <AlertDialogProvider />
+      </NextIntlClientProvider>,
     )
+
+    await waitFor(() => {
+      expect(widgets).not.toHaveLength(0)
+    })
+    await act(() => {
+      widgets[0]?.options.callback('captcha-token')
+
+      return Promise.resolve()
+    })
+    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'person@example.com' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Valid_password1!' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Tudo certo' })).toHaveAccessibleDescription(
+      'Verifique seu e-mail para continuar.',
+    )
+    expect(onClose).toHaveBeenCalled()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    vi.unstubAllEnvs()
+    delete window.turnstile
   })
 
   describe('continuing without an account starts the guest trial directly', () => {

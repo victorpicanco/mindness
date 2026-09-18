@@ -1,7 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef } from 'react'
+import { toast } from 'sonner'
 
 import { GuestTrialForm } from '@/components/auth/guest-trial-form'
 import { SignInForm } from '@/components/auth/sign-in-form'
@@ -12,6 +13,7 @@ import type { AuthFormAction, StartGuestTrialAction } from '@/lib/auth/action-st
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import type { ApiErrorDescription } from '@/lib/errors/api-error-presentation'
+import { showAlertDialog } from '@/lib/feedback/alert-dialog'
 
 export type AuthenticationMode = 'sign-in' | 'sign-up'
 
@@ -56,11 +58,19 @@ export function AuthenticationDialog({
   startGuestTrial,
 }: AuthenticationDialogProps) {
   const t = useTranslations('auth.authenticationDialog')
+  const common = useTranslations('common.alerts')
   const signIn = useTranslations('auth.signIn')
   const signUp = useTranslations('auth.signUp')
-  const [hasSignedUp, setHasSignedUp] = useState(false)
+  const announcedPasswordUpdate = useRef(false)
   const tabId = useId()
   const isSignIn = mode !== 'sign-up'
+
+  useEffect(() => {
+    if (!passwordUpdated || announcedPasswordUpdate.current) return
+
+    announcedPasswordUpdate.current = true
+    toast.success(signIn('passwordUpdated'))
+  }, [passwordUpdated, signIn])
 
   if (mode === null || signInAction === undefined || signUpAction === undefined) return null
 
@@ -96,10 +106,7 @@ export function AuthenticationDialog({
             aria-selected={!isSignIn}
             className={tabButtonClassName(!isSignIn)}
             id={`${tabId}-sign-up`}
-            onClick={() => {
-              setHasSignedUp(false)
-              onModeChange('sign-up')
-            }}
+            onClick={() => onModeChange('sign-up')}
             role="tab"
             type="button"
           >
@@ -121,17 +128,8 @@ export function AuthenticationDialog({
                 </h2>
                 <p className="text-sm font-normal text-text-muted">{t('welcomeDescription')}</p>
               </div>
-              <SignInForm action={signInAction} appearance="dialog" initialError={initialError} />
-              {passwordUpdated ? (
-                <p className="text-sm text-text-muted" role="status">
-                  {signIn('passwordUpdated')}
-                </p>
-              ) : null}
+              <SignInForm action={signInAction} initialError={initialError} />
             </>
-          ) : hasSignedUp ? (
-            <p className="text-sm text-text-muted" role="status">
-              {signUp('success')}
-            </p>
           ) : (
             <>
               <div className="grid gap-2">
@@ -148,7 +146,13 @@ export function AuthenticationDialog({
               <SignUpForm
                 action={signUpAction}
                 appearance="dialog"
-                onSuccess={() => setHasSignedUp(true)}
+                onSuccess={() => {
+                  showAlertDialog({
+                    description: signUp('success'),
+                    title: common('successTitle'),
+                  })
+                  onClose()
+                }}
               />
             </>
           )}

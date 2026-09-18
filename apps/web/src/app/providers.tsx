@@ -5,11 +5,11 @@ import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 
 import { createQueryClient } from '@/lib/api/query-client'
-import type { ApiErrorTranslator } from '@/lib/errors/show-api-error-toast'
+import type { AlertTranslator } from '@/lib/errors/show-api-error-alert'
 
 let browserQueryClient: QueryClient | undefined
 
-function getQueryClient(translate: ApiErrorTranslator): QueryClient {
+function getQueryClient(translate: AlertTranslator): QueryClient {
   if (isServer) {
     return createQueryClient(translate)
   }

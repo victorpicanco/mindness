@@ -16,7 +16,9 @@ import { Select } from '@/components/ui/select'
 import { apiErrorDetails } from '@/lib/api/api-error'
 import type { AuthFormAction, StartGuestTrialAction } from '@/lib/auth/action-state'
 import { startGuestTrialAction } from '@/lib/auth/start-guest-trial'
-import { describeApiError, type ApiErrorDescription } from '@/lib/errors/api-error-presentation'
+import type { ApiErrorDescription } from '@/lib/errors/api-error-presentation'
+import { showApiErrorAlert } from '@/lib/errors/show-api-error-alert'
+import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
 import { sessionPath } from '@/lib/navigation/session-routes'
 import { bffFetch } from '@/lib/api/bff-client'
 import { startedSessionSchema } from '@/lib/api/contracts/sessions'
@@ -66,14 +68,6 @@ async function requestSessionStart(input: StartSessionInput): Promise<StartedSes
     method: 'POST',
     schema: startedSessionSchema,
   })
-}
-
-function inlineFailureCode(error: unknown): string | null {
-  if (error === null) return null
-
-  const { code } = apiErrorDetails(error)
-
-  return describeApiError(code).presentation === 'inline' ? code : null
 }
 
 function toDifficulty(value: string): SessionDifficulty | null {
@@ -150,10 +144,20 @@ export function PracticeConfigForm({
   const startControlRef = useRef<HTMLButtonElement>(null)
   const startsAnonymousTrialRef = useRef(viewer === 'guest')
 
+  function handleSignOut() {
+    posthog.capture('sign_out')
+    posthog.reset()
+
+    return signOut()
+  }
+
   const mutation = useMutation({
+    meta: { announcesOwnFailure: true },
     mutationFn: startSession,
     onError: (error) => {
-      if (apiErrorDetails(error).code === GUEST_TRIAL_CONSUMED_CODE) {
+      const details = apiErrorDetails(error)
+
+      if (details.code === GUEST_TRIAL_CONSUMED_CODE) {
         posthog.capture('anonymous_trial_blocked')
         setHasConsumedTrial(true)
         setAuthenticationMode('sign-in')
@@ -161,9 +165,17 @@ export function PracticeConfigForm({
         return
       }
 
-      if (inlineFailureCode(error) === PRACTICE_NOT_ALLOWED_CODE) {
+      if (details.code === PRACTICE_NOT_ALLOWED_CODE) {
         posthog.capture('practice_not_allowed')
+        showApiErrorAlert(details, translate, [
+          { label: t('signOutToRetry'), onSelect: () => void handleSignOut() },
+        ])
+
+        return
       }
+
+      showApiErrorToast(details, translate)
+      showApiErrorAlert(details, translate)
     },
     onSuccess: (session, startedConfiguration) => {
       const { serverNow, ...practiceSession } = session
@@ -213,16 +225,6 @@ export function PracticeConfigForm({
   function closeAuthentication() {
     setAuthenticationMode(null)
     startControlRef.current?.focus()
-  }
-
-  const failureCode = inlineFailureCode(mutation.isError ? mutation.error : null)
-  const isConsentPending = failureCode === PRACTICE_NOT_ALLOWED_CODE
-
-  function handleSignOut() {
-    posthog.capture('sign_out')
-    posthog.reset()
-
-    return signOut()
   }
 
   return (
@@ -301,18 +303,6 @@ export function PracticeConfigForm({
         signUpAction={signUpAction}
         startGuestTrial={startGuestTrial}
       />
-      {failureCode === null ? null : (
-        <div className="flex flex-col items-start gap-3 text-sm text-error" role="alert">
-          <p>{translate(describeApiError(failureCode).messageKey)}</p>
-          {isConsentPending ? (
-            <form action={handleSignOut}>
-              <Button size="sm" type="submit" variant="secondary">
-                {t('signOutToRetry')}
-              </Button>
-            </form>
-          ) : null}
-        </div>
-      )}
     </div>
   )
 }

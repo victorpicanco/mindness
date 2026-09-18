@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 
+import { ExpiredRecoveryLink } from '@/components/auth/expired-recovery-link'
 import { AuthPageShell } from '@/components/auth/page-shell'
 import { UpdatePasswordForm } from '@/components/auth/update-password-form'
 import { createRequireSession } from '@/lib/auth/require-session'
@@ -21,18 +21,7 @@ export default async function UpdatePasswordPage({
 
   return (
     <AuthPageShell description={t('description')} title={t('title')}>
-      {invalid ? (
-        <>
-          <p className="text-sm text-error" role="alert">
-            {t('invalid')}
-          </p>
-          <Link className="text-center text-sm underline" href="/auth/password-recovery">
-            {t('requestAgain')}
-          </Link>
-        </>
-      ) : (
-        <UpdatePasswordForm action={updatePasswordAction} />
-      )}
+      {invalid ? <ExpiredRecoveryLink /> : <UpdatePasswordForm action={updatePasswordAction} />}
     </AuthPageShell>
   )
 }

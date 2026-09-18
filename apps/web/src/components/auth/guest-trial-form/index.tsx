@@ -14,12 +14,13 @@ import {
 } from '@/lib/auth/action-state'
 import { clientEnv } from '@/lib/env/client'
 import { describeApiError, type ApiErrorMessageKey } from '@/lib/errors/api-error-presentation'
+import { showApiErrorAlert } from '@/lib/errors/show-api-error-alert'
 import { showApiErrorToast } from '@/lib/errors/show-api-error-toast'
 import { runGuestTrialExclusively } from '@/lib/auth/guest-trial-lock'
 
 type GuestTrialTranslator = (key: 'auth.errors.captchaRequired' | ApiErrorMessageKey) => string
 
-function inlineFailureMessage(
+function captchaErrorMessage(
   state: StartGuestTrialState,
   translate: GuestTrialTranslator,
 ): string | undefined {
@@ -28,7 +29,13 @@ function inlineFailureMessage(
 
   const description = describeApiError(state.error.code)
 
-  return description.presentation === 'inline' ? translate(description.messageKey) : undefined
+  return description.presentation === 'inline' && description.field === 'captchaToken'
+    ? translate(description.messageKey)
+    : undefined
+}
+
+function hasFailed(state: StartGuestTrialState): boolean {
+  return state.status === 'captcha-required' || state.status === 'api-error'
 }
 
 type GuestTrialFormProps = {
@@ -68,10 +75,13 @@ export function GuestTrialForm({
   }, [onAccountRequired, onStarted, state])
 
   useEffect(() => {
-    if (state.status === 'api-error') showApiErrorToast(state.error, translate)
+    if (state.status !== 'api-error') return
+
+    showApiErrorToast(state.error, translate)
+    showApiErrorAlert(state.error, translate)
   }, [state, translate])
 
-  const failure = inlineFailureMessage(state, translate)
+  const captchaError = captchaErrorMessage(state, translate)
   const isCompact = appearance === 'compact'
 
   return (
@@ -82,7 +92,14 @@ export function GuestTrialForm({
     >
       <AnonymousDistinctIdField getDistinctId={() => analytics.getDistinctId()} />
       {siteKey === undefined ? null : (
-        <Turnstile onTokenChange={setCaptchaToken} resetSignal={state} siteKey={siteKey} />
+        <div className="grid gap-1.5">
+          <Turnstile onTokenChange={setCaptchaToken} resetSignal={state} siteKey={siteKey} />
+          {captchaError === undefined ? null : (
+            <p className="text-sm text-error" role="alert">
+              {captchaError}
+            </p>
+          )}
+        </div>
       )}
       <Button
         className={isCompact ? 'px-2 text-sm' : undefined}
@@ -92,13 +109,8 @@ export function GuestTrialForm({
         type="submit"
         variant={isCompact ? 'ghost' : 'secondary'}
       >
-        {failure === undefined ? t('continueWithoutAccount') : t('retry')}
+        {hasFailed(state) ? t('retry') : t('continueWithoutAccount')}
       </Button>
-      {failure === undefined ? null : (
-        <p className="text-sm text-error" role="alert">
-          {failure}
-        </p>
-      )}
     </form>
   )
 }

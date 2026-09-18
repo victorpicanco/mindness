@@ -3,20 +3,28 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { AlertDialogProvider } from '@/components/providers/alert-dialog-provider'
 import { messages } from '@/i18n/messages'
 import { ApiClientError } from '@/lib/api/client-error'
+import { alertDialogStore, dismissAlertDialog } from '@/lib/feedback/alert-dialog'
 
 import { Providers } from './providers'
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
-function FailingMutation({ presentation }: { readonly presentation?: 'inline' }) {
+function FailingMutation({
+  announcesOwnFailure,
+  code = 'web.API_REQUEST_FAILED',
+}: {
+  readonly announcesOwnFailure?: boolean
+  readonly code?: string
+}) {
   const mutation = useMutation({
-    ...(presentation === undefined ? {} : { meta: { errorPresentation: presentation } }),
+    ...(announcesOwnFailure === undefined ? {} : { meta: { announcesOwnFailure } }),
     mutationFn: () =>
       Promise.reject(
         new ApiClientError({
-          code: 'web.API_REQUEST_FAILED',
+          code,
           issues: null,
           message: 'Unable to reach the API.',
           requestId: null,
@@ -31,11 +39,12 @@ function FailingMutation({ presentation }: { readonly presentation?: 'inline' })
   )
 }
 
-function renderMutation(presentation?: 'inline') {
+function renderMutation(props: { announcesOwnFailure?: boolean; code?: string } = {}) {
   render(
     <NextIntlClientProvider locale="pt-BR" messages={messages}>
       <Providers>
-        <FailingMutation {...(presentation === undefined ? {} : { presentation })} />
+        <FailingMutation {...props} />
+        <AlertDialogProvider />
       </Providers>
     </NextIntlClientProvider>,
   )
@@ -45,6 +54,7 @@ function renderMutation(presentation?: 'inline') {
 
 describe('Providers', () => {
   afterEach(() => {
+    dismissAlertDialog()
     cleanup()
     vi.clearAllMocks()
   })
@@ -74,12 +84,23 @@ describe('Providers', () => {
     )
   })
 
-  it('stays quiet for a mutation that renders its own errors inline', async () => {
+  it('raises a blocking mutation failure as a dialog instead of a toast', async () => {
     const { toast } = await import('sonner')
-    renderMutation('inline')
+    renderMutation({ code: 'web.MICROPHONE_UNAVAILABLE' })
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Não foi possível continuar' }),
+    ).toHaveAccessibleDescription('Não foi possível acessar o microfone.')
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('stays quiet for a mutation that announces its own failure', async () => {
+    const { toast } = await import('sonner')
+    renderMutation({ announcesOwnFailure: true, code: 'web.MICROPHONE_UNAVAILABLE' })
 
     await screen.findByRole('button', { name: 'Falhou' })
 
     expect(toast.error).not.toHaveBeenCalled()
+    expect(alertDialogStore.getState().request).toBeNull()
   })
 })

@@ -7,6 +7,7 @@ import { Suspense, type ReactNode } from 'react'
 
 import { rootClientMessages } from '@/i18n/client-messages'
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { AlertDialogProvider } from '@/components/providers/alert-dialog-provider'
 import { ToastProvider } from '@/components/providers/toast-provider'
 
 import './globals.css'
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <Providers>
             <ThemeProvider>
               {children}
+              <AlertDialogProvider />
               <ToastProvider />
             </ThemeProvider>
           </Providers>

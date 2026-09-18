@@ -39,6 +39,12 @@ beforeEach(async () => {
 afterEach(cleanup)
 
 describe('UpdatePasswordForm', () => {
+  it('hints what belongs in the password field', () => {
+    renderForm(() => Promise.resolve(initialAuthActionState))
+
+    expect(screen.getByLabelText('Senha')).toHaveAttribute('placeholder', 'Digite sua senha')
+  })
+
   it('shows the invalid password returned by the action', async () => {
     const calls: FormData[] = []
 

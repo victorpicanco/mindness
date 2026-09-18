@@ -43,7 +43,7 @@ const PRACTICE_TRANSLATIONS: Readonly<Record<string, string>> = {
   title: 'Qual será o assunto de hoje?',
 }
 
-vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 vi.mock('next/cache', () => ({ cacheLife: () => undefined }))
 vi.mock('next/headers', () => ({
   cookies: () =>
@@ -232,14 +232,14 @@ describe('HomePage', () => {
     expect(toast.error).toHaveBeenCalledTimes(1)
   })
 
-  it('opens authentication with the password-updated confirmation for a visitor', async () => {
+  it('opens authentication and toasts the password-updated confirmation for a visitor', async () => {
+    const { toast } = await import('sonner')
     const HomePage = await loadHomePage()
 
     renderPage(await HomePage(searchParamsOf({ status: 'password-updated' })))
 
     expect(screen.getByRole('dialog', { name: 'É bom ter você de volta.' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Senha atualizada. Entre novamente para continuar.',
-    )
+    expect(toast.success).toHaveBeenCalledWith('Senha atualizada. Entre novamente para continuar.')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 })

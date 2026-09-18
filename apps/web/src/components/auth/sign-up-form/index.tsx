@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react'
 import posthog from 'posthog-js'
 
 import { AuthCaptchaField } from '@/components/auth/captcha-field'
-import { AuthFormAlert } from '@/components/auth/form-alert'
 import { LegalNotice } from '@/components/auth/legal-notice'
 import { PasswordChecklist } from '@/components/auth/password-checklist'
 import { useAuthForm, type AuthFormAction } from '@/components/auth/use-auth-form'
@@ -28,9 +27,6 @@ export function SignUpForm({ action, appearance = 'page', onSuccess }: SignUpFor
   const hasReportedSuccessRef = useRef(false)
   const siteKey = clientEnv().turnstileSiteKey
   const form = useAuthForm({ action, requiresCaptcha: siteKey !== undefined })
-
-  const alertMessageKey =
-    siteKey === undefined ? 'auth.errors.captchaUnavailable' : form.inlineMessageKey
 
   const hasSucceeded = form.state.status === 'success'
   const isDialog = appearance === 'dialog'
@@ -104,9 +100,6 @@ export function SignUpForm({ action, appearance = 'page', onSuccess }: SignUpFor
           </Field>
         )}
         <AuthCaptchaField form={form} siteKey={siteKey} />
-        <AuthFormAlert
-          message={alertMessageKey === undefined ? undefined : translate(alertMessageKey)}
-        />
         <LegalNotice />
         <Button
           disabled={siteKey === undefined}

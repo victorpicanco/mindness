@@ -80,7 +80,7 @@ export function SessionConversation({ analysis }: SessionConversationProps) {
                 >
                   <SessionMessage label={t('assistantMessageLabel')} sender="assistant">
                     {status === 'expired' ? (
-                      <p role="alert">{t('expired')}</p>
+                      <p role="status">{t('expired')}</p>
                     ) : (
                       <div aria-live="polite">
                         <p className="font-medium">{t('researchFinished')}</p>

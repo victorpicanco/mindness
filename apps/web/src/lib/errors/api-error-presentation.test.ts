@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { describeApiError } from './api-error-presentation'
+import { API_ERROR_CODES, describeApiError } from './api-error-presentation'
 
 describe('describeApiError', () => {
   it('raises rejected credentials as a toast, not as a field error', () => {
@@ -52,27 +52,6 @@ describe('describeApiError', () => {
     })
   })
 
-  it('describes the rejected captcha inline so the form can reset the widget', () => {
-    expect(describeApiError('accounts.CAPTCHA_REJECTED')).toEqual({
-      messageKey: 'auth.errors.captchaFailed',
-      presentation: 'inline',
-    })
-  })
-
-  it('describes a request the API refused to validate', () => {
-    expect(describeApiError('shared.VALIDATION_FAILED')).toEqual({
-      messageKey: 'common.errors.validationFailed',
-      presentation: 'inline',
-    })
-  })
-
-  it('keeps a duplicated email next to the field that has to change', () => {
-    expect(describeApiError('accounts.ACCOUNT_ALREADY_EXISTS')).toEqual({
-      messageKey: 'auth.errors.accountAlreadyExists',
-      presentation: 'inline',
-    })
-  })
-
   it('describes an account the API could not find', () => {
     expect(describeApiError('accounts.ACCOUNT_NOT_FOUND')).toEqual({
       messageKey: 'auth.errors.accountNotFound',
@@ -85,23 +64,6 @@ describe('describeApiError', () => {
       messageKey: 'auth.errors.sessionExpired',
       presentation: 'toast',
     })
-  })
-  it.each([
-    ['sessions.AUDIO_SIZE_REJECTED', 'home.research.audioSizeRejected'],
-    ['sessions.AUDIO_VALIDATION_REJECTED', 'home.research.audioValidationRejected'],
-    ['sessions.AUDIO_UPLOAD_FAILED', 'home.research.audioUploadFailed'],
-    ['web.AUDIO_UPLOAD_FAILED', 'home.research.audioUploadFailed'],
-    ['sessions.SESSION_NOT_IN_PROGRESS', 'home.research.sessionNotInProgress'],
-    ['web.MICROPHONE_UNAVAILABLE', 'home.research.microphoneError'],
-  ] as const)('keeps %s on the recording screen', (code, messageKey) => {
-    expect(describeApiError(code)).toEqual({ messageKey, presentation: 'inline' })
-  })
-
-  it.each([
-    ['sessions.THEME_UNAVAILABLE', 'home.practice.errors.themeUnavailable'],
-    ['sessions.PRACTICE_NOT_ALLOWED', 'home.practice.errors.practiceNotAllowed'],
-  ] as const)('keeps the blocking %s on the practice form', (code, messageKey) => {
-    expect(describeApiError(code)).toEqual({ messageKey, presentation: 'inline' })
   })
 
   it('describes a missing API base URL as an unexpected failure', () => {
@@ -122,6 +84,51 @@ describe('describeApiError', () => {
     expect(describeApiError('sessions.SESSION_NOT_DELETABLE')).toEqual({
       messageKey: 'common.errors.sessionNotDeletable',
       presentation: 'toast',
+    })
+  })
+
+  it.each([
+    ['accounts.CAPTCHA_REJECTED', 'auth.errors.captchaFailed', 'captchaToken'],
+    ['accounts.ACCOUNT_ALREADY_EXISTS', 'auth.errors.accountAlreadyExists', 'email'],
+    ['accounts.INVALID_ACCOUNT_VALUE', 'auth.errors.invalidPassword', 'password'],
+  ] as const)(
+    'binds the inline %s to the field the user has to correct',
+    (code, messageKey, field) => {
+      expect(describeApiError(code)).toEqual({ field, messageKey, presentation: 'inline' })
+    },
+  )
+
+  it('never describes an inline error without the field that owns it', () => {
+    const inlineWithoutField = API_ERROR_CODES.map((code) => describeApiError(code)).filter(
+      (description) => description.presentation === 'inline' && !('field' in description),
+    )
+
+    expect(inlineWithoutField).toEqual([])
+  })
+
+  it.each([
+    ['sessions.AUDIO_SIZE_REJECTED', 'home.research.audioSizeRejected'],
+    ['sessions.AUDIO_VALIDATION_REJECTED', 'home.research.audioValidationRejected'],
+    ['sessions.AUDIO_UPLOAD_FAILED', 'home.research.audioUploadFailed'],
+    ['web.AUDIO_UPLOAD_FAILED', 'home.research.audioUploadFailed'],
+    ['sessions.SESSION_NOT_IN_PROGRESS', 'home.research.sessionNotInProgress'],
+    ['web.MICROPHONE_UNAVAILABLE', 'home.research.microphoneError'],
+    ['sessions.PRACTICE_NOT_ALLOWED', 'home.practice.errors.practiceNotAllowed'],
+  ] as const)('interrupts the flow with a dialog on %s', (code, messageKey) => {
+    expect(describeApiError(code)).toEqual({ messageKey, presentation: 'dialog' })
+  })
+
+  it.each([
+    ['sessions.THEME_UNAVAILABLE', 'home.practice.errors.themeUnavailable'],
+    ['shared.VALIDATION_FAILED', 'common.errors.validationFailed'],
+  ] as const)('raises the recoverable %s as a toast', (code, messageKey) => {
+    expect(describeApiError(code)).toEqual({ messageKey, presentation: 'toast' })
+  })
+
+  it('keeps the consumed guest trial silent so the dialog can take over', () => {
+    expect(describeApiError('sessions.GUEST_TRIAL_CONSUMED')).toEqual({
+      messageKey: 'home.practice.accountEntryDialog.accountRequired.description',
+      presentation: 'silent',
     })
   })
 })

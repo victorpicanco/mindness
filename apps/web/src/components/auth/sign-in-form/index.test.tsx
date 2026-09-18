@@ -65,7 +65,7 @@ function fillCredentials(email = 'person@example.com', password = 'a-valid-passw
 }
 
 function submit(): void {
-  fireEvent.click(screen.getByRole('button', { name: 'Avançar' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Login' }))
 }
 
 beforeEach(async () => {
@@ -85,7 +85,7 @@ afterEach(() => {
 })
 
 describe('SignInForm', () => {
-  it('shows the consent notice next to Google entry without making sign-in conditional on interaction', async () => {
+  it('does not make sign-in conditional on interacting with a consent notice', async () => {
     const submittedFormData: FormData[] = []
     const signInAction: SignInAction = (_state, formData) => {
       submittedFormData.push(formData)
@@ -95,7 +95,7 @@ describe('SignInForm', () => {
 
     renderSignInForm(signInAction)
 
-    expect(screen.getByRole('button', { name: 'Termos de Uso e Privacidade' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Termos de Uso e Privacidade' })).toBeNull()
 
     await verifyCaptcha()
     fillCredentials()
@@ -347,14 +347,15 @@ describe('SignInForm', () => {
     expect(passwordField.parentElement).toContainElement(recoveryLink)
     expect(passwordField.parentElement).toHaveClass('grid', 'gap-1')
     expect(recoveryLink).toHaveClass('justify-self-end')
+    expect(recoveryLink).toHaveAttribute('href', '/auth/password-recovery')
   })
 
   it('separates the credential fields from the submit action', () => {
     renderSignInForm(() => Promise.resolve(initialAuthActionState))
 
-    const form = screen.getByRole('button', { name: 'Avançar' }).closest('form')
+    const form = screen.getByRole('button', { name: 'Login' }).closest('form')
 
-    expect(form).toHaveClass('gap-8')
+    expect(form).toHaveClass('gap-5')
   })
 
   it('carries the page that bounced the visitor back to the action', async () => {

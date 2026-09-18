@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
-import { AuthFormAlert } from '@/components/auth/form-alert'
 import { PasswordChecklist } from '@/components/auth/password-checklist'
 import { useAuthForm, type AuthFormAction } from '@/components/auth/use-auth-form'
 import { Button } from '@/components/ui/button'
@@ -31,13 +30,11 @@ export function UpdatePasswordForm({ action }: { readonly action: AuthFormAction
           onChange={(event) => {
             setPassword(event.target.value)
           }}
+          placeholder={t('signIn.passwordPlaceholder')}
           showPasswordLabel={t('password.show')}
         />
       </Field>
       <PasswordChecklist password={password} />
-      <AuthFormAlert
-        message={form.inlineMessageKey === undefined ? undefined : translate(form.inlineMessageKey)}
-      />
       <Button isLoading={form.isSubmitting} size="lg" type="submit">
         {t('updatePassword.submit')}
       </Button>

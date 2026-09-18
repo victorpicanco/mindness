@@ -152,7 +152,7 @@ describe('ProcessingStatus', () => {
 
       await act(() => vi.advanceTimersByTimeAsync(0))
 
-      expect(screen.getByRole('alert')).toHaveTextContent(message)
+      expect(screen.getByRole('status')).toHaveTextContent(message)
       expect(screen.getByRole('link', { name: 'Iniciar nova sessão' })).toHaveAttribute('href', '/')
       expect(router.push).not.toHaveBeenCalled()
       expect(router.refresh).not.toHaveBeenCalled()

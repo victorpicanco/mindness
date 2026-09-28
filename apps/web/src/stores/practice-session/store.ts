@@ -38,6 +38,7 @@ export interface PracticeSessionState {
   readonly retentionDeadline: number | null
   readonly serverTimeOffsetMs: number
   readonly startResearching: (session: PracticeSession, serverNow: string) => void
+  readonly syncServerSession: (serverState: PracticeSessionInitialState | null) => void
   readonly openRecordingWindow: () => void
   readonly openRecording: (input: {
     readonly recordingStartedAt: string
@@ -91,16 +92,27 @@ export function createPracticeSessionStore(initialState?: PracticeSessionInitial
     retentionDeadline: null,
     serverTimeOffsetMs: initialState?.serverTimeOffsetMs ?? 0,
     startResearching: (session, serverNow) => {
-      set((state) => {
-        assertTransition(state.status, 'startResearching', ['idle', 'done'])
-        return {
-          audioBlob: null,
-          retentionDeadline: null,
-          serverTimeOffsetMs: new Date(serverNow).getTime() - Date.now(),
-          session,
-          status: 'researching',
-        }
-      })
+      set(() => ({
+        audioBlob: null,
+        retentionDeadline: null,
+        serverTimeOffsetMs: new Date(serverNow).getTime() - Date.now(),
+        session,
+        status: 'researching',
+      }))
+      clearRetentionTimer()
+    },
+    syncServerSession: (serverState) => {
+      if (serverState === null) return
+      if (serverState.session.sessionId === get().session?.sessionId) return
+
+      set(() => ({
+        audioBlob: null,
+        retentionDeadline: null,
+        serverTimeOffsetMs: serverState.serverTimeOffsetMs,
+        session: serverState.session,
+        status: serverState.status,
+      }))
+      clearRetentionTimer()
     },
     openRecordingWindow: () => {
       set((state) => {

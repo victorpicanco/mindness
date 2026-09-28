@@ -104,6 +104,7 @@ export function PracticeConfigFormWithNavigation(
     | 'signInAction'
     | 'signOut'
     | 'signUpAction'
+    | 'startSession'
     | 'viewer'
   >,
 ) {
@@ -112,7 +113,10 @@ export function PracticeConfigFormWithNavigation(
   return (
     <PracticeConfigForm
       {...props}
-      onSessionStarted={(sessionId) => router.push(sessionPath(sessionId))}
+      onSessionStarted={(sessionId) => {
+        router.push(sessionPath(sessionId))
+        router.refresh()
+      }}
     />
   )
 }

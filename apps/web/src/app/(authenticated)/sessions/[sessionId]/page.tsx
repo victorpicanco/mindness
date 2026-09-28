@@ -5,6 +5,7 @@ import { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
 import { getActiveSession, getSessionHistory } from '@/lib/api/authenticated-session-data'
 import { ApiClientError } from '@/lib/api/client-error'
 import { apiFetch } from '@/lib/api/server-client'
+import { practiceSessionInitialState } from '@/stores/practice-session/server-state'
 
 import { ExpiredSession } from '@/components/practice/expired-session'
 import { SessionConversation } from '@/components/practice/session-conversation'
@@ -46,7 +47,7 @@ export default async function SessionPage({ params }: SessionPageProps) {
   if (activeSession !== null && activeSession.sessionId === sessionId) {
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-surface">
-        <SessionConversation />
+        <SessionConversation serverState={practiceSessionInitialState(activeSession)} />
       </div>
     )
   }

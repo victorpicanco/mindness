@@ -245,6 +245,19 @@ describe('SessionPage', () => {
     vi.useRealTimers()
   })
 
+  it('renders the active session from the server when the client store never received it', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-24T12:00:00.000Z'))
+    respondToApi = createApiFetch(activeSession())
+    const Page = await loadSessionPage()
+
+    renderPage(await Page({ params: Promise.resolve({ sessionId: SESSION_ID }) }))
+
+    expect(screen.getByRole('heading', { name: 'Comunicação clara' })).toBeInTheDocument()
+    expect(screen.getByRole('timer')).toHaveTextContent('03:00')
+    vi.useRealTimers()
+  })
+
   it('rehydrates into the recording window when the research time is already over', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-24T12:04:00.000Z'))

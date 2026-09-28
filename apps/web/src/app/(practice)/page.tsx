@@ -31,12 +31,12 @@ async function readThemeCategories() {
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const [t, categories, accountProfile, activeSession, cookieStore, params] = await Promise.all([
+  const cookieStore = await cookies()
+  const [t, categories, accountProfile, activeSession, params] = await Promise.all([
     getTranslations('home.practice'),
     readThemeCategories(),
     getAccountProfileIfAuthenticated(),
     getActiveSessionIfAuthenticated(),
-    cookies(),
     searchParams,
   ])
 

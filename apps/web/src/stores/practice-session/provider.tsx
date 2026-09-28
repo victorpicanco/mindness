@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 
 import { PracticeSessionProviderMissingError } from './errors'
@@ -20,6 +20,10 @@ interface PracticeSessionProviderProps {
 
 export function PracticeSessionProvider({ children, initialState }: PracticeSessionProviderProps) {
   const [store] = useState(() => createPracticeSessionStore(initialState))
+
+  useEffect(() => {
+    store.getState().syncServerSession(initialState ?? null)
+  }, [initialState, store])
 
   return <PracticeSessionContext.Provider value={store}>{children}</PracticeSessionContext.Provider>
 }

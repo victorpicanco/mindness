@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { NextIntlClientProvider, useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -48,6 +49,7 @@ import {
 
 import {
   PracticeConfigForm,
+  PracticeConfigFormWithNavigation,
   type PracticeViewer,
   type StartSessionInput,
   type StartSessionRequest,
@@ -499,5 +501,42 @@ describe('PracticeConfigForm', () => {
     await selectAlertAction('Sair e entrar de novo')
 
     expect(signOut).toHaveBeenCalledOnce()
+  })
+  it('revalidates the server data of the shell after starting a session', async () => {
+    const router = {
+      back: vi.fn(),
+      bfcacheId: 'test-bfcache-id',
+      forward: vi.fn(),
+      prefetch: vi.fn(),
+      push: vi.fn(),
+      refresh: vi.fn(),
+      replace: vi.fn(),
+    }
+
+    render(
+      <AppRouterContext.Provider value={router}>
+        <NextIntlClientProvider locale="pt-BR" messages={messages} timeZone={DEFAULT_TIME_ZONE}>
+          <ApiProviders>
+            <PracticeSessionProvider>
+              <PracticeConfigFormWithNavigation
+                categories={CATEGORIES}
+                initialAuthenticationMode={null}
+                signInAction={() => Promise.resolve(initialAuthActionState)}
+                signOut={() => undefined}
+                signUpAction={() => Promise.resolve(initialAuthActionState)}
+                viewer="registered"
+                startSession={() => Promise.resolve(STARTED_SESSION)}
+              />
+            </PracticeSessionProvider>
+          </ApiProviders>
+        </NextIntlClientProvider>
+      </AppRouterContext.Provider>,
+    )
+    submitConfiguration()
+
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledWith(`/sessions/${STARTED_SESSION.sessionId}`)
+    })
+    expect(router.refresh).toHaveBeenCalledOnce()
   })
 })

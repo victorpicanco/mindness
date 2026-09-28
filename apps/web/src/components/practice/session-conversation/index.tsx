@@ -2,12 +2,13 @@
 
 import { useFormatter, useTranslations } from 'next-intl'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect } from 'react'
 import type { z } from 'zod'
 
 import type { sessionAnalysisSchema } from '@/lib/api/contracts/sessions'
 import { humanizeSlug } from '@/lib/text/humanize-slug'
 import { usePracticeSessionStore } from '@/stores/practice-session/provider'
+import type { PracticeSessionInitialState } from '@/stores/practice-session/store'
 
 import { AnalysisPlaybackProvider } from '@/components/practice/analysis-playback'
 import { AnalysisMessage } from '@/components/practice/analysis-message'
@@ -21,15 +22,25 @@ type SessionAnalysis = z.output<typeof sessionAnalysisSchema>
 
 interface SessionConversationProps {
   readonly analysis?: SessionAnalysis
+  readonly serverState?: PracticeSessionInitialState | undefined
 }
 
-export function SessionConversation({ analysis }: SessionConversationProps) {
+export function SessionConversation({ analysis, serverState }: SessionConversationProps) {
   const t = useTranslations('home.conversation')
   const format = useFormatter()
-  const activeSession = usePracticeSessionStore((state) => state.session)
-  const status = usePracticeSessionStore((state) => state.status)
-  const [session] = useState(activeSession)
+  const storedSession = usePracticeSessionStore((state) => state.session)
+  const storedStatus = usePracticeSessionStore((state) => state.status)
+  const syncServerSession = usePracticeSessionStore((state) => state.syncServerSession)
   const shouldReduceMotion = useReducedMotion()
+  const isStoreInSync =
+    serverState === undefined || storedSession?.sessionId === serverState.session.sessionId
+
+  useEffect(() => {
+    syncServerSession(serverState ?? null)
+  }, [serverState, syncServerSession])
+
+  const session = isStoreInSync ? storedSession : serverState.session
+  const status = isStoreInSync ? storedStatus : serverState.status
 
   if (session === null) return null
 

@@ -383,4 +383,94 @@ describe('practice session store', () => {
       retentionDeadline: null,
     })
   })
+  it('starts a new session from a status left behind by a previous one', () => {
+    const store = createPracticeSessionStore()
+    const session = {
+      configuration: SESSION_CONFIGURATION,
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    }
+    const nextSession = { ...session, sessionId: 'session-2', themeTitle: 'Speaking with rhythm' }
+
+    store.getState().startResearching(session, '2026-08-24T12:00:00.000Z')
+    store.getState().openRecordingWindow()
+    store.getState().expireSession()
+
+    store.getState().startResearching(nextSession, '2026-08-24T12:20:00.000Z')
+
+    expect(store.getState()).toMatchObject({ session: nextSession, status: 'researching' })
+  })
+
+  it('adopts the active session the server reports when it is not the stored one', () => {
+    const store = createPracticeSessionStore()
+    const session = {
+      configuration: SESSION_CONFIGURATION,
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-2',
+      themeTitle: 'Speaking with rhythm',
+    }
+
+    store.getState().syncServerSession({
+      serverTimeOffsetMs: 1_000,
+      session,
+      status: 'awaiting-recording',
+    })
+
+    expect(store.getState()).toMatchObject({
+      audioBlob: null,
+      serverTimeOffsetMs: 1_000,
+      session,
+      status: 'awaiting-recording',
+    })
+  })
+
+  it('keeps the client progress of the session the server reports as active', () => {
+    const store = createPracticeSessionStore()
+    const session = {
+      configuration: SESSION_CONFIGURATION,
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    }
+
+    store.getState().startResearching(session, '2026-08-24T12:00:00.000Z')
+    store.getState().openRecordingWindow()
+
+    store.getState().syncServerSession({
+      serverTimeOffsetMs: 0,
+      session,
+      status: 'researching',
+    })
+
+    expect(store.getState().status).toBe('awaiting-recording')
+  })
+
+  it('leaves the stored session untouched when the server reports no active session', () => {
+    const store = createPracticeSessionStore()
+    const session = {
+      configuration: SESSION_CONFIGURATION,
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:07:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-24T12:05:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    }
+
+    store.getState().startResearching(session, '2026-08-24T12:00:00.000Z')
+
+    store.getState().syncServerSession(null)
+
+    expect(store.getState()).toMatchObject({ session, status: 'researching' })
+  })
 })

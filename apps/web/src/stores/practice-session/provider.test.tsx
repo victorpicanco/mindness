@@ -39,4 +39,36 @@ describe('PracticeSessionProvider', () => {
 
     expect(screen.getByText('researching')).toBeInTheDocument()
   })
+  it('adopts the active session the server sends on a later render', () => {
+    const session = {
+      configuration: {
+        categorySlug: 'news',
+        difficulty: 'balanced',
+        searchWindowMinutes: 3,
+      } as const,
+      createdAt: '2026-08-24T12:00:00.000Z',
+      expiresAt: '2026-08-24T12:05:00.000Z',
+      recordingStartedAt: null,
+      researchEndsAt: '2026-08-24T12:03:00.000Z',
+      sessionId: 'session-1',
+      themeTitle: 'Communicating with clarity',
+    }
+    const { rerender } = render(
+      <PracticeSessionProvider>
+        <SessionStatus />
+      </PracticeSessionProvider>,
+    )
+
+    expect(screen.getByText('idle')).toBeInTheDocument()
+
+    rerender(
+      <PracticeSessionProvider
+        initialState={{ serverTimeOffsetMs: 0, session, status: 'researching' }}
+      >
+        <SessionStatus />
+      </PracticeSessionProvider>,
+    )
+
+    expect(screen.getByText('researching')).toBeInTheDocument()
+  })
 })

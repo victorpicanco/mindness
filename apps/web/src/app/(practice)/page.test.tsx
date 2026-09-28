@@ -19,6 +19,7 @@ let activeSession: unknown = null
 let isAuthenticated = false
 let accountProfile: unknown = null
 let isTrialUsed = false
+let cookieStoreDelay = Promise.resolve()
 
 const REGISTERED_PROFILE = {
   accountId: '4ff569a3-bffc-4b5d-bbb2-662ebf994a85',
@@ -46,11 +47,14 @@ const PRACTICE_TRANSLATIONS: Readonly<Record<string, string>> = {
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 vi.mock('next/cache', () => ({ cacheLife: () => undefined }))
 vi.mock('next/headers', () => ({
-  cookies: () =>
-    Promise.resolve({
+  cookies: async () => {
+    await cookieStoreDelay
+
+    return {
       get: (name: string) =>
         isTrialUsed && name === 'mindness_guest_trial_used' ? { value: 'true' } : undefined,
-    }),
+    }
+  },
 }))
 vi.mock('next-intl/server', () => ({
   getTranslations: () => Promise.resolve((key: string) => PRACTICE_TRANSLATIONS[key] ?? ''),
@@ -142,31 +146,47 @@ describe('HomePage', () => {
     accountProfile = REGISTERED_PROFILE
     isAuthenticated = false
     isTrialUsed = false
+    cookieStoreDelay = Promise.resolve()
   })
 
   afterEach(cleanup)
 
   it('loads only public categories for a visitor', async () => {
     const HomePage = await loadHomePage()
-    const rendered = HomePage(searchParamsOf())
+
+    await HomePage(searchParamsOf())
 
     expect(requestedPaths).toEqual(['/sessions/theme-categories'])
+  })
 
+  it('waits for request cookies before loading page data', async () => {
+    let releaseCookies: () => void = () => undefined
+    cookieStoreDelay = new Promise<void>((resolve) => {
+      releaseCookies = resolve
+    })
+    const HomePage = await loadHomePage()
+
+    const rendered = HomePage(searchParamsOf())
+
+    expect(requestedPaths).toEqual([])
+
+    releaseCookies()
     await rendered
+
+    expect(requestedPaths).toEqual(['/sessions/theme-categories'])
   })
 
   it('loads the active session for an authenticated viewer', async () => {
     isAuthenticated = true
     const HomePage = await loadHomePage()
-    const rendered = HomePage(searchParamsOf())
+
+    await HomePage(searchParamsOf())
 
     expect(requestedPaths).toEqual([
       '/sessions/theme-categories',
       '/accounts/me',
       '/sessions/active',
     ])
-
-    await rendered
   })
 
   it('shows the available categories', async () => {

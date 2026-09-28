@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-const configSource = readFile(new URL('../../../playwright.config.ts', import.meta.url), 'utf8')
+const configSource = readFile(resolve(process.cwd(), 'playwright.config.ts'), 'utf8')
 
 describe('Playwright configuration', () => {
   it('runs the smoke flow in desktop Chromium and mobile Safari', async () => {

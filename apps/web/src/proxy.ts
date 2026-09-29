@@ -114,6 +114,18 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const isSecureRequest =
     (request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.slice(0, -1)) === 'https'
   const contentSecurityPolicy = createContentSecurityPolicy(nonce, isSecureRequest)
+
+  if (matchesRoute(request.nextUrl.pathname, removedAuthRoutes)) {
+    return setSecurityHeaders(
+      NextResponse.redirect(
+        new URL(`${SIGNED_IN_HOME}${request.nextUrl.search}`, request.url),
+        308,
+      ),
+      contentSecurityPolicy,
+      isSecureRequest,
+    )
+  }
+
   const needsSession = requiresSession(request.nextUrl)
   const hadAccessToken = readSessionCookies(request.cookies).accessToken !== undefined
   const renewal = await renewSession({ cookieStore: request.cookies })
@@ -122,20 +134,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   const isSignedIn = hasLiveSession(request.cookies)
   const isGuest = hasGuestSession(request.cookies)
-
-  if (matchesRoute(request.nextUrl.pathname, removedAuthRoutes)) {
-    const homeUrl = new URL(SIGNED_IN_HOME, request.url)
-    homeUrl.search = request.nextUrl.search
-
-    return applyRenewalToResponse(
-      setSecurityHeaders(
-        NextResponse.redirect(homeUrl, 308),
-        contentSecurityPolicy,
-        isSecureRequest,
-      ),
-      renewal,
-    )
-  }
 
   if (needsSession && !isSignedIn) {
     return applyRenewalToResponse(

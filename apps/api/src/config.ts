@@ -31,6 +31,8 @@ const EnvSchema = Type.Object({
   ANALYSIS_QUEUE_CONCURRENCY: Type.Integer({ minimum: 1 }),
   AUTH_RATE_LIMIT_MAX: Type.Integer({ minimum: 1 }),
   AUTH_RATE_LIMIT_WINDOW_MS: Type.Integer({ minimum: 1000 }),
+  POSTHOG_KEY: Type.Optional(Type.String()),
+  POSTHOG_HOST: Type.Optional(Type.String()),
 })
 
 const STRING_ENV_KEYS = [
@@ -50,6 +52,8 @@ const STRING_ENV_KEYS = [
   'GOOGLE_CLOUD_PROJECT',
   'GOOGLE_CLOUD_LOCATION',
   'GEMINI_MODEL',
+  'POSTHOG_KEY',
+  'POSTHOG_HOST',
 ] as const
 const BOOLEAN_ENV_KEYS = ['TRUST_PROXY'] as const
 const NUMERIC_ENV_KEYS = [
@@ -89,6 +93,8 @@ export interface Config {
   readonly analysisQueueConcurrency: number
   readonly authRateLimitMax: number
   readonly authRateLimitWindowMs: number
+  readonly posthogKey: string | null
+  readonly posthogHost: string | null
 }
 
 function buildCandidate(env: NodeJS.ProcessEnv): Record<string, unknown> {
@@ -161,5 +167,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Readonly<Config> {
     analysisQueueConcurrency: candidate.ANALYSIS_QUEUE_CONCURRENCY,
     authRateLimitMax: candidate.AUTH_RATE_LIMIT_MAX,
     authRateLimitWindowMs: candidate.AUTH_RATE_LIMIT_WINDOW_MS,
+    posthogKey: candidate.POSTHOG_KEY ?? null,
+    posthogHost: candidate.POSTHOG_HOST ?? null,
   })
 }

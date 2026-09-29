@@ -67,6 +67,8 @@ services:
       WORKER_HEALTH_PORT: '3334'
       TRUST_PROXY: 'false'
       REDIS_URL: redis://redis:6379
+      POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+      POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-}
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-credentials.json
     volumes:
       - ./secrets/google-credentials.json:/run/secrets/google-credentials.json:ro

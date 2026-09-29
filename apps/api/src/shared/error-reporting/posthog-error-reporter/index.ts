@@ -2,7 +2,7 @@ import { PostHog } from 'posthog-node'
 
 import { BaseError } from '@/shared/errors/base-error/index.js'
 
-export type ErrorReportProperties = Readonly<Record<string, unknown>>
+type ErrorReportProperties = Readonly<Record<string, unknown>>
 
 export interface ErrorReporter {
   report(error: unknown, properties: ErrorReportProperties): void
@@ -18,7 +18,7 @@ export interface ErrorTrackingClient {
   shutdown(): Promise<void>
 }
 
-export interface CreateErrorReporterOptions {
+interface CreateErrorReporterOptions {
   readonly projectToken: string | null
   readonly host: string | null
   readonly createClient?: (projectToken: string, host: string | null) => ErrorTrackingClient

@@ -19,6 +19,8 @@ const signedOutOnlyRoutes = [
   '/auth/confirmed',
 ]
 
+const removedAuthRoutes = ['/auth/sign-in', '/auth/sign-up']
+
 const UPDATE_PASSWORD_ROUTE = '/auth/update-password'
 const STATUS_PARAM_NAME = 'status'
 const INVALID_LINK_STATUS = 'invalid'
@@ -120,6 +122,20 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   const isSignedIn = hasLiveSession(request.cookies)
   const isGuest = hasGuestSession(request.cookies)
+
+  if (matchesRoute(request.nextUrl.pathname, removedAuthRoutes)) {
+    const homeUrl = new URL(SIGNED_IN_HOME, request.url)
+    homeUrl.search = request.nextUrl.search
+
+    return applyRenewalToResponse(
+      setSecurityHeaders(
+        NextResponse.redirect(homeUrl, 308),
+        contentSecurityPolicy,
+        isSecureRequest,
+      ),
+      renewal,
+    )
+  }
 
   if (needsSession && !isSignedIn) {
     return applyRenewalToResponse(

@@ -6,20 +6,14 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: Target environment
-        type: choice
-        options: [staging, production]
-        default: staging
-        required: true
 
 concurrency:
-  group: deploy-${{ inputs.environment || 'staging' }}
+  group: deploy-production
   cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
+  TARGET_ENV: production
 
 jobs:
   build:
@@ -29,7 +23,7 @@ jobs:
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'staging' }}
+    environment: production
     permissions:
       contents: read
       packages: write
@@ -42,7 +36,6 @@ jobs:
 
       - name: Check the client build variables are set for the target environment
         env:
-          TARGET_ENV: ${{ inputs.environment || 'staging' }}
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
@@ -56,8 +49,7 @@ jobs:
             fi
           done
           exit "$missing"
-      - name: Reject the turnstile test sitekey on production
-        if: inputs.environment == 'production'
+      - name: Reject the turnstile test sitekey
         env:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
         run: |
@@ -70,8 +62,6 @@ jobs:
           esac
 
       - id: meta
-        env:
-          TARGET_ENV: ${{ inputs.environment || 'staging' }}
         run: |
           set -euo pipefail
           {
@@ -124,13 +114,12 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'staging' }}
+    environment: production
     permissions:
       packages: read
     steps:
       - name: Check the host credentials are set for the target environment
         env:
-          TARGET_ENV: ${{ inputs.environment || 'staging' }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}

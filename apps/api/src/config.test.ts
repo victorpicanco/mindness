@@ -62,7 +62,27 @@ describe('loadConfig', () => {
       analysisQueueConcurrency: 5,
       authRateLimitMax: 20,
       authRateLimitWindowMs: 60000,
+      posthogKey: null,
+      posthogHost: null,
     })
+  })
+
+  it('reads the optional PostHog key and host', () => {
+    const config = loadConfig({
+      ...VALID_ENV,
+      POSTHOG_KEY: 'phc_test',
+      POSTHOG_HOST: 'https://us.i.posthog.com',
+    })
+
+    expect(config.posthogKey).toBe('phc_test')
+    expect(config.posthogHost).toBe('https://us.i.posthog.com')
+  })
+
+  it('treats a blank PostHog key as missing', () => {
+    const config = loadConfig({ ...VALID_ENV, POSTHOG_KEY: '', POSTHOG_HOST: '' })
+
+    expect(config.posthogKey).toBeNull()
+    expect(config.posthogHost).toBeNull()
   })
 
   it('lists every missing account variable without leaking the secret', () => {

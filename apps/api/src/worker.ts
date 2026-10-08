@@ -27,6 +27,10 @@ import {
 } from '@/modules/sessions/index.js'
 import { createThemesContainer } from '@/modules/themes/composition/container.js'
 import { createPrismaClient } from '@/shared/database/prisma-client/index.js'
+import {
+  createErrorReporter,
+  type ErrorReporter,
+} from '@/shared/error-reporting/posthog-error-reporter/index.js'
 import { BaseError } from '@/shared/errors/base-error/index.js'
 import { buildApp } from '@/shared/http/build-app/index.js'
 import { registerHealthRoute } from '@/shared/http/health-route/index.js'
@@ -77,6 +81,7 @@ export interface AnalysisWorkerHandle {
 export interface CreateAnalysisWorkerDeps {
   readonly processSessionAudio: AnalysisPipelineUseCase
   readonly concurrency: number
+  readonly errorReporter: Pick<ErrorReporter, 'report'>
   readonly createWorker: (
     processor: AnalysisProcessor,
     options: { readonly concurrency: number },
@@ -88,6 +93,7 @@ export function createAnalysisWorker(deps: CreateAnalysisWorkerDeps): AnalysisWo
     try {
       await deps.processSessionAudio.execute({ sessionId: job.data.sessionId })
     } catch (error) {
+      deps.errorReporter.report(error, { session_id: job.data.sessionId })
       if (error instanceof BaseError && error.code === ANALYSIS_DEADLINE_EXCEEDED_CODE) {
         throw new UnrecoverableError(error.message)
       }
@@ -186,6 +192,10 @@ export function registerOrphanAnalysisReconciliationSweep(
 export async function startWorker(): Promise<void> {
   const config = loadConfig(process.env)
   const logger = createLogger({ level: config.logLevel, pretty: config.nodeEnv !== 'production' })
+  const errorReporter = createErrorReporter({
+    projectToken: config.posthogKey,
+    host: config.posthogHost,
+  })
   const app = buildApp({ logger, trustProxy: config.trustProxy })
   const prisma = createPrismaClient({
     databaseUrl: config.databaseUrl,
@@ -260,6 +270,7 @@ export async function startWorker(): Promise<void> {
   const analysisWorker = createAnalysisWorker({
     processSessionAudio: analysesContainer.useCases.processSessionAudio,
     concurrency: config.analysisQueueConcurrency,
+    errorReporter,
     createWorker: (processor, options) =>
       new Worker(SESSION_ANALYSIS_QUEUE_NAME, processor, {
         ...options,
@@ -281,6 +292,7 @@ export async function startWorker(): Promise<void> {
     stopOrphanAnalysisReconciliation()
     await bullMqQueue.close()
     await closeAnalysisWorker(analysisWorker, redisConnection)
+    await errorReporter.shutdown()
   })
 
   registerShutdownSignals({ close: () => app.close(), logger })

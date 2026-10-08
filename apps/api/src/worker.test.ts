@@ -143,6 +143,7 @@ describe('createAnalysisWorker', () => {
     createAnalysisWorker({
       processSessionAudio: { execute: () => Promise.resolve() },
       concurrency: 7,
+      errorReporter: { report: () => undefined },
       createWorker: (_processor, options) => {
         capturedConcurrency = options.concurrency
         return { close: () => Promise.resolve() }
@@ -161,6 +162,7 @@ describe('createAnalysisWorker', () => {
         execute: () => Promise.reject(new FakeAnalysisDeadlineExceededError('Deadline exceeded')),
       },
       concurrency: 1,
+      errorReporter: { report: () => undefined },
       createWorker: (processor) => {
         capturedProcessor = processor
         return { close: () => Promise.resolve() }
@@ -180,6 +182,7 @@ describe('createAnalysisWorker', () => {
     createAnalysisWorker({
       processSessionAudio: { execute: () => Promise.reject(originalError) },
       concurrency: 1,
+      errorReporter: { report: () => undefined },
       createWorker: (processor) => {
         capturedProcessor = processor
         return { close: () => Promise.resolve() }
@@ -189,6 +192,47 @@ describe('createAnalysisWorker', () => {
     await expect(capturedProcessor?.({ data: { sessionId: 'session-1' } })).rejects.toBe(
       originalError,
     )
+  })
+
+  it('reports each failed job with its session id before BullMQ records the failure', async () => {
+    let capturedProcessor:
+      ((job: { readonly data: { readonly sessionId: string } }) => Promise<void>) | undefined
+    const originalError = new DatabaseError('Connection lost')
+    const reports: { readonly error: unknown; readonly properties: unknown }[] = []
+
+    createAnalysisWorker({
+      processSessionAudio: { execute: () => Promise.reject(originalError) },
+      concurrency: 1,
+      errorReporter: { report: (error, properties) => void reports.push({ error, properties }) },
+      createWorker: (processor) => {
+        capturedProcessor = processor
+        return { close: () => Promise.resolve() }
+      },
+    })
+
+    await expect(capturedProcessor?.({ data: { sessionId: 'session-1' } })).rejects.toBe(
+      originalError,
+    )
+    expect(reports).toEqual([{ error: originalError, properties: { session_id: 'session-1' } }])
+  })
+
+  it('reports nothing when the job succeeds', async () => {
+    let capturedProcessor:
+      ((job: { readonly data: { readonly sessionId: string } }) => Promise<void>) | undefined
+    const reports: unknown[] = []
+
+    createAnalysisWorker({
+      processSessionAudio: { execute: () => Promise.resolve() },
+      concurrency: 1,
+      errorReporter: { report: (error) => void reports.push(error) },
+      createWorker: (processor) => {
+        capturedProcessor = processor
+        return { close: () => Promise.resolve() }
+      },
+    })
+
+    await capturedProcessor?.({ data: { sessionId: 'session-1' } })
+    expect(reports).toEqual([])
   })
 })
 

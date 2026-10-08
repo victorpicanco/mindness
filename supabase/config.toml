@@ -169,47 +169,39 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [experimental.pgdelta]
 enabled = true
 
-[remotes.staging]
+[remotes.development]
 project_id = "fvhdckpfxivorrazhpwp"
 
-[remotes.staging.api]
+[remotes.development.api]
 enabled = false
-[remotes.staging.db.ssl_enforcement]
+[remotes.development.db.ssl_enforcement]
 enabled = true
 
-[remotes.staging.storage.vector]
+[remotes.development.storage.vector]
 enabled = false
 
-[remotes.staging.auth]
-site_url = "https://dev.mindness.app"
-additional_redirect_urls = [
-  "https://dev.mindness.app/auth/confirm",
-  "https://dev.mindness.app/auth/callback",
-  "https://api.dev.mindness.app/auth/google/callback",
-]
-
-[remotes.staging.auth.captcha]
+[remotes.development.auth.captcha]
 enabled = true
 provider = "turnstile"
 secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
 
-[remotes.staging.auth.email]
+[remotes.development.auth.email]
 max_frequency = "60s"
 otp_length = 8
 
-[remotes.staging.auth.email.template.confirmation]
+[remotes.development.auth.email.template.confirmation]
 subject = "Confirme seu e-mail"
 content_path = "./supabase/templates/confirmation-pt-br.html"
 
-[remotes.staging.auth.email.template.recovery]
+[remotes.development.auth.email.template.recovery]
 subject = "Redefinir senha"
 content_path = "./supabase/templates/recovery-pt-br.html"
 
-[remotes.staging.auth.mfa.totp]
+[remotes.development.auth.mfa.totp]
 enroll_enabled = true
 verify_enabled = true
 
-[remotes.staging.auth.external.google]
+[remotes.development.auth.external.google]
 enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"

@@ -2,22 +2,15 @@ name: Migrate
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: Target environment
-        type: choice
-        options: [staging, production]
-        default: staging
-        required: true
 
 concurrency:
-  group: migrate-${{ inputs.environment }}
+  group: migrate-production
   cancel-in-progress: false
 
 jobs:
   migrate:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
@@ -31,13 +24,13 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$DATABASE_URL" ]; then
-            echo "::error::DATABASE_URL is not set for the ${{ inputs.environment }} environment"
+            echo "::error::DATABASE_URL is not set for the production environment"
             exit 1
           fi
           case "$DATABASE_URL" in
             *sslmode=require*|*sslmode=verify-ca*|*sslmode=verify-full*) ;;
             *)
-              echo "::error::DATABASE_URL for ${{ inputs.environment }} does not set sslmode=require"
+              echo "::error::DATABASE_URL for production does not set sslmode=require"
               exit 1
               ;;
           esac

@@ -12,7 +12,7 @@ Report privately through GitHub, never in a public issue:
 Please include what you found, how to reproduce it, and what an attacker could reach
 with it. Expect a first reply within seven days.
 
-Do not test against the live environments (`mindness.app`, `dev.mindness.app`). Run the
+Do not test against the live environment (`mindness.app`). Run the
 stack locally instead — `compose.local.yaml` brings up everything needed.
 
 ## Scope
@@ -29,8 +29,8 @@ automated scanner without a working reproduction.
 
 No credential belongs in this repository. Runtime configuration is read from the
 environment; `apps/api/.env.example` documents the variable names only. Deployment
-credentials live in GitHub Environments, and `staging` and `production` each require a
-protected branch, with `production` also requiring a manual review before it runs.
+credentials live in the `production` GitHub Environment, which requires a protected
+branch and a manual review before it runs.
 
 Secret scanning and push protection are enabled. If you believe a credential has been
 committed at any point in the history, report it through the advisory link above rather

@@ -3,12 +3,6 @@ name: Publish Theme Catalog
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: Target environment
-        type: choice
-        options: [staging, production]
-        default: staging
-        required: true
       mode:
         description: Preview or apply the catalog
         type: choice
@@ -17,13 +11,13 @@ on:
         required: true
 
 concurrency:
-  group: theme-catalog-${{ inputs.environment }}
+  group: theme-catalog-production
   cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: production
     permissions:
       contents: read
     steps:
@@ -43,13 +37,13 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$CATALOG_DATABASE_URL" ]; then
-            echo "::error::DATABASE_URL is not set for the ${{ inputs.environment }} environment"
+            echo "::error::DATABASE_URL is not set for the production environment"
             exit 1
           fi
           case "$CATALOG_DATABASE_URL" in
             *sslmode=require*|*sslmode=verify-ca*|*sslmode=verify-full*) ;;
             *)
-              echo "::error::DATABASE_URL for ${{ inputs.environment }} does not demand TLS"
+              echo "::error::DATABASE_URL for production does not demand TLS"
               exit 1
               ;;
           esac

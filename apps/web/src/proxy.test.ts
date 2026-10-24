@@ -170,6 +170,24 @@ describe('proxy', () => {
     })
   })
 
+  describe('removed standalone auth pages', () => {
+    it.each(['/auth/sign-in', '/auth/sign-up'])(
+      'permanently redirects %s to the home route',
+      async (path) => {
+        const response = await proxy(request(path))
+
+        expect(response.status).toBe(308)
+        expect(redirectTarget(response)).toBe('/')
+      },
+    )
+
+    it('keeps the query string so the home route can show a Google sign-in error', async () => {
+      const response = await proxy(request('/auth/sign-in?error=google_callback_failed'))
+
+      expect(redirectTarget(response)).toBe('/?error=google_callback_failed')
+    })
+  })
+
   describe('routes that only make sense signed out', () => {
     it.each(['/auth/password-recovery', '/auth/resend-confirmation', '/auth/confirmed'])(
       'sends an authenticated visitor away from %s',

@@ -19,6 +19,8 @@ const signedOutOnlyRoutes = [
   '/auth/confirmed',
 ]
 
+const removedAuthRoutes = ['/auth/sign-in', '/auth/sign-up']
+
 const UPDATE_PASSWORD_ROUTE = '/auth/update-password'
 const STATUS_PARAM_NAME = 'status'
 const INVALID_LINK_STATUS = 'invalid'
@@ -112,6 +114,18 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const isSecureRequest =
     (request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.slice(0, -1)) === 'https'
   const contentSecurityPolicy = createContentSecurityPolicy(nonce, isSecureRequest)
+
+  if (matchesRoute(request.nextUrl.pathname, removedAuthRoutes)) {
+    return setSecurityHeaders(
+      NextResponse.redirect(
+        new URL(`${SIGNED_IN_HOME}${request.nextUrl.search}`, request.url),
+        308,
+      ),
+      contentSecurityPolicy,
+      isSecureRequest,
+    )
+  }
+
   const needsSession = requiresSession(request.nextUrl)
   const hadAccessToken = readSessionCookies(request.cookies).accessToken !== undefined
   const renewal = await renewSession({ cookieStore: request.cookies })

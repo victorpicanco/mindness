@@ -169,7 +169,7 @@ export function createAccountsContainer(deps: AccountsModuleDeps) {
     completeGoogleSignIn: new CompleteGoogleSignInController(useCases.completeGoogleSignIn, {
       callbackPath: ACCOUNTS_ROUTE_PATHS.googleCallback,
       webCallbackUrl: `${deps.config.publicWebUrl}/auth/callback`,
-      webSignInUrl: `${deps.config.publicWebUrl}/auth/sign-in`,
+      webSignInUrl: `${deps.config.publicWebUrl}/`,
     }),
     confirmEmail: new ConfirmEmailController(useCases.confirmEmail),
     createAccount: new CreateAccountController(useCases.createAccount),
